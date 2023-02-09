@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+
+        <title>Embedulator</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="libretro_embed.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+        
+            <div class="webplayer-container">
+                <div class="webplayer_border text-xs-center" id="canvas_div">
+                    <canvas class="webplayer hidden" id="canvas" tabindex="1" oncontextmenu="event.preventDefault()"></canvas>
+                    <img id="webplayer-preview" class="webplayer-preview" src="media/canvas.png" width="960px" height="720px" alt="RetroArch Logo">
+                </div>
+            </div>
+            
+            <script src="browserfs.min.js"></script>
+            <script src="libretro_embed.js"></script>
+
+    </body>
+</html>
