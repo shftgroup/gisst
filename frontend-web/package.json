@@ -1,0 +1,19 @@
+{
+  "name": "frontend-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.3",
+    "vite": "^4.1.0",
+    "vite-plugin-checker": "^0.5.5"
+  },
+  "dependencies": {
+    "@types/emscripten": "^1.39.6"
+  }
+}
