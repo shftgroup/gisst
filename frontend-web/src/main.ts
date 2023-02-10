@@ -42,7 +42,7 @@ loadRetroArch(core,
         let p2 = fetch.registerFetchFS(xfs_content_files, content_folder, "/home/web_user/content");
         Promise.all([p1, p2]).then(function () {
             if (entryState) {
-                FS.mkdir("/home/web_user/retroarch/userdata/states");
+                fetch.mkdirp("/home/web_user/retroarch/userdata/states");
                 copyFile("/home/web_user/content/entry_state",
                     "/home/web_user/retroarch/userdata/states/" + content_base + ".state1.entry");
             }
@@ -59,14 +59,15 @@ function copyFile(from: string, to: string): void {
 function retroReady(): void {
     let prev = document.getElementById("webplayer-preview")!;
     prev.classList.add("loaded");
-    let canv = <HTMLCanvasElement>document.getElementById("canvas")!;
     prev.addEventListener(
         "click",
         function () {
+            let canv = <HTMLCanvasElement>document.getElementById("canvas")!;
+            prev.classList.add("hidden");
             startRetroArch(canv, retro_args, function () {
+                let canv = document.getElementById("canvas")!;
                 setInterval(checkChangedSaves, FS_CHECK_INTERVAL);
                 canv.classList.remove("hidden");
-                prev.classList.add("hidden");
             });
             return false;
         });

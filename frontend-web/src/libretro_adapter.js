@@ -1,6 +1,7 @@
 var Module =
     {
         noInitialRun: true,
+        //canvas:document.getElementById("canvas"),
         preRun: [],
         postRun: [],
         print: function(text)
@@ -19,7 +20,7 @@ function startRetroArch(canvas, arguments, initialized_cb)
     Module['arguments'] = arguments;
     Module['callMain'](Module['arguments']);
     Module['resumeMainLoop']();
-    Module['onRuntimeInitialized'] = initialized_cb;
+    initialized_cb();
     canvas.focus();
 }
 
