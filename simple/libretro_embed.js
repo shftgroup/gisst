@@ -13,10 +13,6 @@ const FS_CHECK_INTERVAL = 1000;
 
 console.assert(!(entryState && movie), "It is invalid to have both an entry state and play back a movie");
 
-var movieArg = "-R";
-if (movie) {
-    movieArg = "-P";
-}
 var contentBase = content.substr(0,content.lastIndexOf("."));
 
 var retro_args =  ["-v"];
