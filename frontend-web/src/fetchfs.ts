@@ -1,3 +1,5 @@
+import {get, set} from 'idb-keyval';
+
 type FileContents = null|Index;
 export interface Index extends Record<string, FileContents> {}
 
@@ -6,7 +8,7 @@ function min(n:number,m:number) : number {
   return m;
 }
 
-export async function registerFetchFS(index:string | Index, root:string, mount:string) {
+export async function registerFetchFS(index:string | Index, root:string, mount:string, cache:boolean) {
   let index_file_tree;
   if (typeof index === "string") {
     const index_result = await fetch(index);
@@ -23,7 +25,7 @@ export async function registerFetchFS(index:string | Index, root:string, mount:s
   const batch_size = 100;
   for(let i = 0; i < files.length; i+=batch_size) {
     let file_batch = files.slice(i,min(i+batch_size,files.length));
-    await Promise.all(file_batch.map(([from,to]) => fetchFile(from,to)));
+    await Promise.all(file_batch.map(([from,to]) => fetchFile(from,to,cache)));
   }
 }
 
@@ -39,8 +41,23 @@ function fetchDirectory(index_file_tree:Index, root:string, mount:string, files:
   }
 }
 
-function fetchFile(from:string, to:string):Promise<void> {
-  return fetch(from).then(r => r.arrayBuffer()).then(b => FS.writeFile(to, new Uint8Array(b)));
+async function fetchFile(from:string, to:string, cache:boolean):Promise<void> {
+  if (cache) {
+    let key = "FSCACHE_"+from;
+    let cached = await get(key);
+    if (cached) {
+      return FS.writeFile(to, new Uint8Array(cached));
+    } else {
+      let resp = await fetch(from);
+      let buf = await resp.arrayBuffer();
+      set(key,buf);
+      return FS.writeFile(to, new Uint8Array(buf));
+    }
+  } else {
+    let resp = await fetch(from);
+    let buf = await resp.arrayBuffer();
+    return FS.writeFile(to, new Uint8Array(buf));
+  }
 }
 
 export function mkdir(path:string) {
