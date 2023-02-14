@@ -11,6 +11,6 @@ cp -r retroarch-web/assets/frontend frontend-web/public/assets/
 
 # trim down the bundle size some
 cd frontend-web/public/assets/frontend/bundle
-rm -rf overlays shaders filters assets/glui assets/xmb assets/rgui
+rm -rf overlays shaders filters database assets/glui assets/xmb assets/rgui
 ../../../../../retroarch-web/indexer . > .index-xhr
 cd -
