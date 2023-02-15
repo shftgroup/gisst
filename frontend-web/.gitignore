@@ -12,7 +12,7 @@ dist
 dist-ssr
 *.local
 
-public/assets
+public/assets/frontend
 public/cores
 public/content/bfight.nes
 public/content/entry_state

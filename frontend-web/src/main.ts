@@ -25,6 +25,8 @@ if (movie) {
   retro_args.push("-R");
   retro_args.push("/home/web_user/retroarch/userdata/movie.bsv");
 }
+retro_args.push("--appendconfig");
+retro_args.push("/home/web_user/content/retroarch.cfg");
 retro_args.push("/home/web_user/content/" + content);
 
 
@@ -40,13 +42,15 @@ loadRetroArch(core,
       xfs_content_files["movie.bsv"] = null;
     }
     let p2 = fetch.registerFetchFS(xfs_content_files, content_folder, "/home/web_user/content", false);
-    Promise.all([p1, p2]).then(function () {
+    let p3 = fetch.registerFetchFS({"retroarch_web_base.cfg":null}, "assets", "/home/web_user/retroarch/", false);
+    Promise.all([p1, p2, p3]).then(function () {
+        fetch.mkdirp("/home/web_user/retroarch/userdata");
+      copyFile("/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
       if (entryState) {
         fetch.mkdirp("/home/web_user/retroarch/userdata/states");
         copyFile("/home/web_user/content/entry_state",
           "/home/web_user/retroarch/userdata/states/" + content_base + ".state1.entry");
       }
-      copyFile("/home/web_user/content/retroarch.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
       retroReady();
     });
   });
