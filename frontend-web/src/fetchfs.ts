@@ -1,4 +1,4 @@
-import {get, set} from 'idb-keyval';
+import {get, set, delMany} from 'idb-keyval';
 
 type FileContents = null|Index;
 export interface Index extends Record<string, FileContents> {}
@@ -8,17 +8,48 @@ function min(n:number,m:number) : number {
   return m;
 }
 
+function get_file_paths_cache(index:Index, files:string[], root:string) {
+  for(let file of Object.keys(index)) {
+    const contents = index[file];
+    if (contents === null) {
+      let key = "FSCACHE_"+root+"/"+file;
+      files.push(key);
+    } else {
+      get_file_paths_cache(contents, files, root+"/"+file);
+    }
+  }
+}
+
+function listsEqual(as:any[], bs:any[]):boolean {
+  if(as.length != bs.length) { return false; }
+  for(let i = 0; i < as.length; i++) {
+    if(as[i] != bs[i]) { return false; }
+  }
+  return true;
+}
+
 export async function registerFetchFS(index:string | Index, root:string, mount:string, cache:boolean) {
   let index_file_tree;
   if (typeof index === "string") {
     const index_result = await fetch(index);
+    const mod_date = index_result.headers.get("Last-Modified");
     index_file_tree = await index_result.json();
+    let last_index_info = await get("FSCACHE_INDEX_"+index);
+    if(last_index_info) {
+      const last_index = last_index_info[1];
+      let old_files:string[] = [];
+      get_file_paths_cache(last_index, old_files, root);
+      const new_files:string[] = [];
+      get_file_paths_cache(index_file_tree, new_files, root);
+      if(last_index_info[0] != mod_date || !listsEqual(old_files, new_files)) {
+        console.log("Asset cache out of date, mark all assets for redownload",old_files.length,old_files[0]);
+        await delMany(old_files);
+      }
+    }
+    set("FSCACHE_INDEX_"+index, [mod_date, index_file_tree]);
   } else {
     index_file_tree = index;
   }
-  // TODO: keep our own cache so that we don't need to make 5000 requests.
-  // OR, download and unzip a bundle of assets.
-  // OR, just remove overlays and unnecessary GUI icons and stuff from the bundles
   let files:[string,string][] = [];
   mkdirp(mount);
   fetchDirectory(index_file_tree, root, mount, files);
