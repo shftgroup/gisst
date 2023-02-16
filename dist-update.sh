@@ -18,3 +18,6 @@ cd -
 
 rm -rf frontend-tauri/src-tauri/ra-assets
 cp -r frontend-web/public/assets/frontend/bundle frontend-tauri/src-tauri/ra-assets
+
+rm -rf frontend-elec/resources
+cp -r frontend-web/public/assets/frontend/bundle frontend-elec/resources/ra-assets
