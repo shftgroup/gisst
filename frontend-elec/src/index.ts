@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, IpcMainEvent } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as proc from 'child_process';
@@ -18,15 +18,13 @@ const cache_dir = path.join(app.getPath("temp"),"gisst");
 const resource_dir = path.resolve(__dirname, 'resources');
 const config_dir = app.getPath("userData");
 const content_dir = path.join(cache_dir, "content");
+const saves_dir = path.join(cache_dir, "saves");
+const states_dir = path.join(cache_dir, "states")
 
 const createWindow = (): void => {
   //app.setAsDefaultProtocolClient(protocol[, path, args]);
-  fs.rmSync(path.join(cache_dir, "saves"), {recursive:true,force:true});
-  fs.rmSync(path.join(cache_dir, "states"), {recursive:true,force:true});
 
   fs.mkdirSync(path.join(cache_dir, "core-options"), {recursive:true});
-  fs.mkdirSync(path.join(cache_dir, "saves"), {recursive:true});
-  fs.mkdirSync(path.join(cache_dir, "states"), {recursive:true});
   fs.mkdirSync(path.join(cache_dir, "cache"), {recursive:true});
   fs.mkdirSync(path.join(cache_dir, "screenshots"), {recursive:true});
   fs.mkdirSync(path.join(config_dir, "remaps"), {recursive:true});
@@ -84,10 +82,13 @@ app.on('activate', () => {
   }
 });
 
-function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:bool,movie:bool) {
+let save_listener:fs.FSWatcher = null;
+let state_listener:fs.FSWatcher = null;
+
+function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:boolean,movie:boolean) {
   console.assert(!(entryState && movie), "It is invalid to have both an entry state and play back a movie");
-  let content_base = content.substring(0, content.lastIndexOf("."));
-  let retro_args = ["-v", "-c", path.join(cache_dir, "retroarch.cfg"), "--appendconfig", path.join(content_dir, "retroarch.cfg"), "-L", core];
+  const content_base = content.substring(0, content.lastIndexOf("."));
+  const retro_args = ["-v", "-c", path.join(cache_dir, "retroarch.cfg"), "--appendconfig", path.join(content_dir, "retroarch.cfg"), "-L", core];
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
@@ -105,10 +106,58 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
     fs.cpSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1.entry"));
   }
 
+  if(save_listener != null) {
+    save_listener.close();
+    save_listener = null;
+  }
+  if(state_listener != null) {
+    state_listener.close();
+    state_listener = null;
+  }
+  fs.rmSync(saves_dir, {recursive:true,force:true});
+  fs.rmSync(states_dir, {recursive:true,force:true});
+  fs.mkdirSync(saves_dir, {recursive:true});
+  fs.mkdirSync(states_dir, {recursive:true});
+  const seenSaves:string[] = [];
+  save_listener = fs.watch(saves_dir, {"persistent":false}, function(_file_evt, name) {
+    console.log("saves",_file_evt,name);
+    if(!seenSaves.includes(name)) {
+      seenSaves.push(name);
+      evt.sender.send('gisst:saves_changed', {
+        "file":name,
+      });
+    }
+  });
+  const seenStates:Record<string, Uint8Array> = {};
+  state_listener = fs.watch(states_dir, {"persistent":false}, function(_file_evt, name) {
+    console.log("states",_file_evt,name);
+    if(name.endsWith(".png")) {
+      const img_path = path.join(states_dir,name);
+      console.log("img",img_path,fs.statSync(img_path));
+      const file_name = name.substring(0, name.length-4);
+      if(file_name in seenStates) {
+        console.log("seen image already");
+        return;
+      }
+      if(fs.statSync(img_path).size == 0) {
+        console.log("image file is empty");
+        return;
+      }
+      console.log("image ready, send along",fs.statSync(img_path));
+      const image_data = fs.readFileSync(img_path);
+      seenStates[file_name] = image_data;
+      evt.sender.send('gisst:states_changed', {
+        "file": file_name,
+        "thumbnail_png_b64": image_data.toString('base64')
+      });
+    }
+  });
+  
   const binary = path.join(resource_dir,"binaries","retroarch");
-  const process = proc.spawn(binary, retro_args, {"windowsHide":true,});
+  const process = proc.spawn(binary, retro_args, {"windowsHide":true,"detached":false});
   process.stdout.on('data', (data) => console.log("out",data.toString()));
   process.stderr.on('data', (data) => console.log("err",data.toString()));
   process.on('close', (exit_code) => console.log("exit",exit_code));
   process.on('error', (error) => console.error("failed to start RA",error));
 }
+
