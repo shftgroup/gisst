@@ -39,9 +39,11 @@ const createWindow = (): void => {
   cfg = cfg.replace(/\$CONFIG/g, config_dir);
   fs.writeFileSync(path.join(cache_dir, "retroarch.cfg"),cfg);
 
-  fs.chmodSync(path.join(resource_dir,"binaries","retroarch"),"777");
-  //TODO: chmod +x retroarch bin
-  
+  const is_darwin = process.platform === "darwin";
+  if(!is_darwin) {
+    fs.chmodSync(path.join(resource_dir,"binaries","retroarch"),"777");
+  }
+
   ipcMain.on('gisst:run', handle_run_retroarch);
 
   // Create the browser window.
