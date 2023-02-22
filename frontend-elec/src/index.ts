@@ -154,7 +154,7 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
   });
 
   const is_darwin = process.platform === "darwin";
-  const binary;
+  let binary;
   if(is_darwin) {
     binary = "open";
     const open_args = ["-a", path.join(resource_dir,"binaries","RetroArch.app"), "--args"];
