@@ -88,7 +88,7 @@ let state_listener:fs.FSWatcher = null;
 function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:boolean,movie:boolean) {
   console.assert(!(entryState && movie), "It is invalid to have both an entry state and play back a movie");
   const content_base = content.substring(0, content.lastIndexOf("."));
-  const retro_args = ["-v", "-c", path.join(cache_dir, "retroarch.cfg"), "--appendconfig", path.join(content_dir, "retroarch.cfg"), "-L", core];
+  let retro_args = ["-v", "-c", path.join(cache_dir, "retroarch.cfg"), "--appendconfig", path.join(content_dir, "retroarch.cfg"), "-L", core];
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
@@ -152,8 +152,16 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
       });
     }
   });
-  
-  const binary = path.join(resource_dir,"binaries","retroarch");
+
+  const is_darwin = process.platform === "darwin";
+  const binary;
+  if(is_darwin) {
+    binary = "open";
+    const open_args = ["-a", path.join(resource_dir,"binaries","RetroArch.app"), "--args"];
+    retro_args = open_args + retro_args;
+  } else {
+    binary = path.join(resource_dir,"binaries","retroarch");
+  }
   const process = proc.spawn(binary, retro_args, {"windowsHide":true,"detached":false});
   process.stdout.on('data', (data) => console.log("out",data.toString()));
   process.stderr.on('data', (data) => console.log("err",data.toString()));
