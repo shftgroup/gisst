@@ -43,10 +43,10 @@ const createWindow = (): void => {
   if(is_darwin) {
     fs.chmodSync(path.join(resource_dir,"binaries","RetroArch.app", "Contents", "MacOS", "RetroArch"),"777");
   } else {
-    if(fs.statSync(path.join(resource_dir,"binaries","retroarch"))) {
+    if(fs.existsSync(path.join(resource_dir,"binaries","retroarch"))) {
       fs.chmodSync(path.join(resource_dir,"binaries","retroarch"),"777");
     }
-    if(fs.statSync(path.join(resource_dir,"binaries","RetroArch.AppImage"))) {
+    if(fs.existsSync(path.join(resource_dir,"binaries","RetroArch.AppImage"))) {
       fs.chmodSync(path.join(resource_dir,"binaries","RetroArch.AppImage"),"777");
     }
   }
@@ -168,7 +168,7 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
     binary = path.join(resource_dir,"binaries","RetroArch.app", "Contents", "MacOS", "RetroArch");
   } else {
     let bin_name = "RetroArch.AppImage";
-    if(fs.statSync(path.join(resource_dir,"binaries","retroarch"))) {
+    if(fs.existsSync(path.join(resource_dir,"binaries","retroarch"))) {
       binary="retroarch";
     }
     binary = path.join(resource_dir,"binaries",bin_name);
