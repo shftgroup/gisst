@@ -40,8 +40,15 @@ const createWindow = (): void => {
   fs.writeFileSync(path.join(cache_dir, "retroarch.cfg"),cfg);
 
   const is_darwin = process.platform === "darwin";
-  if(!is_darwin) {
-    fs.chmodSync(path.join(resource_dir,"binaries","retroarch"),"777");
+  if(is_darwin) {
+    fs.chmodSync(path.join(resource_dir,"binaries","RetroArch.app", "Contents", "MacOS", "RetroArch"),"777");
+  } else {
+    if(fs.statSync(path.join(resource_dir,"binaries","retroarch"))) {
+      fs.chmodSync(path.join(resource_dir,"binaries","retroarch"),"777");
+    }
+    if(fs.statSync(path.join(resource_dir,"binaries","RetroArch.AppImage"))) {
+      fs.chmodSync(path.join(resource_dir,"binaries","RetroArch.AppImage"),"777");
+    }
   }
 
   ipcMain.on('gisst:run', handle_run_retroarch);
@@ -90,7 +97,7 @@ let state_listener:fs.FSWatcher = null;
 function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:boolean,movie:boolean) {
   console.assert(!(entryState && movie), "It is invalid to have both an entry state and play back a movie");
   const content_base = content.substring(0, content.lastIndexOf("."));
-  let retro_args = ["-v", "-c", path.join(cache_dir, "retroarch.cfg"), "--appendconfig", path.join(content_dir, "retroarch.cfg"), "-L", core];
+  const retro_args = ["-v", "-c", path.join(cache_dir, "retroarch.cfg"), "--appendconfig", path.join(content_dir, "retroarch.cfg"), "-L", core];
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
@@ -158,11 +165,13 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
   const is_darwin = process.platform === "darwin";
   let binary;
   if(is_darwin) {
-    binary = "open";
-    const open_args = ["-a", path.join(resource_dir,"binaries","RetroArch.app"), "--args"];
-    retro_args = open_args.concat(retro_args);
+    binary = path.join(resource_dir,"binaries","RetroArch.app", "Contents", "MacOS", "RetroArch");
   } else {
-    binary = path.join(resource_dir,"binaries","retroarch");
+    let bin_name = "RetroArch.AppImage";
+    if(fs.statSync(path.join(resource_dir,"binaries","retroarch"))) {
+      binary="retroarch";
+    }
+    binary = path.join(resource_dir,"binaries",bin_name);
   }
   const ra = proc.spawn(binary, retro_args, {"windowsHide":true,"detached":false});
   ra.stdout.on('data', (data) => console.log("out",data.toString()));
