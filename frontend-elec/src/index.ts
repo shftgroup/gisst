@@ -128,8 +128,8 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
   fs.mkdirSync(saves_dir, {recursive:true});
   fs.mkdirSync(states_dir, {recursive:true});
   const seenSaves:string[] = [];
-  save_listener = fs.watch(saves_dir, {"persistent":false}, function(_file_evt, name) {
-    console.log("saves",_file_evt,name);
+  save_listener = fs.watch(saves_dir, {"persistent":false}, function(file_evt, name) {
+    console.log("saves",file_evt,name);
     if(!seenSaves.includes(name)) {
       seenSaves.push(name);
       evt.sender.send('gisst:saves_changed', {
@@ -138,8 +138,8 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
     }
   });
   const seenStates:Record<string, Uint8Array> = {};
-  state_listener = fs.watch(states_dir, {"persistent":false}, function(_file_evt, name) {
-    console.log("states",_file_evt,name);
+  state_listener = fs.watch(states_dir, {"persistent":false}, function(file_evt, name) {
+    console.log("states",file_evt,name);
     if(name.endsWith(".png")) {
       const img_path = path.join(states_dir,name);
       console.log("img",img_path,fs.statSync(img_path));
