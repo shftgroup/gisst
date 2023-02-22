@@ -160,7 +160,7 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
   if(is_darwin) {
     binary = "open";
     const open_args = ["-a", path.join(resource_dir,"binaries","RetroArch.app"), "--args"];
-    retro_args = open_args + retro_args;
+    retro_args = open_args.concat(retro_args);
   } else {
     binary = path.join(resource_dir,"binaries","retroarch");
   }
