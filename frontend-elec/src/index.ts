@@ -52,6 +52,7 @@ const createWindow = (): void => {
   }
 
   ipcMain.on('gisst:run', handle_run_retroarch);
+  ipcMain.on('gisst:load_state', handle_load_state);
 
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -93,7 +94,7 @@ app.on('activate', () => {
 
 let save_listener:fs.FSWatcher = null;
 let state_listener:fs.FSWatcher = null;
-
+let ra:child_process.ChildProcess = null;
 function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:boolean,movie:boolean) {
   console.assert(!(entryState && movie), "It is invalid to have both an entry state and play back a movie");
   const content_base = content.substring(0, content.lastIndexOf("."));
@@ -173,10 +174,18 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
     }
     binary = path.join(resource_dir,"binaries",bin_name);
   }
-  const ra = proc.spawn(binary, retro_args, {"windowsHide":true,"detached":false});
+  if(ra != null) {
+    ra.unref();
+    ra.kill();
+  }
+  ra = proc.spawn(binary, retro_args, {"windowsHide":true,"detached":false});
   ra.stdout.on('data', (data) => console.log("out",data.toString()));
   ra.stderr.on('data', (data) => console.log("err",data.toString()));
   ra.on('close', (exit_code) => console.log("exit",exit_code));
   ra.on('error', (error) => console.error("failed to start RA",error));
 }
 
+function handle_load_state(evt:IpcMainEvent, num:number) {
+  console.log("LOAD_STATE_SLOT "+num);
+  ra.stdin.write("LOAD_STATE_SLOT "+num);
+}
