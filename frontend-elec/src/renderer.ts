@@ -27,7 +27,7 @@
  */
 
 import './index.css';
-import {UI} from './ui.ts';
+import {UI} from 'gisst-player';
 
 let ui_state;
 
@@ -43,7 +43,7 @@ function states_updated(evt:IpcRendererEvent, stateinfo:StatefileInfo) {
 api.on_states_changed(states_updated);
 
 async function run(core:string, content:string, entryState:bool, movie:bool) {
-  ui_state.clearStates();
+  ui_state.clear();
   api.run_retroarch(core, content, entryState, movie);
 }
 
