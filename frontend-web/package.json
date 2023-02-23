@@ -15,7 +15,7 @@
     "vite-plugin-checker": "^0.5.5"
   },
   "dependencies": {
-    "@types/emscripten": "^1.39.6",
+    "gisst-player": "file:../gisst-player-ui",
     "idb-keyval": "^6.2.0"
   }
 }
