@@ -27,28 +27,23 @@
  */
 
 import './index.css';
+import {UI} from './ui.ts';
+
+let ui_state;
 
 function saves_updated(evt:IpcRendererEvent, saveinfo:SavefileInfo) {
   console.log("new save",saveinfo);
+  ui_state.newSave(saveinfo.file);
 }
 api.on_saves_changed(saves_updated);
 function states_updated(evt:IpcRendererEvent, stateinfo:StatefileInfo) {
   console.log("states", evt, stateinfo);
-  const img = new Image();
-  const img_data = "data:image/png;base64,"+stateinfo.thumbnail_png_b64;
-  img.src = img_data;
-  document
-    .querySelector("#states")
-    ?.appendChild(img);
+  ui_state.newState(stateinfo.file,stateinfo.thumbnail_png_b64);
 }
 api.on_states_changed(states_updated);
 
 async function run(core:string, content:string, entryState:bool, movie:bool) {
-   document
-     .querySelectorAll("#states>img")
-     ?.forEach((elt) => {
-       elt.remove();
-     });
+  ui_state.clearStates();
   api.run_retroarch(core, content, entryState, movie);
 }
 
@@ -62,4 +57,7 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#run-movie-button")
     ?.addEventListener("click", () => run("fceumm", "bfight.nes", false, true));
+  ui_state = new UI(document.getElementById("states")!, document.getElementById("saves")!, {
+    "load_state":(number) => api.load_state(number),
+  });
 });
