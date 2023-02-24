@@ -1,7 +1,7 @@
 import './style.css'
-import * as fetch from './fetchfs'
+import IMG_STATE_ENTRY from './media/init_state.png';
+import * as fetchfs from './fetchfs'
 import {UI} from 'gisst-player';
-
 const core = "fceumm";
 const content_folder = "/content/";
 const content = "bfight.nes";
@@ -36,8 +36,8 @@ retro_args.push("/home/web_user/content/" + content);
 
 loadRetroArch(core,
   function () {
-    let p1 = fetch.registerFetchFS(("assets/frontend/bundle/.index-xhr"), "assets/frontend/bundle", "/home/web_user/retroarch/bundle", true);
-    let xfs_content_files: fetch.Index = { "retroarch.cfg": null };
+    let p1 = fetchfs.registerFetchFS(("assets/frontend/bundle/.index-xhr"), "assets/frontend/bundle", "/home/web_user/retroarch/bundle", true);
+    let xfs_content_files: fetchfs.Index = { "retroarch.cfg": null };
     xfs_content_files[content] = null;
     if (entryState) {
       xfs_content_files["entry_state"] = null;
@@ -45,15 +45,23 @@ loadRetroArch(core,
     if (movie) {
       xfs_content_files["movie.bsv"] = null;
     }
-    let p2 = fetch.registerFetchFS(xfs_content_files, content_folder, "/home/web_user/content", false);
-    let p3 = fetch.registerFetchFS({"retroarch_web_base.cfg":null}, "assets", "/home/web_user/retroarch/", false);
+    let p2 = fetchfs.registerFetchFS(xfs_content_files, content_folder, "/home/web_user/content", false);
+    let p3 = fetchfs.registerFetchFS({"retroarch_web_base.cfg":null}, "assets", "/home/web_user/retroarch/", false);
     Promise.all([p1, p2, p3]).then(function () {
-      fetch.mkdirp("/home/web_user/retroarch/userdata");
+      fetchfs.mkdirp("/home/web_user/retroarch/userdata");
       copyFile("/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
+      // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
       if (entryState) {
-        fetch.mkdirp(state_dir);
+        fetchfs.mkdirp(state_dir);
         copyFile("/home/web_user/content/entry_state",
           state_dir + "/" + content_base + ".state1.entry");
+        copyFile("/home/web_user/content/entry_state",
+          state_dir + "/" + content_base + ".state1");
+        if(file_exists("/home/web_user/content/entry_state.png")) {
+          copyFile("/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
+        } else {
+          fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
+        }
       }
       retroReady();
     });
@@ -105,7 +113,7 @@ function retroReady(): void {
 }
 
 function load_state_slot(n:number) {
-  console.error("NYI",n);
+  retroArchSend("LOAD_STATE_SLOT "+n.toString());
 }
 
 // From MDN

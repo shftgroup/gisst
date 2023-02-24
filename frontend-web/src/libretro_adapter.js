@@ -1,8 +1,34 @@
+const encoder = new TextEncoder();
+const message_queue = [];
+
+function retroArchSend(msg) {
+  let bytes = encoder.encode(msg+"\n");
+  message_queue.push([bytes,0]);
+}
+
 var Module =
   {
     noInitialRun: true,
     //canvas:document.getElementById("canvas"),
-    preRun: [],
+    preRun: [
+      function() {
+        function stdin() {
+          // Return ASCII code of character, or null if no input
+          while(message_queue.length > 0){
+            let [msg,index] = message_queue[0];
+            if(index >= msg.length) {
+              message_queue.shift();
+            } else {
+              message_queue[0][1] = index+1;
+              // assumption: msg is a uint8array
+              return msg[index];
+            }
+          }
+          return null;
+        }
+        FS.init(stdin);
+      }
+    ],
     postRun: [],
     print: function(text)
       {
@@ -65,6 +91,6 @@ function loadRetroArch(core, loaded_cb) {
   coreScript.type = 'text/javascript';
   coreScript.src = "cores/"+core+'_libretro.js';
   coreScript.addEventListener("error", function() {console.error("Couldn't load core file", coreScript.src);});
-  coreScript.addEventListener("load", loaded_cb);
+  coreScript.addEventListener("load", function() {Module.preRun.push(loaded_cb);});
   document.head.appendChild(coreScript);
 }

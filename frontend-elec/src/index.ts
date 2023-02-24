@@ -114,9 +114,6 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
   }
   retro_args.push(path.join(content_dir, content));
   console.log(retro_args);
-  if (entryState) {
-    fs.cpSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1.entry"));
-  }
 
   if(save_listener != null) {
     save_listener.close();
@@ -130,6 +127,7 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
   fs.rmSync(states_dir, {recursive:true,force:true});
   fs.mkdirSync(saves_dir, {recursive:true});
   fs.mkdirSync(states_dir, {recursive:true});
+
   const seenSaves:string[] = [];
   save_listener = fs.watch(saves_dir, {"persistent":false}, function(file_evt, name) {
     console.log("saves",file_evt,name);
@@ -165,6 +163,16 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
     }
   });
 
+  if (entryState) {
+    fs.cpSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1.entry"));
+    fs.cpSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1"));
+    if(fs.existsSync(path.join(content_dir, "entry_state.png"))){
+      fs.cpSync(path.join(content_dir,"entry_state.png"), path.join(cache_dir, "states", content_base+".state1.png"));
+    } else {
+      fs.cpSync(path.join(resource_dir,"init_state.png"), path.join(cache_dir, "states", content_base+".state1.png"));
+    }
+  }
+
   const is_darwin = process.platform === "darwin";
   let binary;
 
@@ -173,7 +181,7 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
   } else {
     let bin_name = "RetroArch.AppImage";
     if(fs.existsSync(path.join(resource_dir,"binaries","retroarch"))) {
-      binary="retroarch";
+      bin_name="retroarch";
     }
     binary = path.join(resource_dir,"binaries",bin_name);
   }
@@ -186,11 +194,12 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
   ra.stderr.on('data', (data) => console.log("err",data.toString()));
   ra.on('close', (exit_code) => console.log("exit",exit_code));
   ra.on('error', (error) => console.error("failed to start RA",error));
+  ra.stdin.write("SAVE_STATE\n");
 }
 
 function handle_load_state(evt:IpcMainEvent, num:number) {
   console.log("LOAD_STATE_SLOT "+num);
-  ra.stdin.write("LOAD_STATE_SLOT "+num);
+  ra.stdin.write("LOAD_STATE_SLOT "+num+"\n");
 }
 function handle_download_file(evt:IpcMainEvent, category:"save"|"state"|"movie", file_name:string) {
   try{
