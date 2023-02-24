@@ -143,17 +143,15 @@ const seen_states:Record<string,Uint8Array> = {};
 const seen_saves:Record<string,null> = {};
 function checkChangedStatesAndSaves() {
   const states = FS.readdir(state_dir);
+  listing.childNodes.forEach((c,_,_) => c.remove());
   for (let state of states) {
     if(state == "." || state == "..") { continue; }
-    // Creating this in the loop since we'll use the side-effectful exec function
     const png_file = state.endsWith(".png") ? state : state + ".png";
     const state_file = state.endsWith(".png") ? state.substring(0,state.length-4) : state;
     if(!(state_file in seen_states) && file_exists(state_dir+"/"+png_file) && file_exists(state_dir+"/"+state_file)) {
       const img_data = FS.readFile(state_dir+"/"+png_file);
       seen_states[state_file] = img_data;
-      console.log("new state thumbnail",state_file,img_data);
       const img_data_b64 = base64EncArr(img_data);
-      console.log(img_data_b64);
       ui_state.newState(state_file, img_data_b64);
     }
   }
@@ -169,4 +167,19 @@ function checkChangedStatesAndSaves() {
 
 function file_exists(path:string) : boolean {
   return FS.analyzePath(path).exists
+}
+
+/** per https://github.com/eligrey/FileSaver.js/issues/774#issue-1393525742
+  * @param {Blob} blob
+  * @param {string} name
+  */
+function saveAs(blob:Blob, name:string) {
+    // Namespace is used to prevent conflict w/ Chrome Poper Blocker extension (Issue https://github.com/eligrey/FileSaver.js/issues/561)
+  const a = document.createElementNS('http://www.w3.org/1999/xhtml', 'a');
+  a.download = name;
+  a.rel = 'noopener';
+  a.href = URL.createObjectURL(blob);
+
+  setTimeout(() => URL.revokeObjectURL(a.href), 40 /* sec */ * 1000);
+  setTimeout(() => a.click(), 0);
 }
