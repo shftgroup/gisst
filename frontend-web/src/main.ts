@@ -71,6 +71,20 @@ function retroReady(): void {
     <HTMLDivElement>document.getElementById("saves")!,
     {
       "load_state":(num:number) => load_state_slot(num),
+      "download_file":(category:"state" | "save" | "movie", file_name:string) => {
+        let path = "/home/web_user/retroarch/userdata";
+        if(category == "state") {
+          path += "/states";
+        } else if(category == "save") {
+          path += "/saves";
+        } else if(category == "movie") {
+          path += "/saves";
+        } else {
+          console.error("Invalid save category",category,file_name);
+        }
+        const data = FS.readFile(path+"/"+file_name);
+        saveAs(new Blob([data]), file_name);
+      }
     }
   );
 
@@ -143,7 +157,6 @@ const seen_states:Record<string,Uint8Array> = {};
 const seen_saves:Record<string,null> = {};
 function checkChangedStatesAndSaves() {
   const states = FS.readdir(state_dir);
-  listing.childNodes.forEach((c,_,_) => c.remove());
   for (let state of states) {
     if(state == "." || state == "..") { continue; }
     const png_file = state.endsWith(".png") ? state : state + ".png";
@@ -175,7 +188,7 @@ function file_exists(path:string) : boolean {
   */
 function saveAs(blob:Blob, name:string) {
     // Namespace is used to prevent conflict w/ Chrome Poper Blocker extension (Issue https://github.com/eligrey/FileSaver.js/issues/561)
-  const a = document.createElementNS('http://www.w3.org/1999/xhtml', 'a');
+  const a = <HTMLAnchorElement>document.createElementNS('http://www.w3.org/1999/xhtml', 'a');
   a.download = name;
   a.rel = 'noopener';
   a.href = URL.createObjectURL(blob);

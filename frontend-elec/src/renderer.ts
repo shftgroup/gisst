@@ -59,5 +59,6 @@ window.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener("click", () => run("fceumm", "bfight.nes", false, true));
   ui_state = new UI(document.getElementById("states")!, document.getElementById("saves")!, {
     "load_state":(number) => api.load_state(number),
+    "download_file":(category:"state" | "save" | "movie", file_name:string) => api.download_file(category, file_name)
   });
 });
