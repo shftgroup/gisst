@@ -22,3 +22,6 @@ export function on_states_changed(f:(IpcRenderEvent, StatefileInfo) => void) {
 export async function load_state(state_num:number) {
   ipcRenderer.send('gisst:load_state',state_num);
 }
+export async function download_file(category:"state"|"save"|"movie",file_name:string) {
+  ipcRenderer.send('gisst:download_file',category, file_name);
+}
