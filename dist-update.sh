@@ -11,8 +11,9 @@
 # osx:
 #   x86_64
 #   arm64
-PLATFORM_MAIN = $1 || "linux"
-PLATFORM_SUB  = $2 || "x86_64"
+
+PLATFORM_MAIN="${1:-linux}"
+PLATFORM_SUB="${2:-x86_64}"
 
 rm -rf retroarch-web
 curl -o /tmp/retro.7z https://buildbot.libretro.com/nightly/emscripten/RetroArch.7z
@@ -24,9 +25,19 @@ mkdir -p frontend-web/public/assets
 rm -rf frontend-web/public/assets/frontend
 cp -r retroarch-web/assets/frontend frontend-web/public/assets/
 
+cd gisst-ui-player
+npm i
+cd ..
+
 # trim down the bundle size some
 cd frontend-web
 npm i
+cd ..
+
+cd frontend-elec
+npm i
+cd ..
+
 cd frontend-web/public/assets/frontend/bundle
 rm -rf overlays shaders filters database assets/glui assets/xmb assets/rgui
 ../../../../node_modules/coffeescript/bin/coffee ../../../../../retroarch-web/indexer . > .index-xhr
