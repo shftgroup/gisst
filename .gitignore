@@ -1,2 +1,9 @@
 retroarch-web/
 simple/content/
+.idea/
+frontend-elec/resources/binaries/
+frontend-elec/resources/content/
+frontend-elec/resources/ra-assets/
+frontend-tauri/src-tauri/ra-assets/
+frontend-web/.index-xhr
+.DS_Store
