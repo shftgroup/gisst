@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # PLATFORM_MAIN may be one of:
 # linux
 # osx
@@ -25,7 +27,7 @@ mkdir -p frontend-web/public/assets
 rm -rf frontend-web/public/assets/frontend
 cp -r retroarch-web/assets/frontend frontend-web/public/assets/
 
-cd gisst-ui-player
+cd gisst-player-ui
 npm i
 cd ..
 
@@ -53,10 +55,10 @@ cp -r frontend-web/public/assets/frontend/bundle frontend-elec/resources/ra-asse
 case $PLATFORM_MAIN in
     osx)
         curl -o /tmp/retroarch.dmg https://buildbot.libretro.com/nightly/apple/osx/universal/RetroArch_Metal.dmg
-        hidutil attach /tmp/retroarch.dmg
-        cp -r /Volumes/RetroArch_Metal/RetroArch.app frontend-elec/resources/binaries/
+        hdiutil attach /tmp/retroarch.dmg
+        cp -r /Volumes/RetroArch/RetroArch.app frontend-elec/resources/binaries/
         # TODO it would be nice to unmount the dmg
-        curl "https://buildbot.libretro.com/nightly/apple/osx/$PLATFORM_SUB/latest/" | tr ">" "\n" | sed -Ern 's|<a href="/([a-Z0-9_]+/)+([a-Z0-9_]+.dylib.zip)"|\2|p;' > /tmp/cores.txt
+        curl "https://buildbot.libretro.com/nightly/apple/osx/$PLATFORM_SUB/latest/" | tr ">" "\n" | sed -Ern 's|<a href="/([a-zA-Z0-9_]+/)+([a-zA-Z0-9_]+.dylib.zip)"|\2|p;' > /tmp/cores.txt
         mkdir -p /tmp/cores
         mkdir -p frontend-elec/resources/ra-assets/cores
         while read core; do
