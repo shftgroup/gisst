@@ -12,7 +12,7 @@ export class UI {
     this.state_elt = state_elt;
     this.saves_elt = saves_elt;
     this.control = control;
-  }
+  } 
   newSave(save_file:string) {
     console.log("found new save",save_file);
     const a = <HTMLAnchorElement>document.createElement("a");
