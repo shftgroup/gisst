@@ -41,6 +41,11 @@ function states_updated(evt:IpcRendererEvent, stateinfo:StatefileInfo) {
   ui_state.newState(stateinfo.file,stateinfo.thumbnail_png_b64);
 }
 api.on_states_changed(states_updated);
+function replays_updated(evt:IpcRendererEvent, replayinfo:ReplayfileInfo) {
+  console.log("replays", evt, replayinfo);
+  ui_state.newReplay(replayinfo.file);
+}
+api.on_replays_changed(replays_updated);
 
 async function run(core:string, content:string, entryState:bool, movie:bool) {
   ui_state.clear();
@@ -57,8 +62,9 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#run-movie-button")
     ?.addEventListener("click", () => run("fceumm", "bfight.nes", false, true));
-  ui_state = new UI(document.getElementById("states")!, document.getElementById("saves")!, {
+  ui_state = new UI(document.getElementById("states")!, document.getElementById("replays")!, document.getElementById("saves")!, {
     "load_state":(number) => api.load_state(number),
-    "download_file":(category:"state" | "save" | "movie", file_name:string) => api.download_file(category, file_name)
+    "play_replay":(number) => api.play_replay(number),
+    "download_file":(category:"state" | "save" | "replay", file_name:string) => api.download_file(category, file_name)
   });
 });

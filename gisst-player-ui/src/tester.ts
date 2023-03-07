@@ -5,16 +5,24 @@ const IMG_DATA:string = "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAABbWlDQ1B
 addEventListener("load", () =>
   {
     let statenum:number = 0;
+    let replaynum:number = 0;
     let ui_state:ui.UI = new ui.UI(
       <HTMLDivElement>document.getElementById("states")!,
+      <HTMLDivElement>document.getElementById("replays")!,
       <HTMLDivElement>document.getElementById("saves")!,
       {
         load_state: (sn:number) => console.log("LOAD",sn),
-        download_file: (category:"save"|"state"|"movie", file_name:string) => console.log("Save file",category,file_name)
+        play_replay: (sn:number) => console.log("PLAY",sn),
+        download_file: (category:"save"|"state"|"replay", file_name:string) => console.log("Save file",category,file_name)
       }
     );
     (<HTMLAnchorElement>document.getElementById("new_save_button")!).addEventListener("click",
       () => ui_state.newSave("yet another save.srm"));
+    (<HTMLAnchorElement>document.getElementById("new_replay_button")!).addEventListener("click",
+      () => {
+        replaynum +=1;
+        ui_state.newReplay("yet another replay.replay"+replaynum.toString());
+      });
     (<HTMLAnchorElement>document.getElementById("new_state_button")!).addEventListener("click", () => {
       statenum += 1;
       ui_state.newState("a state.state"+statenum.toString(), IMG_DATA);
