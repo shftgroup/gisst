@@ -54,6 +54,7 @@ const createWindow = (): void => {
 
   ipcMain.on('gisst:run', handle_run_retroarch);
   ipcMain.on('gisst:load_state', handle_load_state);
+  ipcMain.on('gisst:play_replay', handle_play_replay);
   ipcMain.on('gisst:download_file',handle_download_file);
   
   // Create the browser window.
@@ -97,20 +98,20 @@ app.on('activate', () => {
 let save_listener:fs.FSWatcher = null;
 let state_listener:fs.FSWatcher = null;
 let ra:child_process.ChildProcess = null;
-function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:boolean,movie:boolean) {
-  console.assert(!(entryState && movie), "It is invalid to have both an entry state and play back a movie");
+function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:boolean,replay:boolean) {
+  console.assert(!(entryState && replay), "It is invalid to have both an entry state and play back a replay");
   const content_base = content.substring(0, content.lastIndexOf("."));
   const retro_args = ["-v", "-c", path.join(cache_dir, "retroarch.cfg"), "--appendconfig", path.join(content_dir, "retroarch.cfg"), "-L", core];
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
   }
-  if (movie) {
+  if (replay) {
     retro_args.push("-P");
-    retro_args.push(path.join(content_dir,"/movie.bsv"));
+    retro_args.push(path.join(states_dir, content_base+".replay0"));
   } else {
     retro_args.push("-R");
-    retro_args.push(path.join(content_dir, "/movie.bsv"));
+    retro_args.push(path.join(states_dir, content_base+".replay0"));
   }
   retro_args.push(path.join(content_dir, content));
   console.log(retro_args);
@@ -139,6 +140,7 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
     }
   });
   const seenStates:Record<string, Uint8Array> = {};
+  const seenReplays:string[] = [];
   state_listener = fs.watch(states_dir, {"persistent":false}, function(file_evt, name) {
     console.log("states",file_evt,name);
     if(name.endsWith(".png")) {
@@ -161,6 +163,23 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
         "thumbnail_png_b64": image_data.toString('base64')
       });
     }
+    if(name.includes(".replay")) {
+      const replay_path = path.join(states_dir,name);
+      console.log("replay",replay_path,fs.statSync(replay_path));
+      if(seenReplays.includes(name)) {
+        console.log("seen replay already");
+        return;
+      }
+      if(fs.statSync(replay_path).size == 0) {
+        console.log("replay file is empty");
+        return;
+      }
+      console.log("replay ready, send along",fs.statSync(replay_path));
+      seenReplays.push(name);
+      evt.sender.send('gisst:replays_changed', {
+        "file": name,
+      });
+    }
   });
 
   if (entryState) {
@@ -171,6 +190,13 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
     } else {
       fs.cpSync(path.join(resource_dir,"init_state.png"), path.join(cache_dir, "states", content_base+".state1.png"));
     }
+  }
+  if (replay) {
+    fs.cpSync(path.join(content_dir, "replay.replay"), path.join(cache_dir, "states", content_base+".replay0"));
+  } else {
+    let f = fs.openSync(path.join(cache_dir, "states", content_base+".replay0"), 'w');
+    fs.writeSync(f, Buffer.from("\0"), 0, 1);
+    fs.closeSync(f);
   }
 
   const is_darwin = process.platform === "darwin";
@@ -201,15 +227,19 @@ function handle_load_state(evt:IpcMainEvent, num:number) {
   console.log("LOAD_STATE_SLOT "+num);
   ra.stdin.write("LOAD_STATE_SLOT "+num+"\n");
 }
-function handle_download_file(evt:IpcMainEvent, category:"save"|"state"|"movie", file_name:string) {
+function handle_play_replay(evt:IpcMainEvent, num:number) {
+  console.log("PLAY_REPLAY_SLOT "+num);
+  ra.stdin.write("PLAY_REPLAY_SLOT "+num+"\n");
+}
+function handle_download_file(evt:IpcMainEvent, category:"save"|"state"|"replay", file_name:string) {
   try{
     let fpath;
     if(category == "state") {
       fpath = states_dir;
     } else if(category == "save") {
       fpath = saves_dir;
-    } else if(category == "movie") {
-      fpath = saves_dir;
+    } else if(category == "replay") {
+      fpath = states_dir;
     } else {
       console.error("Invalid save category",category,file_name);
     }

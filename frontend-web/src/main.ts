@@ -24,15 +24,15 @@ if (entryState) {
 }
 if (movie) {
   retro_args.push("-P");
-  retro_args.push("/home/web_user/content/movie.bsv");
+  retro_args.push(state_dir+"/"+content_base+".replay0");
 } else {
   retro_args.push("-R");
-  retro_args.push("/home/web_user/retroarch/userdata/movie.bsv");
+  retro_args.push(state_dir+"/"+content_base+".replay0");
 }
 retro_args.push("--appendconfig");
 retro_args.push("/home/web_user/content/retroarch.cfg");
 retro_args.push("/home/web_user/content/" + content);
-
+console.log(retro_args);
 
 loadRetroArch(core,
   function () {
@@ -43,7 +43,7 @@ loadRetroArch(core,
       xfs_content_files["entry_state"] = null;
     }
     if (movie) {
-      xfs_content_files["movie.bsv"] = null;
+      xfs_content_files["replay.replay"] = null;
     }
     let p2 = fetchfs.registerFetchFS(xfs_content_files, content_folder, "/home/web_user/content", false);
     let p3 = fetchfs.registerFetchFS({"retroarch_web_base.cfg":null}, "assets", "/home/web_user/retroarch/", false);
@@ -63,6 +63,21 @@ loadRetroArch(core,
           fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
         }
       }
+      if (movie) {
+        fetchfs.mkdirp(state_dir);
+        copyFile("/home/web_user/content/replay.replay0",
+          state_dir + "/" + content_base + ".replay0");
+        // if(file_exists("/home/web_user/content/entry_state.png")) {
+        //   copyFile("/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
+        // } else {
+        //   fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
+        // }
+      } else {
+        const f = FS.open(state_dir+"/"+content_base+".replay0", 'w');
+        const te = new TextEncoder();
+        FS.write(f, te.encode("\0"), 0, 1);
+        FS.close(f);
+      }
       retroReady();
     });
   });
@@ -76,17 +91,19 @@ let ui_state:UI;
 function retroReady(): void {
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("states")!,
+    <HTMLDivElement>document.getElementById("replays")!,
     <HTMLDivElement>document.getElementById("saves")!,
     {
       "load_state":(num:number) => load_state_slot(num),
-      "download_file":(category:"state" | "save" | "movie", file_name:string) => {
+      "play_replay":(num:number) => play_replay_slot(num),
+      "download_file":(category:"state" | "save" | "replay", file_name:string) => {
         let path = "/home/web_user/retroarch/userdata";
         if(category == "state") {
           path += "/states";
         } else if(category == "save") {
           path += "/saves";
-        } else if(category == "movie") {
-          path += "/saves";
+        } else if(category == "replay") {
+          path += "/states";
         } else {
           console.error("Invalid save category",category,file_name);
         }
@@ -114,6 +131,9 @@ function retroReady(): void {
 
 function load_state_slot(n:number) {
   retroArchSend("LOAD_STATE_SLOT "+n.toString());
+}
+function play_replay_slot(n:number) {
+  retroArchSend("PLAY_REPLAY_SLOT "+n.toString());
 }
 
 // From MDN
@@ -163,17 +183,25 @@ function base64EncArr(aBytes:Uint8Array) {
 
 const seen_states:Record<string,Uint8Array> = {};
 const seen_saves:Record<string,null> = {};
+const seen_replays:Record<string,null> = {};
 function checkChangedStatesAndSaves() {
   const states = FS.readdir(state_dir);
   for (let state of states) {
     if(state == "." || state == "..") { continue; }
-    const png_file = state.endsWith(".png") ? state : state + ".png";
-    const state_file = state.endsWith(".png") ? state.substring(0,state.length-4) : state;
-    if(!(state_file in seen_states) && file_exists(state_dir+"/"+png_file) && file_exists(state_dir+"/"+state_file)) {
-      const img_data = FS.readFile(state_dir+"/"+png_file);
-      seen_states[state_file] = img_data;
-      const img_data_b64 = base64EncArr(img_data);
-      ui_state.newState(state_file, img_data_b64);
+    if(state.endsWith(".png") || state.includes(".state")) {
+      const png_file = state.endsWith(".png") ? state : state + ".png";
+      const state_file = state.endsWith(".png") ? state.substring(0,state.length-4) : state;
+      if(!(state_file in seen_states) && file_exists(state_dir+"/"+png_file) && file_exists(state_dir+"/"+state_file)) {
+        const img_data = FS.readFile(state_dir+"/"+png_file);
+        seen_states[state_file] = img_data;
+        const img_data_b64 = base64EncArr(img_data);
+        ui_state.newState(state_file, img_data_b64);
+      }
+    } else if(state.includes(".replay")) {
+      if(!(state in seen_replays)) {
+        seen_replays[state] = null;
+        ui_state.newReplay(state);
+      }
     }
   }
   const saves = FS.readdir(saves_dir);
