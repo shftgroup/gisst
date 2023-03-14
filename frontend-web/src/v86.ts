@@ -13,8 +13,10 @@ export async function init(content_folder:string, content:string, entry_state:bo
       "load_state":(num:number) => load_state_slot(num),
       "play_replay":(num:number) => play_replay_slot(num),
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
+        const num_str = (file_name.match(/state([0-9]+)$/)?.[1]) ?? "0";
+        const save_num = parseInt(num_str,10);
         if(category == "state") {
-          saveAs(new Blob([states[parseInt(file_name,10)]]), "state"+file_name.toString()+".v86state");
+          saveAs(new Blob([states[save_num]]), file_name.toString()+".v86state");
         } else if(category == "save") {
           console.error("Not yet implemented");
         } else if(category == "replay") {
@@ -33,7 +35,6 @@ export async function init(content_folder:string, content:string, entry_state:bo
     states.push(await emulator.save_state());
   };
   //const content_base = content.substring(0, content.lastIndexOf("."));
-  /* TODO: content should point to a json file with the hda/hdb/fda/fdb/cdrom/etc info */
   const config:V86StarterConfig = {
     wasm_path: "v86/v86.wasm",
     screen_container: <HTMLDivElement>document.getElementById("canvas_div")!,

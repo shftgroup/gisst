@@ -55,8 +55,8 @@ export class UI {
     this.replay_elt.appendChild(a_file);
   }
   clear() {
-    this.state_elt.childNodes.forEach((elt:ChildNode,_key,_par) => {
-      elt.remove();
-    });
+    this.state_elt.innerHTML = '';
+    this.replay_elt.innerHTML = '';
+    this.saves_elt.innerHTML = '';
   }
 }

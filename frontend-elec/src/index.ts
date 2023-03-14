@@ -52,7 +52,7 @@ const createWindow = (): void => {
     }
   }
 
-  ipcMain.on('gisst:run', handle_run_retroarch);
+  ipcMain.on('gisst:run_retroarch', handle_run_retroarch);
   ipcMain.on('gisst:load_state', handle_load_state);
   ipcMain.on('gisst:play_replay', handle_play_replay);
   ipcMain.on('gisst:download_file',handle_download_file);
@@ -160,7 +160,7 @@ function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entry
       seenStates[file_name] = image_data;
       evt.sender.send('gisst:states_changed', {
         "file": file_name,
-        "thumbnail_png_b64": image_data.toString('base64')
+        "thumbnail": image_data.toString('base64')
       });
     }
     if(name.includes(".replay")) {
