@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron';
 
 export async function run_retroarch(core:string, content:string, entryState:bool, movie:bool) {
-  ipcRenderer.send('gisst:run',core,content,entryState,movie);
+  ipcRenderer.send('gisst:run_retroarch',core,content,entryState,movie);
 }
 
 export interface SavefileInfo {
@@ -9,7 +9,7 @@ export interface SavefileInfo {
 }
 export interface StatefileInfo {
   file:string;
-  thumbnail_png_b64:string
+  thumbnail:string
 }
 export interface ReplayfileInfo {
   file:string;

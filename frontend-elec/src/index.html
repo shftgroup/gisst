@@ -3,14 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <title>Embedulator Desktop</title>
+    <script src="renderer-resources/v86/libv86.js"></script>
+    <style>
+      .hidden {
+          display:none;
+      }
+    </style>
   </head>
 
   <body>
     <div class="container">
+      <button id="run-v86-button" type="button">Run v86</button>
       <button id="run-cold-button" type="button">Run Game cold</button>
       <button id="run-entry-button" type="button">Run Game from entry state</button>
       <button id="run-movie-button" type="button">Run Game from movie</button>
     </div>
+    <div id="v86-container" class="hidden">
+      <div style="white-space: pre; font: 14px monospace; line-height: 14px" id="webplayer-textmode"></div>
+      <canvas class="webplayer" id="canvas" tabindex="1" oncontextmenu="event.preventDefault()"></canvas>
+    </div>
+      <ul class="hidden" id="v86-controls">
+        <button type="button" id="v86_save">Save state</button>
+      </ul>
     <div id="states">
     </div>
     <div id="replays">
