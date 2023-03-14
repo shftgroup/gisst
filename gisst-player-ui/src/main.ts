@@ -23,9 +23,9 @@ export class UI {
     a.addEventListener("click", () => this.control.download_file("save",save_file));
     this.saves_elt.appendChild(a);
   }
-  newState(state_file:string, state_thumbnail_b64_png:string) {
+  newState(state_file:string, state_thumbnail:string) {
     const img = new Image();
-    const img_data = "data:image/png;base64,"+state_thumbnail_b64_png;
+    const img_data = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
     img.src = img_data;
     const num_str = (state_file.match(/state([0-9]+)$/)?.[1]) ?? "0";
     const save_num = parseInt(num_str,10);

@@ -6,14 +6,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Embedulator</title>
         <script src="/src/libretro_adapter.js"></script>
+        <script src="v86/libv86.js"></script>
   </head>
   <body>
       <div class="webplayer-container">
           <div class="webplayer_border text-xs-center" id="canvas_div">
-              <canvas class="webplayer hidden" id="canvas" tabindex="1" oncontextmenu="event.preventDefault()"></canvas>
+            <div style="white-space: pre; font: 14px monospace; line-height: 14px" class="hidden" id="webplayer-textmode"></div>
+            <canvas class="webplayer hidden" id="canvas" tabindex="1" oncontextmenu="event.preventDefault()"></canvas>
               <img id="webplayer-preview" class="webplayer-preview" src="media/canvas.png" width="960px" height="720px" alt="RetroArch Logo">
           </div>
       </div>
+      <ul id="v86_controls" class="hidden">
+        <button type="button" id="v86_save">Save State</button>
+        </ul>
     <div id="states">
     </div>
     <div id="replays">
