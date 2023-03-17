@@ -1,6 +1,7 @@
 declare class V86Starter {
   constructor(config:object);
   is_running(): bool;
+  destroy():void;
   mouse_set_status(bool): void;
   keyboard_set_status(bool): void;
   screen_adapter:ScreenAdapter;

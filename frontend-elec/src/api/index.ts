@@ -1,6 +1,6 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, IpcRendererEvent } from 'electron';
 
-export async function run_retroarch(core:string, content:string, entryState:bool, movie:bool) {
+export async function run_retroarch(core:string, content:string, entryState:boolean, movie:boolean) {
   ipcRenderer.send('gisst:run_retroarch',core,content,entryState,movie);
 }
 
@@ -15,13 +15,13 @@ export interface ReplayfileInfo {
   file:string;
 }
 
-export function on_saves_changed(f:(IpcRenderEvent, SavefileInfo) => void) {
+export function on_saves_changed(f:(evt:IpcRendererEvent, info:SavefileInfo) => void) {
   ipcRenderer.on('gisst:saves_changed',f);
 }
-export function on_states_changed(f:(IpcRenderEvent, StatefileInfo) => void) {
+export function on_states_changed(f:(evt:IpcRendererEvent, info:StatefileInfo) => void) {
   ipcRenderer.on('gisst:states_changed',f);
 }
-export function on_replays_changed(f:(IpcRenderEvent, ReplayfileInfo) => void) {
+export function on_replays_changed(f:(evt:IpcRendererEvent, info:ReplayfileInfo) => void) {
   ipcRenderer.on('gisst:replays_changed',f);
 }
 

@@ -1,0 +1,26 @@
+{
+  "name": "embedv86",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "files": ["dist"],
+  "main": "./dist/embedv86.umd.cjs",
+  "module": "./dist/embedv86.js",
+  "exports": {
+    ".": {
+      "import": "./dist/embedv86.js",
+      "require": "./dist/embedv86.umd.cjs"
+    }
+  },
+  "types": "./dist/embedv86.d.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && cp dist/embedv86.d.ts dist/embedv86.umd.d.ts",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.3",
+    "vite": "^4.1.0",
+    "vite-plugin-dts": "^2.0.2"
+  }
+}
