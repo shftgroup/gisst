@@ -1,10 +1,24 @@
 declare class V86Starter {
   constructor(config:object);
   is_running(): bool;
+  destroy():void;
+  mouse_set_status(bool): void;
+  keyboard_set_status(bool): void;
   screen_adapter:ScreenAdapter;
   screen_make_screenshot():Image;
   async save_state(): ArrayBuffer;
-  async restore_state(ArrayBuffer): void;
+  async restore_state(sbuf:ArrayBuffer): void;
+  add_listener(evt:string, listener:(any)=>void);
+  get_instruction_counter():number;
+  v86:V86;
+  bus:any;
+  emulator_bus:any;
+}
+declare class V86 {
+  cpu:Cpu
+}
+declare class Cpu {
+  instruction_counter:UInt32Array
 }
 declare class ScreenAdapter {
   is_graphical:boolean;

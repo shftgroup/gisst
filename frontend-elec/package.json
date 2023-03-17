@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
+    "embedv86": "file:../embedv86",
     "gisst-player": "file:../gisst-player-ui"
   }
 }

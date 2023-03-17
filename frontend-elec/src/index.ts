@@ -97,7 +97,7 @@ app.on('activate', () => {
 
 let save_listener:fs.FSWatcher = null;
 let state_listener:fs.FSWatcher = null;
-let ra:child_process.ChildProcess = null;
+let ra:proc.ChildProcess = null;
 function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:boolean,replay:boolean) {
   console.assert(!(entryState && replay), "It is invalid to have both an entry state and play back a replay");
   const content_base = content.substring(0, content.lastIndexOf("."));
