@@ -4,17 +4,24 @@ export interface EmbedV86Config {
     bios_root: string;
     content_root: string;
     container: HTMLDivElement;
+    record_replay: (nom: string) => void;
+    save_state: (nom: string, thumb: string) => void;
+}
+export declare class State {
+    replay: Replay | null;
+    native_state: ArrayBuffer;
+    constructor(replay: Replay | null, native_state: ArrayBuffer);
 }
 export declare class EmbedV86 {
     emulator: V86Starter | null;
     config: EmbedV86Config;
-    states: ArrayBuffer[];
+    states: State[];
     replays: Replay[];
     active_replay: number | null;
     constructor(config: EmbedV86Config);
     clear(): void;
-    save_state(callback: (nom: string, screen: string) => void): Promise<void>;
-    record_replay(callback: (nom: string) => void): Promise<void>;
+    save_state(): Promise<void>;
+    record_replay(): Promise<void>;
     stop_replay(): Promise<void>;
     load_state_slot(n: number): Promise<void>;
     play_replay_slot(n: number): Promise<void>;

@@ -35,7 +35,7 @@ import {SavefileInfo, StatefileInfo, ReplayfileInfo} from './api';
 
 let ui_state:UI;
 let active_core:string|null = null;
-let v86:EmbedV86 = new EmbedV86({wasm_root:"renderer-resources/v86",bios_root:"renderer-resources/v86/bios", content_root:"renderer-resources/content",container: <HTMLDivElement>document.getElementById("v86-container")!});
+let v86:EmbedV86 = new EmbedV86({wasm_root:"renderer-resources/v86",bios_root:"renderer-resources/v86/bios", content_root:"renderer-resources/content",container: <HTMLDivElement>document.getElementById("v86-container")!, record_replay:(nom:string)=>ui_state.newReplay(nom), save_state:(nom:string, thumb:string) => ui_state.newState(nom,thumb)});
 
 function saves_updated(evt:IpcRendererEvent, saveinfo:SavefileInfo) {
   console.log("new save",saveinfo);
@@ -83,10 +83,10 @@ window.addEventListener("DOMContentLoaded", () => {
     .querySelector("#run-movie-button")
     ?.addEventListener("click", () => run("fceumm", "bfight.nes", false, true));
   document.getElementById("v86_save")?.addEventListener("click",
-    () => v86.save_state((nom:string, thumb:string) => ui_state.newState(nom,thumb))
+    () => v86.save_state()
   );
   document.getElementById("v86_record")?.addEventListener("click",
-    () => v86.record_replay((nom:string)=>ui_state.newReplay(nom))
+    () => v86.record_replay()
   );
   document.getElementById("v86_halt")?.addEventListener("click",
     () => v86.stop_replay()

@@ -7,7 +7,7 @@ export declare enum Evt {
     MouseWheel = 5
 }
 export declare const EvtNames: (string | null)[];
-declare enum ReplayMode {
+export declare enum ReplayMode {
     Inactive = 0,
     Record = 1,
     Playback = 2,
@@ -21,7 +21,12 @@ export declare class Replay {
     last_time: number;
     wraps: number;
     private constructor();
-    replay_time(insn_counter: number): bigint;
+    clone(): Replay;
+    seek(event_index: number, t: number): void;
+    resume(mode: ReplayMode, emulator: V86Starter): void;
+    current_time(): number;
+    replay_time(insn_counter: number): number;
+    cpu_time(t: number): [number, number];
     log_evt(emulator: V86Starter, code: Evt, val: any): void;
     tick(emulator: V86Starter): Promise<void>;
     static start_recording(emulator: V86Starter): Promise<Replay>;
@@ -31,9 +36,9 @@ export declare class Replay {
     start_playback(emulator: V86Starter): Promise<void>;
 }
 declare class ReplayEvent {
-    when: bigint;
+    when: number;
     code: Evt;
     value: any;
-    constructor(when: bigint, code: Evt, value: any);
+    constructor(when: number, code: Evt, value: any);
 }
 export {};

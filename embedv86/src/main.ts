@@ -1,16 +1,29 @@
-import {Replay,Evt} from './v86replay';
+import {Replay,Evt,ReplayMode} from './v86replay';
 export interface EmbedV86Config {
   wasm_root:string;
   bios_root:string;
   content_root:string;
   container:HTMLDivElement;
+  record_replay:(nom:string)=>void;
+  save_state:(nom:string, thumb:string) => void;
+}
+
+export class State {
+  // This is a clone of the currently recording or playing replay and its data as of the time the state was saved.  Later, we can use its wraps and last_time to set the instruction counter properly.
+  replay:Replay | null;
+  // This is just a regular state.  we don't know that the replay (if any) will necessarily have a checkpoint at the right time (e.g. it could be during playback).
+  native_state:ArrayBuffer;
+  constructor(replay:Replay|null, native_state:ArrayBuffer) {
+    this.replay = replay;
+    this.native_state = native_state;
+  }
 }
 
 export class EmbedV86 {
   emulator:V86Starter | null;
   config:EmbedV86Config;
   // TODO wrap in a State class that includes the current replay ID if any
-  states:ArrayBuffer[];
+  states:State[];
   replays:Replay[];
   active_replay:number|null;
   constructor(config:EmbedV86Config) {
@@ -29,19 +42,19 @@ export class EmbedV86 {
       this.emulator = null;
     }
   }
-  async save_state(callback:(nom:string,screen:string)=>void) {
+  async save_state() {
     nonnull(this.emulator);
     const screenshot = this.emulator.screen_make_screenshot();
-    callback("state"+this.states.length.toString(), screenshot.src);
-    this.states.push(await this.emulator.save_state());
+    this.config.save_state("state"+this.states.length.toString(), screenshot.src);
+    this.states.push(new State(this.active_replay != null ? this.replays[this.active_replay].clone() : null, await this.emulator.save_state()));
   }
-  async record_replay(callback:(nom:string)=>void) {
+  async record_replay() {
     nonnull(this.emulator);
     //const screenshot = emulator.screen_make_screenshot();
     if(this.active_replay != null) {
       await this.replays[this.active_replay!].stop(this.emulator);
     }
-    callback("replay"+this.replays.length.toString());
+    this.config.record_replay("replay"+this.replays.length.toString());
     this.active_replay = this.replays.length;
     this.replays.push(await Replay.start_recording(this.emulator));
   }
@@ -53,11 +66,39 @@ export class EmbedV86 {
   }
   async load_state_slot(n:number) {
     nonnull(this.emulator);
+    const state = this.states[n];
     if(this.active_replay != null) {
-      console.log("loading states during replay recording/playback is not yet supported for v86");
-      await this.replays[this.active_replay].stop(this.emulator);
+      const replay = this.replays[this.active_replay];
+      //const old_t = replay.current_time();
+      const mode = replay.mode;
+      if(state.replay) {
+        if(state.replay.id != replay.id) {
+          console.log("Loading state from incompatible ID, cancel");
+          return;
+        }
+        const new_t = state.replay.current_time();
+        this.emulator.restore_state(state.native_state);
+        if(replay.index < state.replay.index) {
+          // current replay is before state replay, fast forward to state's version and fix instruction counter/last_time/etc
+          this.replays[this.active_replay] = state.replay.clone();
+        } else {
+          // state replay is before current replay, seeking is fine.
+        }
+        this.replays[this.active_replay].seek(state.replay.index, new_t);
+        // resume recording or playback
+        this.replays[this.active_replay].resume(mode, this.emulator);
+      } else if (replay.mode == ReplayMode.Record) {
+        console.log("loading states without associated replays during replay recording is not yet supported for v86, cancelling load");
+        return;
+      } else {
+        // playback or finished or inactive
+        await this.replays[this.active_replay].stop(this.emulator);
+        this.emulator.restore_state(this.states[n].native_state);
+      }
+    } else {
+      // TODO maybe activate this state's replay?
+      this.emulator.restore_state(this.states[n].native_state);
     }
-    this.emulator.restore_state(this.states[n]);
   }
   async play_replay_slot(n:number) {
     nonnull(this.emulator);
@@ -71,7 +112,7 @@ export class EmbedV86 {
     if(category == "state") {
       const num_str = (file_name.match(/state([0-9]+)$/)?.[1]) ?? "0";
       const save_num = parseInt(num_str,10);
-      return [new Blob([this.states[save_num]]), file_name.toString()+".v86state"];
+      return [new Blob([this.states[save_num].native_state]), file_name.toString()+".v86state"];
     } else if(category == "save") {
       throw "Not yet implemented";
     } else if(category == "replay") {
