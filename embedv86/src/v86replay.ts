@@ -8,10 +8,10 @@ export enum Evt {
 }
 export const EvtNames:(string|null)[] = [null, "keyboard-code", "mouse-click", "mouse-delta", "mouse-absolute", "mouse-wheel"];
 
-const REPLAY_CHECKPOINT_INTERVAL:bigint = BigInt(10003*1000*120);
+const REPLAY_CHECKPOINT_INTERVAL:number = 10003*1000*120;
 /* Cycles per millisecond (appx) * milliseconds per second * number of seconds */
 
-enum ReplayMode {
+export enum ReplayMode {
   Inactive=0,
   Record,
   Playback,
@@ -34,13 +34,63 @@ export class Replay {
     this.last_time = 0;
     this.mode = mode;
   }
-  replay_time(insn_counter:number) : bigint {
-    let wrap_amt = BigInt(2**32-1);
+  clone():Replay {
+    const r = new Replay(this.id, this.mode);
+    r.events = this.events.slice();
+    r.index = this.index;
+    r.wraps = this.wraps;
+    r.last_time = this.last_time;
+    r.mode = this.mode;
+    return r;
+  }
+  seek(event_index:number, t:number) {
+    if(event_index > this.events.length) { throw "Seek: event index out of bounds"; }
+    const [wraps, time] = this.cpu_time(t);
+    if(event_index < this.events.length) {
+      if(this.events[event_index].when > t) {
+        throw "Seek: current event is after given t";
+      }
+      if(event_index+1 < this.events.length) {
+        if(this.events[event_index+1].when < t) {
+          throw "Seek: next event is before given t";
+        }
+      }
+    }
+    this.index = event_index;
+    this.wraps = wraps;
+    this.last_time = time;
+  }
+  resume(mode:ReplayMode, emulator:V86Starter) {
+    // ensure emulator time is current time
+    emulator.v86.cpu.instruction_counter[0] = this.last_time;
+    if (mode == ReplayMode.Record) {
+      emulator.mouse_set_status(true);
+      emulator.keyboard_set_status(true);
+      // truncate if necessary
+      this.events.length = this.index;
+    } else if(mode == ReplayMode.Playback) {
+      emulator.mouse_set_status(false);
+      emulator.keyboard_set_status(false);
+      // don't truncate!
+    } else {
+      throw "Resume: invalid mode";
+    }
+  }
+  current_time():number {
+    return this.replay_time(this.last_time);
+  }
+  replay_time(insn_counter:number) : number {
+    let wrap_amt = 2**32-1;
     // how many full wraparounds we have done
-    wrap_amt *= BigInt(this.wraps);
+    wrap_amt *= this.wraps;
     // add in the amount of leftover time, which we get from insn_counter
-    wrap_amt += BigInt(insn_counter);
+    wrap_amt += insn_counter;
     return wrap_amt;
+  }
+  cpu_time(t:number):[number,number] {
+    let wraps = t / (2**32-1);
+    let rem = t - (wraps * 2**32-1);
+    return [wraps, rem];
   }
   log_evt(emulator:V86Starter, code:Evt, val:any) {
     if(this.mode == ReplayMode.Record) {
@@ -56,7 +106,7 @@ export class Replay {
     const real_t = this.replay_time(t);
     switch(this.mode) {
       case ReplayMode.Record:
-        let last_t = BigInt(0);
+        let last_t = 0;
         if(this.events.length != 0) {
           last_t = this.events[this.events.length-1].when;
         }
@@ -136,10 +186,10 @@ export class Replay {
   }
 }
 class ReplayEvent {
-  when:bigint;
+  when:number;
   code:Evt;
   value:any;
-  constructor(when:bigint, code:Evt, value:any) {
+  constructor(when:number, code:Evt, value:any) {
     this.when = when;
     this.code = code;
     this.value = value;
