@@ -29,13 +29,38 @@
 import './index.css';
 import {IpcRendererEvent} from 'electron';
 import {UI} from 'gisst-player';
-import {EmbedV86} from 'embedv86';
+import {EmbedV86,StateInfo} from 'embedv86';
 import {saveAs} from './util';
 import {SavefileInfo, StatefileInfo, ReplayfileInfo} from './api';
 
 let ui_state:UI;
 let active_core:string|null = null;
-let v86:EmbedV86 = new EmbedV86({wasm_root:"renderer-resources/v86",bios_root:"renderer-resources/v86/bios", content_root:"renderer-resources/content",container: <HTMLDivElement>document.getElementById("v86-container")!, record_replay:(nom:string)=>ui_state.newReplay(nom), save_state:(nom:string, thumb:string) => ui_state.newState(nom,thumb)});
+let v86:EmbedV86 = new EmbedV86({
+  wasm_root:"renderer-resources/v86",
+  bios_root:"renderer-resources/v86/bios",
+  content_root:"renderer-resources/content",
+  container: <HTMLDivElement>document.getElementById("v86-container")!,
+  record_replay:(nom:string)=>ui_state.newReplay(nom),
+  stop_replay:()=>{
+    ui_state.replayFinished();
+  },
+  states_changed:(added:StateInfo[], removed:StateInfo[]) => {
+    for(let si of removed) {
+      ui_state.removeState(si.name);
+    }
+    for(let si of added) {
+      ui_state.newState(si.name,si.thumbnail);
+    }
+  },
+  replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
+    for(let si of removed) {
+      ui_state.removeCheckpoint(si.name);
+    }
+    for(let si of added) {
+      ui_state.newCheckpoint(si.name,si.thumbnail);
+    }
+  },
+});
 
 function saves_updated(evt:IpcRendererEvent, saveinfo:SavefileInfo) {
   console.log("new save",saveinfo);
@@ -92,12 +117,11 @@ window.addEventListener("DOMContentLoaded", () => {
     () => v86.stop_replay()
   );
   ui_state = new UI(
-    <HTMLDivElement>document.getElementById("states")!,
-    <HTMLDivElement>document.getElementById("replays")!,
-    <HTMLDivElement>document.getElementById("saves")!,
+    <HTMLDivElement>document.getElementById("ui")!,
     {
       "load_state":(n:number) => {
         if (active_core == "v86") {
+          if(v86.active_replay != null) { v86.stop_replay(); }
           v86.load_state_slot(n);
         } else {
           api.load_state(n);
@@ -106,6 +130,14 @@ window.addEventListener("DOMContentLoaded", () => {
       "play_replay":(n:number) => {
         if (active_core == "v86") {
           v86.play_replay_slot(n);
+        } else {
+          api.play_replay(n);
+        }
+      },
+      "load_checkpoint":(n:number) => {
+        if (active_core == "v86") {
+          if(v86.active_replay == null) { throw "Can't load checkpoint if no replay"; }
+          v86.load_state_slot(n);
         } else {
           api.play_replay(n);
         }
