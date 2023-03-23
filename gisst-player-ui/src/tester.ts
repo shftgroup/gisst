@@ -6,12 +6,12 @@ addEventListener("load", () =>
   {
     let statenum:number = 0;
     let replaynum:number = 0;
+    let cpnum:number = 0;
     let ui_state:ui.UI = new ui.UI(
-      <HTMLDivElement>document.getElementById("states")!,
-      <HTMLDivElement>document.getElementById("replays")!,
-      <HTMLDivElement>document.getElementById("saves")!,
+      <HTMLDivElement>document.getElementById("ui")!,
       {
         load_state: (sn:number) => console.log("LOAD",sn),
+        load_checkpoint: (sn:number) => console.log("LOADCP",sn),
         play_replay: (sn:number) => console.log("PLAY",sn),
         download_file: (category:"save"|"state"|"replay", file_name:string) => console.log("Save file",category,file_name)
       }
@@ -20,11 +20,39 @@ addEventListener("load", () =>
       () => ui_state.newSave("yet another save.srm"));
     (<HTMLAnchorElement>document.getElementById("new_replay_button")!).addEventListener("click",
       () => {
-        replaynum +=1;
         ui_state.newReplay("yet another replay.replay"+replaynum.toString());
+        replaynum +=1;
+      });
+    (<HTMLAnchorElement>document.getElementById("new_cp_button")!).addEventListener("click",
+      () => {
+        ui_state.newCheckpoint("check"+cpnum.toString(),IMG_DATA);
+        cpnum +=1;
       });
     (<HTMLAnchorElement>document.getElementById("new_state_button")!).addEventListener("click", () => {
-      statenum += 1;
       ui_state.newState("a state.state"+statenum.toString(), IMG_DATA);
+      statenum += 1;
     });
+
+    (<HTMLAnchorElement>document.getElementById("pop_save_button")!).addEventListener("click",
+      () => ui_state.removeSave("yet another save.srm"));
+    (<HTMLAnchorElement>document.getElementById("pop_replay_button")!).addEventListener("click",
+      () => {
+        replaynum -= 1;
+        ui_state.removeReplay("yet another replay.replay"+replaynum.toString());
+      });
+    (<HTMLAnchorElement>document.getElementById("pop_cp_button")!).addEventListener("click",
+      () => {
+        cpnum -= 1;
+        ui_state.removeCheckpoint("check"+cpnum.toString());
+      });
+    (<HTMLAnchorElement>document.getElementById("pop_state_button")!).addEventListener("click", () => {
+      statenum -= 1;
+      ui_state.removeState("a state.state"+statenum.toString());
+    });
+
+    (<HTMLAnchorElement>document.getElementById("clear_button")!).addEventListener("click",
+      () => ui_state.clear());
+    (<HTMLAnchorElement>document.getElementById("replay_finished_button")!).addEventListener("click",
+      () => ui_state.replayFinished());
+
   });

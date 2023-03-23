@@ -1,16 +1,23 @@
 import { Replay, Evt } from './v86replay';
+export interface StateInfo {
+    name: string;
+    thumbnail: string;
+}
 export interface EmbedV86Config {
     wasm_root: string;
     bios_root: string;
     content_root: string;
     container: HTMLDivElement;
     record_replay: (nom: string) => void;
-    save_state: (nom: string, thumb: string) => void;
+    stop_replay: () => void;
+    states_changed: (added: StateInfo[], removed: StateInfo[]) => void;
+    replay_checkpoints_changed: (added: StateInfo[], removed: StateInfo[]) => void;
 }
 export declare class State {
-    replay: Replay | null;
-    native_state: ArrayBuffer;
-    constructor(replay: Replay | null, native_state: ArrayBuffer);
+    name: string;
+    state: ArrayBuffer;
+    thumbnail: string;
+    constructor(name: string, state: ArrayBuffer, thumbnail: string);
 }
 export declare class EmbedV86 {
     emulator: V86Starter | null;
@@ -20,6 +27,7 @@ export declare class EmbedV86 {
     active_replay: number | null;
     constructor(config: EmbedV86Config);
     clear(): void;
+    get_active_replay(): Replay;
     save_state(): Promise<void>;
     record_replay(): Promise<void>;
     stop_replay(): Promise<void>;
