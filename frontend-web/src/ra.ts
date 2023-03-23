@@ -86,11 +86,10 @@ function copyFile(from: string, to: string): void {
 // TODO add clear button to call ui_state.clear()
 function retroReady(): void {
   ui_state = new UI(
-    <HTMLDivElement>document.getElementById("states")!,
-    <HTMLDivElement>document.getElementById("replays")!,
-    <HTMLDivElement>document.getElementById("saves")!,
+    <HTMLDivElement>document.getElementById("ui")!,
     {
       "load_state":(num:number) => load_state_slot(num),
+      "load_checkpoint":(_num:number) => alert("nyi"),
       "play_replay":(num:number) => play_replay_slot(num),
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
         let path = "/home/web_user/retroarch/userdata";
