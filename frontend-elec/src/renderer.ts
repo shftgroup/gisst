@@ -42,7 +42,7 @@ let v86:EmbedV86 = new EmbedV86({
   container: <HTMLDivElement>document.getElementById("v86-container")!,
   record_replay:(nom:string)=>ui_state.newReplay(nom),
   stop_replay:()=>{
-    ui_state.replayFinished();
+    ui_state.clearCheckpoints();
   },
   states_changed:(added:StateInfo[], removed:StateInfo[]) => {
     for(let si of removed) {
@@ -77,6 +77,16 @@ function replays_updated(evt:IpcRendererEvent, replayinfo:ReplayfileInfo) {
   ui_state.newReplay(replayinfo.file);
 }
 api.on_replays_changed(replays_updated);
+function checkpoints_updated(evt:IpcRendererEvent, info:ReplayCheckpointInfo) {
+  console.log("checkpoints", evt, info);
+  if(info.delete_old) {
+    ui_state.clearCheckpoints();
+  }
+  for(let check of info.added) {
+    ui_state.newCheckpoint(check.file, check.thumbnail);
+  }
+}
+api.on_replay_checkpoints_changed(checkpoints_updated);
 
 async function run(core:string, content:string, entryState:boolean, movie:boolean) {
   ui_state.clear();
@@ -116,6 +126,11 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("v86_halt")?.addEventListener("click",
     () => v86.stop_replay()
   );
+  setInterval(() => {
+    if(active_core && active_core != "v86") {
+      api.update_checkpoints();
+    }
+  }, 1000);
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
@@ -139,7 +154,7 @@ window.addEventListener("DOMContentLoaded", () => {
           if(v86.active_replay == null) { throw "Can't load checkpoint if no replay"; }
           v86.load_state_slot(n);
         } else {
-          api.play_replay(n);
+          api.load_checkpoint(n);
         }
       },
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {

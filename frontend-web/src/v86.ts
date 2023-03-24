@@ -11,7 +11,7 @@ export async function init(content_folder:string, content:string, entry_state:bo
     container: <HTMLDivElement>document.getElementById("canvas_div")!,
     record_replay:(nom:string)=>ui_state.newReplay(nom),
     stop_replay:()=>{
-      ui_state.replayFinished();
+      ui_state.clearCheckpoints();
     },
     states_changed:(added:StateInfo[], removed:StateInfo[]) => {
       for(let si of removed) {

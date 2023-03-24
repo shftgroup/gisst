@@ -53,6 +53,6 @@ addEventListener("load", () =>
     (<HTMLAnchorElement>document.getElementById("clear_button")!).addEventListener("click",
       () => ui_state.clear());
     (<HTMLAnchorElement>document.getElementById("replay_finished_button")!).addEventListener("click",
-      () => ui_state.replayFinished());
+      () => ui_state.clearCheckpoints());
 
   });
