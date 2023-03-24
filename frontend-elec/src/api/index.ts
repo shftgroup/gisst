@@ -38,6 +38,9 @@ export async function update_checkpoints() {
 export async function load_state(state_num:number) {
   ipcRenderer.send('gisst:load_state',state_num);
 }
+export async function load_checkpoint(cp_num:number) {
+  ipcRenderer.send('gisst:load_checkpoint',cp_num);
+}
 export async function play_replay(replay_num:number) {
   ipcRenderer.send('gisst:play_replay',replay_num);
 }

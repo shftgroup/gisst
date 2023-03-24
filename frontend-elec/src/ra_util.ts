@@ -21,12 +21,13 @@ export function replay_of(data:ArrayBuffer):ReplayInfo {
   let i = 8;
   while(i < data.length) {
     // fetch header
-    let block_size = (new DataView(data.buffer,i+4,i+8)).getUint32(0,true);
+    let block_size = (new DataView(data.buffer,i+4,4)).getUint32(0,true);
     let marker = data.subarray(i,i+4);
+    console.log(marker,block_size);
     i += 8;
     // check header contents
     if(marker.every((x,j)=>x==RASTATE_BLOCK.RPLY.charCodeAt(j))) {
-      let header = new DataView(data.buffer,i,i+(7*4));
+      let header = new DataView(data.buffer,i,(7*4));
       let loaded_len = header.getUint32(0*4,true);
       // let magic = header.getUint32(1*4,true);
       // let vsn = header.getUint32(2*4,true);

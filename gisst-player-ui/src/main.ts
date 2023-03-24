@@ -97,7 +97,7 @@ export class UI {
     const img = new Image();
     const img_data = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
     img.src = img_data;
-    const num_str = (check_name.match(/check([0-9]+)$/)?.[1]) ?? "0";
+    const num_str = (check_name.match(/(check|state)([0-9]+)$/)?.[2]) ?? "0";
     const save_num = parseInt(num_str,10);
     img.addEventListener("click", () => {
       console.log("Load CP",check_name,save_num);
