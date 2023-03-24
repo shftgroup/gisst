@@ -55,6 +55,7 @@ const createWindow = (): void => {
   ipcMain.on('gisst:update_checkpoints', handle_update_checkpoints);
   ipcMain.on('gisst:run_retroarch', handle_run_retroarch);
   ipcMain.on('gisst:load_state', handle_load_state);
+  ipcMain.on('gisst:load_checkpoint', handle_load_checkpoint);
   ipcMain.on('gisst:play_replay', handle_play_replay);
   ipcMain.on('gisst:download_file',handle_download_file);
   
@@ -165,18 +166,18 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string
       console.log("image ready, send along",fs.statSync(img_path));
       const image_data = fs.readFileSync(img_path);
       seenStates[file_name] = image_data;
-      // TODO: If this state is part of a replay:
-      //  - if part of current replay, use it as a replay checkpoint, rename with checknn?
-      //  - if we have no current replay or if it's from a different replay, ignore it
+      // If it's already a known checkpoint, ignore it
       if(!seenCheckpoints.includes(file_name)) {
         const replay = ra_util.replay_of((fs.readFileSync(path.join(states_dir,file_name))));
         if(replay && current_replay && replay.id == current_replay.id) {
           seenCheckpoints.push(file_name);
+          // add it as a mere checkpoint if it's associated with a replay
           evt.sender.send('gisst:replay_checkpoints_changed', {
             "added":[{"file": file_name,"thumbnail": image_data.toString('base64'),}],
             "delete_old":false
           });
-        } else {
+          // otherwise ignore it if it's a checkpoint from a non-current replay
+        } else if(!replay) {
           evt.sender.send('gisst:states_changed', {
             "file": file_name,
             "thumbnail": image_data.toString('base64')
@@ -290,6 +291,9 @@ async function handle_play_replay(evt:IpcMainEvent, num:number) {
 async function handle_load_state(evt:IpcMainEvent, num:number) {
   send_message("LOAD_STATE_SLOT "+num.toString());
 }
+async function handle_load_checkpoint(evt:IpcMainEvent, num:number) {
+  send_message("LOAD_STATE_SLOT "+num.toString());
+}
 enum BSVFlags {
   START_RECORDING    = (1 << 0),
   START_PLAYBACK     = (1 << 1),
@@ -345,6 +349,7 @@ function find_checkpoints_inner(evt:IpcMainEvent) {
     const replay = ra_util.replay_of((fs.readFileSync(path.join(states_dir,state_file))));
     console.log("Replay info",replay,"vs",current_replay);
     if(replay && replay.id == current_replay.id) {
+      seenCheckpoints.push(state_file);
       evt.sender.send('gisst:replay_checkpoints_changed', {
         "added":[{"file": state_file,"thumbnail": seenStates[state_file].toString('base64')}],
         "delete_old":false
