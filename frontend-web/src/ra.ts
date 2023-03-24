@@ -129,6 +129,7 @@ function load_state_slot(n:number) {
 }
 function play_replay_slot(n:number) {
   retroArchSend("PLAY_REPLAY_SLOT "+n.toString());
+  // TODO: find states from this replay and use as checkpoints, rename with checkNN?
 }
 
 const seen_states:Record<string,Uint8Array> = {};
@@ -145,6 +146,10 @@ function checkChangedStatesAndSaves() {
         const img_data = FS.readFile(state_dir+"/"+png_file);
         seen_states[state_file] = img_data;
         const img_data_b64 = base64EncArr(img_data);
+        // TODO: If this state is part of a replay:
+        //  - if part of current replay, use it as a replay checkpoint, rename with checkNN?
+        //  - if we have no current replay or if it's from a different replay, ignore it
+
         ui_state.newState(state_file, img_data_b64);
       }
     } else if(state.includes(".replay")) {

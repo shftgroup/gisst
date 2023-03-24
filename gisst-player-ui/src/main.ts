@@ -61,7 +61,7 @@ export class UI {
     this.entries_by_name["st__"+state_file] = li;
   }
   newReplay(replay_file:string) {
-    this.replayFinished();
+    this.clearCheckpoints();
     const num_str = (replay_file.match(/replay([0-9]+)$/)?.[1]) ?? "0";
     const replay_num = parseInt(num_str,10);
     const a_replay = <HTMLAnchorElement>document.createElement("a");
@@ -80,7 +80,7 @@ export class UI {
     this.replay_elt.appendChild(li);
     this.entries_by_name["rp__"+replay_file] = li;
   }
-  replayFinished() {
+  clearCheckpoints() {
     let toRemove = [];
     for(let lit in this.entries_by_name) {
       if(lit.startsWith("cp__")) {
