@@ -101,13 +101,13 @@ let save_listener:fs.FSWatcher = null;
 let state_listener:fs.FSWatcher = null;
 let ra:proc.ChildProcess = null;
 let seenSaves:string[] = [];
-let seenReplays:string[] = [];
+let seenReplays:Record<string,string> = {};
 let seenCheckpoints:string[] = [];
 let seenStates:Record<string, Uint8Array> = {};
 async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:boolean,replay:boolean) {
   seenStates = {};
   seenSaves = [];
-  seenReplays = [];
+  seenReplays = {};
   seenCheckpoints = [];
   console.assert(!(entryState && replay), "It is invalid to have both an entry state and play back a replay");
   clear_current_replay(evt);
@@ -168,7 +168,15 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string
       seenStates[file_name] = image_data;
       // If it's already a known checkpoint, ignore it
       if(!seenCheckpoints.includes(file_name)) {
-        const replay = ra_util.replay_of((fs.readFileSync(path.join(states_dir,file_name))));
+        const replay = ra_util.replay_of_state((fs.readFileSync(path.join(states_dir,file_name))));
+        let known_replay = false;
+        if(replay) {
+          for(let seen in seenReplays) {
+            if(seenReplays[seen] == replay.id) {
+              known_replay = true;
+            }
+          }
+        }
         if(replay && current_replay && replay.id == current_replay.id) {
           seenCheckpoints.push(file_name);
           // add it as a mere checkpoint if it's associated with a replay
@@ -176,8 +184,9 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string
             "added":[{"file": file_name,"thumbnail": image_data.toString('base64'),}],
             "delete_old":false
           });
-          // otherwise ignore it if it's a checkpoint from a non-current replay
-        } else if(!replay) {
+          // otherwise ignore it if it's a checkpoint from a non-current replay 
+        } else if(!replay || !known_replay) {
+          // TODO: actually, it should be ignored if it's for a replay that we have locally. if we don't have the replay it should absollutely be shown'
           evt.sender.send('gisst:states_changed', {
             "file": file_name,
             "thumbnail": image_data.toString('base64')
@@ -188,7 +197,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string
     if(name.includes(".replay")) {
       const replay_path = path.join(states_dir,name);
       console.log("replay",replay_path,fs.statSync(replay_path));
-      if(seenReplays.includes(name)) {
+      if(name in seenReplays) {
         console.log("seen replay already");
         return;
       }
@@ -197,7 +206,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string
         return;
       }
       console.log("replay ready, send along",fs.statSync(replay_path));
-      seenReplays.push(name);
+      seenReplays[name] = ra_util.replay_info(new Uint8Array(fs.readFileSync(replay_path).buffer)).id;
       evt.sender.send('gisst:replays_changed', {
         "file": name,
       });
@@ -248,10 +257,10 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string
 }
 
 async function read_response(wait:boolean): Promise<string | null> {
-  const waiting = () => new Promise((resolve) => {
+  const waiting = () => new Promise((resolve,_reject) => {
     const read_cb = () => {
       ra.stdout.removeListener("readable",read_cb);
-      resolve();
+      resolve(null);
     }
     ra.stdout.on("readable", read_cb);
   });
@@ -281,6 +290,7 @@ async function handle_play_replay(evt:IpcMainEvent, num:number) {
   clear_current_replay(evt);
   send_message("PLAY_REPLAY_SLOT "+num);
   let resp = await read_response(true);
+  nonnull(resp);
   const num_str = (resp.match(/PLAY_REPLAY_SLOT ([0-9]+)$/)?.[1]) ?? "0";
   if(num_str == "0") {
     return;
@@ -313,6 +323,7 @@ async function handle_update_checkpoints(evt:IpcMainEvent) {
   console.log("Update cps/replay status");
   await send_message("GET_CONFIG_PARAM active_replay");
   let resp = await read_response(true);
+  nonnull(resp);
   let matches = resp.match(/GET_CONFIG_PARAM active_replay ([0-9]+) ([0-9]+)$/);
   const id = (matches?.[1]) ?? "0";
   const flags = parseInt((matches?.[2]) ?? "0",10);
@@ -340,13 +351,14 @@ function clear_current_replay(evt:IpcMainEvent) {
     "delete_old":true
   });
 }
+declare function toString(encoding:string):string;
 function find_checkpoints_inner(evt:IpcMainEvent) {
   // search state files for states saved of current replay
   console.log(seenStates);
   for(let state_file in seenStates) {
     if(seenCheckpoints.includes(state_file)) { continue; }
     console.log("Check ",state_file);
-    const replay = ra_util.replay_of((fs.readFileSync(path.join(states_dir,state_file))));
+    const replay = ra_util.replay_of_state(new Uint8Array(fs.readFileSync(path.join(states_dir,state_file)).buffer));
     console.log("Replay info",replay,"vs",current_replay);
     if(replay && replay.id == current_replay.id) {
       seenCheckpoints.push(state_file);
@@ -373,4 +385,9 @@ function handle_download_file(evt:IpcMainEvent, category:"save"|"state"|"replay"
     evt.sender.downloadURL(url.pathToFileURL(fpath).toString());
   }
   catch(e) {console.error(e); throw e;}
+}
+function nonnull(obj:any):asserts obj {
+  if(obj == null) {
+    throw "Must be non-null";
+  }
 }
