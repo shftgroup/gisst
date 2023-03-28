@@ -1,9 +1,19 @@
 const encoder = new TextEncoder();
 const message_queue = [];
+const message_out = [];
+let message_accum = "";
 
 function retroArchSend(msg) {
   let bytes = encoder.encode(msg+"\n");
   message_queue.push([bytes,0]);
+}
+function retroArchRecv() {
+  let out = message_out.shift();
+  if(out == null && message_accum != "") {
+    out = message_accum;
+    message_accum = "";
+  }
+  return out;
 }
 
 var Module =
@@ -26,14 +36,29 @@ var Module =
           }
           return null;
         }
-        FS.init(stdin);
+        function stdout(c) {
+          if(c == null) {
+            // flush
+            if(message_accum != "") {
+              message_out.push(message_accum);
+              message_accum = "";
+            }
+          } else {
+            let s = String.fromCharCode(c);
+            if(s == "\n") {
+              if(message_accum != "") {
+                message_out.push(message_accum);
+                message_accum = "";
+              }
+            } else {
+              message_accum = message_accum+s;
+            }
+          }
+        }
+        FS.init(stdin,stdout);
       }
     ],
     postRun: [],
-    print: function(text)
-      {
-        console.log(text);
-      },
     printErr: function(text)
       {
         console.log(text);

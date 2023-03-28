@@ -2,9 +2,9 @@ import './style.css'
 import * as ra from './ra';
 import * as v86 from './v86';
 
-let core = "v86";
+let core = "fceumm";
 const content_folder = "/content/";
-const content = "freedos722-root.json";
+const content = "bfight.nes";
 const entryState = false;
 const movie = false;
 

@@ -3,6 +3,8 @@ import IMG_STATE_ENTRY from './media/init_state.png';
 import * as fetchfs from './fetchfs';
 import {UI} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
+import * as ra_util from 'ra-util';
+
 const FS_CHECK_INTERVAL = 1000;
 
 const state_dir = "/home/web_user/retroarch/userdata/states";
@@ -123,18 +125,119 @@ function retroReady(): void {
       return false;
     });
 }
+function nonnull(obj:any):asserts obj {
+  if(obj == null) {
+    throw "Must be non-null";
+  }
+}
 
 function load_state_slot(n:number) {
-  retroArchSend("LOAD_STATE_SLOT "+n.toString());
+  send_message("LOAD_STATE_SLOT "+n.toString());
 }
-function play_replay_slot(n:number) {
-  retroArchSend("PLAY_REPLAY_SLOT "+n.toString());
-  // TODO: find states from this replay and use as checkpoints, rename with checkNN?
+async function play_replay_slot(n:number) {
+  clear_current_replay();
+  send_message("PLAY_REPLAY_SLOT "+n.toString());
+  let resp = await read_response(true);
+  nonnull(resp);
+  const num_str = (resp.match(/PLAY_REPLAY_SLOT ([0-9]+)$/)?.[1]) ?? "0";
+  if(num_str == "0") {
+    return;
+  }
+  current_replay = {mode:ReplayMode.Playback,id:num_str,finished:false};
+  find_checkpoints_inner();
+}
+enum BSVFlags {
+  START_RECORDING    = (1 << 0),
+  START_PLAYBACK     = (1 << 1),
+  PLAYBACK           = (1 << 2),
+  RECORDING          = (1 << 3),
+  END                = (1 << 4),
+  EOF_EXIT           = (1 << 5)
 }
 
+async function read_response(wait:boolean): Promise<string | null> {
+  const waiting:() => Promise<string|null> = () => new Promise((resolve,_reject) => {
+    let interval:number;
+    const read_cb = () => {
+      let resp = retroArchRecv();
+      if(resp != null) {
+        clearInterval(interval!);
+        resolve(resp);
+      }
+    }
+    interval = setInterval(read_cb, 100);
+  });
+  let outp:string|null=null;
+  if(wait) {
+    outp = await waiting();
+  } else {
+    outp = retroArchRecv();
+  }
+  console.log("stdout: ",outp);
+  return outp;
+}
+
+async function send_message(msg:string) {
+  let clearout = await read_response(false);
+  while(clearout) { clearout = await read_response(false); }
+  console.log("send:",msg);
+  retroArchSend(msg+"\n");
+}
+// Called by timer from time to time
+async function update_checkpoints() {
+  await send_message("GET_CONFIG_PARAM active_replay");
+  let resp = await read_response(true);
+  nonnull(resp);
+  let matches = resp.match(/GET_CONFIG_PARAM active_replay ([0-9]+) ([0-9]+)$/);
+  const id = (matches?.[1]) ?? "0";
+  const flags = parseInt((matches?.[2]) ?? "0",10);
+  if(id == "0" || flags == 0) {
+    console.log("no current replay or different replay started");
+    clear_current_replay();
+  } else {
+    if(current_replay && current_replay.id != id) {
+      clear_current_replay();
+    }
+    let finished = (flags & BSVFlags.END) != 0;
+    let mode = (flags & BSVFlags.PLAYBACK) != 0 ? ReplayMode.Playback : (flags & BSVFlags.RECORDING ? ReplayMode.Record : ReplayMode.Inactive);
+    console.log("current replay",id,mode,finished);
+    current_replay = {id:id,mode:mode,finished:finished};
+  }
+  if(current_replay) {
+    find_checkpoints_inner();
+  }
+}
+function find_checkpoints_inner() {
+  nonnull(current_replay);
+  // search state files for states saved of current replay
+  console.log(seen_states);
+  for(let state_file in seen_states) {
+    if(state_file in seen_checkpoints) { continue; }
+    console.log("Check ",state_file);
+    const replay = ra_util.replay_of_state(new Uint8Array(FS.readFile(state_dir+"/"+state_file)));
+    console.log("Replay info",replay,"vs",current_replay);
+    if(replay && replay.id == current_replay.id) {
+      seen_checkpoints[state_file] = seen_states[state_file];
+      ui_state.newCheckpoint(state_file, base64EncArr(seen_states[state_file]));
+    }
+  }
+}
+enum ReplayMode {
+  Record,
+  Playback,
+  Inactive
+}
+interface Replay {
+  finished:boolean;
+  mode:ReplayMode;
+  id:string;
+}
+
+let current_replay:Replay | null = null;
 const seen_states:Record<string,Uint8Array> = {};
 const seen_saves:Record<string,null> = {};
-const seen_replays:Record<string,null> = {};
+const seen_replays:Record<string,string> = {};
+let seen_checkpoints:Record<string,Uint8Array> = {};
 function checkChangedStatesAndSaves() {
   const states = FS.readdir(state_dir);
   for (let state of states) {
@@ -142,19 +245,38 @@ function checkChangedStatesAndSaves() {
     if(state.endsWith(".png") || state.includes(".state")) {
       const png_file = state.endsWith(".png") ? state : state + ".png";
       const state_file = state.endsWith(".png") ? state.substring(0,state.length-4) : state;
-      if(!(state_file in seen_states) && file_exists(state_dir+"/"+png_file) && file_exists(state_dir+"/"+state_file)) {
-        const img_data = FS.readFile(state_dir+"/"+png_file);
+      if(state_file in seen_states || state_file in seen_checkpoints) {
+        continue;
+      }
+      // If not yet seen and both files exist
+      if(!(file_exists(state_dir+"/"+png_file) && file_exists(state_dir+"/"+state_file))) {
+        continue;
+      }
+      const replay = ra_util.replay_of_state((FS.readFile(state_dir+"/"+state_file)));
+      let known_replay = false;
+      if(replay) {
+        for(let seen in seen_replays) {
+          if(seen_replays[seen] == replay.id) {
+            known_replay = true;
+          }
+        }
+      }
+      const img_data = FS.readFile(state_dir+"/"+png_file);
+      const img_data_b64 = base64EncArr(img_data);
+      // If this state belongs to the current replay...
+      if(replay && current_replay && replay.id == current_replay.id) {
+        seen_checkpoints[state_file] = img_data;
+        ui_state.newCheckpoint(state_file, img_data_b64);
+        // otherwise ignore it if it's a checkpoint from a non-current replay we have locally
+      } else if(!replay || !known_replay) {
         seen_states[state_file] = img_data;
-        const img_data_b64 = base64EncArr(img_data);
-        // TODO: If this state is part of a replay:
-        //  - if part of current replay, use it as a replay checkpoint, rename with checkNN?
-        //  - if we have no current replay or if it's from a different replay, ignore it
-
+        // TODO something's off here, states of non current replays are getting added here
         ui_state.newState(state_file, img_data_b64);
       }
     } else if(state.includes(".replay")) {
       if(!(state in seen_replays)) {
-        seen_replays[state] = null;
+        const replay = ra_util.replay_info(new Uint8Array(FS.readFile(state_dir+"/"+state)));
+        seen_replays[state] = replay.id;
         ui_state.newReplay(state);
       }
     }
@@ -167,6 +289,12 @@ function checkChangedStatesAndSaves() {
       ui_state.newSave(save);
     }
   }
+  update_checkpoints();
+}
+function clear_current_replay() {
+  current_replay = null;
+  seen_checkpoints = {};
+  ui_state.clearCheckpoints();
 }
 
 function file_exists(path:string) : boolean {
