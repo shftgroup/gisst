@@ -210,6 +210,192 @@ export class Replay {
     emulator.mouse_set_status(false);
     emulator.keyboard_set_status(false);
   }
+  serialize():ArrayBuffer {
+    // magic+metadata+frame count+checkpoint count+(frame count * max event size)+(checkpoint count * size of last checkpoint)
+    const frame_count = this.events.length;
+    const checkpoint_count = this.checkpoints.length;
+    let last_check = this.checkpoints[this.checkpoints.length-1];
+    let size_max = 4+32+4+4+(frame_count*(1+8+4*8))+(checkpoint_count*(8+4+4+4+last_check.state.byteLength+last_check.thumbnail.length));
+    const ret = new ArrayBuffer(size_max);
+    const view = new DataView(ret);
+    // ASCII "VRPL" backwards ("LPRV") so it shows up as "VRPL" in binary
+    let x = 0;
+    view.setUint32(x,0x4C505256,true);
+    x += 4;
+    // metadata: 16 bytes UUID; reserve the rest for later.
+    for(let i = 0; i < this.id.length; i++) {
+      view.setUint8(x,this.id.charCodeAt(i));
+      x += 1;
+    }
+    view.setUint32(x,frame_count,true);
+    x += 4;
+    view.setUint32(x,checkpoint_count,true);
+    x += 4;
+    for(let evt of this.events) {
+      view.setUint8(x,evt.code);
+      x += 1;
+      view.setBigUint64(x,BigInt(evt.when),true);
+      x += 8;
+      switch(evt.code) {
+      case Evt.KeyCode:
+        view.setUint8(x,evt.value);
+        x += 1;
+        break;
+      case Evt.MouseClick:
+        view.setUint8(x,evt.value[0]);
+        view.setUint8(x+1,evt.value[1]);
+        view.setUint8(x+2,evt.value[2]);
+        x += 3;
+        break;
+      case Evt.MouseDelta:
+      case Evt.MouseWheel:
+        view.setFloat64(x,evt.value[0],true);
+        view.setFloat64(x+8,evt.value[1],true);
+        x += 8*2;
+        break;
+      case Evt.MouseAbsolute:
+        view.setFloat64(x,evt.value[0],true);
+        view.setFloat64(x+8,evt.value[1],true);
+        view.setFloat64(x+16,evt.value[2],true);
+        view.setFloat64(x+24,evt.value[3],true);
+        x += 8*4;
+        break;
+      default:
+        throw "Unhandled event type";
+      }
+    }
+    for(let check of this.checkpoints) {
+      // the when
+      view.setBigUint64(x,BigInt(check.when),true);
+      x += 8;
+      // the event index
+      view.setUint32(x,check.event_index,true);
+      x += 4;
+      // the thumbnail; TODO decode base64
+      view.setUint32(x,check.thumbnail.length,true);
+      x += 4;
+      for(let byte of check.thumbnail) {
+        view.setUint8(x,byte.charCodeAt(0));
+        x += 1;
+      }
+      // the state
+      view.setUint32(x,check.state.byteLength,true);
+      x += 4;
+      let st_buf = new Uint8Array(check.state);
+      let dst_buf = new Uint8Array(ret,x,st_buf.length);
+      dst_buf.set(st_buf);
+      x += st_buf.length;
+    }
+    return ret;
+  }
+  static deserialize(buf:ArrayBuffer):Replay {
+    let events = [];
+    let checkpoints = [];
+    const view = new DataView(buf);
+    let x = 0;
+    let magic = view.getUint32(x,true);
+    x += 4;
+    if(magic != 0x4C505256) {
+      throw "Invalid magic, not a v86replay file";
+    }
+    // metadata: 16 bytes UUID; reserve the rest for later.
+    let id = "";
+    for(let i = 0; i < 16; i++) {
+      id += String.fromCharCode(view.getUint8(x));
+      x += 1;
+    }
+    // empty metadata bytes
+    x += 16;
+    let frame_count = view.getUint32(x,true);
+    x += 16;
+    let checkpoint_count = view.getUint32(x,true);
+    x += 16;
+    for(let i = 0; i < frame_count; i++) {
+      let code = view.getUint8(x);
+      x += 1;
+      let when_b = view.getBigUint64(x,true);
+      x += 8;
+      if(when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
+        throw "When is too big";
+      }
+      let when = Number(when_b);
+      if(BigInt(when) != when_b) {
+        throw "When didn't match";
+      }
+      let value:any;
+      switch(code) {
+      case Evt.KeyCode:
+        value = view.getUint8(x);
+        x += 1;
+        break;
+      case Evt.MouseClick: {
+        let a = view.getUint8(x);
+        let b = view.getUint8(x+1);
+        let c = view.getUint8(x+2);
+        x += 3;
+        value = [a,b,c];
+        break;
+      }
+      case Evt.MouseDelta:
+      case Evt.MouseWheel: {
+        let mx = view.getFloat64(x,true);
+        let my = view.getFloat64(x+8,true);
+        value = [mx,my];
+        x += 8*2;
+        break;
+      }
+      case Evt.MouseAbsolute: {
+        let mx = view.getFloat64(x,true);
+        let my = view.getFloat64(x+8,true);
+        let w = view.getFloat64(x+16,true);
+        let h = view.getFloat64(x+24,true);
+        value = [mx,my,w,h];
+        x += 8*4;
+        break;
+      }
+      default:
+        throw "Unhandled event type";
+      }
+      events.push(new ReplayEvent(when, code, value));
+    }
+    for(let i = 0; i < checkpoint_count; i++) {
+      let when_b = view.getBigUint64(x,true);
+      x += 8;
+      if(when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
+        throw "When is too big";
+      }
+      let when = Number(when_b);
+      if(BigInt(when) != when_b) {
+        throw "When didn't match";
+      }
+      let event_index = view.getUint32(x,true);
+      x += 4;
+      let name = "check"+i.toString();
+      let thumb_len = view.getUint32(x,true);
+      x += 4;
+      // TODO: get binary and encdoe to base64
+      let thumb = "";
+      for(let j = 0; j < thumb_len; j++) {
+        thumb += String.fromCharCode(view.getUint8(x+j));
+      }
+      x += thumb_len;
+      let state_len = view.getUint32(x,true);
+      x += 4;
+      let src_buf = new Uint8Array(buf,x,state_len);
+      let state = new Uint8Array(state_len);
+      state.set(src_buf);
+      x += state_len;
+      checkpoints.push(new Checkpoint(when, name, event_index, state, thumb));
+    }
+    let r = new Replay(id, ReplayMode.Inactive);
+    r.events = events;
+    r.checkpoints = checkpoints;
+    r.index = 0;
+    r.checkpoint_index = 0;
+    r.last_time = 0;
+    r.wraps = 0;
+    return r;
+  }
 }
 class ReplayEvent {
   when:number;

@@ -44,6 +44,8 @@ export declare class Replay {
     private finish_recording;
     stop(emulator: V86Starter): Promise<void>;
     start_playback(emulator: V86Starter): Promise<void>;
+    serialize(): ArrayBuffer;
+    static deserialize(buf: ArrayBuffer): Replay;
 }
 declare class ReplayEvent {
     when: number;
