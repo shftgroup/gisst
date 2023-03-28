@@ -111,10 +111,9 @@ export class EmbedV86 {
     } else if(category == "save") {
       throw "Not yet implemented";
     } else if(category == "replay") {
-      // const num_str = (file_name.match(/replay([0-9]+)$/)?.[1]) ?? "0";
-      // const replay_num = parseInt(num_str,10);
-      // saveAs(new Blob([this.replays[replay_num]]), file_name.toString()+".v86replay");
-      throw "Not yet implemented";
+      const num_str = (file_name.match(/replay([0-9]+)$/)?.[1]) ?? "0";
+      const replay_num = parseInt(num_str,10);
+      return [new Blob([this.replays[replay_num].serialize()]), file_name.toString()+".v86replay"];
     } else {
       throw "Invalid save category";
     }
