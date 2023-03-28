@@ -8,19 +8,17 @@ const RASTATE_MAGIC="RASTATE";
 
 export interface ReplayInfo {
   id:string;
-  length:number;
   data:Uint8Array;
 }
 export function replay_info(raw_data:Uint8Array):ReplayInfo {
   let data = raw_data.buffer;
-  let header = new DataView(data,raw_data.byteOffset,7*4);
-  let loaded_len = header.getUint32(0*4,true);
-  // let magic = header.getUint32(1*4,true);
-  // let vsn = header.getUint32(2*4,true);
-  // let content_crc = header.getUint32(3*4,true);
-  // let state_size = header.getUint32(4*4,true);
-  let identifier = header.getBigInt64(5*4,true);
-  return {id:identifier.toString(), length:loaded_len, data:raw_data.subarray(7*4,raw_data.length))};
+  let header = new DataView(data,raw_data.byteOffset,6*4);
+  // let magic = header.getUint32(0*4,true);
+  // let vsn = header.getUint32(1*4,true);
+  // let content_crc = header.getUint32(2*4,true);
+  // let state_size = header.getUint32(3*4,true);
+  let identifier = header.getBigInt64(4*4,true);
+  return {id:identifier.toString(), data:raw_data.subarray(6*4,raw_data.length)};
 
 }
 export function replay_of_state(raw_bytes:Uint8Array):ReplayInfo|null {
@@ -39,7 +37,7 @@ export function replay_of_state(raw_bytes:Uint8Array):ReplayInfo|null {
     i += 8;
     // check header contents
     if(marker.every((x,j)=>x==RASTATE_BLOCK.RPLY.charCodeAt(j))) {
-      return replay_info(new Uint8Array(data, i, block_size));
+      return replay_info(new Uint8Array(data, i+4, block_size-4));
     } else {
       console.log("Skip state block "+Array.from(marker).map((x)=>String.fromCharCode(x)).join(""));
     }
