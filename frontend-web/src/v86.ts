@@ -9,7 +9,7 @@ export async function init(content_folder:string, content:string, entry_state:bo
     bios_root:"v86/bios",
     content_root:content_folder,
     container: <HTMLDivElement>document.getElementById("canvas_div")!,
-    record_replay:(nom:string)=>ui_state.newReplay(nom),
+    register_replay:(nom:string)=>ui_state.newReplay(nom),
     stop_replay:()=>{
       ui_state.clearCheckpoints();
     },
@@ -43,8 +43,7 @@ export async function init(content_folder:string, content:string, entry_state:bo
         v86.load_state_slot(n);
       },
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
-        let [blob, name] = v86.download_file(category, file_name);
-        saveAs(blob, name)
+        v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
       }
     }
   );

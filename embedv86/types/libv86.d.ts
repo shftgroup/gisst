@@ -9,6 +9,7 @@ declare class V86Starter {
   async save_state(): ArrayBuffer;
   async restore_state(sbuf:ArrayBuffer): void;
   add_listener(evt:string, listener:(any)=>void);
+  remove_listener(evt:string, listener:(any)=>void);
   get_instruction_counter():number;
   v86:V86;
   bus:any;

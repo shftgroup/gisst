@@ -40,7 +40,7 @@ let v86:EmbedV86 = new EmbedV86({
   bios_root:"renderer-resources/v86/bios",
   content_root:"renderer-resources/content",
   container: <HTMLDivElement>document.getElementById("v86-container")!,
-  record_replay:(nom:string)=>ui_state.newReplay(nom),
+  register_replay:(nom:string)=>ui_state.newReplay(nom),
   stop_replay:()=>{
     ui_state.clearCheckpoints();
   },
@@ -106,8 +106,14 @@ async function run(core:string, content:string, entryState:boolean, movie:boolea
 
 window.addEventListener("DOMContentLoaded", () => {
   document
-    .querySelector("#run-v86-button")
+    .querySelector("#run-v86-cold-button")
     ?.addEventListener("click", () => run("v86", "freedos722-root.json", false, false));
+  document
+    .querySelector("#run-v86-entry-button")
+    ?.addEventListener("click", () => run("v86", "freedos722-root.json", true, false));
+  document
+    .querySelector("#run-v86-movie-button")
+    ?.addEventListener("click", () => run("v86", "freedos722-root.json", false, true));
   document
     .querySelector("#run-cold-button")
     ?.addEventListener("click", () => run("fceumm", "bfight.nes", false, false));
@@ -159,8 +165,7 @@ window.addEventListener("DOMContentLoaded", () => {
       },
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
         if (active_core == "v86") {
-          let [blob,name] = v86.download_file(category, file_name);
-          saveAs(blob, name);
+          v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
         } else {
           api.download_file(category, file_name);
         }

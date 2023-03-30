@@ -8,7 +8,7 @@ export interface EmbedV86Config {
   bios_root:string;
   content_root:string;
   container:HTMLDivElement;
-  record_replay:(nom:string)=>void;
+  register_replay:(nom:string)=>void;
   stop_replay:()=>void;
   states_changed:(added:StateInfo[], removed:StateInfo[]) => void;
   replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => void;
@@ -70,7 +70,7 @@ export class EmbedV86 {
       await this.replays[this.active_replay!].stop(this.emulator);
       this.config.stop_replay();
     }
-    this.config.record_replay("replay"+this.replays.length.toString());
+    this.config.register_replay("replay"+this.replays.length.toString());
     this.active_replay = this.replays.length;
     this.replays.push(await Replay.start_recording(this.emulator));
     this.config.replay_checkpoints_changed(this.replays[this.replays.length-1].checkpoints,[]);
@@ -103,7 +103,7 @@ export class EmbedV86 {
     await this.replays[n].start_playback(this.emulator);
     this.config.replay_checkpoints_changed(this.replays[n].checkpoints,[]);
   }
-  download_file(category:"state" | "save" | "replay", file_name:string):[Blob,string] {
+  async download_file(category:"state" | "save" | "replay", file_name:string):Promise<[Blob,string]> {
     if(category == "state") {
       const num_str = (file_name.match(/state([0-9]+)$/)?.[1]) ?? "0";
       const save_num = parseInt(num_str,10);
@@ -113,7 +113,14 @@ export class EmbedV86 {
     } else if(category == "replay") {
       const num_str = (file_name.match(/replay([0-9]+)$/)?.[1]) ?? "0";
       const replay_num = parseInt(num_str,10);
-      return [new Blob([this.replays[replay_num].serialize()]), file_name.toString()+".v86replay"];
+      const rep = this.replays[replay_num];
+      const ser_rep = await rep.serialize();
+      //TODO remove me, just for testing
+      let unser_rep = await Replay.deserialize(ser_rep);
+      if(unser_rep.events.length != rep.events.length || unser_rep.checkpoints.length != rep.checkpoints.length) {
+        throw "ser roundtrip error";
+      }
+      return [new Blob([ser_rep]), file_name.toString()+".v86replay"];
     } else {
       throw "Invalid save category";
     }
@@ -136,17 +143,29 @@ export class EmbedV86 {
     }
   }
   async run(content:string, entryState:boolean, movie:boolean) {
+    this.clear();
     const content_folder = this.config.content_root;
     const config:V86StarterConfig = {
       wasm_path: this.config.wasm_root+"/v86.wasm",
       screen_container:this.config.container,
       autostart: true
     };
+    if(entryState && movie) {
+      throw "Can't specify both entry state and movie";
+    }
+    // TODO: avoid use of /, get explicit paths or a path joining function as arguments or config props
     if(entryState) {
       config["initial_state"] = {url:content_folder+"/entry_state"}
     }
     if(movie) {
       // do nothing for now
+      const replay_resp = await fetch(content_folder+"/replay.replay");
+      if(!replay_resp.ok) { alert("Failed to load replay movie"); return; }
+      const replay_data = await replay_resp.arrayBuffer();
+      const replay = await Replay.deserialize(replay_data);
+      console.log(replay.id,replay.events.length,replay.checkpoints.length);
+      this.config.register_replay("replay"+this.replays.length.toString());
+      this.replays.push(replay);
     }
     const content_resp = await fetch(content_folder+"/"+content);
     if(!content_resp.ok) { alert("Failed to load content"); return; }
@@ -166,6 +185,14 @@ export class EmbedV86 {
     this.emulator.emulator_bus.register("mouse-absolute", (pos:[number,number,number,number]) => this.replay_log(Evt.MouseAbsolute,pos));
     this.emulator.emulator_bus.register("mouse-wheel", (delta:[number,number]) => this.replay_log(Evt.MouseWheel, delta));
     this.emulator.bus.register("emulator-ticked", (_k:any) => this.replay_tick());
+    // first time it runs, play_replay_slot 0 if movie is used
+    if(movie) {
+      const start_initial_replay = () => {
+        this.emulator!.remove_listener("emulator-started", start_initial_replay);
+        this.play_replay_slot(0);
+      };
+      this.emulator.add_listener("emulator-started", start_initial_replay);
+    }
   }
 }
 function nonnull(obj:number|object|null):asserts obj {
@@ -184,4 +211,3 @@ function setup_image(img:"bios"|"vga_bios"|"fda"|"fdb"|"hda"|"hdb"|"cdrom", cont
     config[img] = content_json[img];
   }
 }
-
