@@ -2,11 +2,11 @@ import './style.css'
 import * as ra from './ra';
 import * as v86 from './v86';
 
-let core = "fceumm";
+let core = "v86";
 const content_folder = "/content/";
-const content = "bfight.nes";
+const content = "freedos722-root.json";
 const entryState = false;
-const movie = false;
+const movie = true;
 
 window.onload = function() {
   console.assert(!(entryState && movie), "It is invalid to have both an entry state and play back a movie");

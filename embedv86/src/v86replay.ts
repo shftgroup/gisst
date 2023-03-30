@@ -210,7 +210,7 @@ export class Replay {
     emulator.mouse_set_status(false);
     emulator.keyboard_set_status(false);
   }
-  serialize():ArrayBuffer {
+  async serialize():Promise<ArrayBuffer> {
     // magic+metadata+frame count+checkpoint count+(frame count * max event size)+(checkpoint count * size of last checkpoint)
     const frame_count = this.events.length;
     const checkpoint_count = this.checkpoints.length;
@@ -223,10 +223,15 @@ export class Replay {
     view.setUint32(x,0x4C505256,true);
     x += 4;
     // metadata: 16 bytes UUID; reserve the rest for later.
-    for(let i = 0; i < this.id.length; i++) {
-      view.setUint8(x,this.id.charCodeAt(i));
-      x += 1;
+    {
+      let id_bytes = uuid_to_bytes(this.id);
+      let dst = new Uint8Array(ret, x, 16);
+      dst.set(id_bytes);
+      x += 16;
     }
+    // empty 16 bytes
+    x += 16;
+    // counts
     view.setUint32(x,frame_count,true);
     x += 4;
     view.setUint32(x,checkpoint_count,true);
@@ -272,23 +277,25 @@ export class Replay {
       view.setUint32(x,check.event_index,true);
       x += 4;
       // the thumbnail; TODO decode base64
-      view.setUint32(x,check.thumbnail.length,true);
+      let thumb_bytes = await dataURLToBlob(check.thumbnail).arrayBuffer();
+      view.setUint32(x,thumb_bytes.byteLength,true);
       x += 4;
-      for(let byte of check.thumbnail) {
-        view.setUint8(x,byte.charCodeAt(0));
-        x += 1;
+      {
+        let dst = new Uint8Array(ret,x,thumb_bytes.byteLength);
+        dst.set(new Uint8Array(thumb_bytes));
       }
+      x += thumb_bytes.byteLength;
       // the state
       view.setUint32(x,check.state.byteLength,true);
       x += 4;
       let st_buf = new Uint8Array(check.state);
-      let dst_buf = new Uint8Array(ret,x,st_buf.length);
+      let dst_buf = new Uint8Array(ret,x,check.state.byteLength);
       dst_buf.set(st_buf);
-      x += st_buf.length;
+      x += check.state.byteLength;
     }
     return ret;
   }
-  static deserialize(buf:ArrayBuffer):Replay {
+  static async deserialize(buf:ArrayBuffer):Promise<Replay> {
     let events = [];
     let checkpoints = [];
     const view = new DataView(buf);
@@ -299,27 +306,26 @@ export class Replay {
       throw "Invalid magic, not a v86replay file";
     }
     // metadata: 16 bytes UUID; reserve the rest for later.
-    let id = "";
-    for(let i = 0; i < 16; i++) {
-      id += String.fromCharCode(view.getUint8(x));
-      x += 1;
-    }
+    let id = bytes_to_uuid(new Uint8Array(buf,x,16));
+    x += 16;
     // empty metadata bytes
     x += 16;
     let frame_count = view.getUint32(x,true);
-    x += 16;
+    x += 4;
     let checkpoint_count = view.getUint32(x,true);
-    x += 16;
+    x += 4;
     for(let i = 0; i < frame_count; i++) {
       let code = view.getUint8(x);
       x += 1;
       let when_b = view.getBigUint64(x,true);
       x += 8;
       if(when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
+        console.log(when_b);
         throw "When is too big";
       }
       let when = Number(when_b);
       if(BigInt(when) != when_b) {
+        console.log(when,when_b);
         throw "When didn't match";
       }
       let value:any;
@@ -362,10 +368,12 @@ export class Replay {
       let when_b = view.getBigUint64(x,true);
       x += 8;
       if(when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
+        console.log(when_b);
         throw "When is too big";
       }
       let when = Number(when_b);
       if(BigInt(when) != when_b) {
+        console.log(when,when_b);
         throw "When didn't match";
       }
       let event_index = view.getUint32(x,true);
@@ -373,11 +381,9 @@ export class Replay {
       let name = "check"+i.toString();
       let thumb_len = view.getUint32(x,true);
       x += 4;
-      // TODO: get binary and encdoe to base64
-      let thumb = "";
-      for(let j = 0; j < thumb_len; j++) {
-        thumb += String.fromCharCode(view.getUint8(x+j));
-      }
+      let thumb_bytes = new Uint8Array(thumb_len);
+      thumb_bytes.set(new Uint8Array(buf,x,thumb_len));
+      let thumb = await blobToDataURL(new Blob([thumb_bytes], {type:"image/png"}));
       x += thumb_len;
       let state_len = view.getUint32(x,true);
       x += 4;
@@ -421,5 +427,62 @@ function generateUUID():string { // Public Domain/MIT
       d2 = Math.floor(d2/16);
     }
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+function uuid_to_bytes(s:string):Uint8Array {
+  // format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  let out = new Uint8Array(16);
+  out[0] = parseInt(s.slice(0,2),16);
+  out[1] = parseInt(s.slice(2,4),16);
+  out[2] = parseInt(s.slice(4,6),16);
+  out[3] = parseInt(s.slice(6,8),16);
+
+  out[4] = parseInt(s.slice(9,11),16);
+  out[5] = parseInt(s.slice(11,13),16);
+
+  out[6] = parseInt(s.slice(14,16),16);
+  out[7] = parseInt(s.slice(16,18),16);
+
+  out[8] = parseInt(s.slice(19,21),16);
+  out[9] = parseInt(s.slice(21,23),16);
+
+  out[10] = parseInt(s.slice(24,26),16);
+  out[11] = parseInt(s.slice(26,28),16);
+  out[12] = parseInt(s.slice(28,30),16);
+  out[13] = parseInt(s.slice(30,32),16);
+  out[14] = parseInt(s.slice(32,34),16);
+  out[15] = parseInt(s.slice(34,36),16);
+
+  return out;
+}
+function bytes_to_uuid(buf:Uint8Array):string {
+  // https://stackoverflow.com/a/50767210
+  function bufferToHex (buffer:Uint8Array) {
+    return [...buffer]
+        .map (b => b.toString (16).padStart (2, "0"))
+        .join ("");
+  }
+  // format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  let s = bufferToHex(buf);
+  return [s.slice(0,8),s.slice(8,12),s.slice(12,16),s.slice(16,20),s.slice(20,32)].join("-");
+}
+
+//https://stackoverflow.com/a/30407959
+function dataURLToBlob(dataurl:string) {
+    var arr = dataurl.split(','), mime = arr[0]!.match(/:(.*?);/)![1],
+        bstr = atob(arr[1]!), n = bstr.length, u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], {type:mime});
+}
+//https://stackoverflow.com/a/67551175
+function blobToDataURL(blob: Blob): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = _e => resolve(reader.result as string);
+    reader.onerror = _e => reject(reader.error);
+    reader.onabort = _e => reject(new Error("Read aborted"));
+    reader.readAsDataURL(blob);
   });
 }

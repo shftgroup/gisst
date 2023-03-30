@@ -8,7 +8,7 @@ export interface EmbedV86Config {
     bios_root: string;
     content_root: string;
     container: HTMLDivElement;
-    record_replay: (nom: string) => void;
+    register_replay: (nom: string) => void;
     stop_replay: () => void;
     states_changed: (added: StateInfo[], removed: StateInfo[]) => void;
     replay_checkpoints_changed: (added: StateInfo[], removed: StateInfo[]) => void;
@@ -33,7 +33,7 @@ export declare class EmbedV86 {
     stop_replay(): Promise<void>;
     load_state_slot(n: number): Promise<void>;
     play_replay_slot(n: number): Promise<void>;
-    download_file(category: "state" | "save" | "replay", file_name: string): [Blob, string];
+    download_file(category: "state" | "save" | "replay", file_name: string): Promise<[Blob, string]>;
     replay_log(evt: Evt, val: any): void;
     replay_tick(): void;
     run(content: string, entryState: boolean, movie: boolean): Promise<void>;
