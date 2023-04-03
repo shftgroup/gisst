@@ -1,3 +1,5 @@
+// Importing main scss file, vite will process and include bootstrap
+import './styles.scss'
 interface UIController {
   load_state: (state_num:number) => void;
   play_replay: (replay_num:number) => void;
@@ -6,9 +8,19 @@ interface UIController {
 }
 
 export class UI {
+  // static declarations for UI element names
+  // assuming a single emulator window right now, will modify for multiple windows
+  static readonly emulator_single_div_id = "emulatorDiv";
+  static readonly new_state_button_id = "newStateButton";
+  static readonly new_save_button_id = "newSaveButton";
+  static readonly new_checkpoint_button_id = "newCPButton";
+  static readonly new_replay_button_id = "newReplayButton";
   control:UIController;
 
+  desktop_ui:Boolean;
+
   ui_root:HTMLDivElement;
+  emulator_div:HTMLDivElement;
   state_elt:HTMLOListElement;
   saves_elt:HTMLOListElement;
   replay_elt:HTMLOListElement;
@@ -17,20 +29,23 @@ export class UI {
   entries_by_name:Record<string,HTMLLIElement>;
   
   // ... functions go here
-  constructor(ui_root:HTMLDivElement, control:UIController) {
-    this.control = control;
-
+  constructor(ui_root:HTMLDivElement, control:UIController, desktop_ui:Boolean) {
     this.ui_root = ui_root;
+    this.control = control;
+    this.desktop_ui = desktop_ui;
+
+    // Configure emulator manipulation toolbar
     this.saves_elt = <HTMLOListElement>document.createElement("ol");
-    ui_root.appendChild(this.saves_elt);
+    this.ui_root.appendChild(this.saves_elt);
     this.state_elt = <HTMLOListElement>document.createElement("ol");
-    ui_root.appendChild(this.state_elt);
+    this.ui_root.appendChild(this.state_elt);
     this.replay_elt = <HTMLOListElement>document.createElement("ol");
-    ui_root.appendChild(this.replay_elt);
+    this.ui_root.appendChild(this.replay_elt);
     this.checkpoint_elt = <HTMLOListElement>document.createElement("ol");
-    ui_root.appendChild(this.checkpoint_elt);
+    this.ui_root.appendChild(this.checkpoint_elt);
     this.entries_by_name = {};
   }
+
   newSave(save_file:string) {
     console.log("found new save",save_file);
     const a = <HTMLAnchorElement>document.createElement("a");
