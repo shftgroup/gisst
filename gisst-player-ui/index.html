@@ -6,20 +6,44 @@
     <title>Vite + TS</title>
   </head>
   <body>
-    <div style="width:640px; height:480px; background-color:black;"></div>
-    <div id="ui"></div>
+    <div id="ui" class="container">
+      <div class="row">
+        <div class="col">
+          <div id="emulator_single_div"></div>
+        </div>
+        <div class="col">
+          <div id="emulator_contextual_div">
+            Test
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+            <div class="btn-toolbar" role="toolbar" aria-label="Emulator manipulation toolbar with buttons" id="emulator_single_button_toolbar">
+              <div class="btn-group me-2" role="group" aria-label="Save and state creation tools">
+                <button type="button" class="btn btn-secondary">Save</button>
+                <button type="button" class="btn btn-secondary">Save State</button>
+                <button type="button" class="btn btn-secondary">Checkpoint</button>
+              </div>
+              <div class="btn-group me-2" role="group" aria-label="Replay creation tools">
+                <button type="button" class="btn btn-secondary">Start Replay</button>
+                <button type="button" class="btn btn-secondary">Finish Replay</button>
+              </div>
+              <div class="btn-group me-2" role="group" aria-label="Deletion tools">
+                <button type="button" class="btn btn-secondary">Pop Save</button>
+                <button type="button" class="btn btn-secondary">Pop State</button>
+                <button type="button" class="btn btn-secondary">Pop Checkpoint</button>
+                <button type="button" class="btn btn-secondary">Pop Replay</button>
+              </div>
+              <div class="btn-group me-2" role="group" aria-label="UI manipulation">
+                <button type="button" class="btn btn-secondary">Clear UI</button>
+                <button type="button" class="btn btn-secondary">Hide Emulator</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     <script type="module" src="/src/main.ts"></script>
     <script type="module" src="/src/tester.ts"></script>
-    <a id="new_save_button">New Save</a>
-    <a id="new_replay_button">New Replay</a>
-    <a id="new_state_button">New State</a>
-    <br/>
-    <a id="replay_finished_button">Replay Finished</a>
-    <br/>
-    <a id="pop_save_button">Pop Save</a>
-    <a id="pop_replay_button">Pop Replay</a>
-    <a id="pop_state_button">Pop State</a>
-    <br/>
-    <a id="clear_button">Clear UI</a>
   </body>
 </html>
