@@ -1,5 +1,6 @@
 // Importing main scss file, vite will process and include bootstrap
 import './styles.scss'
+
 interface UIController {
   load_state: (state_num:number) => void;
   play_replay: (replay_num:number) => void;
@@ -10,21 +11,26 @@ interface UIController {
 export class UI {
   // static declarations for UI element names
   // assuming a single emulator window right now, will modify for multiple windows
-  static readonly emulator_single_div_id = "emulatorDiv";
-  static readonly new_state_button_id = "newStateButton";
-  static readonly new_save_button_id = "newSaveButton";
-  static readonly new_checkpoint_button_id = "newCPButton";
-  static readonly new_replay_button_id = "newReplayButton";
+  static readonly emulator_single_div_id = "emulator_single_div";
+  static readonly state_button_id = "state_button";
+  static readonly save_button_id = "save_button";
+  static readonly checkpoint_button_id = "checkpoint_button";
+  static readonly replay_button_id = "start_replay_button";
+  static readonly gisst_saves_list_content_id = "gisst-saves";
+  static readonly gisst_states_list_content_id = "gisst-states";
+  static readonly gisst_replays_list_content_id = "gisst-replays";
+  static readonly gisst_checkpoints_list_content_id = "gisst-checkpoints";
   control:UIController;
 
   desktop_ui:Boolean;
 
   ui_root:HTMLDivElement;
-  emulator_div:HTMLDivElement;
   state_elt:HTMLOListElement;
   saves_elt:HTMLOListElement;
   replay_elt:HTMLOListElement;
   checkpoint_elt:HTMLOListElement;
+
+  state_tab_content:HTMLDivElement;
 
   entries_by_name:Record<string,HTMLLIElement>;
   
@@ -57,18 +63,31 @@ export class UI {
     this.entries_by_name["sv__"+save_file] = li;
   }
   newState(state_file:string, state_thumbnail:string) {
-    const img = new Image();
+    console.log("found new state", state_file);
+    // Create state list template object
+    const state_list_object_template = <HTMLTemplateElement>document.getElementById("temp_state_list_object");
+    const new_state_list_object = <HTMLDivElement>state_list_object_template.content.cloneNode(true);
+
+    // Add img data to state_list_object and create on click load
+    // state from img
+    const img = <HTMLImageElement>new_state_list_object.querySelector("img");
     const img_data = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
     img.src = img_data;
+
     const num_str = (state_file.match(/state([0-9]+)$/)?.[1]) ?? "0";
     const save_num = parseInt(num_str,10);
     img.addEventListener("click", () => {
       console.log("Load",state_file,save_num);
       this.control["load_state"](save_num);
     });
+
+    // Add state descriptive information and download link
     const a = <HTMLAnchorElement>document.createElement("a");
     a.textContent=state_file;
     a.addEventListener("click", () => this.control.download_file("state",state_file));
+    const state_object_title = <HTMLHeadElement>new_state_list_object.querySelector("h5");
+    const 
+
     const li = <HTMLLIElement>document.createElement("li");
     li.appendChild(img);
     li.appendChild(a);
