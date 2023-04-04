@@ -6,14 +6,43 @@
     <title>Vite + TS</title>
   </head>
   <body>
+  <!-- Initial UI Structure -->
     <div id="ui" class="container">
       <div class="row">
         <div class="col">
-          <div id="emulator_single_div"></div>
+          <div id="emulator_single_div" class="w-100 p-3"></div>
         </div>
         <div class="col">
           <div id="emulator_contextual_div">
-            Test
+            <ul class="nav nav-pills mb-3" id="gisst-artifacts-tab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="gisst-saves-tab" data-bs-toggle="pill"
+                        data-bs-target="#gisst-saves" type="button" role="tab"
+                        aria-controls="gisst-saves" aria-selected="true">Saves</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="gisst-states-tab" data-bs-toggle="pill"
+                        data-bs-target="#gisst-states" type="button" role="tab"
+                        aria-controls="gisst-states" aria-selected="false">States</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="gisst-replays-tab" data-bs-toggle="pill"
+                        data-bs-target="#gisst-replays" type="button" role="tab"
+                        aria-controls="gisst-replays" aria-selected="false">Replays</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="gisst-checkpoints-tab" data-bs-toggle="pill"
+                        data-bs-target="#gisst-checkpoints" type="button" role="tab"
+                        aria-controls="gisst-checkpoints" aria-selected="false">Checkpoints</button>
+              </li>
+            </ul>
+            <div class="tab-content" id="pills-tabContent">
+              <div class="tab-pane fade show active" id="gisst-saves" role="tabpanel" aria-labelledby="gisst-saves-tab">Saves</div>
+              <div class="tab-pane fade" id="gisst-states" role="tabpanel" aria-labelledby="gisst-states-tab">States</div>
+              <div class="tab-pane fade" id="gisst-replays" role="tabpanel" aria-labelledby="gisst-replays-tab">Replays</div>
+              <div class="tab-pane fade" id="gisst-checkpoints" role="tabpanel" aria-labelledby="gisst-checkpoints-tab">Checkpoints</div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -21,29 +50,51 @@
         <div class="col">
             <div class="btn-toolbar" role="toolbar" aria-label="Emulator manipulation toolbar with buttons" id="emulator_single_button_toolbar">
               <div class="btn-group me-2" role="group" aria-label="Save and state creation tools">
-                <button type="button" class="btn btn-secondary">Save</button>
-                <button type="button" class="btn btn-secondary">Save State</button>
-                <button type="button" class="btn btn-secondary">Checkpoint</button>
+                <button id="save_button" type="button" class="btn btn-secondary">Save</button>
+                <button id="save_state_button" type="button" class="btn btn-secondary">Save State</button>
+                <button id="checkpoint_button" type="button" class="btn btn-secondary">Checkpoint</button>
               </div>
               <div class="btn-group me-2" role="group" aria-label="Replay creation tools">
-                <button type="button" class="btn btn-secondary">Start Replay</button>
-                <button type="button" class="btn btn-secondary">Finish Replay</button>
+                <button id="start_replay_button" type="button" class="btn btn-secondary">Start Replay</button>
+                <button id="finish_replay_button" type="button" class="btn btn-secondary">Finish Replay</button>
               </div>
               <div class="btn-group me-2" role="group" aria-label="Deletion tools">
-                <button type="button" class="btn btn-secondary">Pop Save</button>
-                <button type="button" class="btn btn-secondary">Pop State</button>
-                <button type="button" class="btn btn-secondary">Pop Checkpoint</button>
-                <button type="button" class="btn btn-secondary">Pop Replay</button>
+                <button id="remove_last_save_button" type="button" class="btn btn-secondary">Pop Save</button>
+                <button id="remove_last_state_button" type="button" class="btn btn-secondary">Pop State</button>
+                <button id="remove_last_checkpoint_button" type="button" class="btn btn-secondary">Pop Checkpoint</button>
+                <button id="remove_last_replay_button" type="button" class="btn btn-secondary">Pop Replay</button>
               </div>
               <div class="btn-group me-2" role="group" aria-label="UI manipulation">
-                <button type="button" class="btn btn-secondary">Clear UI</button>
-                <button type="button" class="btn btn-secondary">Hide Emulator</button>
+                <button id="clear_ui_button" type="button" class="btn btn-secondary">Clear UI</button>
+                <button id="hide_emulator" type="button" class="btn btn-secondary">Hide Emulator</button>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+    <!-- Templates for UI Elements -->
+    <!-- State list item with screenshot template -->
+    <template id="temp_state_list_object">
+      <div class="card mb-3 state-list-object">
+        <div class="row g-0">
+          <div class="col-md-4">
+            <img class="gisst-state-screenshot-img" src="" class="img-fluid rounded-start" alt="">
+          </div>
+          <div class="col-md-8">
+            <div class="card-body">
+              <h5 class="card-title"></h5>
+              <p class="card-text"></p>
+              <p class="card-text"><small class="text-muted"></small></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
     <script type="module" src="/src/main.ts"></script>
     <script type="module" src="/src/tester.ts"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>
+
   </body>
 </html>
