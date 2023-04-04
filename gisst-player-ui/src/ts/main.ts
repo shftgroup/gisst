@@ -1,5 +1,5 @@
 // Importing main scss file, vite will process and include bootstrap
-import './styles.scss'
+import '../scss/styles.scss'
 
 interface UIController {
   load_state: (state_num:number) => void;
@@ -20,19 +20,20 @@ export class UI {
   static readonly gisst_states_list_content_id = "gisst-states";
   static readonly gisst_replays_list_content_id = "gisst-replays";
   static readonly gisst_checkpoints_list_content_id = "gisst-checkpoints";
+  ui_date_format:Object = {
+    day: "2-digit", year: "numeric", month: "short",
+    hour:"numeric", minute:"numeric", second:"numeric"
+  }
   control:UIController;
 
   desktop_ui:Boolean;
 
   ui_root:HTMLDivElement;
-  state_elt:HTMLOListElement;
   saves_elt:HTMLOListElement;
   replay_elt:HTMLOListElement;
   checkpoint_elt:HTMLOListElement;
 
-  state_tab_content:HTMLDivElement;
-
-  entries_by_name:Record<string,HTMLLIElement>;
+  entries_by_name:Record<string,HTMLDivElement>;
   
   // ... functions go here
   constructor(ui_root:HTMLDivElement, control:UIController, desktop_ui:Boolean) {
@@ -43,8 +44,6 @@ export class UI {
     // Configure emulator manipulation toolbar
     this.saves_elt = <HTMLOListElement>document.createElement("ol");
     this.ui_root.appendChild(this.saves_elt);
-    this.state_elt = <HTMLOListElement>document.createElement("ol");
-    this.ui_root.appendChild(this.state_elt);
     this.replay_elt = <HTMLOListElement>document.createElement("ol");
     this.ui_root.appendChild(this.replay_elt);
     this.checkpoint_elt = <HTMLOListElement>document.createElement("ol");
@@ -86,13 +85,14 @@ export class UI {
     a.textContent=state_file;
     a.addEventListener("click", () => this.control.download_file("state",state_file));
     const state_object_title = <HTMLHeadElement>new_state_list_object.querySelector("h5");
-    const 
+    state_object_title.appendChild(a);
+    const state_object_timestamp = <HTMLElement>new_state_list_object.querySelector("small");
+    state_object_timestamp.textContent = `Created ${new Date().toLocaleDateString("en-US", this.ui_date_format)}`;
 
-    const li = <HTMLLIElement>document.createElement("li");
-    li.appendChild(img);
-    li.appendChild(a);
-    this.state_elt.appendChild(li);
-    this.entries_by_name["st__"+state_file] = li;
+    const gisst_state_tab = <HTMLDivElement>document.getElementById(UI.gisst_states_list_content_id);
+    gisst_state_tab.appendChild(new_state_list_object);
+
+    this.entries_by_name["st__"+state_file] = new_state_list_object;
   }
   newReplay(replay_file:string) {
     this.clearCheckpoints();
