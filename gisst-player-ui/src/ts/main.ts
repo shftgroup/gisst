@@ -8,6 +8,30 @@ interface UIController {
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
 }
 
+interface GISSTArtifact {
+  id: string;
+  created: Date;
+  list_element?: HTMLLIElement;
+  image_element?: HTMLImageElement;
+  card_element?: HTMLDivElement;
+}
+
+class State implements GISSTArtifact {
+
+}
+
+class Replay implements GISSTArtifact {
+  linked_states: State[];
+
+}
+class Checkpoint implements GISSTArtifact {
+  linked_states: State[];
+}
+
+class Save implements GISSTArtifact {
+
+}
+
 export class UI {
   // static declarations for UI element names
   // assuming a single emulator window right now, will modify for multiple windows
@@ -33,7 +57,7 @@ export class UI {
   replay_elt:HTMLOListElement;
   checkpoint_elt:HTMLOListElement;
 
-  entries_by_name:Record<string,HTMLDivElement>;
+  entries_by_name:Record<string,GISSTArtifact>;
   
   // ... functions go here
   constructor(ui_root:HTMLDivElement, control:UIController, desktop_ui:Boolean) {
