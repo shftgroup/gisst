@@ -7,3 +7,6 @@ frontend-elec/resources/ra-assets/
 frontend-tauri/src-tauri/ra-assets/
 frontend-web/.index-xhr
 .DS_Store
+gisst-server/target/
+gisst-server/debug/
+gisst-server/.idea/

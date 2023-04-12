@@ -89,25 +89,25 @@ function copyFile(from: string, to: string): void {
 function retroReady(): void {
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
-    {
-      "load_state":(num:number) => load_state_slot(num),
-      "load_checkpoint":(_num:number) => alert("nyi"),
-      "play_replay":(num:number) => play_replay_slot(num),
-      "download_file":(category:"state" | "save" | "replay", file_name:string) => {
-        let path = "/home/web_user/retroarch/userdata";
-        if(category == "state") {
-          path += "/states";
-        } else if(category == "save") {
-          path += "/saves";
-        } else if(category == "replay") {
-          path += "/states";
-        } else {
-          console.error("Invalid save category",category,file_name);
+      {
+        "load_state": (num: number) => load_state_slot(num),
+        "load_checkpoint": (_num: number) => alert("nyi"),
+        "play_replay": (num: number) => play_replay_slot(num),
+        "download_file": (category: "state" | "save" | "replay", file_name: string) => {
+          let path = "/home/web_user/retroarch/userdata";
+          if (category == "state") {
+            path += "/states";
+          } else if (category == "save") {
+            path += "/saves";
+          } else if (category == "replay") {
+            path += "/states";
+          } else {
+            console.error("Invalid save category", category, file_name);
+          }
+          const data = FS.readFile(path + "/" + file_name);
+          saveAs(new Blob([data]), file_name);
         }
-        const data = FS.readFile(path+"/"+file_name);
-        saveAs(new Blob([data]), file_name);
       }
-    }
   );
 
   let prev = document.getElementById("webplayer-preview")!;
