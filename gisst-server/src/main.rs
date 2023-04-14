@@ -1,10 +1,11 @@
 use axum::{
     routing::{get, post},
     http::{StatusCode, Request, Response, Uri},
-    response::IntoResponse,
+    response::{IntoResponse, Html},
     body::{boxed, Body},
     Json,
     Router,
+    extract::Path,
 };
 use serde::{Deserialize,Serialize};
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
@@ -16,6 +17,7 @@ use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 use clap::Parser;
 use log;
+use minijinja::render;
 
 
 
@@ -72,7 +74,14 @@ async fn main() {
 }
 
 fn using_serve_dir() -> Router {
-    Router::new().nest_service("/", ServeDir::new("../frontend-web/dist"))
+    Router::new()
+        .route("/artifact/:artifact_id", get(get_artifact))
+        .nest_service("/", ServeDir::new("../frontend-web/dist"))
+}
+
+async fn get_artifact(Path(artifact_id):Path<String>) -> Html<String> {
+    let r = render!(INDEX_TEMPLATE, artifact => Artifact { id: artifact_id } );
+    Html(r)
 }
 
 async fn serve(app: Router, ip_addr:String, port:u16){
@@ -89,3 +98,20 @@ async fn serve(app: Router, ip_addr:String, port:u16){
 
     log::info!("listening on http://{}", ip_addr);
 }
+
+#[derive(Debug, Serialize)]
+struct Artifact {
+    id: String,
+}
+
+const INDEX_TEMPLATE: &'static str = r#"
+<!doctype html>
+<html lang="en">
+<head>
+</head>
+
+<body data-artifact-id={{ artifact.id }}>
+Just a test to show the template correctly, {{ artifact.id }}.
+</body>
+</html>
+"#;
