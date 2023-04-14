@@ -1,3 +1,6 @@
+// Importing main scss file, vite will process and include bootstrap
+import '../scss/styles.scss'
+
 interface UIController {
   load_state: (state_num:number) => void;
   play_replay: (replay_num:number) => void;
@@ -5,32 +8,73 @@ interface UIController {
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
 }
 
+interface GISSTArtifact {
+  id: string;
+  created: Date;
+  list_element?: HTMLLIElement;
+  image_element?: HTMLImageElement;
+  card_element?: HTMLDivElement;
+}
+
+class State implements GISSTArtifact {
+
+}
+
+class Replay implements GISSTArtifact {
+  linked_states: State[];
+
+}
+class Checkpoint implements GISSTArtifact {
+  linked_states: State[];
+}
+
+class Save implements GISSTArtifact {
+
+}
+
 export class UI {
+  // static declarations for UI element names
+  // assuming a single emulator window right now, will modify for multiple windows
+  static readonly emulator_single_div_id = "emulator_single_div";
+  static readonly state_button_id = "state_button";
+  static readonly save_button_id = "save_button";
+  static readonly checkpoint_button_id = "checkpoint_button";
+  static readonly replay_button_id = "start_replay_button";
+  static readonly gisst_saves_list_content_id = "gisst-saves";
+  static readonly gisst_states_list_content_id = "gisst-states";
+  static readonly gisst_replays_list_content_id = "gisst-replays";
+  static readonly gisst_checkpoints_list_content_id = "gisst-checkpoints";
+  ui_date_format:Object = {
+    day: "2-digit", year: "numeric", month: "short",
+    hour:"numeric", minute:"numeric", second:"numeric"
+  }
   control:UIController;
 
+  desktop_ui:Boolean;
+
   ui_root:HTMLDivElement;
-  state_elt:HTMLOListElement;
   saves_elt:HTMLOListElement;
   replay_elt:HTMLOListElement;
   checkpoint_elt:HTMLOListElement;
 
-  entries_by_name:Record<string,HTMLLIElement>;
+  entries_by_name:Record<string,GISSTArtifact>;
   
   // ... functions go here
-  constructor(ui_root:HTMLDivElement, control:UIController) {
-    this.control = control;
-
+  constructor(ui_root:HTMLDivElement, control:UIController, desktop_ui:Boolean) {
     this.ui_root = ui_root;
+    this.control = control;
+    this.desktop_ui = desktop_ui;
+
+    // Configure emulator manipulation toolbar
     this.saves_elt = <HTMLOListElement>document.createElement("ol");
-    ui_root.appendChild(this.saves_elt);
-    this.state_elt = <HTMLOListElement>document.createElement("ol");
-    ui_root.appendChild(this.state_elt);
+    this.ui_root.appendChild(this.saves_elt);
     this.replay_elt = <HTMLOListElement>document.createElement("ol");
-    ui_root.appendChild(this.replay_elt);
+    this.ui_root.appendChild(this.replay_elt);
     this.checkpoint_elt = <HTMLOListElement>document.createElement("ol");
-    ui_root.appendChild(this.checkpoint_elt);
+    this.ui_root.appendChild(this.checkpoint_elt);
     this.entries_by_name = {};
   }
+
   newSave(save_file:string) {
     console.log("found new save",save_file);
     const a = <HTMLAnchorElement>document.createElement("a");
@@ -42,23 +86,37 @@ export class UI {
     this.entries_by_name["sv__"+save_file] = li;
   }
   newState(state_file:string, state_thumbnail:string) {
-    const img = new Image();
+    console.log("found new state", state_file);
+    // Create state list template object
+    const state_list_object_template = <HTMLTemplateElement>document.getElementById("temp_state_list_object");
+    const new_state_list_object = <HTMLDivElement>state_list_object_template.content.cloneNode(true);
+
+    // Add img data to state_list_object and create on click load
+    // state from img
+    const img = <HTMLImageElement>new_state_list_object.querySelector("img");
     const img_data = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
     img.src = img_data;
+
     const num_str = (state_file.match(/state([0-9]+)$/)?.[1]) ?? "0";
     const save_num = parseInt(num_str,10);
     img.addEventListener("click", () => {
       console.log("Load",state_file,save_num);
       this.control["load_state"](save_num);
     });
+
+    // Add state descriptive information and download link
     const a = <HTMLAnchorElement>document.createElement("a");
     a.textContent=state_file;
     a.addEventListener("click", () => this.control.download_file("state",state_file));
-    const li = <HTMLLIElement>document.createElement("li");
-    li.appendChild(img);
-    li.appendChild(a);
-    this.state_elt.appendChild(li);
-    this.entries_by_name["st__"+state_file] = li;
+    const state_object_title = <HTMLHeadElement>new_state_list_object.querySelector("h5");
+    state_object_title.appendChild(a);
+    const state_object_timestamp = <HTMLElement>new_state_list_object.querySelector("small");
+    state_object_timestamp.textContent = `Created ${new Date().toLocaleDateString("en-US", this.ui_date_format)}`;
+
+    const gisst_state_tab = <HTMLDivElement>document.getElementById(UI.gisst_states_list_content_id);
+    gisst_state_tab.appendChild(new_state_list_object);
+
+    this.entries_by_name["st__"+state_file] = new_state_list_object;
   }
   newReplay(replay_file:string) {
     this.clearCheckpoints();
