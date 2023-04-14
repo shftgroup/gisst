@@ -9,6 +9,7 @@ edition = "2021"
 axum = "0.6.12"
 clap = { version = "4.2.1", features = ["derive"] }
 log = "0.4.17"
+minijinja = "0.31.1"
 serde = "1.0.159"
 sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "postgres"] }
 tokio = { version = "1.27.0", features = ["full"] }
