@@ -10,3 +10,5 @@ frontend-web/.index-xhr
 gisst-server/target/
 gisst-server/debug/
 gisst-server/.idea/
+gisst-server/.env
+test-file-storage/
