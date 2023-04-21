@@ -1,4 +1,5 @@
 -- Add migration script here
+DROP TABLE content;
 
 CREATE TABLE IF NOT EXISTS content (
     content_id          serial  PRIMARY KEY,
@@ -12,6 +13,8 @@ CREATE TABLE IF NOT EXISTS content (
     created_on  timestamp
 );
 
+DROP TABLE platform;
+
 CREATE TABLE IF NOT EXISTS platform (
     platform_id         serial PRIMARY KEY,
     core_id             integer,
@@ -19,6 +22,7 @@ CREATE TABLE IF NOT EXISTS platform (
     created_on          timestamp
 );
 
+DROP TABLE creator;
 CREATE TABLE IF NOT EXISTS creator (
     creator_id          serial PRIMARY KEY,
     creator_username    varchar(20),
@@ -26,6 +30,7 @@ CREATE TABLE IF NOT EXISTS creator (
     created_on  timestamp
 );
 
+DROP TABLE save;
 CREATE TABLE IF NOT EXISTS save (
     save_id          serial PRIMARY KEY,
     save_uuid        uuid,
@@ -39,6 +44,7 @@ CREATE TABLE IF NOT EXISTS save (
     created_on  timestamp
 );
 
+DROP TABLE image;
 CREATE TABLE IF NOT EXISTS image (
     image_id          serial PRIMARY KEY,
     image_filename    text,
@@ -47,6 +53,7 @@ CREATE TABLE IF NOT EXISTS image (
     created_on  timestamp
 );
 
+DROP TABLE replay;
 CREATE TABLE IF NOT EXISTS replay (
     replay_id           serial PRIMARY KEY,
     content_id          integer,
@@ -57,6 +64,7 @@ CREATE TABLE IF NOT EXISTS replay (
     core_id             integer
 );
 
+DROP TABLE core;
 CREATE TABLE IF NOT EXISTS core (
     core_id         serial PRIMARY KEY,
     core_name       text,
@@ -64,8 +72,10 @@ CREATE TABLE IF NOT EXISTS core (
     core_manifest   json
 );
 
+DROP TABLE state;
 CREATE TABLE IF NOT EXISTS state (
     state_id            serial PRIMARY KEY,
+    state_screenshot    bytea,
     replay_id           integer,
     content_id          integer,
     creator_id          integer,
