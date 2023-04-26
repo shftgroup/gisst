@@ -1,3 +1,6 @@
+mod db;
+mod serverconfig;
+
 use axum::{
     routing::{get, post},
     http::{StatusCode, Request, Response, Uri},
@@ -21,28 +24,32 @@ use log;
 use minijinja::{render, context};
 use sqlx::{PgConnection, PgPool, Postgres};
 use std::fs::{self, DirBuilder};
+use serde::__private::de::TagOrContentField::Content;
 
 
-// Setup command line interface, taken from: https://robert.kra.hn/posts/2022-04-03_rust-web-wasm/
-#[derive(Parser, Debug)]
-#[clap(name = "gisst-server", about = "Basic GISST Server Implementation")]
-struct Opt {
-    /// set log level
-    #[clap(short = 'l', long = "log", default_value = "debug")]
-    log_level: String,
-    /// set server address
-    #[clap(short = 'a', long = "addr", default_value = "::1")]
-    addr:String,
-
-    /// set server port
-    #[clap(short = 'p', long = "port", default_value = "3000")]
-    port: u16,
-
-    /// do not serve frontend application
-    #[arg(short,long)]
-    no_app: bool,
+#[derive(Debug, thiserror::Error)]
+enum GISSTError {
+    #[error("database error")]
+    SqlError(#[from] sqlx::Error),
 }
 
+impl IntoResponse for GISSTError {
+    fn into_response(self) -> axum::response::Response {
+        let (status, message) = match self {
+            GISSTError::SqlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database error"),
+        };
+
+        let body = Json(json!({"error": message}));
+
+        (status, body).into_response()
+    }
+}
+
+async fn get_content(db: Extension<PgPool>,
+                     content_id: i32) -> Result<(StatusCode, Json<ContentItem>), GISSTError> {
+
+    Ok((StatusCode::OK, ))
+}
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error>{
@@ -83,7 +90,7 @@ async fn main() -> Result<(), sqlx::Error>{
     }
 
 
-    tracing::debug!("listening on {}", ip_addr);
+    tracing::debug!("listening on {}", addr);
 
     axum::Server::bind(&addr)
         .serve(app.layer(TraceLayer::new_for_http()).into_make_service())
@@ -113,55 +120,57 @@ async fn main() -> Result<(), sqlx::Error>{
                 .recursive(false)
                 .create(path.as_path())
                 .unwrap();
+            assert!(fs::metadata(path.as_path()).unwrap().is_dir());
             path.pop();
         }
 
     }
-    assert!(fs::metadata(path).unwrap().is_dir());
 
-    log::info!("listening on http://{}", ip_addr);
+    log::info!("listening on http://{}", addr);
     Ok(())
 }
 
 async fn get_content(db: Extension<PgPool>, content_id:Path<String>) -> Html<String> {
-    let mut conn = db.acquire().await?;
+    let mut conn = db.acquire().await.unwrap();
     // Just getting this to work, will change unwrap to something safer later
     let id: i32 = content_id.rsplit_once("/").unwrap().1.parse::<i32>().unwrap();
 
-    let content_record: Content = get_content_by_id(&mut conn, id);
-    let platform_record: Platform = get_platform_by_id(&mut conn, content_record.platform_id);
-    let core_record: Core = get_core_by_id(&mut conn, platform_record.core_id);
+    println!("{}", id);
+    let content_record: ContentItem = get_content_by_id(&mut conn, id)?;
+    let platform_record: Platform = get_platform_by_id(&mut conn, content_record.platform_id.unwrap())?;
+    let core_record: Core = get_core_by_id(&mut conn, platform_record.core_id)?;
 
     // Just for testing right now, in future will be a call to the database
-    let r = render!(INDEX_TEMPLATE, context! {
+    let r = render!(INDEX_TEMPLATE,
         content => content_record,
         platform => platform_record,
         core => core_record,
-    });
+    );
     Html(r)
 }
 
-async fn get_content_by_id(conn: &mut PgConnection, content_id: i32) -> Content {
+async fn get_content_by_id(conn: &mut PgConnection, content_id: i32) -> Option<ContentItem> {
     sqlx::query_as!(
-        Content, r"SELECT * FROM content WHERE id = ?",
+        ContentItem,
+        "SELECT * FROM content WHERE content_id = $1",
         content_id
     )
         .fetch_one(conn)
-        .await?
+        .await
 }
 
 async fn get_platform_by_id(conn: &mut PgConnection, platform_id: i32) -> Platform{
     sqlx::query_as!(
-        Platform, r"SELECT * FROM platform WHERE id = ?",
+        Platform, "SELECT * FROM platform WHERE platform_id = $1",
         platform_id,
     )
         .fetch_one(conn)
-        .await?
+        .await
 }
 
 async fn get_core_by_id(conn: &mut PgConnection, core_id: i32) -> Core {
     sqlx::query_as!(
-        Core, r"SELECT * FROM core WHERE id = ?",
+        Core, "SELECT * FROM core WHERE core_id = $1",
         core_id,
     )
         .fetch_one(conn)
@@ -171,23 +180,24 @@ async fn get_core_by_id(conn: &mut PgConnection, core_id: i32) -> Core {
 // Database structs, templates, and table generation
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Content {
-    id: i32,
-    uuid: uuid::Uuid,
-    title: String,
-    version: String,
-    path: String,
-    filename: String,
-    platform_id: i32,
-    parent_id: i32,
+struct ContentItem{
+    content_id: i32,
+    content_uuid: Option<uuid::Uuid>,
+    content_title: Option<String>,
+    content_version: Option<String>,
+    content_path: Option<String>,
+    content_filename: Option<String>,
+    platform_id: Option<i32>,
+    content_parent_id: Option<i32>,
+    created_on: Option<time::PrimitiveDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Core{
-    id: i32,
-    name: String,
-    version: String,
-    manifest: serde_json::Value,
+    core_id: i32,
+    core_name: String,
+    core_version: String,
+    core_manifest: serde_json::Value,
 }
 
 #[derive(Debug, Serialize)]
@@ -221,9 +231,9 @@ struct Replay{
 
 #[derive(Debug, Serialize)]
 struct Platform{
-    id: i32,
+    platform_id: i32,
     core_id: i32,
-    framework: String,
+    platform_framework: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -235,7 +245,7 @@ struct State{
     content_id: i32,
     replay_time_index: u16,
     is_checkpoint: bool,
-    path: std::path::Path,
+    path: String,
     filename: String,
     name: String,
     description: String,

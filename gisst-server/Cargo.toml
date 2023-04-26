@@ -8,11 +8,15 @@ edition = "2021"
 [dependencies]
 axum = { version = "0.6.12", features = ["multipart"] }
 clap = { version = "4.2.1", features = ["derive"] }
+config = "0.13.3"
 log = "0.4.17"
 minijinja = "0.31.1"
+secrecy = "0.8.0"
 serde = "1.0.159"
 serde_json = "1.0.96"
-sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "postgres"] }
+sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "postgres", "uuid", "time", "json"] }
+thiserror = "1.0.40"
+time = "0.3.20"
 tokio = { version = "1.27.0", features = ["full"] }
 tower = "0.4.13"
 tower-http = { version = "0.4.0", features = ["fs", "trace"] }
