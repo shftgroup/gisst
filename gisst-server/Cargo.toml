@@ -1,11 +1,12 @@
 [package]
-name = "gisst-server"
+name = "gisst_server"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.70"
 axum = { version = "0.6.12", features = ["multipart"] }
 clap = { version = "4.2.1", features = ["derive"] }
 config = "0.13.3"
