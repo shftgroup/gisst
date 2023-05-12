@@ -1,12 +1,8 @@
 use std::net::Ipv4Addr;
-use axum::extract::rejection::InvalidUtf8InPathParam;
-use axum::Server;
 
 use config::{Config, ConfigError, Environment, File};
 use secrecy::Secret;
 use serde::Deserialize;
-use sqlx::Encode;
-use tracing_subscriber::registry::Data;
 
 //Configuration file setup taken from https://github.com/shanesveller/axum-rest-example/blob/develop/src/config.rs
 #[derive(Debug,Default,Deserialize)]
@@ -16,6 +12,9 @@ pub struct ServerConfig {
 
     #[serde(default)]
     pub http: HttpConfig,
+
+    #[serde(default)]
+    pub storage: StorageConfig,
 }
 
 impl ServerConfig {
@@ -44,7 +43,7 @@ pub struct DatabaseConfig {
 }
 
 fn default_database_url() -> Secret<String> {
-    Secret::new("postgresql://postgres:postgres@localhost/gisst_db".to_owned())
+    Secret::new("postgresql://eric.kaltman@localhost/testdb".to_owned())
 }
 
 impl Default for DatabaseConfig {
@@ -60,6 +59,31 @@ impl Default for DatabaseConfig {
     }
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct StorageConfig {
+    #[serde(default = "default_root_folder_path")]
+    pub root_folder_path: String,
+    #[serde(default = "default_folder_depth")]
+    pub folder_depth: i8,
+}
+
+fn default_root_folder_path() -> String {
+    "./storage".to_string()
+}
+
+fn default_folder_depth() -> i8{
+    4
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self {
+            root_folder_path: default_root_folder_path(),
+            folder_depth: default_folder_depth(),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize)]
 pub struct HttpConfig {
     #[serde(default = "default_listen_address")]
@@ -69,6 +93,7 @@ pub struct HttpConfig {
     pub listen_port: u16,
 }
 
+// Not sure if all of this is redundant, it appears so
 fn default_listen_address() -> Ipv4Addr {
     Ipv4Addr::new(0,0,0,0)
 }

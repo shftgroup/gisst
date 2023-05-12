@@ -3,7 +3,7 @@ use std::time::Duration;
 use crate::serverconfig::ServerConfig;
 
 use secrecy::ExposeSecret;
-use sqlx::{pool::PoolOptions, PgPool, Pool};
+use sqlx::{pool::PoolOptions, PgPool,};
 
 pub(crate) async fn new_pool(config: &ServerConfig) -> sqlx::Result<PgPool> {
     PoolOptions::new()
