@@ -12,3 +12,4 @@ gisst-server/debug/
 gisst-server/.idea/
 gisst-server/storage/
 gisst-server/.env
+gisst-server/config/local.toml

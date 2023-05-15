@@ -272,7 +272,9 @@ impl State {
             state_description,
             core_id,
             state_derived_from
-            "#
+            FROM state WHERE state_id = $1
+            "#,
+            id,
         )
             .fetch_optional(conn)
             .await

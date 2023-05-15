@@ -15,7 +15,7 @@ ALTER TABLE state DROP CONSTRAINT state_core_id_fkey;
 ALTER TABLE state DROP CONSTRAINT state_creator_id_fkey;
 ALTER TABLE state DROP CONSTRAINT state_state_derived_from_fkey;
 ALTER TABLE state DROP CONSTRAINT state_replay_id_fkey;
---ALTER TABLE state DROP CONSTRAINT state_screenshot_id_fkey;
+ALTER TABLE state DROP CONSTRAINT state_screenshot_id_fkey;
 
 DROP TABLE platform;
 DROP TABLE content;
@@ -25,4 +25,4 @@ DROP TABLE replay;
 DROP TABLE state;
 DROP TABLE creator;
 DROP TABLE core;
---DROP TABLE screenshot;
+DROP TABLE screenshot;

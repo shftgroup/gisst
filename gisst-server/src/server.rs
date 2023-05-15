@@ -18,6 +18,10 @@ use anyhow::Result;
 use axum::{
     Router,
     Server,
+    body::{
+        Body,
+        Bytes,
+    },
     extract::{
         Path,
         Json,
@@ -25,7 +29,7 @@ use axum::{
     },
     routing::{get,},
     response::{IntoResponse, Response, Html},
-    http::{StatusCode},
+    http::{StatusCode, Request},
     Extension,
     };
 
@@ -169,6 +173,10 @@ async fn get_player(db: Extension<PgPool>, Query(params): Query<PlayerParams>) -
             state: state_item,
             content: content_item,
     })))
+}
+
+async fn get_item(db:Extension<PgPool>, Path((item, id)):Path<(String, Uuid)>) -> Result<Json<???>> {
+
 }
 
 async fn get_content(db: Extension<PgPool>, Path(content_id): Path<Uuid>) -> Result<Json<ContentItem>, GISSTError> {
