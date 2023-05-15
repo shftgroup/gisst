@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS core (
 
 CREATE TABLE IF NOT EXISTS state (
                                      state_id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                     state_screenshot    bytea,
+                                     screenshot_id       uuid,
                                      replay_id           uuid,
                                      content_id          uuid,
                                      creator_id          uuid,
@@ -79,6 +79,11 @@ CREATE TABLE IF NOT EXISTS state (
                                      state_description   text,
                                      core_id             uuid,
                                      state_derived_from        uuid
+);
+
+CREATE TABLE IF NOT EXISTS screenshot (
+    screenshot_id   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    screenshot_data bytea
 );
 
 -- Add foreign key constraints for all tables
@@ -103,6 +108,7 @@ ALTER TABLE state ADD FOREIGN KEY (content_id) REFERENCES content(content_id);
 ALTER TABLE state ADD FOREIGN KEY (creator_id) REFERENCES creator(creator_id);
 ALTER TABLE state ADD FOREIGN KEY (core_id) REFERENCES core(core_id);
 ALTER TABLE state ADD FOREIGN KEY (state_derived_from) REFERENCES state(state_id);
+ALTER TABLE state ADD FOREIGN KEY (screenshot_id) REFERENCES screenshot(screenshot_id);
 
 -- Add indexes for specific fields
 CREATE UNIQUE INDEX idx_content_hash ON content(content_hash);

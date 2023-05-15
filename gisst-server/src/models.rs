@@ -84,7 +84,7 @@ pub struct Replay{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State{
     state_id: Uuid,
-    state_screenshot: Option<Vec<u8>>,
+    screenshot_id: Option<Uuid>,
     replay_id: Option<Uuid>,
     content_id: Option<Uuid>,
     state_replay_index: u16,
@@ -231,7 +231,50 @@ impl Save {
     pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT "#
+            r#"SELECT
+            save_id,
+            save_short_desc,
+            save_description,
+            save_filename,
+            save_path,
+            creator_id,
+            content_id,
+            core_id,
+            created_on
+            FROM save WHERE save_id = $1"#,
+            id
         )
+            .fetch_optional(conn)
+            .await
+    }
+}
+
+impl Platform {
+    pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
+
+    }
+}
+
+impl State {
+    pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT state_id,
+            screenshot_id,
+            replay_id,
+            content_id,
+            creator_id,
+            state_replay_index,
+            is_checkpoint,
+            state_path,
+            state_filename,
+            state_name,
+            state_description,
+            core_id,
+            state_derived_from
+            "#
+        )
+            .fetch_optional(conn)
+            .await
     }
 }

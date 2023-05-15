@@ -176,3 +176,9 @@ async fn get_content(db: Extension<PgPool>, Path(content_id): Path<Uuid>) -> Res
     let content = ContentItem::get_by_id(&mut conn, content_id).await?;
     Ok(Json(content.unwrap_or(ContentItem::empty())))
 }
+
+async fn get_state(db: Extension<PgPool>, Path(state_id): Path<Uuid>) -> Result<Json<State>, GISSTError> {
+    let mut conn = db.acquire().await?;
+    let state = State::get_by_id(&mut conn, state_id).await?;
+    Ok(Json(state.unwrap_or(State::empty())))
+}
