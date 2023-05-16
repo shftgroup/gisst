@@ -7,6 +7,7 @@ ALTER TABLE replay DROP CONSTRAINT replay_content_id_fkey;
 ALTER TABLE replay DROP CONSTRAINT replay_core_id_fkey;
 ALTER TABLE replay DROP CONSTRAINT replay_replay_forked_from_fkey;
 ALTER TABLE replay DROP CONSTRAINT replay_save_id_fkey;
+ALTER TABLE replay DROP CONSTRAINT replay_creator_id_fkey;
 ALTER TABLE save DROP CONSTRAINT save_content_id_fkey;
 ALTER TABLE save DROP CONSTRAINT save_core_id_fkey;
 ALTER TABLE save DROP CONSTRAINT save_creator_id_fkey;

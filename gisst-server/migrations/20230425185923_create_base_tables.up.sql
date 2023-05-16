@@ -52,8 +52,9 @@ CREATE TABLE IF NOT EXISTS replay (
                                       replay_id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                                       content_id          uuid,
                                       save_id             uuid,
+                                      creator_id          uuid,
                                       replay_forked_from  uuid,
-                                      replay_filename     integer,
+                                      replay_filename     text,
                                       replay_path         text,
                                       core_id            uuid
 );
@@ -102,6 +103,7 @@ ALTER TABLE replay ADD FOREIGN KEY (content_id) REFERENCES content(content_id);
 ALTER TABLE replay ADD FOREIGN KEY (save_id) REFERENCES save(save_id);
 ALTER TABLE replay ADD FOREIGN KEY (replay_forked_from) REFERENCES replay(replay_id);
 ALTER TABLE replay ADD FOREIGN KEY (core_id) REFERENCES core(core_id);
+ALTER TABLE replay ADD FOREIGN KEY (creator_id) REFERENCES creator(creator_id);
 
 ALTER TABLE state ADD FOREIGN KEY (replay_id) REFERENCES replay(replay_id);
 ALTER TABLE state ADD FOREIGN KEY (content_id) REFERENCES content(content_id);
