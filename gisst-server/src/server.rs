@@ -74,6 +74,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/player", get(get_player))
         .route("/content/:content_id", get(get_content))
         .route("/state/:state_id", get(get_state))
+        .route("/")
         .nest_service("/", ServeDir::new("../frontend-web/dist"))
         .layer(Extension(pool));
 
@@ -108,12 +109,12 @@ where   D: Deserializer<'de>,
 
 #[derive(Deserialize, Serialize)]
 struct PlayerTemplateInfo {
-    content: Option<ContentItem>,
-    core: Option<Core>,
-    platform: Option<Platform>,
-    state: Option<State>,
-    replay: Option<Replay>,
-    save: Option<Save>,
+    content: ContentItem,
+    core: Core,
+    platform: Platform,
+    state: State,
+    replay: Replay,
+    save: Save,
 }
 
 
@@ -128,38 +129,44 @@ struct PlayerParams {
 
 async fn get_player(db: Extension<PgPool>, Query(params): Query<PlayerParams>) -> Result<Html<String>, GISSTError> {
     let mut conn = db.acquire().await?;
-    let content_item:ContentItem;
-    let platform_item:Platform;
-    let state_item:State;
-    let replay_item:Replay;
-    let save_item:Save;
+    let mut content_item:ContentItem = ContentItem::default();
+    let mut platform_item:Platform = Platform::default();
+    let mut state_item:State = State::default();
+    let mut replay_item:Replay = Replay::default();
+    let mut save_item:Save = Save::default();
+    let mut core_item:Core = Core::default();
 
     // Check if the content_uuid param is present, if so query for the content item and its
     // platform information
     if !params.content_uuid.is_none(){
-        if let Ok(content) = ContentItem::get_by_id(&mut conn, params.content_uuid.unwrap()).await? {
+        if let Ok(content) = ContentItem::get_by_id(&mut conn, params.content_uuid.unwrap()).await?.ok_or("Cannot get content from database"){
             content_item = content;
 
-            if let Ok(platform) = Platform::get_by_id(&mut conn, content.platform_id).await? {
+            if let Ok(platform) = Platform::get_by_id(&mut conn, content_item.platform_id.unwrap()).await?.ok_or("Cannot get platform from database"){
                 platform_item = platform;
+
+                if let Ok(core) = Core::get_by_id(&mut conn, platform_item.core_id.unwrap()).await?.ok_or("Cannot get core from database."){
+                    core_item = core;
+
+                }
             }
         }
     }
     // Check for an entry state for the player, if so query for the state information
     if !params.state_uuid.is_none() {
-        if let Ok(state) = State::get_by_id(&mut conn, params.state_uuid.unwrap()).await? {
+        if let Ok(state) = State::get_by_id(&mut conn, params.state_uuid.unwrap()).await?.ok_or("Cannot get state from database"){
             state_item = state;
         }
     }
     // Check for replay for the player
     if !params.replay_uuid.is_none() {
-        if let Ok(replay) = Replay::get_by_id(&mut conn, params.replay_uuid.unwrap()).await? {
+        if let Ok(replay) = Replay::get_by_id(&mut conn, params.replay_uuid.unwrap()).await?.ok_or("Cannot get replay from database"){
             replay_item = replay;
         }
     }
     // Check for save for the player
     if !params.save_uuid.is_none() {
-        if let Ok(save) = Save::get_by_id(&mut conn, params.save_uuid.unwrap()).await? {
+        if let Ok(save) = Save::get_by_id(&mut conn, params.save_uuid.unwrap()).await?.ok_or("Cannot get save from database"){
             save_item = save;
         }
     }
@@ -172,21 +179,18 @@ async fn get_player(db: Extension<PgPool>, Query(params): Query<PlayerParams>) -
             save: save_item,
             state: state_item,
             content: content_item,
+            core: core_item,
     })))
-}
-
-async fn get_item(db:Extension<PgPool>, Path((item, id)):Path<(String, Uuid)>) -> Result<Json<???>> {
-
 }
 
 async fn get_content(db: Extension<PgPool>, Path(content_id): Path<Uuid>) -> Result<Json<ContentItem>, GISSTError> {
     let mut conn = db.acquire().await?;
     let content = ContentItem::get_by_id(&mut conn, content_id).await?;
-    Ok(Json(content.unwrap_or(ContentItem::empty())))
+    Ok(Json(content.unwrap_or_default()))
 }
 
 async fn get_state(db: Extension<PgPool>, Path(state_id): Path<Uuid>) -> Result<Json<State>, GISSTError> {
     let mut conn = db.acquire().await?;
     let state = State::get_by_id(&mut conn, state_id).await?;
-    Ok(Json(state.unwrap_or(State::empty())))
+    Ok(Json(state.unwrap_or_default()))
 }

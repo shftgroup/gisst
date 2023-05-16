@@ -12,19 +12,19 @@ use uuid::{
 
 // Model definitions that should match PSQL database schema
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Default, FromRow, Serialize, Deserialize)]
 pub struct ContentItem{
     content_id: Uuid,
     content_title: Option<String>,
     content_version: Option<String>,
     content_path: Option<String>,
     content_filename: Option<String>,
-    platform_id: Option<i32>,
-    content_parent_id: Option<i32>,
+    pub platform_id: Option<Uuid>,
+    content_parent_id: Option<Uuid>,
     created_on: Option<OffsetDateTime>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Core{
     core_id: Uuid,
     core_name: Option<String>,
@@ -49,17 +49,17 @@ pub struct Image{
     created_on: Option<OffsetDateTime>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Platform{
     platform_id: Uuid,
-    core_id: Option<Uuid>,
+    pub core_id: Option<Uuid>,
     platform_framework: Option<String>,
     created_on: Option<OffsetDateTime>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Save{
-    id: Uuid,
+    save_id: Uuid,
     save_short_desc: Option<String>,
     save_description: Option<String>,
     save_filename: Option<String>,
@@ -70,25 +70,27 @@ pub struct Save{
     created_on: Option<OffsetDateTime>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Replay{
     replay_id: Uuid,
     content_id: Option<Uuid>,
     save_id: Option<Uuid>,
+    creator_id: Option<Uuid>,
     replay_forked_from: Option<Uuid>,
     replay_filename: Option<String>,
     replay_path: Option<String>,
     core_id: Option<Uuid>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct State{
     state_id: Uuid,
     screenshot_id: Option<Uuid>,
     replay_id: Option<Uuid>,
     content_id: Option<Uuid>,
-    state_replay_index: u16,
-    is_checkpoint: bool,
+    creator_id: Option<Uuid>,
+    state_replay_index: Option<i32>,
+    is_checkpoint: Option<bool>,
     state_path: Option<String>,
     state_filename: Option<String>,
     state_name: Option<String>,
@@ -97,19 +99,13 @@ pub struct State{
     state_derived_from: Option<Uuid>,
 }
 
-impl ContentItem {
+fn default_uuid() -> Uuid {
+    uuid!("00000000-0000-0000-0000-000000000000")
+}
 
-    pub fn empty() -> Self {
-        Self {
-            content_id: uuid!("00000000-0000-0000-0000-000000000000"),
-            content_title: None,
-            content_version: None,
-            content_path: None,
-            content_filename: None,
-            platform_id: None,
-            content_parent_id: None,
-            created_on: None,
-        }
+impl ContentItem {
+    pub fn default() -> Self {
+        Self { content_id: default_uuid(), ..Default::default()}
     }
 
     pub async fn get_by_id(
@@ -199,6 +195,9 @@ pub enum NewRecordError {
 
 
 impl Core {
+    pub fn default() -> Self {
+        Self{core_id: default_uuid(), ..Default::default()}
+    }
 
     pub async fn get_by_id(
         conn: &mut PgConnection,
@@ -228,6 +227,10 @@ impl Core {
 }
 
 impl Save {
+    pub fn default() -> Self {
+        Self { save_id: default_uuid(), ..Default::default()}
+    }
+
     pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -250,12 +253,53 @@ impl Save {
 }
 
 impl Platform {
+    pub fn default() -> Self{
+        Self { platform_id: default_uuid(), ..Default::default()}
+    }
     pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT platform_id, core_id, platform_framework, created_on
+            FROM platform WHERE platform_id = $1
+            "#,
+            id
+        )
+            .fetch_optional(conn)
+            .await
+    }
+}
 
+impl Replay {
+    pub fn default() -> Self{
+        Self { replay_id: default_uuid(), ..Default::default()}
+    }
+
+    pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT replay_id,
+            content_id,
+            save_id,
+            creator_id,
+            replay_forked_from,
+            replay_filename,
+            replay_path,
+            core_id
+            FROM replay WHERE replay_id = $1
+            "#,
+            id,
+        )
+            .fetch_optional(conn)
+            .await
     }
 }
 
 impl State {
+    pub fn default() -> Self{
+        Self { state_id: default_uuid(), ..Default::default()}
+    }
+
+
     pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
