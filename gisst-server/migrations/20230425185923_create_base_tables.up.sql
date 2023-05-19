@@ -2,11 +2,11 @@
 
 CREATE TABLE IF NOT EXISTS content (
                                        content_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                       content_hash        bytea,
+                                       content_hash        text,
                                        content_title       text,
                                        content_version     text,
-                                       content_path        text,
-                                       content_filename    text,
+                                       content_source_filename text,
+                                       content_dest_filename    text,
                                        platform_id          uuid,
                                        content_parent_id   uuid,
                                        created_on  timestamptz DEFAULT current_timestamp
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS image (
                                      image_filename    text,
                                      image_parent_id   uuid,
                                      image_path        text,
-                                     image_hash        bytea,
+                                     image_hash        text,
                                      created_on  timestamptz DEFAULT current_timestamp
 );
 
