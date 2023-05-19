@@ -5,6 +5,6 @@ DO $$
 BEGIN
 INSERT INTO core (core_name, core_version) VALUES ('nes', '0.1') RETURNING core_id INTO lastcoreid;
 INSERT INTO platform (platform_framework, core_id) VALUES ('retroarch', lastcoreid) RETURNING platform_id INTO lastplatformid;
-INSERT INTO content (content_title, content_version, content_path, content_filename, platform_id)
+INSERT INTO content (content_title, content_version, content_dest_filename, content_source_filename, platform_id)
 VALUES ('test_object','0.1', 'hash', 'test_file', lastplatformid);
 END $$;

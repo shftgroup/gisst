@@ -14,14 +14,14 @@ use uuid::{
 
 #[derive(Debug, Default, FromRow, Serialize, Deserialize)]
 pub struct ContentItem{
-    content_id: Uuid,
-    content_title: Option<String>,
-    content_version: Option<String>,
-    content_path: Option<String>,
-    content_filename: Option<String>,
+    pub content_id: Uuid,
+    pub content_title: Option<String>,
+    pub content_version: Option<String>,
+    pub content_source_filename: Option<String>,
+    pub content_dest_filename: Option<String>,
     pub platform_id: Option<Uuid>,
-    content_parent_id: Option<Uuid>,
-    created_on: Option<OffsetDateTime>,
+    pub content_parent_id: Option<Uuid>,
+    pub created_on: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -40,12 +40,13 @@ pub struct Creator{
     created_on: Option<OffsetDateTime>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Image{
     image_id: Uuid,
     image_filename: Option<String>,
     image_parent_id: Option<Uuid>,
     image_path: Option<String>,
+    image_hash: Option<String>,
     created_on: Option<OffsetDateTime>,
 }
 
@@ -104,6 +105,7 @@ fn default_uuid() -> Uuid {
 }
 
 impl ContentItem {
+
     pub fn default() -> Self {
         Self { content_id: default_uuid(), ..Default::default()}
     }
@@ -116,7 +118,7 @@ impl ContentItem {
             Self,
             r#"SELECT content_id,
             content_title, content_version,
-            content_path, content_filename,
+            content_source_filename, content_dest_filename,
             platform_id, content_parent_id,
             created_on
             FROM content
@@ -135,7 +137,7 @@ impl ContentItem {
             Self,
             r#"SELECT content_id,
             content_title, content_version,
-            content_path, content_filename,
+            content_source_filename, content_dest_filename,
             platform_id, content_parent_id,
             created_on
             FROM content
@@ -151,23 +153,25 @@ impl ContentItem {
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(ContentItem,
             r#"INSERT INTO content (
+            content_id,
             content_title, content_version,
-            content_path, content_filename,
+            content_source_filename, content_dest_filename,
             platform_id, content_parent_id, created_on)
-            VALUES ($1, $2, $3, $4, $5, $6, current_timestamp)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, current_timestamp)
             RETURNING
             content_id,
             content_title,
             content_version,
-            content_path,
-            content_filename,
+            content_source_filename,
+            content_dest_filename,
             platform_id,
             content_parent_id, created_on
             "#,
+            content_item.content_id,
             content_item.content_title,
             content_item.content_version,
-            content_item.content_path,
-            content_item.content_filename,
+            content_item.content_source_filename,
+            content_item.content_dest_filename,
             content_item.platform_id,
             content_item.content_parent_id,
         )
@@ -319,6 +323,29 @@ impl State {
             FROM state WHERE state_id = $1
             "#,
             id,
+        )
+            .fetch_optional(conn)
+            .await
+    }
+}
+
+impl Image {
+    pub fn default() -> Self {
+        Self { image_id: default_uuid(), ..Default::default()}
+    }
+
+    pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT image_id,
+            image_filename,
+            image_parent_id,
+            image_path,
+            image_hash,
+            created_on
+            FROM image WHERE image_id = $1
+            "#,
+            id
         )
             .fetch_optional(conn)
             .await

@@ -15,4 +15,3 @@ pub(crate) async fn new_pool(config: &ServerConfig) -> sqlx::Result<PgPool> {
         .connect(config.database.url.expose_secret())
         .await
 }
-
