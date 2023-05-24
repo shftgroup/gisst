@@ -21,3 +21,22 @@ pub const PLAYER_TEMPLATE: &'static str = r#"
 </body>
 </html>
 "#;
+
+pub const UPLOAD_TEMPLATE: &'static str = r#"
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>test upload</title>
+</head>
+<body>
+<form action="/content" method="post" enctype="multipart/form-data">
+    Title: <input type="text" name="title"><br/>
+    Version: <input type="text" name="version"><br/>
+    <label for="content"> Choose a file to upload: </label>
+    <input type="file" id="content" name="content">
+    <button type="submit">Submit</button>
+</form>
+</body>
+</html>
+"#;

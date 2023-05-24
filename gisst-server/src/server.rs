@@ -8,12 +8,14 @@ use crate::{
         State,
         Save,
         Replay,
+        Image,
     },
     storage::{
         StorageHandler,
     },
     templates::{
         PLAYER_TEMPLATE,
+        UPLOAD_TEMPLATE,
     }
 };
 use anyhow::Result;
@@ -35,14 +37,15 @@ use sqlx::PgPool;
 use serde_json::json;
 use std::{fmt, net::{IpAddr, SocketAddr}, str::FromStr};
 use std::fmt::Debug;
-use minijinja::render;
+use minijinja::{render, Template};
 use serde::{Deserialize, Deserializer, de, Serialize};
 use tower_http::services::ServeDir;
-use uuid::Uuid;
+use uuid::{Uuid, uuid};
 use std::sync::Arc;
-use axum::body::boxed;
 use axum::extract::{Multipart};
-use crate::models::Image;
+use axum::extract::multipart::MultipartError;
+use serde::__private::de::TagOrContentField::Content;
+use bytes::Bytes;
 
 #[derive(Debug, thiserror::Error)]
 pub enum GISSTError {
@@ -79,6 +82,12 @@ impl IntoResponse for GISSTError {
     }
 }
 
+impl From<MultipartError> for GISSTError {
+    fn from(error: MultipartError) -> Self {
+        GISSTError::Generic
+    }
+}
+
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     // Arc is needed to allow for thread safety, see: https://docs.rs/axum/latest/axum/struct.Extension.html
     let app_state = Arc::new(ServerState{
@@ -90,6 +99,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/player", get(get_player))
         .route("/content/:content_id", get(get_content_json))
         .route("/content", post(content_upload))
+        .route("/test_upload", get(get_upload))
         .route("/state/:state_id", get(get_state_json))
         .route("/replay/:replay_id", get(get_replay_json))
         .route("/save/:save_id", get(get_save_json))
@@ -230,47 +240,68 @@ async fn get_content_json(app_state: Extension<Arc<ServerState>>, Path(content_i
     Ok(Json(content.unwrap_or_default()))
 }
 
-async fn content_upload(app_state: Extension<Arc<ServerState>>, Query(params): Query<ContentUploadParams>, mut multipart:Multipart) -> Result<Response, GISSTError>{
+async fn content_upload(app_state: Extension<Arc<ServerState>>, mut multipart:Multipart) -> Result<Json<ContentItem>, GISSTError>{
+    let mut content_params = ContentUploadParams{
+        title: None,
+        parent_id: None,
+        platform_id: None,
+        version: None,
+    };
+    let mut filename:Option<String> = None;
+    let mut data: Option<Bytes> = None;
+    let mut hash: Option<String> = None;
+
+    // Iterate over form fields to collect information
     while let Some(field) = multipart.next_field().await.unwrap(){
-        let filename = if let Some(filename) = field.file_name() {
-            filename.to_string()
-        } else {
-            continue;
-        };
+        let name = field.name().unwrap();
 
-        let new_uuid = Uuid::new_v4();
-        let mut content_item : Option<ContentItem> = None;
-
-        if let Ok(file_info) = app_state.storage
-            .write_file_to_uuid_folder(new_uuid, &filename, &*field.bytes().await.unwrap()).await {
-
-            let mut conn = app_state.pool.acquire().await.map_err(|e|GISSTError::SqlError(e))?;
-
-            if let Ok(content) = ContentItem::insert(&mut conn, ContentItem {
-                content_id: new_uuid,
-                content_title: params.title,
-                content_version: params.version,
-                content_parent_id: params.parent_id,
-                content_source_filename: Some(file_info.source_filename.to_string()),
-                content_dest_filename: Some(file_info.dest_filename),
-                platform_id: params.platform_id,
-                created_on: None,
-            }).await? {
-                content_item = Some(content);
-            } else {
-                app_state.storage
-                    .delete_file_with_uuid(new_uuid, &filename)
-                    .await?;
-            }
-        } else {
-            return Err(GISSTError::Generic)
+        if name == "title" {
+            content_params.title = field.text().await.ok();
+        } else if name == "parent_id" {
+            content_params.parent_id = Uuid::parse_str(&field.text().await?).ok();
+        } else if name == "version" {
+            content_params.version = field.text().await.ok();
+        } else if name == "platform_id" {
+            content_params.parent_id = Uuid::parse_str(&field.text().await?).ok();
+        } else if name == "content" {
+            filename = Some(field.file_name().unwrap().to_string());
+            data = Some(field.bytes().await.unwrap());
+            hash = Some(StorageHandler::get_md5_hash(&data.clone().unwrap()));
         }
-
-        return Ok(Response::builder()
-            .status(StatusCode::CREATED)
-            .body(boxed("OK".to_string()))
-            .unwrap());
     }
+
+    let new_uuid = Uuid::new_v4();
+    let mut conn = app_state.pool.acquire().await.map_err(|e| GISSTError::SqlError(e))?;
+
+    // Check if the content is already in the database, if not add the file to storage
+    if hash.is_some() &&
+        filename.is_some() &&
+        data.is_some() &&
+        ContentItem::get_by_hash(&mut conn, &hash.as_ref().unwrap()).await?.is_none(){
+
+        // Get file pathing information to add to the database
+        if let Ok(file_info) = app_state.storage
+            .write_file_to_uuid_folder(new_uuid, &filename.unwrap(), &data.unwrap()).await {
+
+            if let Ok(content_item) = ContentItem::insert(&mut conn, ContentItem{
+                content_id: new_uuid,
+                content_hash: hash,
+                content_title: content_params.title,
+                content_version: content_params.version,
+                content_parent_id: content_params.parent_id,
+                content_source_filename: Some(file_info.source_filename),
+                content_dest_filename: Some(file_info.dest_filename.to_string()),
+                platform_id: content_params.platform_id,
+                created_on: None,
+            }).await {
+                return Ok(Json(content_item));
+            } else {
+                // If anything went wrong with adding the SQL record, delete the uploaded file
+                app_state.storage.delete_file_with_uuid(new_uuid, &file_info.dest_filename).await?;
+            }
+        }
+    }
+
     Err(GISSTError::Generic)
 }
 
@@ -295,4 +326,8 @@ async fn get_image_json(app_state: Extension<Arc<ServerState>>, Path(image_id): 
     let mut conn = app_state.pool.acquire().await?;
     let image = Image::get_by_id(&mut conn, image_id).await?;
     Ok(Json(image.unwrap_or_default()))
+}
+
+async fn get_upload(app_state: Extension<Arc<ServerState>>) -> Result<Html<String>, GISSTError> {
+    Ok(Html(render!(UPLOAD_TEMPLATE)))
 }
