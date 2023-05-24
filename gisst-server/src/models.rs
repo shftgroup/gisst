@@ -1,3 +1,4 @@
+use std::num::ParseFloatError;
 use serde::{Serialize, Deserialize};
 use sqlx::{
     PgConnection,
@@ -15,6 +16,7 @@ use uuid::{
 #[derive(Debug, Default, FromRow, Serialize, Deserialize)]
 pub struct ContentItem{
     pub content_id: Uuid,
+    pub content_hash: Option<String>,
     pub content_title: Option<String>,
     pub content_version: Option<String>,
     pub content_source_filename: Option<String>,
@@ -110,13 +112,32 @@ impl ContentItem {
         Self { content_id: default_uuid(), ..Default::default()}
     }
 
+    pub async fn get_by_hash(
+        conn: &mut PgConnection,
+        hash: &str
+    ) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT content_id, content_hash,
+            content_title, content_version,
+            content_source_filename, content_dest_filename,
+            platform_id, content_parent_id,
+            created_on
+            FROM content
+            WHERE content_hash = $1"#,
+            hash
+        )
+            .fetch_optional(conn)
+            .await
+    }
+
     pub async fn get_by_id(
         conn: &mut PgConnection,
         id: Uuid
     ) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT content_id,
+            r#"SELECT content_id, content_hash,
             content_title, content_version,
             content_source_filename, content_dest_filename,
             platform_id, content_parent_id,
@@ -135,7 +156,7 @@ impl ContentItem {
     ) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT content_id,
+            r#"SELECT content_id, content_hash,
             content_title, content_version,
             content_source_filename, content_dest_filename,
             platform_id, content_parent_id,
@@ -154,12 +175,14 @@ impl ContentItem {
         sqlx::query_as!(ContentItem,
             r#"INSERT INTO content (
             content_id,
+            content_hash,
             content_title, content_version,
             content_source_filename, content_dest_filename,
             platform_id, content_parent_id, created_on)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, current_timestamp)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, current_timestamp)
             RETURNING
             content_id,
+            content_hash,
             content_title,
             content_version,
             content_source_filename,
@@ -168,6 +191,7 @@ impl ContentItem {
             content_parent_id, created_on
             "#,
             content_item.content_id,
+            content_item.content_hash,
             content_item.content_title,
             content_item.content_version,
             content_item.content_source_filename,

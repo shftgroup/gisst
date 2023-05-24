@@ -49,6 +49,10 @@ impl StorageHandler {
         path
     }
 
+    pub fn get_md5_hash(data: &[u8]) -> String {
+        format!("{:x}", md5::compute(data))
+    }
+
     fn remove_whitespace(s: &str) -> String {
         s.chars().filter(|c| !c.is_whitespace()).collect()
     }
@@ -68,18 +72,18 @@ impl StorageHandler {
             create_dir_all(path.as_path()).await.expect("Unable to create directory for uuid")
         }
 
-        let hash_string = format!("{:x}",md5::compute(file_data));
+        let hash_string = StorageHandler::get_md5_hash(file_data);
         let dest_filename = StorageHandler::remove_whitespace(filename).to_lowercase();
         let save_filename = format!("{}-{}", hash_string, dest_filename);
 
-        path.push(save_filename);
+        path.push(&save_filename);
 
         let mut file = File::create(path.to_path_buf()).await?;
         file.write_all(file_data).await?;
 
         Ok(FileInformation{
             source_filename: filename.to_string(),
-            dest_filename: dest_filename.to_string(),
+            dest_filename: save_filename,
             dest_path: path.to_string_lossy().into_owned(),
             file_hash: hash_string.to_string(),
         })
