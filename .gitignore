@@ -13,3 +13,4 @@ gisst-server/.idea/
 gisst-server/storage/
 gisst-server/.env
 gisst-server/config/local.toml
+gisst-server/test_content/
