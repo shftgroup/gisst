@@ -42,7 +42,7 @@ use serde::{Deserialize, Deserializer, de, Serialize};
 use tower_http::services::ServeDir;
 use uuid::{Uuid, uuid};
 use std::sync::Arc;
-use axum::extract::{Multipart};
+use axum::extract::{DefaultBodyLimit, Multipart};
 use axum::extract::multipart::MultipartError;
 use serde::__private::de::TagOrContentField::Content;
 use bytes::Bytes;
@@ -105,7 +105,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/save/:save_id", get(get_save_json))
         .route("/image/:image_id", get(get_image_json))
         .nest_service("/", ServeDir::new("../frontend-web/dist"))
-        .layer(Extension(app_state));
+        .layer(Extension(app_state))
+        .layer(DefaultBodyLimit::max(33554432));
 
 
     let addr = SocketAddr::new(
@@ -238,6 +239,13 @@ async fn get_content_json(app_state: Extension<Arc<ServerState>>, Path(content_i
     let mut conn = app_state.pool.acquire().await?;
     let content = ContentItem::get_by_id(&mut conn, content_id).await?;
     Ok(Json(content.unwrap_or_default()))
+}
+
+async fn chunk_upload(app_state: Extension<Arc<ServerState>>, mut multipart:Multipart) -> Result<(), StatusCode> {
+
+
+
+    Ok(())
 }
 
 async fn content_upload(app_state: Extension<Arc<ServerState>>, mut multipart:Multipart) -> Result<Json<ContentItem>, GISSTError>{

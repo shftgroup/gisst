@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS content (
 CREATE TABLE IF NOT EXISTS platform (
                                         platform_id       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                                         core_id             uuid,
+                                        platform_name       text,
                                         platform_framework  text,
                                         created_on          timestamptz DEFAULT current_timestamp
 );
@@ -55,7 +56,7 @@ CREATE TABLE IF NOT EXISTS replay (
                                       creator_id          uuid,
                                       replay_forked_from  uuid,
                                       replay_filename     text,
-                                      replay_path         text,
+                                      replay_hash         text,
                                       core_id            uuid
 );
 
@@ -74,8 +75,8 @@ CREATE TABLE IF NOT EXISTS state (
                                      creator_id          uuid,
                                      state_replay_index  integer,
                                      is_checkpoint       boolean,
-                                     state_path          text,
                                      state_filename      text,
+                                     state_hash          text,
                                      state_name          text,
                                      state_description   text,
                                      core_id             uuid,
