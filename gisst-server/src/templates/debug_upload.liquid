@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>test upload</title>
+</head>
+<body>
+<form action="/{ model.name }" method="post" enctype="multipart/form-data">
+    {% for field in model.fields %}
+        {% if field.type != 'file' %}
+            {{ field.name | capitalize }}: <input type="{{ field.type }}" name="{{ field.name }}"> <br/>
+        {%  else %}
+            <label for="{{ field.name }}"> Choose a file to upload: </label>
+            <input type="file" id="{{ field.name }}" name="{{ field.name }}">
+        {% endif %}
+    {% endfor %}
+    <button type="submit">Submit</button>
+</form>
+</body>
+</html>

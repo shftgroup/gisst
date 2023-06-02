@@ -90,6 +90,8 @@ impl StorageHandler {
         let mut file = File::create(path.to_path_buf()).await?;
         file.write_all(file_data).await?;
 
+        path.pop();
+
         Ok(FileInformation{
             source_filename: filename.to_string(),
             dest_filename: save_filename,
