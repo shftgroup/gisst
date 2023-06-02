@@ -307,6 +307,5 @@ async fn get_image_json(app_state: Extension<Arc<ServerState>>, Path(image_id): 
 
 async fn get_upload(app_state: Extension<Arc<ServerState>>, Path(model): Path<String>) -> Result<Html<String>, GISSTError> {
 
-
     Ok(Html(render!(UPLOAD_TEMPLATE)))
 }

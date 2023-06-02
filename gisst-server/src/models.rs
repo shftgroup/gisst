@@ -116,6 +116,7 @@ pub struct Replay{
     replay_filename: String,
     replay_path: String,
     replay_hash: String,
+    created_on: Option<OffsetDateTime>
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -145,6 +146,7 @@ pub struct State{
     creator_id: Option<Uuid>,
     state_replay_index: Option<i32>,
     state_derived_from: Option<Uuid>,
+    created_on: Option<OffsetDateTime>
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -153,11 +155,23 @@ pub struct Work {
     work_name: String,
     work_version: String,
     work_platform: String,
+    created_on: Option<OffsetDateTime>
 }
 
 impl Instance {
     pub fn default() -> Self{
         Self { instance_id: default_uuid(), ..Default::default()}
+    }
+
+    pub fn fields() -> Vec<(String, String)> {
+        vec![
+            ("instance_id".to_string(), "Uuid".to_string()),
+            ("environment_id".to_string(), "Uuid".to_string()),
+            ("work_id".to_string(), "Uuid".to_string()),
+            ("instance_framework".to_string(), "String".to_string()),
+            ("instance_config".to_string(), "Json".to_string()),
+            ("created_on".to_string(), "OffsetDateTime".to_string())
+        ]
     }
 
     pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
@@ -179,6 +193,16 @@ impl Image {
         Self { image_id: default_uuid(), ..Default::default()}
     }
 
+    pub fn fields() -> Vec<(String, String)> {
+        vec![
+            ("image_id".to_string(), "Uuid".to_string()),
+            ("image_filename".to_string(), "String".to_string()),
+            ("image_path".to_string(), "String".to_string()),
+            ("image_hash".to_string(), "String".to_string()),
+            ("image_config".to_string(), "Json".to_string()),
+            ("created_on".to_string(), "OffsetDateTime".to_string())
+        ]
+    }
     pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -222,6 +246,18 @@ impl Environment {
         Self { environment_id: default_uuid(), ..Default::default()}
     }
 
+    pub fn fields() -> Vec<(String, String)> {
+        vec![
+            ("environment_id".to_string(), "Uuid".to_string()),
+            ("environment_name".to_string(), "String".to_string()),
+            ("core_name".to_string(), "String".to_string()),
+            ("core_version".to_string(), "String".to_string()),
+            ("environment_derive_from".to_string(), "Uuid".to_string()),
+            ("environment_config".to_string(), "Json".to_string()),
+            ("created_on".to_string(), "OffsetDateTime".to_string())
+        ]
+    }
+
     pub async fn get_by_id(
         conn: &mut PgConnection,
         id: Uuid
@@ -242,6 +278,16 @@ impl Object {
 
     pub fn default() -> Self {
         Self { object_id: default_uuid(), ..Default::default()}
+    }
+
+    pub fn fields() -> Vec<(String, String)> {
+        vec![
+            ("object_id".to_string(), "Uuid".to_string()),
+            ("object_hash".to_string(), "String".to_string()),
+            ("object_filename".to_string(), "String".to_string()),
+            ("object_path".to_string(), "String".to_string()),
+            ("created_on".to_string(), "OffsetDateTime".to_string())
+        ]
     }
 
     pub async fn get_by_hash(
@@ -320,6 +366,18 @@ impl Replay {
         Self { replay_id: default_uuid(), ..Default::default()}
     }
 
+    pub fn fields() -> Vec<(String, String)> {
+        vec![
+            ("replay_id".to_string(), "Uuid".to_string()),
+            ("creator_id".to_string(), "Uuid".to_string()),
+            ("replay_forked_from".to_string(), "Uuid".to_string()),
+            ("replay_hash".to_string(), "String".to_string()),
+            ("replay_filename".to_string(), "String".to_string()),
+            ("replay_path".to_string(), "String".to_string()),
+            ("created_on".to_string(), "OffsetDateTime".to_string())
+        ]
+    }
+
     pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -329,7 +387,8 @@ impl Replay {
             replay_forked_from,
             replay_filename,
             replay_hash,
-            replay_path
+            replay_path,
+            created_on
             FROM replay WHERE replay_id = $1
             "#,
             id,
@@ -342,6 +401,19 @@ impl Replay {
 impl Save {
     pub fn default() -> Self {
         Self { save_id: default_uuid(), ..Default::default()}
+    }
+
+    pub fn fields() -> Vec<(String, String)> {
+        vec![
+            ("save_id".to_string(), "Uuid".to_string()),
+            ("instance_id".to_string(), "Uuid".to_string()),
+            ("save_short_desc".to_string(), "Uuid".to_string()),
+            ("save_description".to_string(), "String".to_string()),
+            ("save_filename".to_string(), "String".to_string()),
+            ("save_path".to_string(), "String".to_string()),
+            ("creator_id".to_string(), "Uuid".to_string()),
+            ("created_on".to_string(), "OffsetDateTime".to_string())
+        ]
     }
 
     pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
@@ -369,6 +441,23 @@ impl State {
         Self { state_id: default_uuid(), ..Default::default()}
     }
 
+    pub fn fields() -> Vec<(String, String)> {
+        vec![
+            ("state_id".to_string(), "Uuid".to_string()),
+            ("instance_id".to_string(), "Uuid".to_string()),
+            ("is_checkpoint".to_string(), "bool".to_string()),
+            ("state_filename".to_string(), "String".to_string()),
+            ("state_path".to_string(), "String".to_string()),
+            ("state_name".to_string(), "String".to_string()),
+            ("state_description".to_string(), "String".to_string()),
+            ("screenshot_id".to_string(), "Uuid".to_string()),
+            ("replay_id".to_string(), "Uuid".to_string()),
+            ("creator_id".to_string(), "Uuid".to_string()),
+            ("state_replay_index".to_string(), "i32".to_string()),
+            ("state_derived_from".to_string(), "Uuid".to_string()),
+            ("created_on".to_string(), "OffsetDateTime".to_string())
+        ]
+    }
 
     pub async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
@@ -385,7 +474,8 @@ impl State {
             replay_id,
             creator_id,
             state_replay_index,
-            state_derived_from
+            state_derived_from,
+            created_on
             FROM state WHERE state_id = $1
             "#,
             id,
@@ -400,13 +490,22 @@ impl Work {
         Self{work_id: default_uuid(), ..Default::default()}
     }
 
+    pub fn fields() -> Vec<(String, String)> {
+        vec![
+            ("work_id".to_string(), "Uuid".to_string()),
+            ("work_name".to_string(), "String".to_string()),
+            ("work_version".to_string(), "String".to_string()),
+            ("work_platform".to_string(), "String".to_string()),
+            ("created_on".to_string(), "OffsetDateTime".to_string())
+        ]
+    }
     pub async fn get_by_id(
         conn: &mut PgConnection,
         id: Uuid
     ) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform FROM work WHERE work_id = $1"#,
+            r#"SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_id = $1"#,
             id
         )
             .fetch_optional(conn)
