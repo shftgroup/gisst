@@ -1,86 +1,81 @@
 -- Add up migration script here
 
-CREATE TABLE IF NOT EXISTS content (
-                                       content_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                       content_hash        text,
-                                       content_title       text,
-                                       content_version     text,
-                                       content_source_filename text,
-                                       content_dest_filename    text,
-                                       platform_id          uuid,
-                                       content_parent_id   uuid,
-                                       created_on  timestamptz DEFAULT current_timestamp
-);
-
-
-CREATE TABLE IF NOT EXISTS platform (
-                                        platform_id       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                        core_id             uuid,
-                                        platform_name       text,
-                                        platform_framework  text,
-                                        created_on          timestamptz DEFAULT current_timestamp
-);
-
 CREATE TABLE IF NOT EXISTS creator (
-                                       creator_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                       creator_username    varchar(20),
-                                       creator_full_name   varchar(50),
-                                       created_on  timestamptz DEFAULT current_timestamp
+    creator_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    creator_username    varchar(20) NOT NULL,
+    creator_full_name   varchar(50) NOT NULL,
+    created_on  timestamptz DEFAULT current_timestamp
+);
+
+CREATE TABLE IF NOT EXISTS environment (
+    environment_id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    environment_name                text NOT NULL,
+    core_name                       text NOT NULL,
+    core_version                    text NOT NULL,
+    environment_derived_from        uuid,
+    environment_config              json,
+    created_on                      timestamptz DEFAULT current_timestamp
+);
+
+CREATE TABLE IF NOT EXISTS environmentImage (
+    environment_id              uuid,
+    image_id                    uuid,
+    environment_image_config    json,
+    PRIMARY KEY (environment_id, image_id)
+);
+
+CREATE TABLE IF NOT EXISTS instance (
+    instance_id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    environment_id          uuid NOT NULL,
+    work_id                 uuid NOT NULL,
+    instance_framework      text NOT NULL,
+    instance_config         json,
+    created_on              timestamptz DEFAULT current_timestamp
+);
+
+CREATE TABLE IF NOT EXISTS instanceObject (
+    instance_id             uuid,
+    object_id               uuid,
+    instance_object_config  json,
+    PRIMARY KEY (instance_id, object_id)
+);
+
+CREATE TABLE IF NOT EXISTS object (
+    object_id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    object_hash             text NOT NULL,
+    object_filename         text NOT NULL,
+    object_path             text NOT NULL,
+    created_on  timestamptz DEFAULT current_timestamp
 );
 
 CREATE TABLE IF NOT EXISTS save (
-                                    save_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                    save_short_desc  varchar(100),
-                                    save_description text,
-                                    save_filename    text,
-                                    save_path        text,
-                                    creator_id     uuid,
-                                    content_id     uuid,
-                                    core_id          uuid,
-                                    created_on  timestamptz DEFAULT current_timestamp
+    save_id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    instance_id         uuid NOT NULL,
+    save_short_desc     varchar(100) NOT NULL,
+    save_description    text NOT NULL,
+    save_filename       text NOT NULL,
+    save_path           text NOT NULL,
+    creator_id          uuid NOT NULL,
+    created_on          timestamptz DEFAULT current_timestamp
 );
 
 CREATE TABLE IF NOT EXISTS image (
-                                     image_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                     image_filename    text,
-                                     image_parent_id   uuid,
-                                     image_path        text,
-                                     image_hash        text,
-                                     created_on  timestamptz DEFAULT current_timestamp
+    image_id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    image_filename      text NOT NULL,
+    image_path          text NOT NULL,
+    image_hash          text NOT NULL,
+    image_config        json,
+    created_on  timestamptz DEFAULT current_timestamp
 );
 
 CREATE TABLE IF NOT EXISTS replay (
-                                      replay_id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                      content_id          uuid,
-                                      save_id             uuid,
-                                      creator_id          uuid,
-                                      replay_forked_from  uuid,
-                                      replay_filename     text,
-                                      replay_hash         text,
-                                      core_id            uuid
-);
-
-CREATE TABLE IF NOT EXISTS core (
-                                    core_id       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                    core_name       text,
-                                    core_version    text,
-                                    core_manifest   json
-);
-
-CREATE TABLE IF NOT EXISTS state (
-                                     state_id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                                     screenshot_id       uuid,
-                                     replay_id           uuid,
-                                     content_id          uuid,
-                                     creator_id          uuid,
-                                     state_replay_index  integer,
-                                     is_checkpoint       boolean,
-                                     state_filename      text,
-                                     state_hash          text,
-                                     state_name          text,
-                                     state_description   text,
-                                     core_id             uuid,
-                                     state_derived_from        uuid
+    replay_id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    instance_id         uuid NOT NULL,
+    creator_id          uuid NOT NULL,
+    replay_forked_from  uuid,
+    replay_filename     text NOT NULL,
+    replay_hash         text NOT NULL,
+    replay_path         text NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS screenshot (
@@ -88,30 +83,56 @@ CREATE TABLE IF NOT EXISTS screenshot (
     screenshot_data bytea
 );
 
--- Add foreign key constraints for all tables
-ALTER TABLE content ADD FOREIGN KEY (platform_id) REFERENCES platform(platform_id);
-ALTER TABLE content ADD FOREIGN KEY (content_parent_id) REFERENCES content(content_id);
+CREATE TABLE IF NOT EXISTS state (
+    state_id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    instance_id         uuid NOT NULL,
+    is_checkpoint       boolean NOT NULL DEFAULT false,
+    state_filename      text NOT NULL,
+    state_path          text NOT NULL,
+    state_hash          text NOT NULL,
+    state_name          text NOT NULL,
+    state_description   text NOT NULL,
+    screenshot_id       uuid,
+    replay_id           uuid,
+    creator_id          uuid,
+    state_replay_index  integer,
+    state_derived_from  uuid
+);
 
-ALTER TABLE platform ADD FOREIGN KEY (core_id) REFERENCES core(core_id);
+CREATE TABLE IF NOT EXISTS work (
+    work_id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    work_name       text NOT NULL,
+    work_version    text NOT NULL,
+    work_platform   text NOT NULL
+);
+
+
+-- Add foreign key constraints for all tables
+ALTER TABLE environment ADD FOREIGN KEY (environment_derived_from) REFERENCES environment(environment_id);
+
+ALTER TABLE environmentImage ADD FOREIGN KEY (environment_id) REFERENCES environment(environment_id);
+ALTER TABLE environmentImage ADD FOREIGN KEY (image_id) REFERENCES image(image_id);
+
+ALTER TABLE instance ADD FOREIGN KEY (environment_id) REFERENCES environment(environment_id);
+ALTER TABLE instance ADD FOREIGN KEY (work_id) REFERENCES work(work_id);
+
+ALTER TABLE instanceObject ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id);
+ALTER TABLE instanceObject ADD FOREIGN KEY (object_id) REFERENCES object(object_id);
 
 ALTER TABLE save ADD FOREIGN KEY (creator_id) REFERENCES creator(creator_id);
-ALTER TABLE save ADD FOREIGN KEY (content_id) REFERENCES content(content_id);
-ALTER TABLE save ADD FOREIGN KEY (core_id) REFERENCES core(core_id);
+ALTER TABLE save ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id);
 
-ALTER TABLE image ADD FOREIGN KEY (image_parent_id) REFERENCES image(image_id);
 
-ALTER TABLE replay ADD FOREIGN KEY (content_id) REFERENCES content(content_id);
-ALTER TABLE replay ADD FOREIGN KEY (save_id) REFERENCES save(save_id);
+ALTER TABLE replay ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id);
 ALTER TABLE replay ADD FOREIGN KEY (replay_forked_from) REFERENCES replay(replay_id);
-ALTER TABLE replay ADD FOREIGN KEY (core_id) REFERENCES core(core_id);
 ALTER TABLE replay ADD FOREIGN KEY (creator_id) REFERENCES creator(creator_id);
 
 ALTER TABLE state ADD FOREIGN KEY (replay_id) REFERENCES replay(replay_id);
-ALTER TABLE state ADD FOREIGN KEY (content_id) REFERENCES content(content_id);
+ALTER TABLE state ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id);
 ALTER TABLE state ADD FOREIGN KEY (creator_id) REFERENCES creator(creator_id);
-ALTER TABLE state ADD FOREIGN KEY (core_id) REFERENCES core(core_id);
 ALTER TABLE state ADD FOREIGN KEY (state_derived_from) REFERENCES state(state_id);
 ALTER TABLE state ADD FOREIGN KEY (screenshot_id) REFERENCES screenshot(screenshot_id);
 
 -- Add indexes for specific fields
-CREATE UNIQUE INDEX idx_content_hash ON content(content_hash);
+CREATE UNIQUE INDEX idx_content_hash ON object(object_hash);
+CREATE UNIQUE INDEX idx_image_hash ON image(image_hash);

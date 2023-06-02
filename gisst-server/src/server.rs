@@ -2,13 +2,14 @@ use crate::{
     serverconfig::ServerConfig,
     db,
     models::{
-        ContentItem,
-        Core,
-        Platform,
+        Object,
+        Environment,
+        Instance,
         State,
         Save,
         Replay,
         Image,
+        Work,
     },
     storage::{
         StorageHandler,
@@ -44,7 +45,6 @@ use uuid::{Uuid, uuid};
 use std::sync::Arc;
 use axum::extract::{DefaultBodyLimit, Multipart};
 use axum::extract::multipart::MultipartError;
-use serde::__private::de::TagOrContentField::Content;
 use bytes::Bytes;
 
 #[derive(Debug, thiserror::Error)]
@@ -97,9 +97,9 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 
     let app = Router::new()
         .route("/player", get(get_player))
-        .route("/content/:content_id", get(get_content_json))
-        .route("/content", post(content_upload))
-        .route("/test_upload", get(get_upload))
+        .route("/instance/:instance_id", get(get_instance_json))
+        .route("/object", post(object_upload))
+        .route("/test_upload/:model", get(get_upload))
         .route("/state/:state_id", get(get_state_json))
         .route("/replay/:replay_id", get(get_replay_json))
         .route("/save/:save_id", get(get_save_json))
@@ -139,9 +139,8 @@ where   D: Deserializer<'de>,
 
 #[derive(Deserialize, Serialize)]
 struct PlayerTemplateInfo {
-    content: Option<ContentItem>,
-    core: Option<Core>,
-    platform: Option<Platform>,
+    instance: Option<Instance>,
+    environment: Option<Environment>,
     save: Option<Save>,
     start: PlayerStartTemplateInfo,
 }
@@ -156,7 +155,7 @@ enum PlayerStartTemplateInfo {
 #[derive(Deserialize)]
 struct PlayerParams {
     #[serde(default, deserialize_with = "empty_string_as_none")]
-    content_uuid: Option<Uuid>,
+    instance_uuid: Option<Uuid>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     state_uuid: Option<Uuid>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -179,23 +178,19 @@ struct ContentUploadParams {
 
 async fn get_player(app_state: Extension<Arc<ServerState>>, Query(params): Query<PlayerParams>) -> Result<Html<String>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let mut content_item:Option<ContentItem> =  None;
-    let mut platform_item:Option<Platform> = None;
+    let mut instance_item:Option<Instance> =  None;
+    let mut environment_item:Option<Environment> = None;
     let mut state_item: Option<State> = None;
     let mut replay_item:Option<Replay>= None;
     let mut save_item:Option<Save> = None;
-    let mut core_item:Option<Core> = None;
 
     // Check if the content_uuid param is present, if so query for the content item and its
     // platform information
-    if let Some(content_uuid) = params.content_uuid {
-        content_item = ContentItem::get_by_id(&mut conn, content_uuid)
+    if let Some(instance_uuid) = params.instance_uuid {
+        instance_item = Instance::get_by_id(&mut conn, instance_uuid)
             .await.map_err(|e| GISSTError::SqlError(e))?;
 
-        platform_item = Platform::get_by_id(&mut conn, content_item.as_ref().unwrap().platform_id.unwrap())
-            .await.map_err(|e| GISSTError::SqlError(e))?;
-
-        core_item = Core::get_by_id(&mut conn, platform_item.as_ref().unwrap().core_id.unwrap())
+        environment_item = Environment::get_by_id(&mut conn, instance_item.as_ref().unwrap().environment_id)
             .await.map_err(|e| GISSTError::SqlError(e))?;
     }
 
@@ -221,10 +216,9 @@ async fn get_player(app_state: Extension<Arc<ServerState>>, Query(params): Query
     Ok(Html(render!(
         PLAYER_TEMPLATE,
         player_params => PlayerTemplateInfo{
-            platform: platform_item,
+            environment: environment_item,
             save: save_item,
-            content: content_item,
-            core: core_item,
+            instance: instance_item,
             start: if let Some(state) = state_item {
                 PlayerStartTemplateInfo::State(state)
             } else if let Some(replay) = replay_item {
@@ -235,26 +229,13 @@ async fn get_player(app_state: Extension<Arc<ServerState>>, Query(params): Query
     })))
 }
 
-async fn get_content_json(app_state: Extension<Arc<ServerState>>, Path(content_id): Path<Uuid>) -> Result<Json<ContentItem>, GISSTError> {
+async fn get_instance_json(app_state: Extension<Arc<ServerState>>, Path(content_id): Path<Uuid>) -> Result<Json<Instance>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let content = ContentItem::get_by_id(&mut conn, content_id).await?;
+    let content = Instance::get_by_id(&mut conn, content_id).await?;
     Ok(Json(content.unwrap_or_default()))
 }
 
-async fn chunk_upload(app_state: Extension<Arc<ServerState>>, mut multipart:Multipart) -> Result<(), StatusCode> {
-
-
-
-    Ok(())
-}
-
-async fn content_upload(app_state: Extension<Arc<ServerState>>, mut multipart:Multipart) -> Result<Json<ContentItem>, GISSTError>{
-    let mut content_params = ContentUploadParams{
-        title: None,
-        parent_id: None,
-        platform_id: None,
-        version: None,
-    };
+async fn object_upload(app_state: Extension<Arc<ServerState>>, mut multipart:Multipart) -> Result<Json<Object>, GISSTError>{
     let mut filename:Option<String> = None;
     let mut data: Option<Bytes> = None;
     let mut hash: Option<String> = None;
@@ -263,15 +244,7 @@ async fn content_upload(app_state: Extension<Arc<ServerState>>, mut multipart:Mu
     while let Some(field) = multipart.next_field().await.unwrap(){
         let name = field.name().unwrap();
 
-        if name == "title" {
-            content_params.title = field.text().await.ok();
-        } else if name == "parent_id" {
-            content_params.parent_id = Uuid::parse_str(&field.text().await?).ok();
-        } else if name == "version" {
-            content_params.version = field.text().await.ok();
-        } else if name == "platform_id" {
-            content_params.parent_id = Uuid::parse_str(&field.text().await?).ok();
-        } else if name == "content" {
+        if name == "content" {
             filename = Some(field.file_name().unwrap().to_string());
             data = Some(field.bytes().await.unwrap());
             hash = Some(StorageHandler::get_md5_hash(&data.clone().unwrap()));
@@ -285,24 +258,20 @@ async fn content_upload(app_state: Extension<Arc<ServerState>>, mut multipart:Mu
     if hash.is_some() &&
         filename.is_some() &&
         data.is_some() &&
-        ContentItem::get_by_hash(&mut conn, &hash.as_ref().unwrap()).await?.is_none(){
+        Object::get_by_hash(&mut conn, &hash.as_ref().unwrap()).await?.is_none(){
 
         // Get file pathing information to add to the database
         if let Ok(file_info) = app_state.storage
             .write_file_to_uuid_folder(new_uuid, &filename.unwrap(), &data.unwrap()).await {
 
-            if let Ok(content_item) = ContentItem::insert(&mut conn, ContentItem{
-                content_id: new_uuid,
-                content_hash: hash,
-                content_title: content_params.title,
-                content_version: content_params.version,
-                content_parent_id: content_params.parent_id,
-                content_source_filename: Some(file_info.source_filename),
-                content_dest_filename: Some(file_info.dest_filename.to_string()),
-                platform_id: content_params.platform_id,
+            if let Ok(object) = Object::insert(&mut conn, Object {
+                object_id: new_uuid,
+                object_hash: hash.unwrap(),
+                object_filename: file_info.source_filename,
+                object_path: file_info.dest_path,
                 created_on: None,
             }).await {
-                return Ok(Json(content_item));
+                return Ok(Json(object));
             } else {
                 // If anything went wrong with adding the SQL record, delete the uploaded file
                 app_state.storage.delete_file_with_uuid(new_uuid, &file_info.dest_filename).await?;
@@ -336,6 +305,8 @@ async fn get_image_json(app_state: Extension<Arc<ServerState>>, Path(image_id): 
     Ok(Json(image.unwrap_or_default()))
 }
 
-async fn get_upload(app_state: Extension<Arc<ServerState>>) -> Result<Html<String>, GISSTError> {
+async fn get_upload(app_state: Extension<Arc<ServerState>>, Path(model): Path<String>) -> Result<Html<String>, GISSTError> {
+
+
     Ok(Html(render!(UPLOAD_TEMPLATE)))
 }
