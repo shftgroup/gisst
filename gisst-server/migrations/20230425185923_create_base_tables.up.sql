@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS replay (
     replay_forked_from  uuid,
     replay_filename     text NOT NULL,
     replay_hash         text NOT NULL,
-    replay_path         text NOT NULL
+    replay_path         text NOT NULL,
+    created_on          timestamptz DEFAULT current_timestamp
 );
 
 CREATE TABLE IF NOT EXISTS screenshot (
@@ -96,14 +97,16 @@ CREATE TABLE IF NOT EXISTS state (
     replay_id           uuid,
     creator_id          uuid,
     state_replay_index  integer,
-    state_derived_from  uuid
+    state_derived_from  uuid,
+    created_on          timestamptz DEFAULT current_timestamp
 );
 
 CREATE TABLE IF NOT EXISTS work (
     work_id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     work_name       text NOT NULL,
     work_version    text NOT NULL,
-    work_platform   text NOT NULL
+    work_platform   text NOT NULL,
+    created_on      timestamptz DEFAULT current_timestamp
 );
 
 
