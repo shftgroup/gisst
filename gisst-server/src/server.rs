@@ -2,21 +2,21 @@ use crate::{
     serverconfig::ServerConfig,
     db,
     models::{
-        Object,
-        Environment,
-        Instance,
-        State,
+        DBModel,
+        Image,
         Save,
         Replay,
-        Image,
-        Work,
+        State,
+        Instance,
+        Environment,
+        Object,
     },
     storage::{
         StorageHandler,
     },
     templates::{
-        PLAYER_TEMPLATE,
-        UPLOAD_TEMPLATE,
+        TemplateHandler,
+        PLAYER_TEMPLATE
     }
 };
 use anyhow::Result;
@@ -41,7 +41,7 @@ use std::fmt::Debug;
 use minijinja::{render, Template};
 use serde::{Deserialize, Deserializer, de, Serialize};
 use tower_http::services::ServeDir;
-use uuid::{Uuid, uuid};
+use uuid::Uuid;
 use std::sync::Arc;
 use axum::extract::{DefaultBodyLimit, Multipart};
 use axum::extract::multipart::MultipartError;
@@ -55,6 +55,8 @@ pub enum GISSTError {
     StorageError(#[from] std::io::Error),
     #[error("record creation error")]
     RecordError(#[from] crate::models::NewRecordError),
+    #[error("template error")]
+    TemplateError,
     #[error("generic error")]
     Generic,
 }
@@ -62,9 +64,8 @@ pub enum GISSTError {
 struct ServerState {
     pool: PgPool,
     storage: StorageHandler,
+    templates: TemplateHandler,
 }
-
-
 
 
 impl IntoResponse for GISSTError {
@@ -73,6 +74,7 @@ impl IntoResponse for GISSTError {
             GISSTError::SqlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database error"),
             GISSTError::StorageError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
             GISSTError::RecordError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "record error"),
+            GISSTError::TemplateError => (StatusCode::INTERNAL_SERVER_ERROR, "template error"),
             GISSTError::Generic => (StatusCode::INTERNAL_SERVER_ERROR, "generic error"),
         };
 
@@ -93,6 +95,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     let app_state = Arc::new(ServerState{
         pool: db::new_pool(config).await?,
         storage: StorageHandler::init(config.storage.root_folder_path.to_string(), config.storage.folder_depth),
+        templates: TemplateHandler::new("src/templates")?,
     });
 
     let app = Router::new()
@@ -305,7 +308,45 @@ async fn get_image_json(app_state: Extension<Arc<ServerState>>, Path(image_id): 
     Ok(Json(image.unwrap_or_default()))
 }
 
+#[derive(Serialize)]
+struct ModelInfo {
+    name: String,
+    fields: Vec<ModelField>
+}
+
+#[derive(Serialize)]
+struct ModelField { name: String, field_type: String }
+
 async fn get_upload(app_state: Extension<Arc<ServerState>>, Path(model): Path<String>) -> Result<Html<String>, GISSTError> {
 
-    Ok(Html(render!(UPLOAD_TEMPLATE)))
+    let mut model_name = model.clone();
+    make_ascii_title_case(&mut model_name);
+
+    let model_schema = DBModel::get_model_fields(DBModel::get_model_by_name(&model_name));
+    println!("{:?}", model_schema);
+
+    Ok(Html(render!(
+        app_state.templates.get_template("debug_upload")?,
+        model => ModelInfo{
+            name: model,
+            fields: convert_model_field_vec_to_form_fields(model_schema)
+        }
+    )))
+}
+
+fn convert_model_field_vec_to_form_fields(fields:Vec<(String,String)>) -> Vec<ModelField> {
+    fields.iter().map(|(field, ft)| match ft.as_str() {
+        "OffsetDateTime" => ModelField { name: field.to_string(), field_type: "datetime-local".to_string() },
+        "i32" => ModelField { name: field.to_string(), field_type: "number".to_string() },
+        "Uuid" => ModelField { name: field.to_string(), field_type: "text".to_string() },
+        "String" => ModelField { name: field.to_string(), field_type: "text".to_string() },
+        "Json" => ModelField { name: field.to_string(), field_type: "file".to_string() },
+         _ => ModelField { name: field.to_string(), field_type: ft.to_string() }
+    }).collect()
+}
+
+fn make_ascii_title_case(s: &mut str) {
+    if let Some(r) = s.get_mut(0..1) {
+        r.make_ascii_uppercase();
+    }
 }
