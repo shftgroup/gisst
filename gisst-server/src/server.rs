@@ -102,7 +102,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/player", get(get_player))
         .route("/instance/:instance_id", get(get_instance_json))
         .route("/object", post(object_upload))
-        .route("/test_upload/:model", get(get_upload))
+        .route("/debug/upload/:model", get(get_upload))
+        .route("/debug/view/:model", get(get_models))
         .route("/state/:state_id", get(get_state_json))
         .route("/replay/:replay_id", get(get_replay_json))
         .route("/save/:save_id", get(get_save_json))
@@ -332,6 +333,11 @@ async fn get_upload(app_state: Extension<Arc<ServerState>>, Path(model): Path<St
             fields: convert_model_field_vec_to_form_fields(model_schema)
         }
     )))
+}
+
+async fn get_model(app_state: Extension<Arc<ServerState>>, Path(model): Path<String>) -> Result<Html<String>, GISSTError> {
+
+
 }
 
 fn convert_model_field_vec_to_form_fields(fields:Vec<(String,String)>) -> Vec<ModelField> {
