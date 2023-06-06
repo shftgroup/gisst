@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>test view</title>
+</head>
+<body>
+<table>
+    <h1>{{ model.name }}s</h1>
+    {% tablerow record in model.records %}
+        {{ record.id }}
+    {% endtablerow %}
+</table>
+</body>
+</html>

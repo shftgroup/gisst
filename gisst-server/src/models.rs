@@ -1,9 +1,6 @@
-use std::convert::Infallible;
-use std::num::ParseFloatError;
 use serde::{Serialize, Deserialize};
 use sqlx::{
     PgConnection,
-    FromRow,
 };
 use time::OffsetDateTime;
 
@@ -46,7 +43,7 @@ const fn unix_epoch() -> OffsetDateTime {
     OffsetDateTime::UNIX_EPOCH
 }
 // Model definitions that should match PSQL database schema
-enum DBModel {
+pub enum DBModel {
     Creator(Creator),
     Environment(Environment),
     Image(Image),
@@ -56,6 +53,39 @@ enum DBModel {
     Save(Save),
     State(State),
     Work(Work),
+    Void
+}
+
+impl DBModel {
+    pub fn get_model_by_name(name: &str) -> DBModel {
+        match name {
+            "Creator" => DBModel::Creator(Creator::default()),
+            "Environment" => DBModel::Environment(Environment::default()),
+            "Image" => DBModel::Image(Image::default()),
+            "Instance" => DBModel::Instance(Instance::default()),
+            "Object" => DBModel::Object(Object::default()),
+            "Replay" => DBModel::Replay(Replay::default()),
+            "Save" => DBModel::Save(Save::default()),
+            "State" => DBModel::State(State::default()),
+            "Work" => DBModel::Work(Work::default()),
+            _ => DBModel::Void
+        }
+    }
+
+    pub fn get_model_fields(model: DBModel) -> Vec<(String,String)> {
+        match model {
+            DBModel::Creator(_) => Creator::fields(),
+            DBModel::Environment(_) => Environment::fields(),
+            DBModel::Image(_) => Image::fields(),
+            DBModel::Instance(_) => Instance::fields(),
+            DBModel::Object(_) => Object::fields(),
+            DBModel::Replay(_) => Replay::fields(),
+            DBModel::Save(_) => Save::fields(),
+            DBModel::State(_) => State::fields(),
+            DBModel::Work(_) => Work::fields(),
+            DBModel::Void => vec![("".to_string(), "".to_string())]
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -156,6 +186,21 @@ pub struct Work {
     work_version: String,
     work_platform: String,
     created_on: Option<OffsetDateTime>
+}
+
+impl Creator {
+    pub fn default() -> Self{
+        Self { creator_id: default_uuid(), ..Default::default()}
+    }
+
+    pub fn fields() -> Vec<(String, String)> {
+        vec![
+            ("creator_id".to_string(), "Uuid".to_string()),
+            ("creator_username".to_string(), "String".to_string()),
+            ("creator_full_name".to_string(), "String".to_string()),
+            ("created_on".to_string(), "OffsetDateTime".to_string())
+        ]
+    }
 }
 
 impl Instance {
@@ -518,7 +563,7 @@ impl Work {
     ) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform FROM work WHERE work_name = $1"#,
+            r#"SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_name = $1"#,
             name
         )
             .fetch_all(conn)
@@ -531,7 +576,7 @@ impl Work {
     ) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform FROM work WHERE work_platform = $1"#,
+            r#"SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_platform = $1"#,
             platform
         )
             .fetch_all(conn)
