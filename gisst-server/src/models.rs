@@ -86,6 +86,21 @@ impl DBModel {
             DBModel::Void => vec![("".to_string(), "".to_string())]
         }
     }
+
+    pub fn get_model_values(model:DBModel) -> Vec<String> {
+        match model {
+            DBModel::Creator(m) => m.values(),
+            DBModel::Environment(m) => m.values(),
+            DBModel::Image(m) => m.values(),
+            DBModel::Instance(m) => m.values(),
+            DBModel::Object(m) => m.values(),
+            DBModel::Replay(m) => m.values(),
+            DBModel::Save(m) => m.values(),
+            DBModel::State(m) => m.values(),
+            DBModel::Work(m) => m.values(),
+            DBModel::(m) => m.values(),
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -191,6 +206,15 @@ pub struct Work {
 impl Creator {
     pub fn default() -> Self{
         Self { creator_id: default_uuid(), ..Default::default()}
+    }
+
+    pub fn values(&self) -> Vec<String> {
+        vec![
+            self.creator_id.to_string(),
+            self.creator_full_name.to_string(),
+            self.creator_username.to_string(),
+            self.created_on.unwrap().to_string(),
+        ]
     }
 
     pub fn fields() -> Vec<(String, String)> {
