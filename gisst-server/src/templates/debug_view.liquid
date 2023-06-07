@@ -7,9 +7,20 @@
 <body>
 <table>
     <h1>{{ model.name }}s</h1>
-    {% tablerow record in model.records %}
-        {{ record.id }}
-    {% endtablerow %}
+    <table>
+        <tr>
+            {% for field in model.fields %}
+            <th>{{ field.name | capitalize }}</th>
+            {% endfor %}
+        </tr>
+        {% for record in model.records %}
+            <tr>
+                {% for value in record.values %}
+                    <td>{{ value }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </table>
 </table>
 </body>
 </html>

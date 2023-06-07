@@ -14,6 +14,14 @@ use crate::{
     storage::{
         StorageHandler,
     },
+    routes::{
+        creator_router,
+        environment_router,
+        image_router,
+        instance_router,
+        object_router,
+        work_router
+    },
     templates::{
         TemplateHandler,
         PLAYER_TEMPLATE
@@ -28,7 +36,10 @@ use axum::{
         Json,
         Query,
     },
-    routing::{get,post},
+    routing::{
+        get,
+        post
+    },
     response::{IntoResponse, Response, Html},
     http::{StatusCode},
     Extension,
@@ -46,6 +57,7 @@ use std::sync::Arc;
 use axum::extract::{DefaultBodyLimit, Multipart};
 use axum::extract::multipart::MultipartError;
 use bytes::Bytes;
+use crate::models::{Creator, get_model_by_string};
 
 #[derive(Debug, thiserror::Error)]
 pub enum GISSTError {
@@ -61,10 +73,10 @@ pub enum GISSTError {
     Generic,
 }
 
-struct ServerState {
-    pool: PgPool,
-    storage: StorageHandler,
-    templates: TemplateHandler,
+pub struct ServerState {
+    pub pool: PgPool,
+    pub storage: StorageHandler,
+    pub templates: TemplateHandler,
 }
 
 
@@ -100,14 +112,13 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 
     let app = Router::new()
         .route("/player", get(get_player))
-        .route("/instance/:instance_id", get(get_instance_json))
-        .route("/object", post(object_upload))
-        .route("/debug/upload/:model", get(get_upload))
-        .route("/debug/view/:model", get(get_models))
-        .route("/state/:state_id", get(get_state_json))
-        .route("/replay/:replay_id", get(get_replay_json))
-        .route("/save/:save_id", get(get_save_json))
-        .route("/image/:image_id", get(get_image_json))
+        // .nest("/creators", creator_router())
+        .nest("/environments", environment_router())
+        .nest("/images", image_router())
+        .nest("/instances", instance_router())
+        .nest("/images", image_router())
+        .nest("/objects", object_router())
+        // .nest("/works", work_router())
         .nest_service("/", ServeDir::new("../frontend-web/dist"))
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432));
@@ -127,19 +138,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 }
 
 
-// empty_string_as_none taken from axum docs here: https://github.com/tokio-rs/axum/blob/main/examples/query-params-with-empty-strings/src/main.rs
-/// Serde deserialization decorator to map empty Strings to None,
-fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
-where   D: Deserializer<'de>,
-        T: FromStr,
-        T::Err: fmt::Display,
-{
-    let opt = Option::<String>::deserialize(de)?;
-    match opt.as_deref() {
-        None | Some("") => Ok(None),
-        Some(s) => FromStr::from_str(s).map_err(de::Error::custom).map(Some),
-    }
-}
 
 #[derive(Deserialize, Serialize)]
 struct PlayerTemplateInfo {
@@ -239,53 +237,6 @@ async fn get_instance_json(app_state: Extension<Arc<ServerState>>, Path(content_
     Ok(Json(content.unwrap_or_default()))
 }
 
-async fn object_upload(app_state: Extension<Arc<ServerState>>, mut multipart:Multipart) -> Result<Json<Object>, GISSTError>{
-    let mut filename:Option<String> = None;
-    let mut data: Option<Bytes> = None;
-    let mut hash: Option<String> = None;
-
-    // Iterate over form fields to collect information
-    while let Some(field) = multipart.next_field().await.unwrap(){
-        let name = field.name().unwrap();
-
-        if name == "content" {
-            filename = Some(field.file_name().unwrap().to_string());
-            data = Some(field.bytes().await.unwrap());
-            hash = Some(StorageHandler::get_md5_hash(&data.clone().unwrap()));
-        }
-    }
-
-    let new_uuid = Uuid::new_v4();
-    let mut conn = app_state.pool.acquire().await.map_err(|e| GISSTError::SqlError(e))?;
-
-    // Check if the content is already in the database, if not add the file to storage
-    if hash.is_some() &&
-        filename.is_some() &&
-        data.is_some() &&
-        Object::get_by_hash(&mut conn, &hash.as_ref().unwrap()).await?.is_none(){
-
-        // Get file pathing information to add to the database
-        if let Ok(file_info) = app_state.storage
-            .write_file_to_uuid_folder(new_uuid, &filename.unwrap(), &data.unwrap()).await {
-
-            if let Ok(object) = Object::insert(&mut conn, Object {
-                object_id: new_uuid,
-                object_hash: hash.unwrap(),
-                object_filename: file_info.source_filename,
-                object_path: file_info.dest_path,
-                created_on: None,
-            }).await {
-                return Ok(Json(object));
-            } else {
-                // If anything went wrong with adding the SQL record, delete the uploaded file
-                app_state.storage.delete_file_with_uuid(new_uuid, &file_info.dest_filename).await?;
-            }
-        }
-    }
-
-    Err(GISSTError::Generic)
-}
-
 async fn get_state_json(app_state: Extension<Arc<ServerState>>, Path(state_id): Path<Uuid>) -> Result<Json<State>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     let state = State::get_by_id(&mut conn, state_id).await?;
@@ -318,12 +269,12 @@ struct ModelInfo {
 #[derive(Serialize)]
 struct ModelField { name: String, field_type: String }
 
-async fn get_upload(app_state: Extension<Arc<ServerState>>, Path(model): Path<String>) -> Result<Html<String>, GISSTError> {
+async fn get_upload_form(app_state: Extension<Arc<ServerState>>, Path(model): Path<String>) -> Result<Html<String>, GISSTError> {
 
     let mut model_name = model.clone();
     make_ascii_title_case(&mut model_name);
 
-    let model_schema = DBModel::get_model_fields(DBModel::get_model_by_name(&model_name));
+    let model_schema = get_model_by_string(&model_name).fields();
     println!("{:?}", model_schema);
 
     Ok(Html(render!(
@@ -335,10 +286,12 @@ async fn get_upload(app_state: Extension<Arc<ServerState>>, Path(model): Path<St
     )))
 }
 
-async fn get_model(app_state: Extension<Arc<ServerState>>, Path(model): Path<String>) -> Result<Html<String>, GISSTError> {
+async fn get_model_view(app_state: Extension<Arc<ServerState>>, Path(model): Path<String>) -> Result<Html<String>, GISSTError> {
 
 
 }
+
+// Utility Functions
 
 fn convert_model_field_vec_to_form_fields(fields:Vec<(String,String)>) -> Vec<ModelField> {
     fields.iter().map(|(field, ft)| match ft.as_str() {
@@ -356,3 +309,4 @@ fn make_ascii_title_case(s: &mut str) {
         r.make_ascii_uppercase();
     }
 }
+

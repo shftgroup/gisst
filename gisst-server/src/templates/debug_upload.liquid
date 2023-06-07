@@ -18,6 +18,11 @@
         {% endif %}
         <br>
     {% endfor %}
+    {% if model.name == 'object' or model.name == 'image' %}
+        <label for="{{ model.name }}"> Choose a file to upload: </label>
+        <input type="file" id="{{ model.name }}" name="{{ model.name }}">
+    {% endif %}
+
     <button type="submit">Submit</button>
 </form>
 </body>

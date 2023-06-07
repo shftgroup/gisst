@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS object (
     object_hash             text NOT NULL,
     object_filename         text NOT NULL,
     object_path             text NOT NULL,
+    object_description      text,
     created_on  timestamptz DEFAULT current_timestamp
 );
 
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS image (
     image_filename      text NOT NULL,
     image_path          text NOT NULL,
     image_hash          text NOT NULL,
+    image_description   text,
     image_config        json,
     created_on  timestamptz DEFAULT current_timestamp
 );
