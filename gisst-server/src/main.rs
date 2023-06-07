@@ -4,6 +4,7 @@ mod models;
 mod server;
 mod storage;
 mod templates;
+mod routes;
 
 use anyhow::Result;
 use tracing::debug;
