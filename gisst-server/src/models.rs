@@ -9,6 +9,7 @@ use std::{
     fmt,
     str::FromStr,
 };
+use async_trait::async_trait;
 
 use sqlx::{
     PgConnection,
@@ -20,9 +21,6 @@ use uuid::{
     Uuid,
     uuid
 };
-use crate::models;
-use crate::server::GISSTError;
-
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
@@ -68,15 +66,6 @@ pub enum UpdateRecordError{
     WorkError,
 }
 
-// General functions for Models
-
-fn default_uuid() -> Uuid {
-    uuid!("00000000-0000-0000-0000-000000000000")
-}
-
-const fn unix_epoch() -> OffsetDateTime {
-    OffsetDateTime::UNIX_EPOCH
-}
 
 // empty_string_as_none taken from axum docs here: https://github.com/tokio-rs/axum/blob/main/examples/query-params-with-empty-strings/src/main.rs
 /// Serde deserialization decorator to map empty Strings to None,
@@ -92,23 +81,23 @@ pub fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
     }
 }
 // Model definitions that should match PSQL database schema
-
+#[async_trait]
 pub trait DBModel {
+    type Model;
     fn fields() -> Vec<(String,String)>;
     fn values_to_strings(&self) -> Vec<Option<String>>;
-    async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>>;
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>>;
+    async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self::Model>>;
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self::Model>>;
 }
-
+#[async_trait]
 pub trait DBHashable {
-    async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>>;
-    async fn has_hash(conn: &mut PgConnection, hash: &str) -> bool;
+    type Hashable;
+    async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self::Hashable>>;
 }
 
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Creator{
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     creator_id: Uuid,
     creator_username: String,
     creator_full_name: String,
@@ -117,8 +106,7 @@ pub struct Creator{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Environment {
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    environment_id: Uuid,
+    pub environment_id: Uuid,
     environment_name: String,
     core_name: String,
     core_version: String,
@@ -129,7 +117,6 @@ pub struct Environment {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Image{
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub image_id: Uuid,
     pub image_filename: String,
     pub image_path: String,
@@ -142,10 +129,9 @@ pub struct Image{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Instance {
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     instance_id: Uuid,
     work_id: Uuid,
-    environment_id: Uuid,
+    pub environment_id: Uuid,
     instance_framework: String,
     instance_config: Option<sqlx::types::JsonValue>,
     created_on: Option<OffsetDateTime>,
@@ -153,7 +139,6 @@ pub struct Instance {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Object {
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     pub object_id: Uuid,
     pub object_hash: String,
     pub object_filename: String,
@@ -164,7 +149,6 @@ pub struct Object {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Replay{
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     replay_id: Uuid,
     instance_id: Uuid,
     creator_id: Uuid,
@@ -177,7 +161,6 @@ pub struct Replay{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Save{
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     save_id: Uuid,
     instance_id: Uuid,
     save_short_desc: String,
@@ -190,7 +173,6 @@ pub struct Save{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State{
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     state_id: Uuid,
     instance_id: Uuid,
     is_checkpoint: bool,
@@ -209,15 +191,15 @@ pub struct State{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Work {
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     work_id: Uuid,
     work_name: String,
     work_version: String,
     work_platform: String,
     created_on: Option<OffsetDateTime>
 }
-
+#[async_trait]
 impl DBModel for Creator {
+    type Model = Creator;
     fn fields() -> Vec<(String, String)> {
         vec![
             ("creator_id".to_string(), "Uuid".to_string()),
@@ -253,7 +235,7 @@ impl DBModel for Creator {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT creator_id,
@@ -270,7 +252,9 @@ impl DBModel for Creator {
     }
 }
 
+#[async_trait]
 impl DBModel for Instance {
+    type Model = Instance;
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -306,7 +290,7 @@ impl DBModel for Instance {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT instance_id, environment_id, work_id, instance_framework, instance_config, created_on
@@ -324,6 +308,30 @@ impl DBModel for Instance {
 
 impl Instance {
 
+    pub async fn insert(conn: &mut PgConnection, instance:Instance) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Instance,
+            r#"INSERT INTO instance(
+            instance_id,
+            environment_id,
+            work_id,
+            instance_framework,
+            instance_config,
+            created_on
+            )
+            VALUES($1, $2, $3, $4, $5, $6)
+            RETURNING instance_id, environment_id, work_id, instance_framework, instance_config, created_on"#,
+            instance.instance_id,
+            instance.environment_id,
+            instance.work_id,
+            instance.instance_framework,
+            instance.instance_config,
+            instance.created_on
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::InstanceError)
+    }
     pub async fn update(conn: &mut PgConnection, instance:Instance) -> Result<Self, UpdateRecordError> {
         sqlx::query_as!(
             Instance,
@@ -345,7 +353,7 @@ impl Instance {
     }
 
     pub async fn delete_instance_object_links_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM instanceObject WHERE instance_id = $1").execute(conn).await
+        sqlx::query!("DELETE FROM instanceObject WHERE instance_id = $1", id).execute(conn).await
     }
 
     pub async fn delete_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
@@ -353,7 +361,9 @@ impl Instance {
     }
 }
 
+#[async_trait]
 impl DBModel for Image {
+    type Model = Image;
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -362,6 +372,7 @@ impl DBModel for Image {
             ("image_path".to_string(), "String".to_string()),
             ("image_hash".to_string(), "String".to_string()),
             ("image_config".to_string(), "Json".to_string()),
+            ("image_description".to_string(), "String".to_string()),
             ("created_on".to_string(), "OffsetDateTime".to_string())
         ]
     }
@@ -373,6 +384,7 @@ impl DBModel for Image {
             Some(self.image_path.to_string()),
             Some(self.image_hash.to_string()),
             unwrap_to_option_string(&self.image_config),
+            unwrap_to_option_string(&self.image_description),
             unwrap_to_option_string(&self.created_on)
         ]
     }
@@ -385,6 +397,7 @@ impl DBModel for Image {
             image_path,
             image_hash,
             image_config,
+            image_description,
             created_on
             FROM image WHERE image_id = $1
             "#,
@@ -394,7 +407,7 @@ impl DBModel for Image {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT image_id,
@@ -402,6 +415,7 @@ impl DBModel for Image {
             image_path,
             image_hash,
             image_config,
+            image_description,
             created_on
             FROM image
             ORDER BY created_on DESC
@@ -415,7 +429,9 @@ impl DBModel for Image {
 
 }
 
+#[async_trait]
 impl DBHashable for Image {
+    type Hashable = Image;
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -424,6 +440,7 @@ impl DBHashable for Image {
                 image_path,
                 image_hash,
                 image_config,
+                image_description,
                 created_on
                 FROM image
                 WHERE image_hash = $1
@@ -433,17 +450,65 @@ impl DBHashable for Image {
             .fetch_optional(conn)
             .await
     }
-
-    async fn has_hash(conn: &mut PgConnection, hash: &str) -> bool {
-        if let Ok(Some(record)) = sqlx::query!("SELECT image_id FROM image WHERE image_hash = $1", hash).fetch_optional(conn).await?{
-            true
-        } else{
-            false
-        }
-    }
 }
 
 impl Image {
+
+    pub async fn insert(conn: &mut PgConnection, image:Image) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Image,
+            r#"INSERT INTO image(
+            image_id,
+            image_filename,
+            image_path,
+            image_hash,
+            image_config,
+            image_description,
+            created_on
+            )
+            VALUES($1, $2, $3, $4, $5, $6, $7)
+            RETURNING image_id, image_filename, image_path, image_hash, image_config, image_description, created_on"#,
+            image.image_id,
+            image.image_filename,
+            image.image_path,
+            image.image_hash,
+            image.image_config,
+            image.image_description,
+            image.created_on
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::ImageError)
+    }
+
+    pub async fn update(conn: &mut PgConnection, image:Image) -> Result<Self, UpdateRecordError> {
+        sqlx::query_as!(
+            Image,
+            r#"UPDATE image SET
+            (image_filename, image_path, image_hash, image_config, image_description, created_on) =
+            ($1, $2, $3, $4, $5, $6)
+            WHERE image_id = $7
+            RETURNING image_id, image_filename, image_path, image_hash, image_config, image_description, created_on"#,
+            image.image_filename,
+            image.image_path,
+            image.image_hash,
+            image.image_config,
+            image.image_description,
+            image.created_on,
+            image.image_id,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::ImageError)
+    }
+
+    pub async fn delete_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM image WHERE image_id = $1", id).execute(conn).await
+    }
+
+    pub async fn delete_image_environment_links_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM environmentImage WHERE image_id = $1", id).execute(conn).await
+    }
 
     pub async fn get_all_for_environment_id(
         conn: &mut PgConnection,
@@ -452,7 +517,7 @@ impl Image {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT image_id, image_filename, image_path, image_hash, image_config, image.created_on
+            SELECT image_id, image_filename, image_path, image_hash, image_config, image_description, image.created_on
             FROM image
             JOIN environmentImage USING(image_id)
             JOIN environment USING(environment_id)
@@ -464,9 +529,13 @@ impl Image {
             .await
     }
 
+
+
 }
 
+#[async_trait]
 impl DBModel for Environment {
+    type Model = Environment;
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -507,7 +576,7 @@ impl DBModel for Environment {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT environment_id, environment_name, core_name, core_version, environment_derived_from, environment_config, created_on
@@ -568,9 +637,19 @@ impl Environment {
             .await
             .map_err(|_| UpdateRecordError::EnvironmentError)
     }
+
+    pub async fn delete_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM environment WHERE environment_id = $1", id).execute(conn).await
+    }
+
+    pub async fn delete_environment_image_links_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM environmentImage WHERE environment_id = $1", id).execute(conn).await
+    }
 }
 
+#[async_trait]
 impl DBHashable for Object {
+    type Hashable = Object;
 
     async fn get_by_hash(
         conn: &mut PgConnection,
@@ -586,17 +665,11 @@ impl DBHashable for Object {
             .fetch_optional(conn)
             .await
     }
-    async fn has_hash(conn: &mut PgConnection, hash: &str) -> bool {
-        if let Ok(Some(record)) = sqlx::query!("SELECT object_id FROM object WHERE object_hash = $1", hash).fetch_optional(conn).await? {
-            true
-        }else {
-            false
-        }
-    }
 }
 
+#[async_trait]
 impl DBModel for Object {
-
+    type Model = Object;
     fn fields() -> Vec<(String, String)> {
         vec![
             ("object_id".to_string(), "Uuid".to_string()),
@@ -614,7 +687,7 @@ impl DBModel for Object {
             Some(self.object_hash.to_string()),
             Some(self.object_filename.to_string()),
             Some(self.object_path.to_string()),
-            unwrap_to_option_string(&self.description),
+            unwrap_to_option_string(&self.object_description),
             unwrap_to_option_string(&self.created_on),
         ]
     }
@@ -634,7 +707,7 @@ impl DBModel for Object {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT object_id, object_hash, object_filename, object_path, object_description, created_on
@@ -696,7 +769,7 @@ impl Object {
             r#"INSERT INTO object (
             object_id, object_hash, object_filename, object_path, object_description, created_on )
             VALUES ($1, $2, $3, $4, $5, current_timestamp)
-            RETURNING object_id, object_hash, object_filename, object_path, created_on
+            RETURNING object_id, object_hash, object_filename, object_path, object_description, created_on
             "#,
             object.object_id,
             object.object_hash,
@@ -714,12 +787,13 @@ impl Object {
     }
 
     pub async fn delete_object_instance_links_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM instanceObject WHERE object_id = $1").execute(conn).await
+        sqlx::query!("DELETE FROM instanceObject WHERE object_id = $1", id).execute(conn).await
     }
 }
 
+#[async_trait]
 impl DBModel for Replay {
-
+    type Model = Replay;
     fn fields() -> Vec<(String, String)> {
         vec![
             ("replay_id".to_string(), "Uuid".to_string()),
@@ -762,7 +836,7 @@ impl DBModel for Replay {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT replay_id,
@@ -782,7 +856,9 @@ impl DBModel for Replay {
     }
 }
 
+#[async_trait]
 impl DBModel for Save {
+    type Model = Save;
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -829,7 +905,7 @@ impl DBModel for Save {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT
@@ -849,7 +925,9 @@ impl DBModel for Save {
     }
 }
 
+#[async_trait]
 impl DBModel for State {
+    type Model = State;
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -878,8 +956,8 @@ impl DBModel for State {
             Some(self.state_path.to_string()),
             Some(self.state_name.to_string()),
             Some(self.state_description.to_string()),
-            Some(self.screenshot_id.to_string()),
-            Some(self.creator_id.to_string()),
+            unwrap_to_option_string(&self.screenshot_id),
+            unwrap_to_option_string(&self.creator_id),
             unwrap_to_option_string(&self.replay_id),
             unwrap_to_option_string(&self.state_replay_index),
             unwrap_to_option_string(&self.state_derived_from),
@@ -912,7 +990,7 @@ impl DBModel for State {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT state_id,
@@ -938,7 +1016,9 @@ impl DBModel for State {
     }
 }
 
+#[async_trait]
 impl DBModel for Work {
+    type Model = Work;
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -973,7 +1053,7 @@ impl DBModel for Work {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i32>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT work_id, work_name, work_version, work_platform, created_on FROM work ORDER BY created_on DESC LIMIT $1"#,
@@ -1049,7 +1129,7 @@ impl TryFrom<String> for Platform {
     }
 }
 
-fn unwrap_to_option_string(option: &Option<ToString>) -> Option<String> {
+fn unwrap_to_option_string(option: &Option<impl ToString>) -> Option<String> {
     match option {
         Some(value) => Some(value.to_string()),
         _ => None
