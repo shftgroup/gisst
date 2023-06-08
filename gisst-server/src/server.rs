@@ -19,7 +19,7 @@ use crate::{
         image_router,
         instance_router,
         object_router,
-        // work_router
+        work_router
     },
     templates::{
         TemplateHandler,
@@ -108,13 +108,13 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     });
 
     let app = Router::new()
-        // .nest("/creators", creator_router())
         .route("/player", get(get_player))
+        // .nest("/creators", creator_router())
         .nest("/environments", environment_router())
         .nest("/instances", instance_router())
         .nest("/images", image_router())
         .nest("/objects", object_router())
-        // .nest("/works", work_router())
+        .nest("/works", work_router())
         .nest_service("/", ServeDir::new("../frontend-web/dist"))
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432));

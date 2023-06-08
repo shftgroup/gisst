@@ -1066,6 +1066,50 @@ impl DBModel for Work {
 }
 
 impl Work {
+
+    pub async fn insert(conn: &mut PgConnection, work: Work) -> Result<Self, NewRecordError> {
+        // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
+        // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
+        sqlx::query_as!(Work,
+            r#"INSERT INTO work (
+            work_id, work_name, work_version, work_platform, created_on )
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING work_id, work_name, work_version, work_platform, created_on
+            "#,
+            work.work_id,
+            work.work_name,
+            work.work_version,
+            work.work_platform,
+            work.created_on,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::WorkError)
+    }
+
+    pub async fn delete_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM work WHERE work_id = $1", id).execute(conn).await
+    }
+
+    pub async fn update(conn: &mut PgConnection, work:Work) -> Result<Self, UpdateRecordError> {
+        sqlx::query_as!(
+            Work,
+            r#"UPDATE work SET
+            (work_name, work_version, work_platform, created_on) =
+            ($1, $2, $3, $4)
+            WHERE work_id = $5
+            RETURNING work_id, work_name, work_version, work_platform, created_on"#,
+            work.work_name,
+            work.work_version,
+            work.work_platform,
+            work.created_on,
+            work.work_id,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::WorkError)
+    }
+
     pub async fn get_by_name(
         conn: &mut PgConnection,
         name: &str
