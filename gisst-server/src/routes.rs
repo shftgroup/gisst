@@ -84,32 +84,29 @@ pub fn object_router() -> Router {
             .delete(delete_object))
 }
 
-// pub fn work_router() -> Router {
-//     Router::new()
-//         .route("/", get(get_works))
-//         .route("/create", post(create_work))
-//         .route("/:id", get(get_single_work)
-//             .put(edit_work)
-//             .delete(delete_work))
-// }
+pub fn work_router() -> Router {
+    Router::new()
+        .route("/", get(get_works))
+        .route("/create", post(create_work))
+        .route("/:id", get(get_single_work)
+            .put(edit_work)
+            .delete(delete_work))
+}
 
 // CREATOR method handlers
-// #[derive(Deserialize)]
-// struct CreatorsGetQueryParams { limit: Option<i64> }
-//
-// async fn get_creators(app_state: Extension<Arc<ServerState>>, Query(params):Query<CreatorsGetQueryParams>)
-//     -> Result<Json<Vec<Creator>>, GISSTError> {
-//     let mut conn = app_state.pool.acquire().await?;
-//     if let Ok(creators) = Creator::get_all(&mut conn, params.limit).await {
-//         Ok(creators.into())
-//     } else {
-//         Ok(Json(vec![]))
-//     }
-// }
+#[derive(Deserialize)]
+struct CreatorsGetQueryParams { limit: Option<i64> }
 
-// async fn create_creator(app_state: Extension<Arc<ServerState>>) -> Result<Json<Creator>, GISSTError> {
-//
-// }
+async fn get_creators(app_state: Extension<Arc<ServerState>>, Query(params):Query<CreatorsGetQueryParams>)
+    -> Result<Json<Vec<Creator>>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    if let Ok(creators) = Creator::get_all(&mut conn, params.limit).await {
+        Ok(creators.into())
+    } else {
+        Ok(Json(vec![]))
+    }
+}
+
 
 // ENVIRONMENT method handlers
 #[derive(Deserialize)]
@@ -348,15 +345,40 @@ async fn create_object(app_state: Extension<Arc<ServerState>>, mut multipart:Mul
 }
 
 // WORK method handlers
-// struct WorksGetQueryParams { limit: Option<i64> }
+#[derive(Deserialize)]
+struct WorksGetQueryParams { limit: Option<i64> }
 //
-// async fn get_works(app_state: Extension<Arc<ServerState>>, Query(params):Query<WorksGetQueryParams>)
-//                           -> Result<Json<Vec<Work>>, GISSTError> {
-//     let mut conn = app_state.pool.acquire().await?;
-//     if let Ok(works) = Work::get_all(&mut conn, params.limit).await {
-//         Ok(works.into())
-//     } else {
-//         Ok(Json(vec![]))
-//     }
-// }
+async fn get_works(app_state: Extension<Arc<ServerState>>, Query(params):Query<WorksGetQueryParams>)
+                          -> Result<Json<Vec<Work>>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    if let Ok(works) = Work::get_all(&mut conn, params.limit).await {
+        Ok(works.into())
+    } else {
+        Ok(Json(vec![]))
+    }
+}
 
+async fn get_single_work(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
+                           -> Result<Json<Work>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Work::get_by_id(&mut conn, id).await?.unwrap()))
+}
+
+async fn create_work(app_state: Extension<Arc<ServerState>>, Query(work):Query<Work>)
+                         -> Result<Json<Work>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Work::insert(&mut conn, work).await?))
+}
+
+async fn edit_work(app_state: Extension<Arc<ServerState>>, Query(work):Query<Work>)
+                     -> Result<Json<Work>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Work::update(&mut conn, work).await?))
+}
+
+async fn delete_work(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
+                       -> Result<StatusCode, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Work::delete_by_id(&mut conn, id).await?;
+    Ok(StatusCode::OK)
+}
