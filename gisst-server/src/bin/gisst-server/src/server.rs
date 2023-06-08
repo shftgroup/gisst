@@ -1,6 +1,4 @@
-use crate::{
-    serverconfig::ServerConfig,
-    db,
+use gisstlib::{
     models::{
         DBModel,
         Save,
@@ -13,6 +11,12 @@ use crate::{
     storage::{
         StorageHandler,
     },
+    GISSTError,
+};
+
+use crate::{
+    serverconfig::ServerConfig,
+    db,
     routes::{
         // creator_router,
         environment_router,
@@ -53,21 +57,7 @@ use std::sync::Arc;
 use axum::extract::{DefaultBodyLimit, };
 use axum::extract::multipart::MultipartError;
 
-#[derive(Debug, thiserror::Error)]
-pub enum GISSTError {
-    #[error("database error")]
-    SqlError(#[from] sqlx::Error),
-    #[error("storage error")]
-    StorageError(#[from] std::io::Error),
-    #[error("record creation error")]
-    RecordCreateError(#[from] crate::models::NewRecordError),
-    #[error("record creation error")]
-    RecordUpdateError(#[from] crate::models::UpdateRecordError),
-    #[error("template error")]
-    TemplateError,
-    #[error("generic error")]
-    Generic,
-}
+
 
 pub struct ServerState {
     pub pool: PgPool,
@@ -76,35 +66,14 @@ pub struct ServerState {
 }
 
 
-impl IntoResponse for GISSTError {
-    fn into_response(self) -> Response {
-        let (status, message) = match self {
-            GISSTError::SqlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database error"),
-            GISSTError::StorageError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
-            GISSTError::RecordCreateError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "record creation error"),
-            GISSTError::RecordUpdateError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "record update error"),
-            GISSTError::TemplateError => (StatusCode::INTERNAL_SERVER_ERROR, "template error"),
-            GISSTError::Generic => (StatusCode::INTERNAL_SERVER_ERROR, "generic error"),
-        };
 
-        let body = Json(json!({"error": message}));
-
-        (status, body).into_response()
-    }
-}
-
-impl From<MultipartError> for GISSTError {
-    fn from(error: MultipartError) -> Self {
-        GISSTError::Generic
-    }
-}
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     // Arc is needed to allow for thread safety, see: https://docs.rs/axum/latest/axum/struct.Extension.html
     let app_state = Arc::new(ServerState{
         pool: db::new_pool(config).await?,
         storage: StorageHandler::init(config.storage.root_folder_path.to_string(), config.storage.folder_depth),
-        templates: TemplateHandler::new("src/templates")?,
+        templates: TemplateHandler::new("src/bin/gisst-server/src/templates")?,
     });
 
     let app = Router::new()

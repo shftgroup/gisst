@@ -3,6 +3,18 @@ name = "gisst-server"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "gisstlib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gisst-server"
+path = "src/bin/gisst-server/src/main.rs"
+
+[[bin]]
+name = "gisst-cli"
+path = "src/bin/gisst-server-cli/main.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -16,7 +28,7 @@ crc = "3.0.1"
 futures = "0.3.28"
 log = "0.4.17"
 md5 = "0.7.0"
-minijinja = "0.31.1"
+minijinja = "0.34.0"
 secrecy = { version = "0.8.0", features = ["serde"] }
 serde = { version = "1.0.159", features = ["derive"] }
 serde_json = { version = "1.0.96", features = ["raw_value"] }
