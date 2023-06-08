@@ -1,7 +1,7 @@
 use bytes::{
     Bytes,
 };
-use crate::{
+use gisstlib::{
     models::{
         Creator,
         DBModel,
@@ -12,10 +12,13 @@ use crate::{
         Object,
         Work
     },
-    server::{
-        ServerState
-    }
+    GISSTError,
+    storage::{
+        StorageHandler,
+        FileInformation,
+    },
 };
+use crate::server::ServerState;
 use axum::{
     extract::{
         Path,
@@ -31,12 +34,10 @@ use axum::{
 };
 use std::sync::Arc;
 use serde::{Deserialize,};
-use crate::server::GISSTError;
 use uuid::Uuid;
 use std::io::Read;
 use axum::extract::Multipart;
 use axum::http::StatusCode;
-use crate::storage::StorageHandler;
 
 // Nested Router structs for easier reading and manipulation
 // pub fn creator_router() -> Router {

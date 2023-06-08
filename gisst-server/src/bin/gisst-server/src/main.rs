@@ -1,8 +1,6 @@
 mod db;
 mod serverconfig;
-mod models;
 mod server;
-mod storage;
 mod templates;
 mod routes;
 

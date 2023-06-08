@@ -1,3 +1,4 @@
+use crate::GISSTError;
 use tokio::fs::{
     create_dir_all,
     File,
@@ -11,21 +12,11 @@ use std::path::{
 use tokio::io::AsyncWriteExt;
 
 use uuid::Uuid;
-use crate::server::GISSTError;
-
-pub struct ChunkStatus {
-    total_chunks: u64,
-    received_chunks: Vec<(Uuid, String)>,
-    parent_id: Uuid,
-    file_info: FileInformation,
-}
 
 pub struct StorageHandler {
     root_storage_path: String,
     folder_depth: i8,
-    pending_uploads: Vec<ChunkStatus>,
 }
-
 
 pub struct FileInformation {
     pub source_filename: String,
@@ -44,7 +35,6 @@ impl StorageHandler {
         StorageHandler{
             root_storage_path,
             folder_depth: storage_folder_depth,
-            pending_uploads: vec![],
         }
     }
 

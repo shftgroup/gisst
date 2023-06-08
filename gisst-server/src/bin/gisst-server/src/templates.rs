@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use crate::server::GISSTError;
+use gisstlib::GISSTError;
 
 pub struct TemplateHandler {
     templates: HashMap<String,String>
@@ -9,7 +9,8 @@ pub struct TemplateHandler {
 impl TemplateHandler {
 
     pub fn new(template_path: &str) -> Result<Self, GISSTError> {
-
+        let path = std::env::current_dir()?;
+        println!("The current directory is {}", path.display());
         // TODO: make this check for directory
         println!("{}", template_path);
         let template_names = fs::read_dir(template_path).unwrap();

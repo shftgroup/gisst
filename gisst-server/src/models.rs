@@ -22,6 +22,8 @@ use uuid::{
     uuid
 };
 
+use crate::GISSTError;
+
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
     #[error("could not insert creator record into database")]
