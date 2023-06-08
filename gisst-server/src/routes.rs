@@ -1,4 +1,3 @@
-use std::future::Future;
 use bytes::{
     Bytes,
 };
@@ -28,21 +27,15 @@ use axum::{
     routing::{
         get,
         post,
-        put,
     }
 };
 use std::sync::Arc;
-use serde::{Deserialize, Deserializer, de};
+use serde::{Deserialize,};
 use crate::server::GISSTError;
 use uuid::Uuid;
-use std::{
-    fmt,
-    str::FromStr,
-};
 use std::io::Read;
 use axum::extract::Multipart;
 use axum::http::StatusCode;
-use sqlx::Execute;
 use crate::storage::StorageHandler;
 
 // Nested Router structs for easier reading and manipulation
@@ -56,7 +49,7 @@ use crate::storage::StorageHandler;
 // }
 
 pub fn environment_router() -> Router {
-    Router:new()
+    Router::new()
         .route("/", get(get_environments))
         .route("/create", post(create_environment))
         .route("/:id", get(get_single_environment)
@@ -69,8 +62,8 @@ pub fn image_router() -> Router {
         .route("/", get(get_images))
         .route("/create", post(create_image))
         .route("/:id", get(get_single_image)
-            .put(edit_environment)
-            .delete(delete_environment))
+            .put(edit_image)
+            .delete(delete_image))
 }
 
 pub fn instance_router() -> Router {
@@ -102,7 +95,7 @@ pub fn object_router() -> Router {
 
 // CREATOR method handlers
 // #[derive(Deserialize)]
-// struct CreatorsGetQueryParams { limit: Option<i32> }
+// struct CreatorsGetQueryParams { limit: Option<i64> }
 //
 // async fn get_creators(app_state: Extension<Arc<ServerState>>, Query(params):Query<CreatorsGetQueryParams>)
 //     -> Result<Json<Vec<Creator>>, GISSTError> {
@@ -120,10 +113,10 @@ pub fn object_router() -> Router {
 
 // ENVIRONMENT method handlers
 #[derive(Deserialize)]
-struct EnvironmentsGetQueryParams { limit: Option<i32> }
+struct EnvironmentsGetQueryParams { limit: Option<i64> }
 
 async fn get_environments(app_state: Extension<Arc<ServerState>>, Query(params):Query<EnvironmentsGetQueryParams>)
-    -> Result<Json<Vec<Creator>>, GISSTError> {
+    -> Result<Json<Vec<Environment>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Ok(environments) = Environment::get_all(&mut conn, params.limit).await {
         Ok(environments.into())
@@ -135,33 +128,35 @@ async fn get_environments(app_state: Extension<Arc<ServerState>>, Query(params):
 async fn create_environment(app_state: Extension<Arc<ServerState>>, Query(environment):Query<Environment>)
     -> Result<Json<Environment>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Environment::insert(&mut conn, environment)))
+    Ok(Json(Environment::insert(&mut conn, environment).await?))
 }
 
 async fn get_single_environment(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
     -> Result<Json<Environment>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Environment::get_by_id(&mut conn, id)))
+    Ok(Json(Environment::get_by_id(&mut conn, id).await?.unwrap()))
 }
 
 async fn edit_environment(app_state: Extension<Arc<ServerState>>, Query(environment):Query<Environment>)
     -> Result<Json<Environment>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Environment::update(&mut conn, environment)))
+    Ok(Json(Environment::update(&mut conn, environment).await.map_err(|e| GISSTError::RecordUpdateError(e))?))
 }
 
 async fn delete_environment(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
                           -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Environment::delete_by_id(&mut conn, id);
-    OK(StatusCode::OK)
+    Environment::delete_environment_image_links_by_id(&mut conn, id).await?;
+    Environment::delete_by_id(&mut conn, id).await?;
+    Ok(StatusCode::OK)
 }
 
 // IMAGE method handlers
-struct ImagesGetQueryParams { limit: Option<i32> }
+#[derive(Deserialize)]
+struct ImagesGetQueryParams { limit: Option<i64> }
 
 async fn get_images(app_state: Extension<Arc<ServerState>>, Query(params):Query<ImagesGetQueryParams>)
-                          -> Result<Json<Vec<Creator>>, GISSTError> {
+                          -> Result<Json<Vec<Image>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Ok(images) = Image::get_all(&mut conn, params.limit).await {
         Ok(images.into())
@@ -186,14 +181,14 @@ async fn create_image(app_state: Extension<Arc<ServerState>>, mut multipart:Mult
                 hash = Some(StorageHandler::get_md5_hash(&data.clone().unwrap()))
             },
             "image_description" => image_description = Some(field.text().await.unwrap()),
-            "image_config_json" => image_config_json = Some(serde_json::from_slice(&*field.bytes().await)),
+            "image_config_json" => image_config_json = Some(serde_json::Value::from(&*field.bytes().await.unwrap())),
             _ => ()
         }
     }
 
     let mut conn = app_state.pool.acquire().await?;
 
-    if hash.is_some() && !Image::has_hash(&mut conn, &*hash).await? {
+    if hash.is_some() && Image::get_by_hash(&mut conn, &hash.as_ref().unwrap()).await?.is_none() {
         let new_uuid = Uuid::new_v4();
         if let Ok(file_info) = app_state.storage
             .write_file_to_uuid_folder(new_uuid, &filename.unwrap(), &data.unwrap()).await {
@@ -213,13 +208,34 @@ async fn create_image(app_state: Extension<Arc<ServerState>>, mut multipart:Mult
             }
         }
     }
-    Err(GISSTError::StorageError(std::io::Error("unable to add image file to storage")))
+    Err(GISSTError::Generic)
+}
+
+async fn get_single_image(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
+                             -> Result<Json<Image>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Image::get_by_id(&mut conn, id).await?.unwrap()))
+}
+
+async fn edit_image(app_state: Extension<Arc<ServerState>>, Query(image):Query<Image>)
+                       -> Result<Json<Image>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Image::update(&mut conn, image).await.map_err(|e|GISSTError::RecordUpdateError(e))?))
+}
+
+async fn delete_image(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
+                         -> Result<StatusCode, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Image::delete_by_id(&mut conn, id).await?;
+    Image::delete_image_environment_links_by_id(&mut conn, id).await?;
+    Ok(StatusCode::OK)
 }
 // INSTANCE method handlers
-struct InstancesGetQueryParams { limit: Option<i32> }
+#[derive(Deserialize)]
+struct InstancesGetQueryParams { limit: Option<i64> }
 
 async fn get_instances(app_state: Extension<Arc<ServerState>>, Query(params):Query<InstancesGetQueryParams>)
-                          -> Result<Json<Vec<Creator>>, GISSTError> {
+                          -> Result<Json<Vec<Instance>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Ok(instances) = Instance::get_all(&mut conn, params.limit).await {
         Ok(instances.into())
@@ -231,34 +247,35 @@ async fn get_instances(app_state: Extension<Arc<ServerState>>, Query(params):Que
 async fn create_instance(app_state: Extension<Arc<ServerState>>, Query(instance):Query<Instance>)
                             -> Result<Json<Instance>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Instance::insert(&mut conn, instance)))
+    Ok(Json(Instance::insert(&mut conn, instance).await?))
 }
 
 async fn get_single_instance(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
                                 -> Result<Json<Instance>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Instance::get_by_id(&mut conn, id)))
+    Ok(Json(Instance::get_by_id(&mut conn, id).await?.unwrap()))
 }
 
 async fn edit_instance(app_state: Extension<Arc<ServerState>>, Query(instance):Query<Instance>)
                           -> Result<Json<Instance>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Instance::update(&mut conn, instance)))
+    Ok(Json(Instance::update(&mut conn, instance).await?))
 }
 
 async fn delete_instance(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
                             -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Instance::delete_by_id(&mut conn, id);
-    Instance::delete_instance_object_links_by_id(&mut conn, id);
-    OK(StatusCode::OK)
+    Instance::delete_by_id(&mut conn, id).await?;
+    Instance::delete_instance_object_links_by_id(&mut conn, id).await?;
+    Ok(StatusCode::OK)
 }
 
 // OBJECT method handlers
-struct ObjectsGetQueryParams { limit: Option<i32> }
+#[derive(Deserialize)]
+struct ObjectsGetQueryParams { limit: Option<i64> }
 
 async fn get_objects(app_state: Extension<Arc<ServerState>>, Query(params):Query<ObjectsGetQueryParams>)
-                          -> Result<Json<Vec<Creator>>, GISSTError> {
+                          -> Result<Json<Vec<Object>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Ok(objects) = Object::get_all(&mut conn, params.limit).await {
         Ok(objects.into())
@@ -270,21 +287,21 @@ async fn get_objects(app_state: Extension<Arc<ServerState>>, Query(params):Query
 async fn get_single_object(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
                              -> Result<Json<Object>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Object::get_by_id(&mut conn, id)))
+    Ok(Json(Object::get_by_id(&mut conn, id).await?.unwrap()))
 }
 
 async fn edit_object(app_state: Extension<Arc<ServerState>>, Query(object):Query<Object>)
                        -> Result<Json<Object>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Object::update(&mut conn, object)))
+    Ok(Json(Object::update(&mut conn, object).await?))
 }
 
 async fn delete_object(app_state: Extension<Arc<ServerState>>, Path(id):Path<Uuid>)
                          -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Object::delete_by_id(&mut conn, id);
-    Object::delete_object_instance_links_by_id(&mut conn, id);
-    OK(StatusCode::OK)
+    Object::delete_by_id(&mut conn, id).await?;
+    Object::delete_object_instance_links_by_id(&mut conn, id).await?;
+    Ok(StatusCode::OK)
 }
 
 async fn create_object(app_state: Extension<Arc<ServerState>>, mut multipart:Multipart) -> Result<Json<Object>, GISSTError> {
@@ -308,7 +325,7 @@ async fn create_object(app_state: Extension<Arc<ServerState>>, mut multipart:Mul
 
     let mut conn = app_state.pool.acquire().await?;
 
-    if hash.is_some() && !Object::has_hash(&mut conn, &*hash).await? {
+    if hash.is_some() && Object::get_by_hash(&mut conn, &hash.as_ref().unwrap()).await?.is_none() {
         let new_uuid = Uuid::new_v4();
         if let Ok(file_info) = app_state.storage
             .write_file_to_uuid_folder(new_uuid, &filename.unwrap(), &data.unwrap()).await {
@@ -327,19 +344,19 @@ async fn create_object(app_state: Extension<Arc<ServerState>>, mut multipart:Mul
             }
         }
     }
-    Err(GISSTError::StorageError(std::io::Error("unable to add object file to storage")))
+    Err(GISSTError::Generic)
 }
 
 // WORK method handlers
-struct WorksGetQueryParams { limit: Option<i32> }
-
-async fn get_works(app_state: Extension<Arc<ServerState>>, Query(params):Query<WorksGetQueryParams>)
-                          -> Result<Json<Vec<Creator>>, GISSTError> {
-    let mut conn = app_state.pool.acquire().await?;
-    if let Ok(works) = Work::get_all(&mut conn, params.limit).await {
-        Ok(works.into())
-    } else {
-        Ok(Json(vec![]))
-    }
-}
+// struct WorksGetQueryParams { limit: Option<i64> }
+//
+// async fn get_works(app_state: Extension<Arc<ServerState>>, Query(params):Query<WorksGetQueryParams>)
+//                           -> Result<Json<Vec<Work>>, GISSTError> {
+//     let mut conn = app_state.pool.acquire().await?;
+//     if let Ok(works) = Work::get_all(&mut conn, params.limit).await {
+//         Ok(works.into())
+//     } else {
+//         Ok(Json(vec![]))
+//     }
+// }
 

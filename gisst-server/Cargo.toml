@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.70"
+async-trait = "0.1.68"
 axum = { version = "0.6.12", features = ["multipart", "headers"] }
 bytes = { version = "1.4.0", features = ["serde"] }
 clap = { version = "4.2.1", features = ["derive"] }
