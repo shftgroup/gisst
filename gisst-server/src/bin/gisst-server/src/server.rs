@@ -85,6 +85,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/objects", object_router())
         .nest("/works", work_router())
         .nest_service("/", ServeDir::new("../frontend-web/dist"))
+        .nest_service("/storage", ServeDir::new("storage"))
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432));
 

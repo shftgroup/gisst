@@ -1,3 +1,9 @@
+mod args;
+
+use clap::Parser;
+use args::GISSTCli;
+
 fn main() {
-    println!("Hello World!");
+    let cli = GISSTCli::parse();
+
 }
