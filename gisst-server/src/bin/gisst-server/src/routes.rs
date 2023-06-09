@@ -49,6 +49,7 @@ use axum::http::StatusCode;
 //             .delete(delete_creator))
 // }
 
+
 pub fn environment_router() -> Router {
     Router::new()
         .route("/", get(get_environments))
