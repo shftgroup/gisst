@@ -784,6 +784,10 @@ impl Object {
             .map_err(|_| NewRecordError::ObjectError)
     }
 
+    pub async fn link_object_to_instance(conn: &mut PgConnection, object_id:Uuid, instance_id:Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("INSERT INTO instanceObject(instance_id, object_id) VALUES ($1, $2)", instance_id, object_id).execute(conn).await
+    }
+
     pub async fn delete_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM object WHERE object_id = $1", id).execute(conn).await
     }
