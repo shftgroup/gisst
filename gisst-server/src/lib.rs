@@ -26,6 +26,8 @@ pub enum GISSTError {
     RecordUpdateError(#[from] models::UpdateRecordError),
     #[error("template error")]
     TemplateError,
+    #[error("path prefix error")]
+    PathPrefixError(#[from] std::path::StripPrefixError),
     #[error("generic error")]
     Generic,
 }
@@ -37,6 +39,7 @@ impl IntoResponse for GISSTError {
             GISSTError::StorageError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
             GISSTError::RecordCreateError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "record creation error"),
             GISSTError::RecordUpdateError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "record update error"),
+            GISSTError::PathPrefixError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "file creation error"),
             GISSTError::TemplateError => (StatusCode::INTERNAL_SERVER_ERROR, "template error"),
             GISSTError::Generic => (StatusCode::INTERNAL_SERVER_ERROR, "generic error"),
         };

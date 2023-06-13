@@ -126,7 +126,8 @@ pub struct UpdateObject {
 
 #[derive(Debug, Args)]
 pub struct DeleteObject{
-
+    /// Uuid to delete from the database, this will also disconnect the object from any associated instances
+    pub id: Uuid,
 }
 
 #[derive(Debug, Args)]

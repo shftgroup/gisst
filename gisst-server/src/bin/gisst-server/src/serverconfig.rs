@@ -64,14 +64,14 @@ pub struct StorageConfig {
     #[serde(default = "default_root_folder_path")]
     pub root_folder_path: String,
     #[serde(default = "default_folder_depth")]
-    pub folder_depth: i8,
+    pub folder_depth: u8,
 }
 
 fn default_root_folder_path() -> String {
     "./storage".to_string()
 }
 
-fn default_folder_depth() -> i8{
+fn default_folder_depth() -> u8{
     4
 }
 

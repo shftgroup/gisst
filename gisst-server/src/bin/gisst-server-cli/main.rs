@@ -19,7 +19,11 @@ use sqlx::PgPool;
 use sqlx::pool::PoolOptions;
 use uuid::Uuid;
 use gisstlib::{
-    models,
+    models::{
+        DBHashable,
+        DBModel,
+        Object,
+    },
     storage::{
         StorageHandler,
         FileInformation,
@@ -31,8 +35,8 @@ use args::{
     RecordType,
     ObjectSubcommand,
     CreateObject,
+    DeleteObject,
 };
-use gisstlib::models::{DBModel, Object};
 use anyhow::{Result};
 use sqlx::postgres::PgQueryResult;
 use env_logger;
@@ -55,7 +59,7 @@ async fn main() -> Result<(), GISSTCliError> {
             match &object.command {
                 ObjectSubcommand::Create(create) => create_object(create, db, storage_root).await?,
                 ObjectSubcommand::Update(update) => (),
-                ObjectSubcommand::Delete(delete) => (),
+                ObjectSubcommand::Delete(delete) => delete_object(delete, db, storage_root).await?,
                 ObjectSubcommand::Locate(locate) => (),
                 ObjectSubcommand::Export(export) => (),
             }
@@ -121,10 +125,22 @@ async fn create_object(c:&CreateObject, db: PgPool, storage_path:String) -> Resu
             object_id: Uuid::new_v4(),
             object_hash: StorageHandler::get_md5_hash(data),
             object_filename: path.to_path_buf().file_name().unwrap().to_string_lossy().to_string(),
-            object_path: path.to_path_buf().to_string_lossy().to_string(),
+            object_source_path: path.to_path_buf().to_string_lossy().to_string(),
+            object_dest_path: Default::default(),
             object_description: Some(path.to_path_buf().to_string_lossy().to_string()),
             created_on: None,
         };
+
+        if let Some(found_hash) = Object::get_by_hash(&mut conn, &object.object_hash).await? {
+            warn!("Found object {}:{} with matching hash value {} to object {}:{}, skipping...",
+                found_hash.object_id,
+                found_hash.object_filename,
+                found_hash.object_hash,
+                object.object_id,
+                object.object_filename,
+            );
+            continue;
+        }
 
         if ignore == false {
             let mut description = Default::default();
@@ -135,23 +151,55 @@ async fn create_object(c:&CreateObject, db: PgPool, storage_path:String) -> Resu
             object.object_description = Some(description.to_string());
         }
 
-        let s_handler = StorageHandler::init(storage_path.to_string(), depth as i8);
-        if let Ok(object) = Object::insert(&mut conn, object).await {
-            if link.is_some(){
-                Object::link_object_to_instance(&mut conn, object.object_id, link.unwrap()).await?;
-            }
+        let s_handler = StorageHandler::init(storage_path.to_string(), depth);
 
-            match s_handler.write_file_to_uuid_folder(object.object_id, &object.object_filename, data).await {
-                Ok(file_info) => (),
-                Err(_) => {
-                    Object::delete_by_id(&mut conn, object.object_id).await?;
+        match s_handler.write_file_to_uuid_folder(object.object_id, &object.object_filename, data).await {
+            Ok(file_info) => {
+                info!("Wrote file {} to {}", file_info.dest_filename, file_info.dest_path);
+                let obj_uuid = object.object_id.clone();
+                object.object_dest_path = file_info.dest_path;
+                if let Ok(object) = Object::insert(&mut conn, object).await {
+                    if link.is_some(){
+                        Object::link_object_to_instance(&mut conn, object.object_id, link.unwrap()).await?;
+                    }
+                } else {
+                    s_handler.delete_file_with_uuid(obj_uuid, &file_info.dest_filename).await?;
                 }
+            },
+            Err(e) => {
+                error!("Error writing object file to database, aborting...");
             }
         }
     }
 
     Ok(())
 }
+
+async fn delete_object(d:&DeleteObject, db:PgPool, storage_path:String) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    if let Some(object) = Object::get_by_id(&mut conn, d.id).await? {
+        Object::delete_object_instance_links_by_id(&mut conn, object.object_id).await?;
+
+        info!("Deleting object record with uuid {}", d.id);
+
+        Object::delete_by_id(&mut conn, object.object_id).await?;
+
+        info!("Deleting object file at path:{}", Path::new(&object.object_dest_path).join(
+            Path::new(&StorageHandler::get_dest_filename(&object.object_hash, &object.object_filename)
+        )).to_string_lossy());
+        debug!("Object path depth is set to {}", StorageHandler::get_folder_depth_from_path(Path::new(&object.object_dest_path), None));
+
+        StorageHandler::init(storage_path,
+                             StorageHandler::get_folder_depth_from_path(Path::new(&object.object_dest_path), None))
+            .delete_file_with_uuid(d.id,
+                                   &StorageHandler::get_dest_filename(&object.object_hash, &object.object_filename)).await?;
+    } else {
+        warn!("Object with id: {} not found in database", d.id);
+    }
+
+    Ok(())
+}
+
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {
     PoolOptions::new()
         .connect(&db_url)
