@@ -139,12 +139,20 @@ pub struct Instance {
     created_on: Option<OffsetDateTime>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct InstanceObject {
+    instance_id: Uuid,
+    object_id: Uuid,
+    instance_object_config: Option<sqlx::types::JsonValue>,
+}
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Object {
     pub object_id: Uuid,
     pub object_hash: String,
     pub object_filename: String,
-    pub object_path: String,
+    pub object_source_path: String,
+    pub object_dest_path: String,
     pub object_description: Option<String>,
     pub created_on: Option<OffsetDateTime>,
 }
@@ -659,7 +667,7 @@ impl DBHashable for Object {
     ) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT object_id, object_hash, object_filename, object_path, object_description, created_on
+            r#"SELECT object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
             FROM object
             WHERE object_hash = $1"#,
             hash
@@ -677,7 +685,8 @@ impl DBModel for Object {
             ("object_id".to_string(), "Uuid".to_string()),
             ("object_hash".to_string(), "String".to_string()),
             ("object_filename".to_string(), "String".to_string()),
-            ("object_path".to_string(), "String".to_string()),
+            ("object_source_path".to_string(), "String".to_string()),
+            ("object_dest_path".to_string(), "String".to_string()),
             ("object_description".to_string(), "String".to_string()),
             ("created_on".to_string(), "OffsetDateTime".to_string())
         ]
@@ -688,7 +697,8 @@ impl DBModel for Object {
             Some(self.object_id.to_string()),
             Some(self.object_hash.to_string()),
             Some(self.object_filename.to_string()),
-            Some(self.object_path.to_string()),
+            Some(self.object_source_path.to_string()),
+            Some(self.object_dest_path.to_string()),
             unwrap_to_option_string(&self.object_description),
             unwrap_to_option_string(&self.created_on),
         ]
@@ -700,7 +710,7 @@ impl DBModel for Object {
     ) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT object_id, object_hash, object_filename, object_path, object_description, created_on
+            r#"SELECT object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
             FROM object
             WHERE object_id = $1"#,
             id
@@ -712,7 +722,7 @@ impl DBModel for Object {
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT object_id, object_hash, object_filename, object_path, object_description, created_on
+            r#"SELECT object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
             FROM object
             ORDER BY created_on DESC LIMIT $1
             "#,
@@ -732,7 +742,7 @@ impl Object {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT object_id, object_hash, object_filename, object_path, object_description, object.created_on
+            SELECT object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, object.created_on
             FROM object
             JOIN instanceObject USING(object_id)
             JOIN instance USING(instance_id)
@@ -748,13 +758,14 @@ impl Object {
         sqlx::query_as!(
             Object,
             r#"UPDATE object SET
-            (object_hash, object_filename, object_path, object_description, created_on) =
-            ($1, $2, $3, $4, $5)
-            WHERE object_id = $6
-            RETURNING object_id, object_hash, object_filename, object_path, object_description, created_on"#,
+            (object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on) =
+            ($1, $2, $3, $4, $5, $6)
+            WHERE object_id = $7
+            RETURNING object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on"#,
             object.object_hash,
             object.object_filename,
-            object.object_path,
+            object.object_source_path,
+            object.object_dest_path,
             object.object_description,
             object.created_on,
             object.object_id,
@@ -769,15 +780,16 @@ impl Object {
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(Object,
             r#"INSERT INTO object (
-            object_id, object_hash, object_filename, object_path, object_description, created_on )
-            VALUES ($1, $2, $3, $4, $5, current_timestamp)
-            RETURNING object_id, object_hash, object_filename, object_path, object_description, created_on
+            object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on )
+            VALUES ($1, $2, $3, $4, $5, $6, current_timestamp)
+            RETURNING object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
             "#,
             object.object_id,
             object.object_hash,
             object.object_filename,
+            object.object_source_path,
+            object.object_dest_path,
             object.object_description,
-            object.object_path,
         )
             .fetch_one(conn)
             .await
@@ -787,6 +799,11 @@ impl Object {
     pub async fn link_object_to_instance(conn: &mut PgConnection, object_id:Uuid, instance_id:Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("INSERT INTO instanceObject(instance_id, object_id) VALUES ($1, $2)", instance_id, object_id).execute(conn).await
     }
+
+    pub async fn get_object_instance_by_ids(conn: &mut PgConnection, object_id:Uuid, instance_id:Uuid) -> sqlx::Result<Option<InstanceObject>> {
+        sqlx::query_as!(InstanceObject, "SELECT object_id, instance_id, instance_object_config FROM instanceObject WHERE object_id = $1 AND instance_id = $2", object_id, instance_id).fetch_optional(conn).await
+    }
+
 
     pub async fn delete_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM object WHERE object_id = $1", id).execute(conn).await

@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS object (
     object_id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     object_hash             text NOT NULL,
     object_filename         text NOT NULL,
-    object_path             text NOT NULL,
+    object_source_path      text NOT NULL,
+    object_dest_path        text NOT NULL,
     object_description      text,
     created_on  timestamptz DEFAULT current_timestamp
 );

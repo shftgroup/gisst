@@ -333,8 +333,9 @@ async fn create_object(app_state: Extension<Arc<ServerState>>, mut multipart:Mul
                 object_id: new_uuid,
                 object_hash: hash.unwrap(),
                 object_description,
-                object_filename: file_info.source_filename,
-                object_path: file_info.dest_path,
+                object_filename: file_info.source_filename.to_string(),
+                object_source_path: file_info.source_filename.to_string(),
+                object_dest_path: file_info.dest_path,
                 created_on: None,
             }).await {
                 return Ok(Json(object))
