@@ -1,12 +1,8 @@
 mod args;
 
-use std::{
-    fs::{
-        File,
-        read,
-    },
-    io};
-use std::io::Read;
+use std::{fs::{
+    read,
+}, fs, io};
 use std::path::{
     Path,
     PathBuf,
@@ -14,7 +10,6 @@ use std::path::{
 use log::{info, warn, error, trace, debug};
 use clap::Parser;
 use walkdir::WalkDir;
-use serde_json::to_string;
 use sqlx::PgPool;
 use sqlx::pool::PoolOptions;
 use uuid::Uuid;
@@ -23,12 +18,13 @@ use gisstlib::{
         DBHashable,
         DBModel,
         Object,
+        Instance,
+        Environment,
+        Work,
     },
     storage::{
         StorageHandler,
-        FileInformation,
-    }
-};
+}};
 use args::{
     GISSTCli,
     GISSTCliError,
@@ -36,9 +32,18 @@ use args::{
     ObjectSubcommand,
     CreateObject,
     DeleteObject,
+    CreateEnvironment,
+    DeleteEnvironment,
+    InstanceSubcommand,
+    EnvironmentSubcommand,
+    WorkSubcommand,
+    UpdateObject,
+    CreateInstance,
+    DeleteInstance,
+    CreateWork,
+    DeleteWork,
 };
 use anyhow::{Result};
-use sqlx::postgres::PgQueryResult;
 use env_logger;
 
 #[tokio::main]
@@ -58,20 +63,41 @@ async fn main() -> Result<(), GISSTCliError> {
         RecordType::Object(object) => {
             match &object.command {
                 ObjectSubcommand::Create(create) => create_object(create, db, storage_root).await?,
-                ObjectSubcommand::Update(update) => (),
+                ObjectSubcommand::Update(_update) => (),
                 ObjectSubcommand::Delete(delete) => delete_object(delete, db, storage_root).await?,
-                ObjectSubcommand::Locate(locate) => (),
-                ObjectSubcommand::Export(export) => (),
+                ObjectSubcommand::Locate(_locate) => (),
+                ObjectSubcommand::Export(_export) => (),
             }
         },
-        RecordType::Creator(creator) => {
+        RecordType::Creator(_creator) => {
 
         },
-        RecordType::Image(image) => {
+        RecordType::Environment(environment) => {
+            match &environment.command {
+                EnvironmentSubcommand::Create(create) => create_environment(create, db).await?,
+                EnvironmentSubcommand::Update(_update) => (),
+                EnvironmentSubcommand::Delete(delete) => delete_environment(delete, db).await?,
+                EnvironmentSubcommand::Locate(_locate) => (),
+                EnvironmentSubcommand::Export(_export) => (),
+            }
+        },
+        RecordType::Image(_image) => {
 
+        },
+        RecordType::Instance(instance) => {
+            match &instance.command {
+                InstanceSubcommand::Create(create) => create_instance(create, db).await?,
+                InstanceSubcommand::Update(_update) => (),
+                InstanceSubcommand::Delete(delete) => delete_instance(delete, db).await?,
+                InstanceSubcommand::Locate(_locate) => (),
+                InstanceSubcommand::Export(_export) => (),
+            }
         },
         RecordType::Work(work) => {
-
+            match &work.command {
+                WorkSubcommand::Create(create) => create_work(create, db).await?,
+                WorkSubcommand::Delete(delete) => delete_work(delete, db).await?
+            }
         }
     }
 
@@ -80,7 +106,7 @@ async fn main() -> Result<(), GISSTCliError> {
 }
 
 async fn create_object(c:&CreateObject, db: PgPool, storage_path:String) -> Result<(), GISSTCliError>{
-    let (recursive, extract, ignore, skip, depth, link) = (
+    let (recursive, _extract, ignore, _skip, depth, link) = (
         c.recursive,
         c.extract,
         c.ignore_description,
@@ -148,7 +174,7 @@ async fn create_object(c:&CreateObject, db: PgPool, storage_path:String) -> Resu
             io::stdin()
                 .read_line(&mut description)
                 .ok();
-            object.object_description = Some(description.to_string());
+            object.object_description = Some(description.trim().to_string());
         }
 
         let s_handler = StorageHandler::init(storage_path.to_string(), depth);
@@ -199,6 +225,152 @@ async fn delete_object(d:&DeleteObject, db:PgPool, storage_path:String) -> Resul
 
     Ok(())
 }
+
+async fn update_object(_u:&UpdateObject, _db:PgPool) -> Result<(), GISSTCliError> {
+
+    Ok(())
+}
+
+async fn create_instance(c:&CreateInstance, db:PgPool) -> Result<(), GISSTCliError> {
+    let instance_from_json: Option<Instance> = match (&c.json_file, &c.json_string) {
+        (Some(file_path), None) => {
+            let json_data = fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
+            Some(serde_json::from_str(&json_data).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (None, Some(json_value)) => {
+            Some(serde_json::from_value(json_value.clone()).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (_, _) => None,
+    };
+
+    let instance_config_json: Option<serde_json::Value> = match(&c.instance_config_json_file, &c.instance_config_json_string) {
+        (Some(file_path), None) => {
+            let json_data = fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
+            Some(serde_json::from_str(&json_data).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (None, Some(json_value)) => {
+            Some(serde_json::from_value(json_value.clone()).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (_, _) => None,
+    };
+
+    match (instance_from_json, instance_config_json) {
+        (Some(instance), instance_config) => {
+            let mut conn = db.acquire().await?;
+            Instance::insert(&mut conn, Instance { instance_config, ..instance })
+                .await
+                .map_err(|e|GISSTCliError::NewModelError(e))?;
+            Ok(())
+        },
+        _ => {
+            Err(GISSTCliError::CreateInstanceError("Need to provide a JSON string or file to create instance record.".to_string()))
+        }
+    }
+}
+
+async fn delete_instance(d:&DeleteInstance, db:PgPool) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    if let Some(instance) = Instance::get_by_id(&mut conn, d.id).await? {
+        info!("Deleting unlinking images for instance record with uuid {}", d.id);
+        Instance::delete_instance_object_links_by_id(&mut conn, instance.instance_id).await?;
+
+        info!("Deleting instance record with uuid {}", d.id);
+
+        Instance::delete_by_id(&mut conn, instance.instance_id).await?;
+    } else {
+        warn!("Instance with uuid {} not found in database.", d.id);
+    }
+
+    Ok(())
+}
+
+async fn create_environment(c:&CreateEnvironment, db:PgPool) -> Result<(), GISSTCliError> {
+
+    let environment_from_json: Option<Environment> = match (&c.json_file, &c.json_string) {
+        (Some(file_path), None) => {
+            let json_data = fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
+            Some(serde_json::from_str(&json_data).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (None, Some(json_value)) => {
+            Some(serde_json::from_value(json_value.clone()).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (_, _) => None,
+    };
+
+    let environment_config_json: Option<serde_json::Value> = match(&c.environment_config_json_file, &c.environment_config_json_string) {
+        (Some(file_path), None) => {
+            let json_data = fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
+            Some(serde_json::from_str(&json_data).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (None, Some(json_value)) => {
+            Some(serde_json::from_value(json_value.clone()).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (_, _) => None,
+    };
+
+    match (environment_from_json, environment_config_json) {
+        (Some(environment), environment_config) => {
+            let mut conn = db.acquire().await?;
+            Environment::insert(&mut conn, Environment { environment_config, ..environment })
+                .await
+                .map_err(|e|GISSTCliError::NewModelError(e))?;
+            Ok(())
+        },
+        _ => {
+            Err(GISSTCliError::CreateInstanceError("Need to provide a JSON string or file to create environment record.".to_string()))
+        }
+    }
+}
+
+async fn delete_environment(d:&DeleteEnvironment, db:PgPool) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    if let Some(environment) = Environment::get_by_id(&mut conn, d.id).await? {
+        info!("Deleting unlinking images for environment record with uuid {}", d.id);
+        Environment::delete_environment_image_links_by_id(&mut conn, environment.environment_id).await?;
+
+        info!("Deleting environment record with uuid {}", d.id);
+
+        Environment::delete_by_id(&mut conn, environment.environment_id).await?;
+    } else {
+        warn!("Environment with uuid {} not found in database.", d.id);
+    }
+
+    Ok(())
+}
+
+async fn create_work(c:&CreateWork, db:PgPool) -> Result<(), GISSTCliError> {
+    let work_from_json: Option<Work> = match (&c.json_file, &c.json_string) {
+        (Some(file_path), None) => {
+            let json_data = fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
+            Some(serde_json::from_str(&json_data).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (None, Some(json_value)) => {
+            Some(serde_json::from_value(json_value.clone()).map_err(|e| GISSTCliError::JsonParseError(e))?)
+        },
+        (_, _) => unreachable!(),
+    };
+
+    match work_from_json {
+        Some(work) => {
+            let mut conn = db.acquire().await?;
+            Work::insert(&mut conn, work).await?;
+            Ok(())
+        },
+        None => Err(GISSTCliError::CreateWorkError("Please provide JSON to parse for creating a work record.".to_string()))
+    }
+}
+
+async fn delete_work(d:&DeleteWork, db:PgPool) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    if let Some(work) = Work::get_by_id(&mut conn, d.id).await? {
+        info!("Deleting work record with uuid {}", d.id);
+        Work::delete_by_id(&mut conn, work.work_id).await?;
+    } else {
+        warn!("Work with uuid {} not found in database.", d.id);
+    }
+    Ok(())
+}
+
 
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {
     PoolOptions::new()
