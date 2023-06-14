@@ -70,7 +70,6 @@ impl StorageHandler {
     }
 
     pub async fn delete_file_with_uuid(&self, uuid: Uuid, dest_filename: &str) -> tokio::io::Result<()>{
-        println!("running here!!!!!");
         info!("Deleting file with filename: {}", dest_filename);
         let mut path = Path::new(&self.root_storage_path)
             .join(StorageHandler::split_uuid_to_path_buf(uuid, self.folder_depth).as_path());

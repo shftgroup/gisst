@@ -12,7 +12,7 @@ use clap::Parser;
 use walkdir::WalkDir;
 use sqlx::PgPool;
 use sqlx::pool::PoolOptions;
-use uuid::Uuid;
+use uuid::{Uuid,uuid};
 use gisstlib::{
     models::{
         DBHashable,
@@ -145,7 +145,7 @@ async fn create_object(c:&CreateObject, db: PgPool, storage_path:String) -> Resu
 
     let mut conn = db.acquire().await?;
 
-    for path in valid_paths {
+    for path in &valid_paths {
         let data = &read(&path)?;
         let mut object = Object {
             object_id: Uuid::new_v4(),
@@ -156,6 +156,11 @@ async fn create_object(c:&CreateObject, db: PgPool, storage_path:String) -> Resu
             object_description: Some(path.to_path_buf().to_string_lossy().to_string()),
             created_on: None,
         };
+
+        // DEBUG ONLY!! Need to find a more elegant solution
+        if valid_paths.len() == 1 {
+            object.object_id = c.force_uuid;
+        }
 
         if let Some(found_hash) = Object::get_by_hash(&mut conn, &object.object_hash).await? {
             warn!("Found object {}:{} with matching hash value {} to object {}:{}, skipping...",
