@@ -204,6 +204,10 @@ pub struct CreateObject {
     #[arg(short, long, default_value_t = 4)]
     pub depth: u8,
 
+    /// (DEBUG) Force the use of specific UUID, only works with a single object create
+    #[arg(long="force-uuid")]
+    pub force_uuid: Uuid,
+
     /// Paths of file(s) to create in the database, directories will be ignored unless -r/--recursive flag is enabled
     pub file: Vec<String>,
 }
