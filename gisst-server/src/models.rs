@@ -19,10 +19,8 @@ use time::OffsetDateTime;
 
 use uuid::{
     Uuid,
-    uuid
 };
 
-use crate::GISSTError;
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
@@ -109,12 +107,12 @@ pub struct Creator{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Environment {
     pub environment_id: Uuid,
-    environment_name: String,
-    core_name: String,
-    core_version: String,
-    environment_derived_from: Option<Uuid>,
-    environment_config: Option<sqlx::types::JsonValue>,
-    created_on: Option<OffsetDateTime>,
+    pub environment_name: String,
+    pub core_name: String,
+    pub core_version: String,
+    pub environment_derived_from: Option<Uuid>,
+    pub environment_config: Option<sqlx::types::JsonValue>,
+    pub created_on: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -131,16 +129,16 @@ pub struct Image{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Instance {
-    instance_id: Uuid,
-    work_id: Uuid,
+    pub instance_id: Uuid,
+    pub work_id: Uuid,
     pub environment_id: Uuid,
-    instance_framework: String,
-    instance_config: Option<sqlx::types::JsonValue>,
-    created_on: Option<OffsetDateTime>,
+    pub instance_framework: String,
+    pub instance_config: Option<sqlx::types::JsonValue>,
+    pub created_on: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct InstanceObject {
+pub struct InstanceObject {
     instance_id: Uuid,
     object_id: Uuid,
     instance_object_config: Option<sqlx::types::JsonValue>,
@@ -201,11 +199,11 @@ pub struct State{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Work {
-    work_id: Uuid,
-    work_name: String,
-    work_version: String,
-    work_platform: String,
-    created_on: Option<OffsetDateTime>
+    pub work_id: Uuid,
+    pub work_name: String,
+    pub work_version: String,
+    pub work_platform: String,
+    pub created_on: Option<OffsetDateTime>
 }
 #[async_trait]
 impl DBModel for Creator {
