@@ -14,9 +14,6 @@ path = "src/bin/gisst-server/src/main.rs"
 [[bin]]
 name = "gisst-cli"
 path = "src/bin/gisst-server-cli/main.rs"
-author = "Eric Kaltman <eric.kaltman@csuci.edu>"
-version = "0.1.0"
-about = "A command line manager for the GISST Server application."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
