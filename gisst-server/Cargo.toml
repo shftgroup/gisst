@@ -30,7 +30,7 @@ env_logger = "0.10.0"
 futures = "0.3.28"
 log = "0.4.17"
 md5 = "0.7.0"
-minijinja = "0.34.0"
+minijinja = {version="0.34.0",features=["builtins", "macros", "json"]}
 secrecy = { version = "0.8.0", features = ["serde"] }
 serde = { version = "1.0.159", features = ["derive"] }
 serde_json = { version = "1.0.96", features = ["raw_value"] }

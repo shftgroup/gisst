@@ -1,5 +1,5 @@
 use gisstlib::{
-    models::{empty_string_as_none, DBModel, Environment, Instance, Replay, Save, State},
+    models::{self, DBModel, Environment, Instance, Replay, Save, State},
     storage::StorageHandler,
     GISSTError,
 };
@@ -18,7 +18,12 @@ use crate::{
     templates::{TemplateHandler, PLAYER_TEMPLATE},
 };
 use anyhow::Result;
-use axum::{extract::Query, response::Html, routing::get, Extension, Router, Server};
+use axum::{
+    extract::{Path, Query},
+    response::Html,
+    routing::get,
+    Extension, Router, Server,
+};
 
 use axum::extract::DefaultBodyLimit;
 use minijinja::render;
@@ -47,7 +52,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     });
 
     let app = Router::new()
-        .route("/player", get(get_player))
+        .route("/play/:instance_id", get(get_player))
         // .nest("/creators", creator_router())
         .nest("/environments", environment_router())
         .nest("/instances", instance_router())
@@ -74,10 +79,11 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 
 #[derive(Deserialize, Serialize)]
 struct PlayerTemplateInfo {
-    instance: Option<Instance>,
-    environment: Option<Environment>,
+    instance: Instance,
+    environment: Environment,
     save: Option<Save>,
     start: PlayerStartTemplateInfo,
+    manifest: Vec<models::Object>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -89,79 +95,47 @@ enum PlayerStartTemplateInfo {
 
 #[derive(Deserialize)]
 struct PlayerParams {
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    instance_uuid: Option<Uuid>,
-    state_uuid: Option<Uuid>,
-    replay_uuid: Option<Uuid>,
-    save_uuid: Option<Uuid>,
+    state: Option<Uuid>,
+    replay: Option<Uuid>,
 }
 
 async fn get_player(
     app_state: Extension<Arc<ServerState>>,
+    Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
 ) -> Result<Html<String>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let mut instance_item: Option<Instance> = None;
-    let mut environment_item: Option<Environment> = None;
-    let mut state_item: Option<State> = None;
-    let mut replay_item: Option<Replay> = None;
-    let mut save_item: Option<Save> = None;
-
-    // Check if the content_uuid param is present, if so query for the content item and its
-    // platform information
-    if let Some(instance_uuid) = params.instance_uuid {
-        instance_item = Instance::get_by_id(&mut conn, instance_uuid)
-            .await
-            .map_err(|e| GISSTError::SqlError(e))?;
-
-        environment_item =
-            Environment::get_by_id(&mut conn, instance_item.as_ref().unwrap().environment_id)
-                .await
-                .map_err(|e| GISSTError::SqlError(e))?;
-    }
-
-    // Check for an entry state for the player, if so query for the state information
-    if !params.state_uuid.is_none() {
-        if let Ok(state) = State::get_by_id(&mut conn, params.state_uuid.unwrap())
-            .await?
-            .ok_or("Cannot get state from database")
-        {
-            state_item = Some(state);
-        }
-    }
-    // Check for replay for the player
-    if !params.replay_uuid.is_none() {
-        if let Ok(replay) = Replay::get_by_id(&mut conn, params.replay_uuid.unwrap())
-            .await?
-            .ok_or("Cannot get replay from database")
-        {
-            replay_item = Some(replay);
-        }
-    }
-    // Check for save for the player
-    if !params.save_uuid.is_none() {
-        if let Ok(save) = Save::get_by_id(&mut conn, params.save_uuid.unwrap())
-            .await?
-            .ok_or("Cannot get save from database")
-        {
-            save_item = Some(save);
-        }
-    }
-
+    let instance = Instance::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(GISSTError::Generic)?;
+    let environment = Environment::get_by_id(&mut conn, instance.environment_id)
+        .await?
+        .ok_or(GISSTError::Generic)?;
+    let start = match (params.state, params.replay) {
+        (Some(id), None) => PlayerStartTemplateInfo::State(
+            State::get_by_id(&mut conn, id)
+                .await?
+                .ok_or(GISSTError::Generic)?,
+        ),
+        (None, Some(id)) => PlayerStartTemplateInfo::Replay(
+            Replay::get_by_id(&mut conn, id)
+                .await?
+                .ok_or(GISSTError::Generic)?,
+        ),
+        (None, None) => PlayerStartTemplateInfo::Cold,
+        (_, _) => return Err(GISSTError::Generic),
+    };
+    let manifest = models::Object::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     Ok(Html(render!(
         PLAYER_TEMPLATE,
-        player_params => PlayerTemplateInfo{
-            environment: environment_item,
-            save: save_item,
-            instance: instance_item,
-            start: if let Some(state) = state_item {
-                PlayerStartTemplateInfo::State(state)
-            } else if let Some(replay) = replay_item {
-                PlayerStartTemplateInfo::Replay(replay)
-            } else {
-                PlayerStartTemplateInfo::Cold
-            }
-    })))
+        player_params => PlayerTemplateInfo {
+            environment,
+            instance,
+            save: None,
+            start,
+            manifest
+        }
+    )))
 }
 
 // #[derive(Serialize)]

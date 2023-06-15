@@ -5,7 +5,7 @@ use secrecy::Secret;
 use serde::Deserialize;
 
 //Configuration file setup taken from https://github.com/shanesveller/axum-rest-example/blob/develop/src/config.rs
-#[derive(Debug,Default,Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct ServerConfig {
     #[serde(default)]
     pub database: DatabaseConfig,
@@ -22,11 +22,10 @@ impl ServerConfig {
         let env = std::env::var("GISST_ENV").unwrap_or_else(|_| "development".into());
 
         let builder = Config::builder()
-            .add_source(File::with_name("config/default"))
-            .add_source(File::with_name(&format!("config/{}", env)).required(false))
-            .add_source(File::with_name("config/local").required(false))
+            .add_source(File::with_name("config/default.toml"))
+            .add_source(File::with_name(&format!("config/{}.toml", env)).required(false))
+            .add_source(File::with_name("config/local.toml").required(false))
             .add_source(Environment::with_prefix("GISST").separator("__"));
-
         builder.build()?.try_deserialize()
     }
 }
@@ -39,7 +38,7 @@ pub struct DatabaseConfig {
     pub idle_timeout_seconds: u64,
     pub max_lifetime_seconds: u64,
     #[serde(default = "default_database_url")]
-    pub url: Secret<String>,
+    pub database_url: Secret<String>,
 }
 
 fn default_database_url() -> Secret<String> {
@@ -54,7 +53,7 @@ impl Default for DatabaseConfig {
             connect_timeout_seconds: 30,
             idle_timeout_seconds: 900,
             max_lifetime_seconds: 3600,
-            url: default_database_url(),
+            database_url: default_database_url(),
         }
     }
 }
@@ -71,7 +70,7 @@ fn default_root_folder_path() -> String {
     "./storage".to_string()
 }
 
-fn default_folder_depth() -> u8{
+fn default_folder_depth() -> u8 {
     4
 }
 
@@ -95,7 +94,7 @@ pub struct HttpConfig {
 
 // Not sure if all of this is redundant, it appears so
 fn default_listen_address() -> Ipv4Addr {
-    Ipv4Addr::new(0,0,0,0)
+    Ipv4Addr::new(0, 0, 0, 0)
 }
 
 fn default_port() -> u16 {
