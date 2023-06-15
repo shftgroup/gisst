@@ -49,135 +49,54 @@ pub struct GISSTCli {
 
 }
 
+#[derive(Debug, Args)]
+pub struct GISSTCommand<T: clap::FromArgMatches + clap::Subcommand> {
+    #[command(subcommand)]
+    pub command: T,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum BaseSubcommand<C: clap::FromArgMatches + clap::Args,
+    U: clap::FromArgMatches + clap::Args,
+    D: clap::FromArgMatches + clap::Args,
+    L: clap::FromArgMatches + clap::Args,
+    E: clap::FromArgMatches + clap::Args> {
+    /// Create record(s)
+    Create(C),
+
+    /// Update an existing record
+    Update(U),
+
+    /// Delete an existing record
+    Delete(D),
+
+    /// Locate records in CLI interface
+    Locate(L),
+
+    /// Export records
+    Export(E),
+}
+
 #[derive(Debug, Subcommand)]
 pub enum RecordType {
-    Object(ObjectCommand),
-    Image(ImageCommand),
-    Instance(InstanceCommand),
-    Work(WorkCommand),
-    Creator(CreatorCommand),
-    Environment(EnvironmentCommand),
-}
-
-#[derive(Debug, Args)]
-pub struct ObjectCommand {
-    #[command(subcommand)]
-    pub command: ObjectSubcommand,
-}
-
-#[derive(Debug, Args)]
-pub struct EnvironmentCommand {
-    #[command(subcommand)]
-    pub command: EnvironmentSubcommand,
-}
-
-#[derive(Debug, Args)]
-pub struct ImageCommand {
-    #[command(subcommand)]
-    pub command: ImageSubcommand,
-}
-
-#[derive(Debug, Args)]
-pub struct InstanceCommand {
-    #[command(subcommand)]
-    pub command: InstanceSubcommand,
-}
-
-#[derive(Debug, Args)]
-pub struct WorkCommand {
-    #[command(subcommand)]
-    pub command: WorkSubcommand,
-}
-#[derive(Debug, Args)]
-pub struct CreatorCommand {
-    #[command(subcommand)]
-    pub command: CreatorSubcommand,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum ObjectSubcommand {
-    /// Create object(s)
-    Create(CreateObject),
-
-    /// Update an existing object
-    Update(UpdateObject),
-
-    /// Delete an existing object
-    Delete(DeleteObject),
-
-    /// Locate objects in CLI interface
-    Locate(LocateObject),
-
-    /// Export objects
-    Export(ExportObject),
-}
-
-#[derive(Debug, Subcommand)]
-pub enum ImageSubcommand {
-    /// Create image(s)
-    Create(CreateImage),
-
-    /// Update an existing image
-    Update(UpdateImage),
-
-    /// Delete an existing image
-    Delete(DeleteImage),
-
-    /// Locate images in CLI interface
-    Locate(LocateImage),
-
-    /// Export images
-    Export(ExportImage),
-}
-
-#[derive(Debug, Subcommand)]
-pub enum EnvironmentSubcommand {
-    /// Create environment(s)
-    Create(CreateEnvironment),
-
-    /// Update an existing environment
-    Update(UpdateEnvironment),
-
-    /// Delete an existing environment
-    Delete(DeleteEnvironment),
-
-    /// Locate environments in CLI interface
-    Locate(LocateEnvironment),
-
-    /// Export environments
-    Export(ExportEnvironment),
-}
-
-#[derive(Debug, Subcommand)]
-pub enum InstanceSubcommand {
-    /// Create instance(s)
-    Create(CreateInstance),
-
-    /// Update an existing instance
-    Update(UpdateInstance),
-
-    /// Delete an existing instance
-    Delete(DeleteInstance),
-
-    /// Locate instances in CLI interface
-    Locate(LocateInstance),
-
-    /// Export instances
-    Export(ExportInstance),
-}
-
-#[derive(Debug, Subcommand)]
-pub enum WorkSubcommand {
-    /// Create work(s)
-    Create(CreateWork),
-
-    /// Delete an existing work
-    Delete(DeleteWork),
-}
-
-#[derive(Debug, Subcommand)]
-pub enum CreatorSubcommand {
-
+    /// Manage object records and files
+    Object(GISSTCommand<BaseSubcommand<CreateObject, UpdateObject, DeleteObject, LocateObject, ExportObject>>),
+    /// Manage image records and files
+    Image(GISSTCommand<BaseSubcommand<CreateImage, UpdateImage, DeleteImage, LocateImage, ExportImage>>),
+    /// Manage instance records
+    Instance(GISSTCommand<BaseSubcommand<CreateInstance, UpdateInstance, DeleteInstance, LocateInstance, ExportInstance>>),
+    /// Manage work records
+    Work(GISSTCommand<BaseSubcommand<CreateWork, UpdateWork, DeleteWork, LocateWork, ExportWork>>),
+    /// Manage creator records
+    Creator(GISSTCommand<BaseSubcommand<CreateCreator, UpdateCreator, DeleteCreator, LocateCreator, ExportCreator>>),
+    /// Manage environment records
+    Environment(GISSTCommand<BaseSubcommand<CreateEnvironment, UpdateEnvironment, DeleteEnvironment, LocateEnvironment, ExportEnvironment>>),
+    /// Manage save records
+    Save(GISSTCommand<BaseSubcommand<CreateSave, UpdateSave, DeleteSave, LocateSave, ExportSave>>),
+    /// Manage state records
+    State(GISSTCommand<BaseSubcommand<CreateState, UpdateState, DeleteState, LocateState, ExportState>>),
+    /// Manage replay records
+    Replay(GISSTCommand<BaseSubcommand<CreateReplay, UpdateReplay, DeleteReplay, LocateReplay, ExportReplay>>),
 }
 
 #[derive(Debug, Args)]
@@ -320,13 +239,10 @@ pub struct DeleteImage {
 
 }
 #[derive(Debug, Args)]
-pub struct ExportImage {
-
-}
+pub struct ExportImage {}
 #[derive(Debug, Args)]
-pub struct LocateImage {
+pub struct LocateImage {}
 
-}
 #[derive(Debug, Args)]
 pub struct CreateEnvironment {
 
@@ -384,3 +300,50 @@ pub struct DeleteWork {
     pub id: Uuid,
 
 }
+
+#[derive(Debug, Args)]
+pub struct UpdateWork {}
+#[derive(Debug, Args)]
+pub struct LocateWork {}
+#[derive(Debug, Args)]
+pub struct ExportWork {}
+#[derive(Debug, Args)]
+pub struct CreateSave {}
+#[derive(Debug, Args)]
+pub struct UpdateSave {}
+#[derive(Debug, Args)]
+pub struct DeleteSave {}
+#[derive(Debug, Args)]
+pub struct LocateSave {}
+#[derive(Debug, Args)]
+pub struct ExportSave {}
+#[derive(Debug, Args)]
+pub struct CreateState {}
+#[derive(Debug, Args)]
+pub struct UpdateState {}
+#[derive(Debug, Args)]
+pub struct DeleteState {}
+#[derive(Debug, Args)]
+pub struct LocateState {}
+#[derive(Debug, Args)]
+pub struct ExportState {}
+#[derive(Debug, Args)]
+pub struct CreateReplay {}
+#[derive(Debug, Args)]
+pub struct UpdateReplay {}
+#[derive(Debug, Args)]
+pub struct DeleteReplay {}
+#[derive(Debug, Args)]
+pub struct LocateReplay {}
+#[derive(Debug, Args)]
+pub struct ExportReplay {}
+#[derive(Debug, Args)]
+pub struct CreateCreator {}
+#[derive(Debug, Args)]
+pub struct UpdateCreator {}
+#[derive(Debug, Args)]
+pub struct DeleteCreator {}
+#[derive(Debug, Args)]
+pub struct LocateCreator {}
+#[derive(Debug, Args)]
+pub struct ExportCreator {}
