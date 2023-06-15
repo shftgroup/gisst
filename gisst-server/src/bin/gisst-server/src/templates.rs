@@ -1,41 +1,41 @@
+use gisstlib::GISSTError;
 use std::collections::HashMap;
 use std::fs;
-use gisstlib::GISSTError;
 
+#[allow(dead_code)]
 pub struct TemplateHandler {
-    templates: HashMap<String,String>
+    templates: HashMap<String, String>,
 }
 
 impl TemplateHandler {
-
     pub fn new(template_path: &str) -> Result<Self, GISSTError> {
         let path = std::env::current_dir()?;
         println!("The current directory is {}", path.display());
         // TODO: make this check for directory
         println!("{}", template_path);
         let template_names = fs::read_dir(template_path).unwrap();
-        let mut templates= HashMap::new();
+        let mut templates = HashMap::new();
 
         for filepath in template_names {
             let fp = filepath.unwrap().file_name().to_string_lossy().to_string();
             let filename = fp.clone().split(".").collect::<Vec<_>>()[0].to_string();
             println!("Adding template: {} to Template Handler", &filename);
-            templates.insert(filename,
-                             fs::read_to_string(format!("{}/{}", template_path, &fp)).map_err(|e| GISSTError::TemplateError)?);
+            templates.insert(
+                filename,
+                fs::read_to_string(format!("{}/{}", template_path, &fp))
+                    .map_err(|_e| GISSTError::TemplateError)?,
+            );
         }
 
-        Ok(
-            Self {
-                templates
-        })
+        Ok(Self { templates })
     }
 
-    pub fn get_template(&self, template_name: &str) -> Result<&str, GISSTError> {
-        match self.templates.get(template_name) {
-            Some(template) => Ok(&*template),
-            None => Err(GISSTError::TemplateError),
-        }
-    }
+    // pub fn get_template(&self, template_name: &str) -> Result<&str, GISSTError> {
+    //     match self.templates.get(template_name) {
+    //         Some(template) => Ok(template),
+    //         None => Err(GISSTError::TemplateError),
+    //     }
+    // }
 }
 
 pub const PLAYER_TEMPLATE: &'static str = r#"
@@ -60,6 +60,7 @@ pub const PLAYER_TEMPLATE: &'static str = r#"
 </html>
 "#;
 
+#[allow(dead_code)]
 pub const UPLOAD_TEMPLATE: &'static str = r#"
 <!doctype html>
 <html lang="en">

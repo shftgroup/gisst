@@ -1,21 +1,10 @@
 use gisstlib::{
-    models::{
-        DBModel,
-        Save,
-        Replay,
-        State,
-        Instance,
-        Environment,
-        empty_string_as_none
-    },
-    storage::{
-        StorageHandler,
-    },
+    models::{empty_string_as_none, DBModel, Environment, Instance, Replay, Save, State},
+    storage::StorageHandler,
     GISSTError,
 };
 
 use crate::{
-    serverconfig::ServerConfig,
     db,
     routes::{
         // creator_router,
@@ -23,41 +12,22 @@ use crate::{
         image_router,
         instance_router,
         object_router,
-        work_router
+        work_router,
     },
-    templates::{
-        TemplateHandler,
-        PLAYER_TEMPLATE
-    }
+    serverconfig::ServerConfig,
+    templates::{TemplateHandler, PLAYER_TEMPLATE},
 };
 use anyhow::Result;
-use axum::{
-    Router,
-    Server,
-    extract::{
-        Json,
-        Query,
-    },
-    routing::{
-        get,
-    },
-    response::{IntoResponse, Response, Html},
-    http::{StatusCode},
-    Extension,
-    };
+use axum::{extract::Query, response::Html, routing::get, Extension, Router, Server};
 
-use sqlx::PgPool;
-use serde_json::json;
-use std::net::{IpAddr, SocketAddr};
-use minijinja::{render, };
+use axum::extract::DefaultBodyLimit;
+use minijinja::render;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
+use std::net::{IpAddr, SocketAddr};
+use std::sync::Arc;
 use tower_http::services::ServeDir;
 use uuid::Uuid;
-use std::sync::Arc;
-use axum::extract::{DefaultBodyLimit, };
-use axum::extract::multipart::MultipartError;
-
-
 
 pub struct ServerState {
     pub pool: PgPool,
@@ -65,14 +35,14 @@ pub struct ServerState {
     pub templates: TemplateHandler,
 }
 
-
-
-
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     // Arc is needed to allow for thread safety, see: https://docs.rs/axum/latest/axum/struct.Extension.html
-    let app_state = Arc::new(ServerState{
+    let app_state = Arc::new(ServerState {
         pool: db::new_pool(config).await?,
-        storage: StorageHandler::init(config.storage.root_folder_path.to_string(), config.storage.folder_depth),
+        storage: StorageHandler::init(
+            config.storage.root_folder_path.to_string(),
+            config.storage.folder_depth,
+        ),
         templates: TemplateHandler::new("src/bin/gisst-server/src/templates")?,
     });
 
@@ -89,7 +59,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432));
 
-
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
         config.http.listen_port,
@@ -103,8 +72,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     Ok(())
 }
 
-
-
 #[derive(Deserialize, Serialize)]
 struct PlayerTemplateInfo {
     instance: Option<Instance>,
@@ -113,7 +80,7 @@ struct PlayerTemplateInfo {
     start: PlayerStartTemplateInfo,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 enum PlayerStartTemplateInfo {
     Cold,
     State(State),
@@ -129,39 +96,54 @@ struct PlayerParams {
     save_uuid: Option<Uuid>,
 }
 
-async fn get_player(app_state: Extension<Arc<ServerState>>, Query(params): Query<PlayerParams>) -> Result<Html<String>, GISSTError> {
+async fn get_player(
+    app_state: Extension<Arc<ServerState>>,
+    Query(params): Query<PlayerParams>,
+) -> Result<Html<String>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let mut instance_item:Option<Instance> =  None;
-    let mut environment_item:Option<Environment> = None;
+    let mut instance_item: Option<Instance> = None;
+    let mut environment_item: Option<Environment> = None;
     let mut state_item: Option<State> = None;
-    let mut replay_item:Option<Replay>= None;
-    let mut save_item:Option<Save> = None;
+    let mut replay_item: Option<Replay> = None;
+    let mut save_item: Option<Save> = None;
 
     // Check if the content_uuid param is present, if so query for the content item and its
     // platform information
     if let Some(instance_uuid) = params.instance_uuid {
         instance_item = Instance::get_by_id(&mut conn, instance_uuid)
-            .await.map_err(|e| GISSTError::SqlError(e))?;
+            .await
+            .map_err(|e| GISSTError::SqlError(e))?;
 
-        environment_item = Environment::get_by_id(&mut conn, instance_item.as_ref().unwrap().environment_id)
-            .await.map_err(|e| GISSTError::SqlError(e))?;
+        environment_item =
+            Environment::get_by_id(&mut conn, instance_item.as_ref().unwrap().environment_id)
+                .await
+                .map_err(|e| GISSTError::SqlError(e))?;
     }
 
     // Check for an entry state for the player, if so query for the state information
     if !params.state_uuid.is_none() {
-        if let Ok(state) = State::get_by_id(&mut conn, params.state_uuid.unwrap()).await?.ok_or("Cannot get state from database"){
+        if let Ok(state) = State::get_by_id(&mut conn, params.state_uuid.unwrap())
+            .await?
+            .ok_or("Cannot get state from database")
+        {
             state_item = Some(state);
         }
     }
     // Check for replay for the player
     if !params.replay_uuid.is_none() {
-        if let Ok(replay) = Replay::get_by_id(&mut conn, params.replay_uuid.unwrap()).await?.ok_or("Cannot get replay from database"){
+        if let Ok(replay) = Replay::get_by_id(&mut conn, params.replay_uuid.unwrap())
+            .await?
+            .ok_or("Cannot get replay from database")
+        {
             replay_item = Some(replay);
         }
     }
     // Check for save for the player
     if !params.save_uuid.is_none() {
-        if let Ok(save) = Save::get_by_id(&mut conn, params.save_uuid.unwrap()).await?.ok_or("Cannot get save from database"){
+        if let Ok(save) = Save::get_by_id(&mut conn, params.save_uuid.unwrap())
+            .await?
+            .ok_or("Cannot get save from database")
+        {
             save_item = Some(save);
         }
     }
@@ -181,7 +163,6 @@ async fn get_player(app_state: Extension<Arc<ServerState>>, Query(params): Query
             }
     })))
 }
-
 
 // #[derive(Serialize)]
 // struct ModelInfo {
@@ -222,9 +203,8 @@ async fn get_player(app_state: Extension<Arc<ServerState>>, Query(params): Query
 //     }).collect()
 // }
 
-fn make_ascii_title_case(s: &mut str) {
-    if let Some(r) = s.get_mut(0..1) {
-        r.make_ascii_uppercase();
-    }
-}
-
+// fn make_ascii_title_case(s: &mut str) {
+//     if let Some(r) = s.get_mut(0..1) {
+//         r.make_ascii_uppercase();
+//     }
+// }
