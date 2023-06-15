@@ -18,6 +18,7 @@ use gisstlib::{
         DBHashable,
         DBModel,
         Object,
+        Image,
         Instance,
         Environment,
         Work,
@@ -34,6 +35,9 @@ use args::{
     DeleteObject,
     CreateEnvironment,
     DeleteEnvironment,
+    CreateImage,
+    DeleteImage,
+    ImageSubcommand,
     InstanceSubcommand,
     EnvironmentSubcommand,
     WorkSubcommand,
@@ -81,7 +85,14 @@ async fn main() -> Result<(), GISSTCliError> {
                 EnvironmentSubcommand::Export(_export) => (),
             }
         },
-        RecordType::Image(_image) => {
+        RecordType::Image(image) => {
+            match &image.command {
+                ImageSubcommand::Create(create) => create_image(create, db, storage_root).await?,
+                ImageSubcommand::Update(_update) => (),
+                ImageSubcommand::Delete(delete) => delete_image(delete, db, storage_root).await?,
+                ImageSubcommand::Locate(_locate) => (),
+                ImageSubcommand::Export(_export) => (),
+            }
 
         },
         RecordType::Instance(instance) => {
@@ -376,6 +387,116 @@ async fn delete_work(d:&DeleteWork, db:PgPool) -> Result<(), GISSTCliError> {
     Ok(())
 }
 
+async fn create_image(c:&CreateImage, db: PgPool, storage_path:String) -> Result<(), GISSTCliError> {
+    let (ignore, _skip, depth, link) = (
+        c.ignore_description,
+        c.skip_yes,
+        c.depth,
+        c.link,
+    );
+
+    let mut valid_paths: Vec<PathBuf> = Vec::new();
+
+    for path in &c.file {
+        let p = Path::new(path);
+
+        if p.exists() {
+            valid_paths.push(p.to_path_buf());
+        } else {
+            error!("File not found: {}", &p.to_string_lossy());
+            return Err(GISSTCliError::CreateImageError(
+                format!("File not found: {}", &p.to_string_lossy())))
+        }
+    }
+
+    let mut conn = db.acquire().await?;
+
+    for path in &valid_paths {
+        let data = &read(&path)?;
+        let mut image = Image {
+            image_id: Uuid::new_v4(),
+            image_hash: StorageHandler::get_md5_hash(data),
+            image_filename: path.to_path_buf().file_name().unwrap().to_string_lossy().to_string(),
+            image_source_path: path.to_path_buf().to_string_lossy().to_string(),
+            image_dest_path: Default::default(),
+            image_description: Some(path.to_path_buf().to_string_lossy().to_string()),
+            image_config: None,
+            created_on: None,
+        };
+
+        // DEBUG ONLY!! Need to find a more elegant solution
+        if valid_paths.len() == 1 {
+            image.image_id = c.force_uuid;
+        }
+
+        if let Some(found_hash) = Image::get_by_hash(&mut conn, &image.image_hash).await? {
+            warn!("Found image {}:{} with matching hash value {} to image {}:{}, skipping...",
+                found_hash.image_id,
+                found_hash.image_filename,
+                found_hash.image_hash,
+                image.image_id,
+                image.image_filename,
+            );
+            continue;
+        }
+
+        if ignore == false {
+            let mut description = Default::default();
+            println!("Please enter an image description for file: {}", &path.to_string_lossy());
+            io::stdin()
+                .read_line(&mut description)
+                .ok();
+            image.image_description = Some(description.trim().to_string());
+        }
+
+        let s_handler = StorageHandler::init(storage_path.to_string(), depth);
+
+        match s_handler.write_file_to_uuid_folder(image.image_id, &image.image_filename, data).await {
+            Ok(file_info) => {
+                info!("Wrote file {} to {}", file_info.dest_filename, file_info.dest_path);
+                let image_uuid = image.image_id.clone();
+                image.image_dest_path = file_info.dest_path;
+                if let Ok(image) = Image::insert(&mut conn, image).await {
+                    if link.is_some() {
+                        Image::link_image_to_environment(&mut conn, image.image_id, link.unwrap()).await?;
+                    }
+                } else {
+                    s_handler.delete_file_with_uuid(image_uuid, &file_info.dest_filename).await?;
+                }
+            },
+            Err(e) => {
+                error!("Error writing image file to database, aborting...");
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn delete_image(d:&DeleteImage, db:PgPool, storage_path:String) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    if let Some(image) = Image::get_by_id(&mut conn, d.id).await? {
+        Image::delete_image_environment_links_by_id(&mut conn, image.image_id).await?;
+
+        info!("Deleting image record with uuid {}", d.id);
+
+        Image::delete_by_id(&mut conn, image.image_id).await?;
+
+        info!("Deleting image file at path:{}", Path::new(&image.image_dest_path).join(
+            Path::new(&StorageHandler::get_dest_filename(&image.image_hash, &image.image_filename)
+        )).to_string_lossy());
+        debug!("Image path depth is set to {}", StorageHandler::get_folder_depth_from_path(Path::new(&image.image_dest_path), None));
+
+        StorageHandler::init(storage_path,
+                             StorageHandler::get_folder_depth_from_path(Path::new(&image.image_dest_path), None))
+            .delete_file_with_uuid(d.id,
+                                   &StorageHandler::get_dest_filename(&image.image_hash, &image.image_filename)).await?;
+    } else {
+        warn!("Image with id: {} not found in database", d.id);
+    }
+
+    Ok(())
+}
 
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {
     PoolOptions::new()

@@ -119,7 +119,8 @@ pub struct Environment {
 pub struct Image{
     pub image_id: Uuid,
     pub image_filename: String,
-    pub image_path: String,
+    pub image_source_path: String,
+    pub image_dest_path: String,
     pub image_hash: String,
     pub image_description: Option<String>,
     pub image_config: Option<sqlx::types::JsonValue>,
@@ -377,7 +378,8 @@ impl DBModel for Image {
         vec![
             ("image_id".to_string(), "Uuid".to_string()),
             ("image_filename".to_string(), "String".to_string()),
-            ("image_path".to_string(), "String".to_string()),
+            ("image_source_path".to_string(), "String".to_string()),
+            ("image_dest_path".to_string(), "String".to_string()),
             ("image_hash".to_string(), "String".to_string()),
             ("image_config".to_string(), "Json".to_string()),
             ("image_description".to_string(), "String".to_string()),
@@ -389,7 +391,8 @@ impl DBModel for Image {
         vec![
             Some(self.image_id.to_string()),
             Some(self.image_filename.to_string()),
-            Some(self.image_path.to_string()),
+            Some(self.image_source_path.to_string()),
+            Some(self.image_dest_path.to_string()),
             Some(self.image_hash.to_string()),
             unwrap_to_option_string(&self.image_config),
             unwrap_to_option_string(&self.image_description),
@@ -402,7 +405,8 @@ impl DBModel for Image {
             Self,
             r#"SELECT image_id,
             image_filename,
-            image_path,
+            image_source_path,
+            image_dest_path,
             image_hash,
             image_config,
             image_description,
@@ -420,7 +424,8 @@ impl DBModel for Image {
             Self,
             r#"SELECT image_id,
             image_filename,
-            image_path,
+            image_source_path,
+            image_dest_path,
             image_hash,
             image_config,
             image_description,
@@ -445,7 +450,8 @@ impl DBHashable for Image {
             Self,
                 r#"SELECT image_id,
                 image_filename,
-                image_path,
+                image_source_path,
+                image_dest_path,
                 image_hash,
                 image_config,
                 image_description,
@@ -468,17 +474,19 @@ impl Image {
             r#"INSERT INTO image(
             image_id,
             image_filename,
-            image_path,
+            image_source_path,
+            image_dest_path,
             image_hash,
             image_config,
             image_description,
             created_on
             )
-            VALUES($1, $2, $3, $4, $5, $6, $7)
-            RETURNING image_id, image_filename, image_path, image_hash, image_config, image_description, created_on"#,
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on"#,
             image.image_id,
             image.image_filename,
-            image.image_path,
+            image.image_source_path,
+            image.image_dest_path,
             image.image_hash,
             image.image_config,
             image.image_description,
@@ -493,12 +501,13 @@ impl Image {
         sqlx::query_as!(
             Image,
             r#"UPDATE image SET
-            (image_filename, image_path, image_hash, image_config, image_description, created_on) =
-            ($1, $2, $3, $4, $5, $6)
-            WHERE image_id = $7
-            RETURNING image_id, image_filename, image_path, image_hash, image_config, image_description, created_on"#,
+            (image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on) =
+            ($1, $2, $3, $4, $5, $6, $7)
+            WHERE image_id = $8
+            RETURNING image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on"#,
             image.image_filename,
-            image.image_path,
+            image.image_source_path,
+            image.image_dest_path,
             image.image_hash,
             image.image_config,
             image.image_description,
@@ -508,6 +517,10 @@ impl Image {
             .fetch_one(conn)
             .await
             .map_err(|_| UpdateRecordError::ImageError)
+    }
+
+    pub async fn link_image_to_environment(conn: &mut PgConnection, image_id:Uuid, environment_id:Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("INSERT INTO environmentImage (environment_id, image_id) VALUES ($1, $2)", environment_id, image_id).execute(conn).await
     }
 
     pub async fn delete_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<PgQueryResult> {
@@ -525,7 +538,7 @@ impl Image {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT image_id, image_filename, image_path, image_hash, image_config, image_description, image.created_on
+            SELECT image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, image.created_on
             FROM image
             JOIN environmentImage USING(image_id)
             JOIN environment USING(environment_id)

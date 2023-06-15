@@ -12,6 +12,8 @@ use thiserror::Error;
 pub enum GISSTCliError {
     #[error("create object error")]
     CreateObjectError(String),
+    #[error("create object error")]
+    CreateImageError(String),
     #[error("create instance error")]
     CreateInstanceError(String),
     #[error("create instance error")]
@@ -283,6 +285,28 @@ pub struct LocateInstance {
 }
 #[derive(Debug, Args)]
 pub struct CreateImage {
+    /// Will skip requests for a description for an image and default to using the image's filename
+    #[arg(short, long="ignore-description")]
+    pub ignore_description: bool,
+
+    /// Will answer yes "y" to all "y/n" prompts on record creation
+    #[arg(short='y', long="skip-yes")]
+    pub skip_yes: bool,
+
+    /// Link to a specific environment based on UUID
+    #[arg(short, long)]
+    pub link: Option<Uuid>,
+
+    /// Folder depth to use for input file to path based off of characters in assigned UUID
+    #[arg(short, long, default_value_t = 4)]
+    pub depth: u8,
+
+    /// (DEBUG) Force the use of specific UUID, only works with a single image create
+    #[arg(long="force-uuid")]
+    pub force_uuid: Uuid,
+
+    /// Paths of image files
+    pub file: Vec<String>,
 
 }
 #[derive(Debug, Args)]
@@ -291,6 +315,8 @@ pub struct UpdateImage {
 }
 #[derive(Debug, Args)]
 pub struct DeleteImage {
+    /// Uuid to delete from the database, this will also disconnect the image from any associated environments
+    pub id: Uuid,
 
 }
 #[derive(Debug, Args)]

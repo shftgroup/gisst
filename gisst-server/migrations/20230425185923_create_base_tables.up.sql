@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS save (
 CREATE TABLE IF NOT EXISTS image (
     image_id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     image_filename      text NOT NULL,
-    image_path          text NOT NULL,
+    image_source_path   text NOT NULL,
+    image_dest_path     text NOT NULL,
     image_hash          text NOT NULL,
     image_description   text,
     image_config        json,
