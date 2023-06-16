@@ -778,25 +778,6 @@ impl DBModel for Object {
 }
 
 impl Object {
-    pub async fn get_all_for_instance_id(
-        conn: &mut PgConnection,
-        id: Uuid,
-    ) -> sqlx::Result<Vec<Self>> {
-        sqlx::query_as!(
-            Self,
-            r#"
-            SELECT object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, object.created_on
-            FROM object
-            JOIN instanceObject USING(object_id)
-            JOIN instance USING(instance_id)
-            WHERE instance_id = $1
-            "#,
-            id
-        )
-            .fetch_all(conn)
-            .await
-    }
-
     pub async fn update(
         conn: &mut PgConnection,
         object: Object,
@@ -878,6 +859,34 @@ impl Object {
     ) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM instanceObject WHERE object_id = $1", id)
             .execute(conn)
+            .await
+    }
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ObjectLink {
+    pub object_id: Uuid,
+    pub object_role: ObjectRole,
+    pub object_hash: String,
+    pub object_filename: String,
+    pub object_dest_path: String,
+}
+impl ObjectLink {
+    pub async fn get_all_for_instance_id(
+        conn: &mut PgConnection,
+        id: Uuid,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"
+            SELECT object_id, instanceObject.object_role as "object_role:_", object_hash, object_filename, object_dest_path
+            FROM object
+            JOIN instanceObject USING(object_id)
+            JOIN instance USING(instance_id)
+            WHERE instance_id = $1
+            "#,
+            id
+        )
+            .fetch_all(conn)
             .await
     }
 }
