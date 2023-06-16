@@ -1,12 +1,8 @@
-use clap::{
-    Parser,
-    Args,
-    Subcommand
-};
+use clap::{Args, Parser, Subcommand};
 
 use clap_verbosity_flag::Verbosity;
-use uuid::Uuid;
 use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Debug, Error)]
 pub enum GISSTCliError {
@@ -46,7 +42,6 @@ pub struct GISSTCli {
     /// GISST_STORAGE_ROOT_PATH environment variable must be set
     #[clap(env)]
     pub gisst_storage_root_path: String,
-
 }
 
 #[derive(Debug, Args)]
@@ -56,11 +51,13 @@ pub struct GISSTCommand<T: clap::FromArgMatches + clap::Subcommand> {
 }
 
 #[derive(Debug, Subcommand)]
-pub enum BaseSubcommand<C: clap::FromArgMatches + clap::Args,
+pub enum BaseSubcommand<
+    C: clap::FromArgMatches + clap::Args,
     U: clap::FromArgMatches + clap::Args,
     D: clap::FromArgMatches + clap::Args,
     L: clap::FromArgMatches + clap::Args,
-    E: clap::FromArgMatches + clap::Args> {
+    E: clap::FromArgMatches + clap::Args,
+> {
     /// Create record(s)
     Create(C),
 
@@ -80,23 +77,69 @@ pub enum BaseSubcommand<C: clap::FromArgMatches + clap::Args,
 #[derive(Debug, Subcommand)]
 pub enum RecordType {
     /// Manage object records and files
-    Object(GISSTCommand<BaseSubcommand<CreateObject, UpdateObject, DeleteObject, LocateObject, ExportObject>>),
+    Object(
+        GISSTCommand<
+            BaseSubcommand<CreateObject, UpdateObject, DeleteObject, LocateObject, ExportObject>,
+        >,
+    ),
     /// Manage image records and files
-    Image(GISSTCommand<BaseSubcommand<CreateImage, UpdateImage, DeleteImage, LocateImage, ExportImage>>),
+    Image(
+        GISSTCommand<
+            BaseSubcommand<CreateImage, UpdateImage, DeleteImage, LocateImage, ExportImage>,
+        >,
+    ),
     /// Manage instance records
-    Instance(GISSTCommand<BaseSubcommand<CreateInstance, UpdateInstance, DeleteInstance, LocateInstance, ExportInstance>>),
+    Instance(
+        GISSTCommand<
+            BaseSubcommand<
+                CreateInstance,
+                UpdateInstance,
+                DeleteInstance,
+                LocateInstance,
+                ExportInstance,
+            >,
+        >,
+    ),
     /// Manage work records
     Work(GISSTCommand<BaseSubcommand<CreateWork, UpdateWork, DeleteWork, LocateWork, ExportWork>>),
     /// Manage creator records
-    Creator(GISSTCommand<BaseSubcommand<CreateCreator, UpdateCreator, DeleteCreator, LocateCreator, ExportCreator>>),
+    Creator(
+        GISSTCommand<
+            BaseSubcommand<
+                CreateCreator,
+                UpdateCreator,
+                DeleteCreator,
+                LocateCreator,
+                ExportCreator,
+            >,
+        >,
+    ),
     /// Manage environment records
-    Environment(GISSTCommand<BaseSubcommand<CreateEnvironment, UpdateEnvironment, DeleteEnvironment, LocateEnvironment, ExportEnvironment>>),
+    Environment(
+        GISSTCommand<
+            BaseSubcommand<
+                CreateEnvironment,
+                UpdateEnvironment,
+                DeleteEnvironment,
+                LocateEnvironment,
+                ExportEnvironment,
+            >,
+        >,
+    ),
     /// Manage save records
     Save(GISSTCommand<BaseSubcommand<CreateSave, UpdateSave, DeleteSave, LocateSave, ExportSave>>),
     /// Manage state records
-    State(GISSTCommand<BaseSubcommand<CreateState, UpdateState, DeleteState, LocateState, ExportState>>),
+    State(
+        GISSTCommand<
+            BaseSubcommand<CreateState, UpdateState, DeleteState, LocateState, ExportState>,
+        >,
+    ),
     /// Manage replay records
-    Replay(GISSTCommand<BaseSubcommand<CreateReplay, UpdateReplay, DeleteReplay, LocateReplay, ExportReplay>>),
+    Replay(
+        GISSTCommand<
+            BaseSubcommand<CreateReplay, UpdateReplay, DeleteReplay, LocateReplay, ExportReplay>,
+        >,
+    ),
 }
 
 #[derive(Debug, Args)]
@@ -110,23 +153,27 @@ pub struct CreateObject {
     pub extract: bool,
 
     /// Will skip requests for a description for an object and default to using the object's filename
-    #[arg(short, long="ignore-description")]
+    #[arg(short, long = "ignore-description")]
     pub ignore_description: bool,
 
     /// Will answer yes "y" to all "y/n" prompts on record creation
-    #[arg(short='y', long="skip-yes")]
+    #[arg(short = 'y', long = "skip-yes")]
     pub skip_yes: bool,
 
     /// Link to a specific instance based on UUID
     #[arg(short, long)]
-    pub link: Option<Uuid>,
+    pub link: Uuid,
+
+    /// Object role for instance link. Must be one of "content", "dependency", or "config".
+    #[arg(long)]
+    pub role: gisstlib::models::ObjectRole,
 
     /// Folder depth to use for input file to path based off of characters in assigned UUID
     #[arg(short, long, default_value_t = 4)]
     pub depth: u8,
 
     /// (DEBUG) Force the use of specific UUID, only works with a single object create
-    #[arg(long="force-uuid")]
+    #[arg(long = "force-uuid")]
     pub force_uuid: Uuid,
 
     /// Paths of file(s) to create in the database, directories will be ignored unless -r/--recursive flag is enabled
@@ -139,77 +186,64 @@ pub struct UpdateObject {
     pub id: Uuid,
 
     /// Update object based on a provided JSON string
-    #[arg(long="json-string", group="json_input")]
+    #[arg(long = "json-string", group = "json_input")]
     pub json_string: serde_json::Value,
 
     /// Update object based on a provided JSON file
-    #[arg(long="json-file", group="json_input")]
+    #[arg(long = "json-file", group = "json_input")]
     pub json_file: String,
 }
 
 #[derive(Debug, Args)]
-pub struct DeleteObject{
+pub struct DeleteObject {
     /// Uuid to delete from the database, this will also disconnect the object from any associated instances
     pub id: Uuid,
 }
 
 #[derive(Debug, Args)]
-pub struct LocateObject {
-
-}
+pub struct LocateObject {}
 
 #[derive(Debug, Args)]
-pub struct ExportObject {
-
-}
+pub struct ExportObject {}
 
 #[derive(Debug, Args)]
 pub struct CreateInstance {
-
     /// Provide a JSON string to create instance
-    #[arg(long="json-string", group="json_input")]
+    #[arg(long = "json-string", group = "json_input")]
     pub json_string: Option<serde_json::Value>,
 
     /// Provide a JSON file to create instance
-    #[arg(long="json-file", group="json_input")]
+    #[arg(long = "json-file", group = "json_input")]
     pub json_file: Option<String>,
 
     /// Provide a JSON file for instance configuration
-    #[arg(long="instance-config-file", group="config_input")]
+    #[arg(long = "instance-config-file", group = "config_input")]
     pub instance_config_json_file: Option<String>,
 
     /// Provide a JSON string for instance configuration
-    #[arg(long="instance-config-string", group="config_input")]
+    #[arg(long = "instance-config-string", group = "config_input")]
     pub instance_config_json_string: Option<serde_json::Value>,
-
 }
 
 #[derive(Debug, Args)]
-pub struct UpdateInstance {
-
-}
+pub struct UpdateInstance {}
 #[derive(Debug, Args)]
 pub struct DeleteInstance {
     /// Uuid to delete from the database, this will also disconnect the instance from any associated objects
     pub id: Uuid,
-
 }
 #[derive(Debug, Args)]
-pub struct ExportInstance {
-
-}
+pub struct ExportInstance {}
 #[derive(Debug, Args)]
-pub struct LocateInstance {
-
-}
+pub struct LocateInstance {}
 #[derive(Debug, Args)]
 pub struct CreateImage {
     /// Will skip requests for a description for an image and default to using the image's filename
-    #[arg(short, long="ignore-description")]
+    #[arg(short, long = "ignore-description")]
     pub ignore_description: bool,
 
     /// Will answer yes "y" to all "y/n" prompts on record creation
-    #[arg(short='y', long="skip-yes")]
+    #[arg(short = 'y', long = "skip-yes")]
     pub skip_yes: bool,
 
     /// Link to a specific environment based on UUID
@@ -221,22 +255,18 @@ pub struct CreateImage {
     pub depth: u8,
 
     /// (DEBUG) Force the use of specific UUID, only works with a single image create
-    #[arg(long="force-uuid")]
+    #[arg(long = "force-uuid")]
     pub force_uuid: Uuid,
 
     /// Paths of image files
     pub file: Vec<String>,
-
 }
 #[derive(Debug, Args)]
-pub struct UpdateImage {
-
-}
+pub struct UpdateImage {}
 #[derive(Debug, Args)]
 pub struct DeleteImage {
     /// Uuid to delete from the database, this will also disconnect the image from any associated environments
     pub id: Uuid,
-
 }
 #[derive(Debug, Args)]
 pub struct ExportImage {}
@@ -245,52 +275,43 @@ pub struct LocateImage {}
 
 #[derive(Debug, Args)]
 pub struct CreateEnvironment {
-
     /// Provide a JSON string to create instance
-    #[arg(long="json-string", group="json_input")]
+    #[arg(long = "json-string", group = "json_input")]
     pub json_string: Option<serde_json::Value>,
 
     /// Provide a JSON file to create instance
-    #[arg(long="json-file", group="json_input")]
+    #[arg(long = "json-file", group = "json_input")]
     pub json_file: Option<String>,
 
     /// Provide a JSON file for environment configuration
-    #[arg(long="environment-config-file", group="config_input")]
+    #[arg(long = "environment-config-file", group = "config_input")]
     pub environment_config_json_file: Option<String>,
 
     /// Provide a JSON string for environment configuration
-    #[arg(long="environment-config-string", group="config_input")]
+    #[arg(long = "environment-config-string", group = "config_input")]
     pub environment_config_json_string: Option<serde_json::Value>,
-
 }
 #[derive(Debug, Args)]
-pub struct UpdateEnvironment {
-
-}
+pub struct UpdateEnvironment {}
 #[derive(Debug, Args)]
 pub struct DeleteEnvironment {
     /// Uuid to delete from the database, this will also disconnect the environment from any associated images
     pub id: Uuid,
-
 }
 #[derive(Debug, Args)]
-pub struct ExportEnvironment {
-
-}
+pub struct ExportEnvironment {}
 #[derive(Debug, Args)]
-pub struct LocateEnvironment {
-
-}
+pub struct LocateEnvironment {}
 
 #[derive(Debug, Args)]
 #[group(required = true, multiple = false)]
 pub struct CreateWork {
     /// Provide a JSON string to create work
-    #[arg(long="json-string")]
+    #[arg(long = "json-string")]
     pub json_string: Option<serde_json::Value>,
 
     /// Provide a JSON file to create work
-    #[arg(long="json-file")]
+    #[arg(long = "json-file")]
     pub json_file: Option<String>,
 }
 
@@ -298,7 +319,6 @@ pub struct CreateWork {
 pub struct DeleteWork {
     /// Uuid to delete from the database
     pub id: Uuid,
-
 }
 
 #[derive(Debug, Args)]

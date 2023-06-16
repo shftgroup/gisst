@@ -2,27 +2,10 @@ mod args;
 
 use anyhow::Result;
 use args::{
-    GISSTCli,
-    GISSTCliError,
-    RecordType,
-    CreateObject,
-    DeleteObject,
-    CreateEnvironment,
-    DeleteEnvironment,
-    CreateImage,
-    DeleteImage,
-    UpdateObject,
-    CreateInstance,
-    DeleteInstance,
-    CreateWork,
-    DeleteWork,
-    CreateSave,
-    DeleteSave,
-    CreateReplay,
-    DeleteReplay,
-    CreateState,
-    DeleteState,
-    BaseSubcommand,
+    BaseSubcommand, CreateEnvironment, CreateImage, CreateInstance, CreateObject, CreateReplay,
+    CreateSave, CreateState, CreateWork, DeleteEnvironment, DeleteImage, DeleteInstance,
+    DeleteObject, DeleteReplay, DeleteSave, DeleteState, DeleteWork, GISSTCli, GISSTCliError,
+    RecordType, UpdateObject,
 };
 use clap::Parser;
 use env_logger;
@@ -59,68 +42,68 @@ async fn main() -> Result<(), GISSTCliError> {
 
     match &args.record_type {
         RecordType::Object(object) => match &object.command {
-            ObjectSubcommand::Create(create) => create_object(create, db, storage_root).await?,
-            ObjectSubcommand::Update(_update) => (),
-            ObjectSubcommand::Delete(delete) => delete_object(delete, db, storage_root).await?,
-            ObjectSubcommand::Locate(_locate) => (),
-            ObjectSubcommand::Export(_export) => (),
+            BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_object(delete, db, storage_root).await?,
+            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Creator(_creator) => {},
+        RecordType::Creator(_creator) => {}
         RecordType::Environment(environment) => match &environment.command {
-                BaseSubcommand::Create(create) => create_environment(create, db).await?,
-                BaseSubcommand::Update(_update) => (),
-                BaseSubcommand::Delete(delete) => delete_environment(delete, db).await?,
-                BaseSubcommand::Locate(_locate) => (),
-                BaseSubcommand::Export(_export) => (),
-            },
+            BaseSubcommand::Create(create) => create_environment(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_environment(delete, db).await?,
+            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Export(_export) => (),
+        },
         RecordType::Image(image) => match &image.command {
-                BaseSubcommand::Create(create) => create_image(create, db, storage_root).await?,
-                BaseSubcommand::Update(_update) => (),
-                BaseSubcommand::Delete(delete) => delete_image(delete, db, storage_root).await?,
-                BaseSubcommand::Locate(_locate) => (),
-                BaseSubcommand::Export(_export) => (),
-            },
+            BaseSubcommand::Create(create) => create_image(create, db, storage_root).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_image(delete, db, storage_root).await?,
+            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Export(_export) => (),
+        },
         RecordType::Instance(instance) => match &instance.command {
-                BaseSubcommand::Create(create) => create_instance(create, db).await?,
-                BaseSubcommand::Update(_update) => (),
-                BaseSubcommand::Delete(delete) => delete_instance(delete, db).await?,
-                BaseSubcommand::Locate(_locate) => (),
-                BaseSubcommand::Export(_export) => (),
+            BaseSubcommand::Create(create) => create_instance(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_instance(delete, db).await?,
+            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Export(_export) => (),
         },
         RecordType::Work(work) => match &work.command {
-                BaseSubcommand::Create(create) => create_work(create, db).await?,
-                BaseSubcommand::Update(_update) => (),
-                BaseSubcommand::Delete(delete) => delete_work(delete, db).await?,
-                BaseSubcommand::Locate(_locate) => (),
-                BaseSubcommand::Export(_export) => (),
+            BaseSubcommand::Create(create) => create_work(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_work(delete, db).await?,
+            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Export(_export) => (),
         },
         RecordType::State(state) => match &state.command {
-                BaseSubcommand::Create(create) => create_state(create, db).await?,
-                BaseSubcommand::Update(_update) => (),
-                BaseSubcommand::Delete(delete) => delete_state(delete, db).await?,
-                BaseSubcommand::Locate(_locate) => (),
-                BaseSubcommand::Export(_export) => (),
+            BaseSubcommand::Create(create) => create_state(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_state(delete, db).await?,
+            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Export(_export) => (),
         },
         RecordType::State(state) => match &state.command {
-                BaseSubcommand::Create(create) => create_state(create, db).await?,
-                BaseSubcommand::Update(_update) => (),
-                BaseSubcommand::Delete(delete) => delete_state(delete, db).await?,
-                BaseSubcommand::Locate(_locate) => (),
-                BaseSubcommand::Export(_export) => (),
+            BaseSubcommand::Create(create) => create_state(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_state(delete, db).await?,
+            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Export(_export) => (),
         },
         RecordType::Save(save) => match &save.command {
-                BaseSubcommand::Create(create) => create_save(create, db).await?,
-                BaseSubcommand::Update(_update) => (),
-                BaseSubcommand::Delete(delete) => delete_save(delete, db).await?,
-                BaseSubcommand::Locate(_locate) => (),
-                BaseSubcommand::Export(_export) => (),
+            BaseSubcommand::Create(create) => create_save(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_save(delete, db).await?,
+            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Export(_export) => (),
         },
         RecordType::Replay(replay) => match &replay.command {
-                BaseSubcommand::Create(create) => create_replay(create, db).await?,
-                BaseSubcommand::Update(_update) => (),
-                BaseSubcommand::Delete(delete) => delete_replay(delete, db).await?,
-                BaseSubcommand::Locate(_locate) => (),
-                BaseSubcommand::Export(_export) => (),
+            BaseSubcommand::Create(create) => create_replay(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_replay(delete, db).await?,
+            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Export(_export) => (),
         },
     }
 
@@ -133,13 +116,14 @@ async fn create_object(
     db: PgPool,
     storage_path: String,
 ) -> Result<(), GISSTCliError> {
-    let (recursive, _extract, ignore, _skip, depth, link) = (
+    let (recursive, _extract, ignore, _skip, depth, link, role) = (
         c.recursive,
         c.extract,
         c.ignore_description,
         c.skip_yes,
         c.depth,
         c.link,
+        c.role,
     );
 
     let mut valid_paths: Vec<PathBuf> = Vec::new();
@@ -234,10 +218,8 @@ async fn create_object(
                 let obj_uuid = object.object_id.clone();
                 object.object_dest_path = file_info.dest_path;
                 if let Ok(object) = Object::insert(&mut conn, object).await {
-                    if link.is_some() {
-                        Object::link_object_to_instance(&mut conn, object.object_id, link.unwrap())
-                            .await?;
-                    }
+                    Object::link_object_to_instance(&mut conn, object.object_id, link, role)
+                        .await?;
                 } else {
                     s_handler
                         .delete_file_with_uuid(obj_uuid, &file_info.dest_filename)
@@ -556,9 +538,8 @@ async fn create_image(
                 let image_uuid = image.image_id.clone();
                 image.image_dest_path = file_info.dest_path;
                 if let Ok(image) = Image::insert(&mut conn, image).await {
-                    if link.is_some() {
-                        Image::link_image_to_environment(&mut conn, image.image_id, link.unwrap())
-                            .await?;
+                    if let Some(link) = link {
+                        Image::link_image_to_environment(&mut conn, image.image_id, link).await?;
                     }
                 } else {
                     s_handler
@@ -616,13 +597,25 @@ async fn delete_image(
     Ok(())
 }
 
-async fn create_replay(c:&CreateReplay, db: PgPool) -> Result<(), GISSTCliError> { Ok(())}
-async fn create_state(c:&CreateState, db: PgPool) -> Result<(), GISSTCliError> { Ok(())}
-async fn create_save(c:&CreateSave, db: PgPool) -> Result<(), GISSTCliError> { Ok(())}
+async fn create_replay(c: &CreateReplay, db: PgPool) -> Result<(), GISSTCliError> {
+    Ok(())
+}
+async fn create_state(c: &CreateState, db: PgPool) -> Result<(), GISSTCliError> {
+    Ok(())
+}
+async fn create_save(c: &CreateSave, db: PgPool) -> Result<(), GISSTCliError> {
+    Ok(())
+}
 
-async fn delete_replay(d:&DeleteReplay, db:PgPool) -> Result<(), GISSTCliError> { Ok(())}
-async fn delete_save(d:&DeleteSave, db:PgPool) -> Result<(), GISSTCliError> { Ok(())}
-async fn delete_state(d:&DeleteState, db:PgPool) -> Result<(), GISSTCliError> { Ok(())}
+async fn delete_replay(d: &DeleteReplay, db: PgPool) -> Result<(), GISSTCliError> {
+    Ok(())
+}
+async fn delete_save(d: &DeleteSave, db: PgPool) -> Result<(), GISSTCliError> {
+    Ok(())
+}
+async fn delete_state(d: &DeleteState, db: PgPool) -> Result<(), GISSTCliError> {
+    Ok(())
+}
 
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {
     PoolOptions::new().connect(&db_url).await
