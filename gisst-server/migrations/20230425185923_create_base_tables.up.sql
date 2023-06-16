@@ -1,4 +1,5 @@
 -- Add up migration script here
+CREATE TYPE object_role AS ENUM ('content', 'dependency', 'config');
 
 CREATE TABLE IF NOT EXISTS creator (
     creator_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -13,14 +14,14 @@ CREATE TABLE IF NOT EXISTS environment (
     core_name                       text NOT NULL,
     core_version                    text NOT NULL,
     environment_derived_from        uuid,
-    environment_config              json,
+    environment_config              jsonb,
     created_on                      timestamptz DEFAULT current_timestamp
 );
 
 CREATE TABLE IF NOT EXISTS environmentImage (
     environment_id              uuid,
     image_id                    uuid,
-    environment_image_config    json,
+    environment_image_config    jsonb,
     PRIMARY KEY (environment_id, image_id)
 );
 
@@ -29,14 +30,15 @@ CREATE TABLE IF NOT EXISTS instance (
     environment_id          uuid NOT NULL,
     work_id                 uuid NOT NULL,
     instance_framework      text NOT NULL,
-    instance_config         json,
+    instance_config         jsonb,
     created_on              timestamptz DEFAULT current_timestamp
 );
 
 CREATE TABLE IF NOT EXISTS instanceObject (
-    instance_id             uuid,
-    object_id               uuid,
-    instance_object_config  json,
+    instance_id             uuid NOT NULL,
+    object_id               uuid NOT NULL,
+    object_role             object_role NOT NULL,
+    instance_object_config  jsonb,
     PRIMARY KEY (instance_id, object_id)
 );
 
@@ -68,7 +70,7 @@ CREATE TABLE IF NOT EXISTS image (
     image_dest_path     text NOT NULL,
     image_hash          text NOT NULL,
     image_description   text,
-    image_config        json,
+    image_config        jsonb,
     created_on  timestamptz DEFAULT current_timestamp
 );
 
