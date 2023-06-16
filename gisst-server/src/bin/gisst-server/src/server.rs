@@ -83,7 +83,7 @@ struct PlayerTemplateInfo {
     environment: Environment,
     save: Option<Save>,
     start: PlayerStartTemplateInfo,
-    manifest: Vec<models::Object>,
+    manifest: Vec<models::ObjectLink>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -125,7 +125,8 @@ async fn get_player(
         (None, None) => PlayerStartTemplateInfo::Cold,
         (_, _) => return Err(GISSTError::Generic),
     };
-    let manifest = models::Object::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
+    let manifest =
+        models::ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     Ok(Html(render!(
         PLAYER_TEMPLATE,
         player_params => PlayerTemplateInfo {
