@@ -85,13 +85,6 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Locate(_locate) => (),
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::State(state) => match &state.command {
-            BaseSubcommand::Create(create) => create_state(create, db).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_state(delete, db).await?,
-            BaseSubcommand::Locate(_locate) => (),
-            BaseSubcommand::Export(_export) => (),
-        },
         RecordType::Save(save) => match &save.command {
             BaseSubcommand::Create(create) => create_save(create, db).await?,
             BaseSubcommand::Update(_update) => (),
