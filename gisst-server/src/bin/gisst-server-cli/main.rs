@@ -5,7 +5,7 @@ use args::{
     BaseSubcommand, CreateEnvironment, CreateImage, CreateInstance, CreateObject, CreateReplay,
     CreateSave, CreateState, CreateWork, DeleteEnvironment, DeleteImage, DeleteInstance,
     DeleteObject, DeleteReplay, DeleteSave, DeleteState, DeleteWork, GISSTCli, GISSTCliError,
-    RecordType, UpdateObject,
+    RecordType, UpdateObject, DeleteRecord,
 };
 use clap::Parser;
 use env_logger;
@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 use std::{fs, fs::read, io};
 use uuid::Uuid;
 use walkdir::WalkDir;
+use gisstlib::models::DBLinked;
 
 #[tokio::main]
 async fn main() -> Result<(), GISSTCliError> {
@@ -44,7 +45,7 @@ async fn main() -> Result<(), GISSTCliError> {
         RecordType::Object(object) => match &object.command {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_object(delete, db, storage_root).await?,
+            BaseSubcommand::Delete(delete) => delete_linked_file_record::<Object>(delete, db, storage_root).await?,
             BaseSubcommand::Locate(_locate) => (),
             BaseSubcommand::Export(_export) => (),
         },
@@ -59,7 +60,7 @@ async fn main() -> Result<(), GISSTCliError> {
         RecordType::Image(image) => match &image.command {
             BaseSubcommand::Create(create) => create_image(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_image(delete, db, storage_root).await?,
+            BaseSubcommand::Delete(delete) => delete_linked_file_record::<Image>(delete, db, storage_root).await?,
             BaseSubcommand::Locate(_locate) => (),
             BaseSubcommand::Export(_export) => (),
         },
@@ -235,48 +236,71 @@ async fn create_object(
     Ok(())
 }
 
-async fn delete_object(
-    d: &DeleteObject,
-    db: PgPool,
-    storage_path: String,
-) -> Result<(), GISSTCliError> {
+async fn delete_record<T:DBModel>(
+    d:&DeleteRecord,
+    db:PgPool,
+    storage_path:String
+) -> Result<(), GISSTCliError> where T: DBModel {
     let mut conn = db.acquire().await?;
-    if let Some(object) = Object::get_by_id(&mut conn, d.id).await? {
-        Object::delete_object_instance_links_by_id(&mut conn, object.object_id).await?;
-
-        info!("Deleting object record with uuid {}", d.id);
-
-        Object::delete_by_id(&mut conn, object.object_id).await?;
-
-        info!(
-            "Deleting object file at path:{}",
-            Path::new(&object.object_dest_path)
-                .join(Path::new(&StorageHandler::get_dest_filename(
-                    &object.object_hash,
-                    &object.object_filename
-                )))
-                .to_string_lossy()
-        );
-        debug!(
-            "Object path depth is set to {}",
-            StorageHandler::get_folder_depth_from_path(Path::new(&object.object_dest_path), None)
-        );
-
-        StorageHandler::init(
-            storage_path,
-            StorageHandler::get_folder_depth_from_path(Path::new(&object.object_dest_path), None),
-        )
-        .delete_file_with_uuid(
-            d.id,
-            &StorageHandler::get_dest_filename(&object.object_hash, &object.object_filename),
-        )
-        .await?;
-    } else {
-        warn!("Object with id: {} not found in database", d.id);
-    }
-
+    T::delete_by_id(&mut conn, d.id).await.map_err(|e| GISSTCliError::SqlError(e))?;
+    info!("Deleted record with uuid {}", d.id);
     Ok(())
 }
+
+async fn delete_linked_record<T:DBModel + DBLinked>(
+    d:&DeleteRecord,
+    db:PgPool,
+    storage_path:String
+) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    T::unlink_by_id(&mut conn, d.id).await.map_err(|e| GISSTCliError::SqlError(e))?;
+    info!("Unlinked record with uuid {}", d.id);
+    T::delete_by_id(&mut conn, d.id).await.map_err(|e|GISSTCliError::SqlError(e))?;
+    info!("Deleted record with uuid {}", d.id);
+    Ok(())
+}
+
+
+async fn delete_linked_file_record<T:DBModel + DBHashable + DBLinked>(
+    d:&DeleteRecord,
+    db:PgPool,
+    storage_path:String
+) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+
+    T::unlink_by_id(&mut conn, *model.id()).await.map_err(|e| GISSTCliError::SqlError(e))?;
+    info!("Unlinked record with uuid {}", d.id);
+
+    T::delete_by_id(&mut conn, *model.id()).await.map_err(|e| GISSTCliError::SqlError(e))?;
+    info!("Deleted record with uuid {}", d.id);
+
+    debug!(
+        "File path depth is set to {}",
+        StorageHandler::get_folder_depth_from_path(Path::new(model.dest_file_path()), None)
+    );
+
+    StorageHandler::init(
+        storage_path,
+        StorageHandler::get_folder_depth_from_path(Path::new(model.dest_file_path()), None),
+    )
+        .delete_file_with_uuid(
+            d.id,
+            &StorageHandler::get_dest_filename(model.hash(), model.filename()),
+        )
+        .await.map_err(|e| GISSTCliError::IoError(e))?;
+
+    info!(
+        "Deleted object file at path:{}",
+        Path::new(model.dest_file_path())
+            .join(Path::new(&StorageHandler::get_dest_filename(
+                model.hash(),
+                model.filename()
+            )))
+            .to_string_lossy()
+    );
+    Ok(())
+}
+
 
 // async fn update_object(_u: &UpdateObject, _db: PgPool) -> Result<(), GISSTCliError> {
 //     Ok(())
@@ -339,7 +363,7 @@ async fn delete_instance(d: &DeleteInstance, db: PgPool) -> Result<(), GISSTCliE
             "Deleting unlinking images for instance record with uuid {}",
             d.id
         );
-        Instance::delete_instance_object_links_by_id(&mut conn, instance.instance_id).await?;
+        //Instance:/delete_instance_object_links_by_id(&mut conn, instance.instance_id).await?;
 
         info!("Deleting instance record with uuid {}", d.id);
 
@@ -555,47 +579,6 @@ async fn create_image(
     Ok(())
 }
 
-async fn delete_image(
-    d: &DeleteImage,
-    db: PgPool,
-    storage_path: String,
-) -> Result<(), GISSTCliError> {
-    let mut conn = db.acquire().await?;
-    if let Some(image) = Image::get_by_id(&mut conn, d.id).await? {
-        Image::delete_image_environment_links_by_id(&mut conn, image.image_id).await?;
-
-        info!("Deleting image record with uuid {}", d.id);
-
-        Image::delete_by_id(&mut conn, image.image_id).await?;
-
-        info!(
-            "Deleting image file at path:{}",
-            Path::new(&image.image_dest_path)
-                .join(Path::new(&StorageHandler::get_dest_filename(
-                    &image.image_hash,
-                    &image.image_filename
-                )))
-                .to_string_lossy()
-        );
-        debug!(
-            "Image path depth is set to {}",
-            StorageHandler::get_folder_depth_from_path(Path::new(&image.image_dest_path), None)
-        );
-
-        StorageHandler::init(
-            storage_path,
-            StorageHandler::get_folder_depth_from_path(Path::new(&image.image_dest_path), None),
-        )
-        .delete_file_with_uuid(
-            d.id,
-            &StorageHandler::get_dest_filename(&image.image_hash, &image.image_filename),
-        )
-        .await?;
-    } else {
-        warn!("Image with id: {} not found in database", d.id);
-    }
-    Ok(())
-}
 
 async fn create_replay(c: &CreateReplay, db: PgPool) -> Result<(), GISSTCliError> {
     Ok(())
