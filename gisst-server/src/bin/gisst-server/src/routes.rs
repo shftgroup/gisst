@@ -8,7 +8,7 @@ use axum::{
 };
 use bytes::Bytes;
 use gisstlib::{
-    models::{Creator, DBHashable, DBModel, Environment, Image, Instance, Object, Work},
+    models::{Creator, DBHashable, DBModel, DBLinked, Environment, Image, Instance, Object, Work},
     storage::StorageHandler,
     GISSTError,
 };
@@ -318,7 +318,7 @@ async fn delete_instance(
 ) -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     Instance::delete_by_id(&mut conn, id).await?;
-    Instance::delete_instance_object_links_by_id(&mut conn, id).await?;
+    Instance::unlink_by_id(&mut conn, id).await?;
     Ok(StatusCode::OK)
 }
 
