@@ -3,6 +3,11 @@ use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::Verbosity;
 use thiserror::Error;
 use uuid::Uuid;
+use gisstlib::models::{
+    DBHashable,
+    DBModel,
+    Object,
+};
 
 #[derive(Debug, Error)]
 pub enum GISSTCliError {
@@ -79,13 +84,24 @@ pub enum RecordType {
     /// Manage object records and files
     Object(
         GISSTCommand<
-            BaseSubcommand<CreateObject, UpdateObject, DeleteObject, LocateObject, ExportObject>,
+            BaseSubcommand<
+                CreateObject,
+                UpdateObject,
+                DeleteRecord,
+                LocateObject,
+                ExportObject
+            >,
         >,
     ),
     /// Manage image records and files
     Image(
         GISSTCommand<
-            BaseSubcommand<CreateImage, UpdateImage, DeleteImage, LocateImage, ExportImage>,
+            BaseSubcommand<
+                CreateImage,
+                UpdateImage,
+                DeleteRecord,
+                LocateImage,
+                ExportImage>,
         >,
     ),
     /// Manage instance records
@@ -101,7 +117,17 @@ pub enum RecordType {
         >,
     ),
     /// Manage work records
-    Work(GISSTCommand<BaseSubcommand<CreateWork, UpdateWork, DeleteWork, LocateWork, ExportWork>>),
+    Work(
+        GISSTCommand<
+            BaseSubcommand<
+                CreateWork,
+                UpdateWork,
+                DeleteWork,
+                LocateWork,
+                ExportWork
+            >
+        >
+    ),
     /// Manage creator records
     Creator(
         GISSTCommand<
@@ -141,6 +167,13 @@ pub enum RecordType {
         >,
     ),
 }
+
+#[derive(Debug, Args)]
+pub struct DeleteRecord {
+    /// Uuid of record to delete from database
+    pub id:Uuid,
+}
+
 
 #[derive(Debug, Args)]
 pub struct CreateObject {

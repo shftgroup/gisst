@@ -69,14 +69,37 @@ where
 }
 // Model definitions that should match PSQL database schema
 #[async_trait]
-pub trait DBModel {
-    type Model;
+pub trait DBModel: Sized {
+    fn id(&self) -> &Uuid;
     fn fields() -> Vec<(String, String)>;
     fn values_to_strings(&self) -> Vec<Option<String>>;
-    async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self::Model>>;
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>)
-        -> sqlx::Result<Vec<Self::Model>>;
+    async fn get_by_id(
+        conn: &mut PgConnection,
+        id: Uuid
+    ) -> sqlx::Result<Option<Self>>;
+    async fn get_all(
+        conn: &mut PgConnection,
+        limit: Option<i64>
+    )
+        -> sqlx::Result<Vec<Self>>;
+    async fn insert(
+        conn: &mut PgConnection,
+        model: Self
+    ) -> Result<Self, NewRecordError>;
+    async fn delete_by_id(
+        conn: &mut PgConnection,
+        id: Uuid
+    ) -> sqlx::Result<PgQueryResult>;
 }
+
+#[async_trait]
+pub trait DBLinked {
+    async fn unlink_by_id(
+        conn: &mut PgConnection,
+        id: Uuid
+    ) -> sqlx::Result<PgQueryResult>;
+}
+
 #[async_trait]
 pub trait DBHashable {
     type Hashable;
@@ -84,6 +107,9 @@ pub trait DBHashable {
         conn: &mut PgConnection,
         hash: &str,
     ) -> sqlx::Result<Option<Self::Hashable>>;
+    fn dest_file_path(&self) -> &str;
+    fn hash(&self) -> &str;
+    fn filename(&self) -> &str;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -219,7 +245,7 @@ pub struct Work {
 }
 #[async_trait]
 impl DBModel for Creator {
-    type Model = Creator;
+    fn id(&self) -> &Uuid { &self.creator_id }
     fn fields() -> Vec<(String, String)> {
         vec![
             ("creator_id".to_string(), "Uuid".to_string()),
@@ -268,11 +294,34 @@ impl DBModel for Creator {
         .fetch_all(conn)
         .await
     }
+
+    async fn insert(conn: &mut PgConnection, model: Creator) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Self,
+            r#"INSERT INTO creator(creator_id, creator_username, creator_full_name, created_on)
+            VALUES($1, $2, $3, $4)
+            RETURNING creator_id, creator_username, creator_full_name, created_on
+            "#,
+            model.creator_id,
+            model.creator_username,
+            model.creator_full_name,
+            model.created_on
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::CreatorError)
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM creator WHERE creator_id = $1", id).execute(conn).await
+    }
 }
 
 #[async_trait]
 impl DBModel for Instance {
-    type Model = Instance;
+    fn id(&self) -> &Uuid {
+        &self.instance_id
+    }
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -321,12 +370,9 @@ impl DBModel for Instance {
             .fetch_all(conn)
             .await
     }
-}
-
-impl Instance {
-    pub async fn insert(
+    async fn insert(
         conn: &mut PgConnection,
-        instance: Instance,
+        model: Instance,
     ) -> Result<Self, NewRecordError> {
         sqlx::query_as!(
             Instance,
@@ -340,17 +386,35 @@ impl Instance {
             )
             VALUES($1, $2, $3, $4, $5, $6)
             RETURNING instance_id, environment_id, work_id, instance_framework, instance_config, created_on"#,
-            instance.instance_id,
-            instance.environment_id,
-            instance.work_id,
-            instance.instance_framework,
-            instance.instance_config,
-            instance.created_on
+            model.instance_id,
+            model.environment_id,
+            model.work_id,
+            model.instance_framework,
+            model.instance_config,
+            model.created_on
         )
             .fetch_one(conn)
             .await
             .map_err(|_| NewRecordError::InstanceError)
     }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM instance WHERE instance_id = $1", id)
+            .execute(conn)
+            .await
+    }
+}
+
+#[async_trait]
+impl DBLinked for Instance {
+    async fn unlink_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+       sqlx::query!("DELETE FROM instanceObject WHERE instance_id = $1", id)
+           .execute(conn)
+           .await
+    }
+}
+
+impl Instance {
     pub async fn update(
         conn: &mut PgConnection,
         instance: Instance,
@@ -374,25 +438,13 @@ impl Instance {
             .map_err(|_| UpdateRecordError::InstanceError)
     }
 
-    pub async fn delete_instance_object_links_by_id(
-        conn: &mut PgConnection,
-        id: Uuid,
-    ) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM instanceObject WHERE instance_id = $1", id)
-            .execute(conn)
-            .await
-    }
-
-    pub async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM instance WHERE instance_id = $1", id)
-            .execute(conn)
-            .await
-    }
 }
 
 #[async_trait]
 impl DBModel for Image {
-    type Model = Image;
+    fn id(&self) -> &Uuid {
+        &self.image_id
+    }
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -459,6 +511,39 @@ impl DBModel for Image {
         .fetch_all(conn)
         .await
     }
+
+    async fn insert(conn: &mut PgConnection, model: Image) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Image,
+            r#"INSERT INTO image(
+            image_id,
+            image_filename,
+            image_source_path,
+            image_dest_path,
+            image_hash,
+            image_config,
+            image_description,
+            created_on
+            )
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on"#,
+            model.image_id,
+            model.image_filename,
+            model.image_source_path,
+            model.image_dest_path,
+            model.image_hash,
+            model.image_config,
+            model.image_description,
+            model.created_on
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::ImageError)
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM image WHERE image_id = $1", id).execute(conn).await
+    }
 }
 
 #[async_trait]
@@ -483,37 +568,25 @@ impl DBHashable for Image {
         .fetch_optional(conn)
         .await
     }
+    fn dest_file_path(&self) -> &str { &self.image_dest_path }
+    fn hash(&self) -> &str { &self.image_hash }
+    fn filename(&self) -> &str { &self.image_filename }
+}
+
+#[async_trait]
+impl DBLinked for Image {
+
+    async fn unlink_by_id(
+        conn: &mut PgConnection,
+        id: Uuid,
+    ) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM environmentImage WHERE image_id = $1", id)
+            .execute(conn)
+            .await
+    }
 }
 
 impl Image {
-    pub async fn insert(conn: &mut PgConnection, image: Image) -> Result<Self, NewRecordError> {
-        sqlx::query_as!(
-            Image,
-            r#"INSERT INTO image(
-            image_id,
-            image_filename,
-            image_source_path,
-            image_dest_path,
-            image_hash,
-            image_config,
-            image_description,
-            created_on
-            )
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on"#,
-            image.image_id,
-            image.image_filename,
-            image.image_source_path,
-            image.image_dest_path,
-            image.image_hash,
-            image.image_config,
-            image.image_description,
-            image.created_on
-        )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| NewRecordError::ImageError)
-    }
 
     pub async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, UpdateRecordError> {
         sqlx::query_as!(
@@ -551,20 +624,6 @@ impl Image {
         .await
     }
 
-    pub async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM image WHERE image_id = $1", id)
-            .execute(conn)
-            .await
-    }
-
-    pub async fn delete_image_environment_links_by_id(
-        conn: &mut PgConnection,
-        id: Uuid,
-    ) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM environmentImage WHERE image_id = $1", id)
-            .execute(conn)
-            .await
-    }
 
     pub async fn get_all_for_environment_id(
         conn: &mut PgConnection,
@@ -588,7 +647,9 @@ impl Image {
 
 #[async_trait]
 impl DBModel for Environment {
-    type Model = Environment;
+    fn id(&self) -> &Uuid {
+        &self.environment_id
+    }
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -635,6 +696,32 @@ impl DBModel for Environment {
             limit
         )
             .fetch_all(conn)
+            .await
+    }
+
+    async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Self,
+            r#"INSERT INTO environment (environment_id, environment_name, core_name, core_version, environment_derived_from, environment_config, created_on)
+            VALUES($1, $2, $3, $4, $5, $6, $7)
+            RETURNING environment_id, environment_name, core_name, core_version, environment_derived_from, environment_config, created_on
+            "#,
+            model.environment_id,
+            model.environment_name,
+            model.core_name,
+            model.core_version,
+            model.environment_derived_from,
+            model.environment_config,
+            model.created_on
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::EnvironmentError)
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM environment WHERE environment_id = $1", id)
+            .execute(conn)
             .await
     }
 }
@@ -710,7 +797,6 @@ impl Environment {
 #[async_trait]
 impl DBHashable for Object {
     type Hashable = Object;
-
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -722,11 +808,16 @@ impl DBHashable for Object {
             .fetch_optional(conn)
             .await
     }
+    fn dest_file_path(&self) -> &str { &self.object_dest_path }
+    fn hash(&self) -> &str { &self.object_hash }
+    fn filename(&self) -> &str { &self.object_filename }
 }
 
 #[async_trait]
 impl DBModel for Object {
-    type Model = Object;
+    fn id(&self) -> &Uuid {
+        &self.object_id
+    }
     fn fields() -> Vec<(String, String)> {
         vec![
             ("object_id".to_string(), "Uuid".to_string()),
@@ -775,6 +866,41 @@ impl DBModel for Object {
             .fetch_all(conn)
             .await
     }
+    async fn insert(conn: &mut PgConnection, model: Object) -> Result<Self, NewRecordError> {
+        // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
+        // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
+        sqlx::query_as!(Object,
+            r#"INSERT INTO object (
+            object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on )
+            VALUES ($1, $2, $3, $4, $5, $6, current_timestamp)
+            RETURNING object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
+            "#,
+            model.object_id,
+            model.object_hash,
+            model.object_filename,
+            model.object_source_path,
+            model.object_dest_path,
+            model.object_description,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::ObjectError)
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM object WHERE object_id = $1", id)
+            .execute(conn)
+            .await
+    }
+}
+
+#[async_trait]
+impl DBLinked for Object {
+    async fn unlink_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM instanceObject WHERE object_id = $1", id)
+            .execute(conn)
+            .await
+    }
 }
 
 impl Object {
@@ -802,27 +928,6 @@ impl Object {
             .map_err(|_| UpdateRecordError::ObjectError)
     }
 
-    pub async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, NewRecordError> {
-        // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
-        // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
-        sqlx::query_as!(Object,
-            r#"INSERT INTO object (
-            object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on )
-            VALUES ($1, $2, $3, $4, $5, $6, current_timestamp)
-            RETURNING object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
-            "#,
-            object.object_id,
-            object.object_hash,
-            object.object_filename,
-            object.object_source_path,
-            object.object_dest_path,
-            object.object_description,
-        )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| NewRecordError::ObjectError)
-    }
-
     pub async fn link_object_to_instance(
         conn: &mut PgConnection,
         object_id: Uuid,
@@ -847,11 +952,6 @@ impl Object {
         sqlx::query_as!(InstanceObject, r#"SELECT object_id, instance_id, instance_object_config, object_role as "object_role:_" FROM instanceObject WHERE object_id = $1 AND instance_id = $2"#, object_id, instance_id).fetch_optional(conn).await
     }
 
-    pub async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM object WHERE object_id = $1", id)
-            .execute(conn)
-            .await
-    }
 
     pub async fn delete_object_instance_links_by_id(
         conn: &mut PgConnection,
@@ -893,7 +993,9 @@ impl ObjectLink {
 
 #[async_trait]
 impl DBModel for Replay {
-    type Model = Replay;
+    fn id(&self) -> &Uuid {
+        &self.replay_id
+    }
     fn fields() -> Vec<(String, String)> {
         vec![
             ("replay_id".to_string(), "Uuid".to_string()),
@@ -954,11 +1056,21 @@ impl DBModel for Replay {
         .fetch_all(conn)
         .await
     }
+
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+        todo!()
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        todo!()
+    }
 }
 
 #[async_trait]
 impl DBModel for Save {
-    type Model = Save;
+    fn id(&self) -> &Uuid {
+        &self.save_id
+    }
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -1023,11 +1135,21 @@ impl DBModel for Save {
         .fetch_all(conn)
         .await
     }
+
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+        todo!()
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        todo!()
+    }
 }
 
 #[async_trait]
 impl DBModel for State {
-    type Model = State;
+    fn id(&self) -> &Uuid {
+        &self.state_id
+    }
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -1114,11 +1236,21 @@ impl DBModel for State {
         .fetch_all(conn)
         .await
     }
+
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+        todo!()
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        todo!()
+    }
 }
 
 #[async_trait]
 impl DBModel for Work {
-    type Model = Work;
+    fn id(&self) -> &Uuid {
+        &self.work_id
+    }
 
     fn fields() -> Vec<(String, String)> {
         vec![
@@ -1158,6 +1290,14 @@ impl DBModel for Work {
         )
             .fetch_all(conn)
             .await
+    }
+
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+        todo!()
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        todo!()
     }
 }
 
