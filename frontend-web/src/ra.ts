@@ -14,8 +14,24 @@ const retro_args = ["-v"];
 
 let ui_state:UI;
 
-export function init(core:string, content_folder:string, content:string, entryState:boolean, movie:boolean) {
-  let content_base = content.substring(0, content.lastIndexOf("."));
+export interface ObjectLink {
+  object_role:string,
+  object_dest_path:string,
+  object_filename:string,
+  object_source_path:string,
+  object_hash:string,
+  object_id:string,
+}
+
+export function init(core:string, manifest:ObjectLink[]) {
+  let content = manifest.find((o) => o.object_role=="content")!;
+  let content_file = content.object_filename!;
+  let dash_point = content_file.indexOf("-");
+  let content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
+  
+  // TODO implement based on other inputs, add a parameter to take the whole config instead of the manifest
+  let entryState = false;
+  let movie = false;
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
@@ -27,27 +43,36 @@ export function init(core:string, content_folder:string, content:string, entrySt
     retro_args.push("-R");
     retro_args.push(state_dir+"/"+content_base+".replay0");
   }
+  // END TODO
+
   retro_args.push("--appendconfig");
   retro_args.push("/home/web_user/content/retroarch.cfg");
-  retro_args.push("/home/web_user/content/" + content);
+  retro_args.push("/home/web_user/content/" + content_file);
   console.log(retro_args);
 
   loadRetroArch(core,
     function () {
-      let p1 = fetchfs.registerFetchFS(("assets/frontend/bundle/.index-xhr"), "assets/frontend/bundle", "/home/web_user/retroarch/bundle", true);
-      let xfs_content_files: fetchfs.Index = { "retroarch.cfg": null };
-      xfs_content_files[content] = null;
-      if (entryState) {
-        xfs_content_files["entry_state"] = null;
+      fetchfs.mkdirp("/home/web_user/content");
+
+      let proms = [];
+      proms.push(fetchfs.registerFetchFS(("/assets/frontend/bundle/.index-xhr"), "/assets/frontend/bundle", "/home/web_user/retroarch/bundle", true));
+
+      for(let file of manifest) {
+        let file_prom = fetchfs.fetchFile("/storage/"+file.object_dest_path+"/"+file.object_hash+"-"+file.object_filename,"/home/web_user/content/"+file.object_source_path,true);
+        proms.push(file_prom);
       }
-      if (movie) {
-        xfs_content_files["replay.replay"] = null;
-      }
-      let p2 = fetchfs.registerFetchFS(xfs_content_files, content_folder, "/home/web_user/content", false);
-      let p3 = fetchfs.registerFetchFS({"retroarch_web_base.cfg":null}, "assets", "/home/web_user/retroarch/", false);
+      // // TODO
+      // if (entryState) {
+      //   xfs_content_files["entry_state"] = null;
+      // }
+      // if (movie) {
+      //   xfs_content_files["replay.replay"] = null;
+      // }
+      // // END TODO
+      proms.push(fetchfs.registerFetchFS({"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/", false));
       fetchfs.mkdirp(saves_dir);
       fetchfs.mkdirp(state_dir);
-      Promise.all([p1, p2, p3]).then(function () {
+      Promise.all(proms).then(function () {
         copyFile("/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
         // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
         if (entryState) {

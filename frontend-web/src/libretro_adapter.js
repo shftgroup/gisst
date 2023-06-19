@@ -114,7 +114,8 @@ function loadRetroArch(core, loaded_cb) {
   // Load the Core's related JavaScript.
   var coreScript = document.createElement('script');
   coreScript.type = 'text/javascript';
-  coreScript.src = "cores/"+core+'_libretro.js';
+  // TODO configure this path root
+  coreScript.src = "/cores/"+core+'_libretro.js';
   coreScript.addEventListener("error", function() {console.error("Couldn't load core file", coreScript.src);});
   coreScript.addEventListener("load", function() {Module.preRun.push(loaded_cb);});
   document.head.appendChild(coreScript);
