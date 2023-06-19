@@ -1,6 +1,7 @@
 import {get, set, delMany} from 'idb-keyval';
 
 type FileContents = null|Index;
+
 export interface Index extends Record<string, FileContents> {}
 
 function min(n:number,m:number) : number {
@@ -72,16 +73,22 @@ function fetchDirectory(index_file_tree:Index, root:string, mount:string, files:
   }
 }
 
-async function fetchFile(from:string, to:string, cache:boolean):Promise<void> {
+export async function fetchFile(from:string, to:string, cache:boolean):Promise<void> {
   if (cache) {
     let key = "FSCACHE_"+from;
     let cached = await get(key);
     if (cached) {
+      if(to.endsWith("bfight.nes") || to.endsWith("retroarch.cfg")) {
+        console.log("make cached req",key,cached.byteLength,from,to);
+      }
       return FS.writeFile(to, new Uint8Array(cached));
     } else {
       let resp = await fetch(from);
       let buf = await resp.arrayBuffer();
       set(key,buf);
+      if(to.endsWith("bfight.nes") || to.endsWith("retroarch.cfg")) {
+        console.log("make uncached req",key,from,to,buf.byteLength);
+      }
       return FS.writeFile(to, new Uint8Array(buf));
     }
   } else {
