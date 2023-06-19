@@ -48,9 +48,9 @@ pub const PLAYER_TEMPLATE: &'static str = r#"
     <script type="module" crossorigin src="/assets/index.js"></script>
     <link rel="stylesheet" href="/assets/index.css">
     {% if player_params.instance.instance_framework == "retroarch" %}
-    <script src="ra/libretro_adapter.js"></script>
+    <script src="/ra/libretro_adapter.js"></script>
     {% elif player_params.instance.instance_framework == "v86" %}
-    <script src="v86/libv86.js"></script>
+    <script src="/v86/libv86.js"></script>
     {% endif %}
     <script id="config" type="application/json">
     {{ player_params|tojson }}
@@ -58,6 +58,18 @@ pub const PLAYER_TEMPLATE: &'static str = r#"
 </head>
 
 <body>
+      <div class="webplayer-container">
+          <div class="webplayer_border text-xs-center" id="canvas_div">
+            <div style="white-space: pre; font: 14px monospace; line-height: 14px" class="hidden" id="webplayer-textmode"></div>
+            <canvas class="webplayer hidden" id="canvas" tabindex="1" oncontextmenu="event.preventDefault()"></canvas>
+              <img id="webplayer-preview" class="webplayer-preview" src="/media/canvas.png" width="960px" height="720px" alt="Loading Icon">
+          </div>
+      </div>
+      <ul id="v86_controls" class="hidden">
+        <button type="button" id="v86_save">Save State</button>
+        <button type="button" id="v86_record">Record Replay</button>
+        <button type="button" id="v86_stop">Stop Replay</button>
+      </ul>
     <div id="ui"></div>
 </body>
 </html>
