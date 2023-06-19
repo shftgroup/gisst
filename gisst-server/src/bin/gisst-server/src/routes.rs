@@ -88,7 +88,6 @@ struct CreatorsGetQueryParams {
     limit: Option<i64>,
 }
 
-#[allow(dead_code)]
 async fn get_creators(
     app_state: Extension<Arc<ServerState>>,
     Query(params): Query<CreatorsGetQueryParams>,

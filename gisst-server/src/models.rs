@@ -968,6 +968,7 @@ pub struct ObjectLink {
     pub object_role: ObjectRole,
     pub object_hash: String,
     pub object_filename: String,
+    pub object_source_path: String,
     pub object_dest_path: String,
 }
 impl ObjectLink {
@@ -978,7 +979,7 @@ impl ObjectLink {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT object_id, instanceObject.object_role as "object_role:_", object_hash, object_filename, object_dest_path
+            SELECT object_id, instanceObject.object_role as "object_role:_", object_hash, object_filename, object_source_path, object_dest_path
             FROM object
             JOIN instanceObject USING(object_id)
             JOIN instance USING(instance_id)
