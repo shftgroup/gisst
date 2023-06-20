@@ -73,31 +73,15 @@ pub trait DBModel: Sized {
     fn id(&self) -> &Uuid;
     fn fields() -> Vec<(String, String)>;
     fn values_to_strings(&self) -> Vec<Option<String>>;
-    async fn get_by_id(
-        conn: &mut PgConnection,
-        id: Uuid
-    ) -> sqlx::Result<Option<Self>>;
-    async fn get_all(
-        conn: &mut PgConnection,
-        limit: Option<i64>
-    )
-        -> sqlx::Result<Vec<Self>>;
-    async fn insert(
-        conn: &mut PgConnection,
-        model: Self
-    ) -> Result<Self, NewRecordError>;
-    async fn delete_by_id(
-        conn: &mut PgConnection,
-        id: Uuid
-    ) -> sqlx::Result<PgQueryResult>;
+    async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>>;
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>>;
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError>;
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult>;
 }
 
 #[async_trait]
 pub trait DBLinked {
-    async fn unlink_by_id(
-        conn: &mut PgConnection,
-        id: Uuid
-    ) -> sqlx::Result<PgQueryResult>;
+    async fn unlink_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult>;
 }
 
 #[async_trait]
@@ -245,7 +229,9 @@ pub struct Work {
 }
 #[async_trait]
 impl DBModel for Creator {
-    fn id(&self) -> &Uuid { &self.creator_id }
+    fn id(&self) -> &Uuid {
+        &self.creator_id
+    }
     fn fields() -> Vec<(String, String)> {
         vec![
             ("creator_id".to_string(), "Uuid".to_string()),
@@ -307,13 +293,15 @@ impl DBModel for Creator {
             model.creator_full_name,
             model.created_on
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| NewRecordError::CreatorError)
+        .fetch_one(conn)
+        .await
+        .map_err(|_| NewRecordError::CreatorError)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM creator WHERE creator_id = $1", id).execute(conn).await
+        sqlx::query!("DELETE FROM creator WHERE creator_id = $1", id)
+            .execute(conn)
+            .await
     }
 }
 
@@ -370,10 +358,7 @@ impl DBModel for Instance {
             .fetch_all(conn)
             .await
     }
-    async fn insert(
-        conn: &mut PgConnection,
-        model: Instance,
-    ) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, model: Instance) -> Result<Self, NewRecordError> {
         sqlx::query_as!(
             Instance,
             r#"INSERT INTO instance(
@@ -408,9 +393,18 @@ impl DBModel for Instance {
 #[async_trait]
 impl DBLinked for Instance {
     async fn unlink_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-       sqlx::query!("DELETE FROM instanceObject WHERE instance_id = $1", id)
-           .execute(conn)
-           .await
+        sqlx::query!("DELETE FROM instanceObject WHERE instance_id = $1", id)
+            .execute(conn)
+            .await
+        // sqlx::query!("DELETE FROM save WHERE instance_id = $1", id)
+        //     .execute(conn)
+        //     .await
+        // sqlx::query!("DELETE FROM state WHERE instance_id = $1", id)
+        //     .execute(conn)
+        //     .await
+        // sqlx::query!("DELETE FROM replay WHERE instance_id = $1", id)
+        //     .execute(conn)
+        //     .await
     }
 }
 
@@ -437,7 +431,6 @@ impl Instance {
             .await
             .map_err(|_| UpdateRecordError::InstanceError)
     }
-
 }
 
 #[async_trait]
@@ -542,7 +535,9 @@ impl DBModel for Image {
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM image WHERE image_id = $1", id).execute(conn).await
+        sqlx::query!("DELETE FROM image WHERE image_id = $1", id)
+            .execute(conn)
+            .await
     }
 }
 
@@ -568,18 +563,20 @@ impl DBHashable for Image {
         .fetch_optional(conn)
         .await
     }
-    fn dest_file_path(&self) -> &str { &self.image_dest_path }
-    fn hash(&self) -> &str { &self.image_hash }
-    fn filename(&self) -> &str { &self.image_filename }
+    fn dest_file_path(&self) -> &str {
+        &self.image_dest_path
+    }
+    fn hash(&self) -> &str {
+        &self.image_hash
+    }
+    fn filename(&self) -> &str {
+        &self.image_filename
+    }
 }
 
 #[async_trait]
 impl DBLinked for Image {
-
-    async fn unlink_by_id(
-        conn: &mut PgConnection,
-        id: Uuid,
-    ) -> sqlx::Result<PgQueryResult> {
+    async fn unlink_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM environmentImage WHERE image_id = $1", id)
             .execute(conn)
             .await
@@ -587,7 +584,6 @@ impl DBLinked for Image {
 }
 
 impl Image {
-
     pub async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, UpdateRecordError> {
         sqlx::query_as!(
             Image,
@@ -623,7 +619,6 @@ impl Image {
         .execute(conn)
         .await
     }
-
 
     pub async fn get_all_for_environment_id(
         conn: &mut PgConnection,
@@ -808,9 +803,15 @@ impl DBHashable for Object {
             .fetch_optional(conn)
             .await
     }
-    fn dest_file_path(&self) -> &str { &self.object_dest_path }
-    fn hash(&self) -> &str { &self.object_hash }
-    fn filename(&self) -> &str { &self.object_filename }
+    fn dest_file_path(&self) -> &str {
+        &self.object_dest_path
+    }
+    fn hash(&self) -> &str {
+        &self.object_hash
+    }
+    fn filename(&self) -> &str {
+        &self.object_filename
+    }
 }
 
 #[async_trait]
@@ -951,7 +952,6 @@ impl Object {
     ) -> sqlx::Result<Option<InstanceObject>> {
         sqlx::query_as!(InstanceObject, r#"SELECT object_id, instance_id, instance_object_config, object_role as "object_role:_" FROM instanceObject WHERE object_id = $1 AND instance_id = $2"#, object_id, instance_id).fetch_optional(conn).await
     }
-
 
     pub async fn delete_object_instance_links_by_id(
         conn: &mut PgConnection,
