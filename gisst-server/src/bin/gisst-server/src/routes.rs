@@ -8,7 +8,7 @@ use axum::{
 };
 use bytes::Bytes;
 use gisstlib::{
-    models::{Creator, DBHashable, DBModel, DBLinked, Environment, Image, Instance, Object, Work},
+    models::{Creator, DBHashable, DBLinked, DBModel, Environment, Image, Instance, Object, Work},
     storage::StorageHandler,
     GISSTError,
 };
@@ -265,8 +265,8 @@ async fn delete_image(
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
+    Image::unlink_by_id(&mut conn, id).await?;
     Image::delete_by_id(&mut conn, id).await?;
-    Image::delete_image_environment_links_by_id(&mut conn, id).await?;
     Ok(StatusCode::OK)
 }
 // INSTANCE method handlers
