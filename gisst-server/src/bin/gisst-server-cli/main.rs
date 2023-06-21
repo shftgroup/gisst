@@ -274,12 +274,12 @@ async fn delete_linked_file_record<T: DBModel + DBHashable + DBLinked>(
         .ok_or(GISSTCliError::RecordNotFoundError(d.id))?;
     T::unlink_by_id(&mut conn, d.id)
         .await
-        .map_err(|e| GISSTCliError::SqlError(e))?;
+        .map_err(GISSTCliError::SqlError)?;
     info!("Unlinked record with uuid {}", d.id);
 
     T::delete_by_id(&mut conn, d.id)
         .await
-        .map_err(|e| GISSTCliError::SqlError(e))?;
+        .map_err(GISSTCliError::SqlError)?;
     info!("Deleted record with uuid {}", d.id);
 
     debug!(
@@ -296,7 +296,7 @@ async fn delete_linked_file_record<T: DBModel + DBHashable + DBLinked>(
         &StorageHandler::get_dest_filename(model.hash(), model.filename()),
     )
     .await
-    .map_err(|e| GISSTCliError::IoError(e))?;
+    .map_err(GISSTCliError::IoError)?;
 
     info!(
         "Deleted object file at path:{}",
@@ -317,12 +317,11 @@ async fn delete_linked_file_record<T: DBModel + DBHashable + DBLinked>(
 async fn create_instance(c: CreateInstance, db: PgPool) -> Result<(), GISSTCliError> {
     let instance_from_json: Option<Instance> = match (&c.json_file, &c.json_string) {
         (Some(file_path), None) => {
-            let json_data = fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
-            Some(serde_json::from_str(&json_data).map_err(|e| GISSTCliError::JsonParseError(e))?)
+            let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::IoError)?;
+            Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParseError)?)
         }
         (None, Some(json_value)) => Some(
-            serde_json::from_value(json_value.clone())
-                .map_err(|e| GISSTCliError::JsonParseError(e))?,
+            serde_json::from_value(json_value.clone()).map_err(GISSTCliError::JsonParseError)?,
         ),
         (_, _) => None,
     };
@@ -330,16 +329,12 @@ async fn create_instance(c: CreateInstance, db: PgPool) -> Result<(), GISSTCliEr
     let instance_config_json: Option<serde_json::Value> =
         match (&c.instance_config_json_file, &c.instance_config_json_string) {
             (Some(file_path), None) => {
-                let json_data =
-                    fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
-                Some(
-                    serde_json::from_str(&json_data)
-                        .map_err(|e| GISSTCliError::JsonParseError(e))?,
-                )
+                let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::IoError)?;
+                Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParseError)?)
             }
             (None, Some(json_value)) => Some(
                 serde_json::from_value(json_value.clone())
-                    .map_err(|e| GISSTCliError::JsonParseError(e))?,
+                    .map_err(GISSTCliError::JsonParseError)?,
             ),
             (_, _) => None,
         };
@@ -355,7 +350,7 @@ async fn create_instance(c: CreateInstance, db: PgPool) -> Result<(), GISSTCliEr
                 },
             )
             .await
-            .map_err(|e| GISSTCliError::NewModelError(e))?;
+            .map_err(GISSTCliError::NewModelError)?;
             Ok(())
         }
         _ => Err(GISSTCliError::CreateInstanceError(
