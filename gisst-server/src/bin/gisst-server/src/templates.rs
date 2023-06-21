@@ -18,7 +18,7 @@ impl TemplateHandler {
 
         for filepath in template_names {
             let fp = filepath.unwrap().file_name().to_string_lossy().to_string();
-            let filename = fp.clone().split(".").collect::<Vec<_>>()[0].to_string();
+            let filename = fp.clone().split('.').collect::<Vec<_>>()[0].to_string();
             println!("Adding template: {} to Template Handler", &filename);
             templates.insert(
                 filename,
@@ -38,7 +38,7 @@ impl TemplateHandler {
     // }
 }
 
-pub const PLAYER_TEMPLATE: &'static str = r#"
+pub const PLAYER_TEMPLATE: &str = r#"
 <!doctype html>
 <html lang="en">
 <head>
@@ -76,7 +76,7 @@ pub const PLAYER_TEMPLATE: &'static str = r#"
 "#;
 
 #[allow(dead_code)]
-pub const UPLOAD_TEMPLATE: &'static str = r#"
+pub const UPLOAD_TEMPLATE: &str = r#"
 <!doctype html>
 <html lang="en">
 <head>
