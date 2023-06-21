@@ -3,11 +3,6 @@ use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::Verbosity;
 use thiserror::Error;
 use uuid::Uuid;
-use gisstlib::models::{
-    DBHashable,
-    DBModel,
-    Object,
-};
 
 #[derive(Debug, Error)]
 pub enum GISSTCliError {
@@ -29,6 +24,8 @@ pub enum GISSTCliError {
     NewModelError(#[from] gisstlib::models::NewRecordError),
     #[error("json parse error")]
     JsonParseError(#[from] serde_json::Error),
+    #[error("record not found error")]
+    RecordNotFoundError(Uuid),
 }
 
 #[derive(Debug, Parser)]
@@ -84,24 +81,13 @@ pub enum RecordType {
     /// Manage object records and files
     Object(
         GISSTCommand<
-            BaseSubcommand<
-                CreateObject,
-                UpdateObject,
-                DeleteRecord,
-                LocateObject,
-                ExportObject
-            >,
+            BaseSubcommand<CreateObject, UpdateObject, DeleteRecord, LocateObject, ExportObject>,
         >,
     ),
     /// Manage image records and files
     Image(
         GISSTCommand<
-            BaseSubcommand<
-                CreateImage,
-                UpdateImage,
-                DeleteRecord,
-                LocateImage,
-                ExportImage>,
+            BaseSubcommand<CreateImage, UpdateImage, DeleteRecord, LocateImage, ExportImage>,
         >,
     ),
     /// Manage instance records
@@ -117,17 +103,7 @@ pub enum RecordType {
         >,
     ),
     /// Manage work records
-    Work(
-        GISSTCommand<
-            BaseSubcommand<
-                CreateWork,
-                UpdateWork,
-                DeleteWork,
-                LocateWork,
-                ExportWork
-            >
-        >
-    ),
+    Work(GISSTCommand<BaseSubcommand<CreateWork, UpdateWork, DeleteWork, LocateWork, ExportWork>>),
     /// Manage creator records
     Creator(
         GISSTCommand<
@@ -171,9 +147,8 @@ pub enum RecordType {
 #[derive(Debug, Args)]
 pub struct DeleteRecord {
     /// Uuid of record to delete from database
-    pub id:Uuid,
+    pub id: Uuid,
 }
-
 
 #[derive(Debug, Args)]
 pub struct CreateObject {
