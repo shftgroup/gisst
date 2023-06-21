@@ -9,7 +9,7 @@ use args::{
 };
 use clap::Parser;
 use env_logger;
-use gisstlib::models::DBLinked;
+use gisstlib::{models::DBLinked, GISSTError};
 use gisstlib::{
     models::{DBHashable, DBModel, Environment, Image, Instance, Object, Work},
     storage::StorageHandler,
@@ -41,8 +41,8 @@ async fn main() -> Result<(), GISSTCliError> {
         .filter_level(args.verbose.log_level_filter())
         .init();
 
-    match &args.record_type {
-        RecordType::Object(object) => match &object.command {
+    match dbg!(args).record_type {
+        RecordType::Object(object) => match object.command {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -52,14 +52,14 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Creator(_creator) => {}
-        RecordType::Environment(environment) => match &environment.command {
+        RecordType::Environment(environment) => match environment.command {
             BaseSubcommand::Create(create) => create_environment(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_environment(delete, db).await?,
             BaseSubcommand::Locate(_locate) => (),
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Image(image) => match &image.command {
+        RecordType::Image(image) => match image.command {
             BaseSubcommand::Create(create) => create_image(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -68,35 +68,35 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Locate(_locate) => (),
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Instance(instance) => match &instance.command {
+        RecordType::Instance(instance) => match instance.command {
             BaseSubcommand::Create(create) => create_instance(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_instance(delete, db).await?,
             BaseSubcommand::Locate(_locate) => (),
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Work(work) => match &work.command {
+        RecordType::Work(work) => match work.command {
             BaseSubcommand::Create(create) => create_work(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_work(delete, db).await?,
             BaseSubcommand::Locate(_locate) => (),
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::State(state) => match &state.command {
+        RecordType::State(state) => match state.command {
             BaseSubcommand::Create(create) => create_state(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_state(delete, db).await?,
             BaseSubcommand::Locate(_locate) => (),
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Save(save) => match &save.command {
+        RecordType::Save(save) => match save.command {
             BaseSubcommand::Create(create) => create_save(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_save(delete, db).await?,
             BaseSubcommand::Locate(_locate) => (),
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Replay(replay) => match &replay.command {
+        RecordType::Replay(replay) => match replay.command {
             BaseSubcommand::Create(create) => create_replay(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_replay(delete, db).await?,
@@ -104,8 +104,6 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Export(_export) => (),
         },
     }
-
-    println!("{:?}", &args);
     Ok(())
 }
 
@@ -126,7 +124,7 @@ async fn create_object(
     let mut valid_paths: Vec<PathBuf> = Vec::new();
 
     for path in file {
-        let p = Path::new(path);
+        let p = Path::new(&path);
 
         if p.exists() {
             if p.is_dir() {
@@ -266,12 +264,14 @@ async fn delete_linked_record<T: DBModel + DBLinked>(
 }
 
 async fn delete_linked_file_record<T: DBModel + DBHashable + DBLinked>(
-    d: &DeleteRecord,
+    d: DeleteRecord,
     db: PgPool,
     storage_path: String,
 ) -> Result<(), GISSTCliError> {
     let mut conn = db.acquire().await?;
-
+    let model = T::get_by_id(&mut conn, d.id)
+        .await?
+        .ok_or(GISSTCliError::RecordNotFoundError(d.id))?;
     T::unlink_by_id(&mut conn, d.id)
         .await
         .map_err(|e| GISSTCliError::SqlError(e))?;
@@ -314,7 +314,7 @@ async fn delete_linked_file_record<T: DBModel + DBHashable + DBLinked>(
 //     Ok(())
 // }
 
-async fn create_instance(c: &CreateInstance, db: PgPool) -> Result<(), GISSTCliError> {
+async fn create_instance(c: CreateInstance, db: PgPool) -> Result<(), GISSTCliError> {
     let instance_from_json: Option<Instance> = match (&c.json_file, &c.json_string) {
         (Some(file_path), None) => {
             let json_data = fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
@@ -364,7 +364,7 @@ async fn create_instance(c: &CreateInstance, db: PgPool) -> Result<(), GISSTCliE
     }
 }
 
-async fn delete_instance(d: &DeleteInstance, db: PgPool) -> Result<(), GISSTCliError> {
+async fn delete_instance(d: DeleteInstance, db: PgPool) -> Result<(), GISSTCliError> {
     let mut conn = db.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, d.id).await? {
         info!(
@@ -383,7 +383,7 @@ async fn delete_instance(d: &DeleteInstance, db: PgPool) -> Result<(), GISSTCliE
     Ok(())
 }
 
-async fn create_environment(c: &CreateEnvironment, db: PgPool) -> Result<(), GISSTCliError> {
+async fn create_environment(c: CreateEnvironment, db: PgPool) -> Result<(), GISSTCliError> {
     let environment_from_json: Option<Environment> = match (&c.json_file, &c.json_string) {
         (Some(file_path), None) => {
             let json_data = fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
@@ -431,7 +431,7 @@ async fn create_environment(c: &CreateEnvironment, db: PgPool) -> Result<(), GIS
     }
 }
 
-async fn delete_environment(d: &DeleteEnvironment, db: PgPool) -> Result<(), GISSTCliError> {
+async fn delete_environment(d: DeleteEnvironment, db: PgPool) -> Result<(), GISSTCliError> {
     let mut conn = db.acquire().await?;
     if let Some(environment) = Environment::get_by_id(&mut conn, d.id).await? {
         info!(
@@ -450,7 +450,7 @@ async fn delete_environment(d: &DeleteEnvironment, db: PgPool) -> Result<(), GIS
     Ok(())
 }
 
-async fn create_work(c: &CreateWork, db: PgPool) -> Result<(), GISSTCliError> {
+async fn create_work(c: CreateWork, db: PgPool) -> Result<(), GISSTCliError> {
     let work_from_json: Option<Work> = match (&c.json_file, &c.json_string) {
         (Some(file_path), None) => {
             let json_data = fs::read_to_string(file_path).map_err(|e| GISSTCliError::IoError(e))?;
@@ -475,7 +475,7 @@ async fn create_work(c: &CreateWork, db: PgPool) -> Result<(), GISSTCliError> {
     }
 }
 
-async fn delete_work(d: &DeleteWork, db: PgPool) -> Result<(), GISSTCliError> {
+async fn delete_work(d: DeleteWork, db: PgPool) -> Result<(), GISSTCliError> {
     let mut conn = db.acquire().await?;
     if let Some(work) = Work::get_by_id(&mut conn, d.id).await? {
         info!("Deleting work record with uuid {}", d.id);
@@ -487,7 +487,7 @@ async fn delete_work(d: &DeleteWork, db: PgPool) -> Result<(), GISSTCliError> {
 }
 
 async fn create_image(
-    c: &CreateImage,
+    c: CreateImage,
     db: PgPool,
     storage_path: String,
 ) -> Result<(), GISSTCliError> {
@@ -587,23 +587,23 @@ async fn create_image(
     Ok(())
 }
 
-async fn create_replay(c: &CreateReplay, db: PgPool) -> Result<(), GISSTCliError> {
+async fn create_replay(c: CreateReplay, db: PgPool) -> Result<(), GISSTCliError> {
     Ok(())
 }
-async fn create_state(c: &CreateState, db: PgPool) -> Result<(), GISSTCliError> {
+async fn create_state(c: CreateState, db: PgPool) -> Result<(), GISSTCliError> {
     Ok(())
 }
-async fn create_save(c: &CreateSave, db: PgPool) -> Result<(), GISSTCliError> {
+async fn create_save(c: CreateSave, db: PgPool) -> Result<(), GISSTCliError> {
     Ok(())
 }
 
-async fn delete_replay(d: &DeleteReplay, db: PgPool) -> Result<(), GISSTCliError> {
+async fn delete_replay(d: DeleteReplay, db: PgPool) -> Result<(), GISSTCliError> {
     Ok(())
 }
-async fn delete_save(d: &DeleteSave, db: PgPool) -> Result<(), GISSTCliError> {
+async fn delete_save(d: DeleteSave, db: PgPool) -> Result<(), GISSTCliError> {
     Ok(())
 }
-async fn delete_state(d: &DeleteState, db: PgPool) -> Result<(), GISSTCliError> {
+async fn delete_state(d: DeleteState, db: PgPool) -> Result<(), GISSTCliError> {
     Ok(())
 }
 
