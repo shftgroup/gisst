@@ -12,45 +12,45 @@ use uuid::Uuid;
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
     #[error("could not insert creator record into database")]
-    CreatorError,
+    Creator,
     #[error("could not insert environment record into database")]
-    EnvironmentError,
+    Environment,
     #[error("could not insert instance record into database")]
-    InstanceError,
+    Instance,
     #[error("could not insert image record into database")]
-    ImageError,
+    Image,
     #[error("could not insert object record into database")]
-    ObjectError,
+    Object,
     #[error("could not insert replay record into database")]
-    ReplayError,
+    Replay,
     #[error("could not insert save record into database")]
-    SaveError,
+    Save,
     #[error("could not insert state record into database")]
-    StateError,
+    State,
     #[error("could not insert work record into database")]
-    WorkError,
+    Work,
 }
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum UpdateRecordError {
     #[error("could not update creator record in database")]
-    CreatorError,
+    Creator,
     #[error("could not update environment record in database")]
-    EnvironmentError,
+    Environment,
     #[error("could not update instance record into database")]
-    InstanceError,
+    Instance,
     #[error("could not update image record in database")]
-    ImageError,
+    Image,
     #[error("could not update object record in database")]
-    ObjectError,
+    Object,
     #[error("could not update replay record in database")]
-    ReplayError,
+    Replay,
     #[error("could not update save record in database")]
-    SaveError,
+    Save,
     #[error("could not update state record in database")]
-    StateError,
+    State,
     #[error("could not update work record in database")]
-    WorkError,
+    Work,
 }
 
 // empty_string_as_none taken from axum docs here: https://github.com/tokio-rs/axum/blob/main/examples/query-params-with-empty-strings/src/main.rs
@@ -295,7 +295,7 @@ impl DBModel for Creator {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::CreatorError)
+        .map_err(|_| NewRecordError::Creator)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -380,7 +380,7 @@ impl DBModel for Instance {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| NewRecordError::InstanceError)
+            .map_err(|_| NewRecordError::Instance)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -429,7 +429,7 @@ impl Instance {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| UpdateRecordError::InstanceError)
+            .map_err(|_| UpdateRecordError::Instance)
     }
 }
 
@@ -531,7 +531,7 @@ impl DBModel for Image {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| NewRecordError::ImageError)
+            .map_err(|_| NewRecordError::Image)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -603,7 +603,7 @@ impl Image {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| UpdateRecordError::ImageError)
+            .map_err(|_| UpdateRecordError::Image)
     }
 
     pub async fn link_image_to_environment(
@@ -711,7 +711,7 @@ impl DBModel for Environment {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| NewRecordError::EnvironmentError)
+            .map_err(|_| NewRecordError::Environment)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -746,7 +746,7 @@ impl Environment {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| NewRecordError::EnvironmentError)
+            .map_err(|_| NewRecordError::Environment)
     }
 
     pub async fn update(
@@ -770,7 +770,7 @@ impl Environment {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| UpdateRecordError::EnvironmentError)
+            .map_err(|_| UpdateRecordError::Environment)
     }
 
     pub async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -885,7 +885,7 @@ impl DBModel for Object {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| NewRecordError::ObjectError)
+            .map_err(|_| NewRecordError::Object)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -926,7 +926,7 @@ impl Object {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| UpdateRecordError::ObjectError)
+            .map_err(|_| UpdateRecordError::Object)
     }
 
     pub async fn link_object_to_instance(
@@ -1058,11 +1058,11 @@ impl DBModel for Replay {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+    async fn insert(_conn: &mut PgConnection, _model: Self) -> Result<Self, NewRecordError> {
         todo!()
     }
 
-    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+    async fn delete_by_id(_conn: &mut PgConnection, _id: Uuid) -> sqlx::Result<PgQueryResult> {
         todo!()
     }
 }
@@ -1137,11 +1137,11 @@ impl DBModel for Save {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+    async fn insert(_conn: &mut PgConnection, _model: Self) -> Result<Self, NewRecordError> {
         todo!()
     }
 
-    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+    async fn delete_by_id(_conn: &mut PgConnection, _id: Uuid) -> sqlx::Result<PgQueryResult> {
         todo!()
     }
 }
@@ -1238,11 +1238,11 @@ impl DBModel for State {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+    async fn insert(_conn: &mut PgConnection, _model: Self) -> Result<Self, NewRecordError> {
         todo!()
     }
 
-    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+    async fn delete_by_id(_conn: &mut PgConnection, _id: Uuid) -> sqlx::Result<PgQueryResult> {
         todo!()
     }
 }
@@ -1293,11 +1293,11 @@ impl DBModel for Work {
             .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+    async fn insert(_conn: &mut PgConnection, _model: Self) -> Result<Self, NewRecordError> {
         todo!()
     }
 
-    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+    async fn delete_by_id(_conn: &mut PgConnection, _id: Uuid) -> sqlx::Result<PgQueryResult> {
         todo!()
     }
 }
@@ -1321,7 +1321,7 @@ impl Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::WorkError)
+        .map_err(|_| NewRecordError::Work)
     }
 
     pub async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1346,7 +1346,7 @@ impl Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| UpdateRecordError::WorkError)
+        .map_err(|_| UpdateRecordError::Work)
     }
 
     pub async fn get_by_name(conn: &mut PgConnection, name: &str) -> sqlx::Result<Vec<Self>> {
@@ -1409,9 +1409,6 @@ impl TryFrom<String> for Platform {
     }
 }
 
-fn unwrap_to_option_string(option: &Option<impl ToString>) -> Option<String> {
-    match option {
-        Some(value) => Some(value.to_string()),
-        _ => None,
-    }
+fn unwrap_to_option_string<T: ToString>(o: &Option<T>) -> Option<String> {
+    o.as_ref().map(T::to_string)
 }
