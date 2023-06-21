@@ -85,12 +85,8 @@ pub trait DBLinked {
 }
 
 #[async_trait]
-pub trait DBHashable {
-    type Hashable;
-    async fn get_by_hash(
-        conn: &mut PgConnection,
-        hash: &str,
-    ) -> sqlx::Result<Option<Self::Hashable>>;
+pub trait DBHashable: Sized {
+    async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>>;
     fn dest_file_path(&self) -> &str;
     fn hash(&self) -> &str;
     fn filename(&self) -> &str;
@@ -179,44 +175,44 @@ pub struct Object {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Replay {
-    replay_id: Uuid,
-    instance_id: Uuid,
-    creator_id: Uuid,
-    replay_forked_from: Option<Uuid>,
-    replay_filename: String,
-    replay_path: String,
-    replay_hash: String,
-    created_on: Option<OffsetDateTime>,
+    pub replay_id: Uuid,
+    pub instance_id: Uuid,
+    pub creator_id: Uuid,
+    pub replay_forked_from: Option<Uuid>,
+    pub replay_filename: String,
+    pub replay_path: String,
+    pub replay_hash: String,
+    pub created_on: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Save {
-    save_id: Uuid,
-    instance_id: Uuid,
-    save_short_desc: String,
-    save_description: String,
-    save_filename: String,
-    save_path: String,
-    creator_id: Uuid,
-    created_on: Option<OffsetDateTime>,
+    pub save_id: Uuid,
+    pub instance_id: Uuid,
+    pub save_short_desc: String,
+    pub save_description: String,
+    pub save_filename: String,
+    pub save_path: String,
+    pub creator_id: Uuid,
+    pub created_on: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct State {
-    state_id: Uuid,
-    instance_id: Uuid,
-    is_checkpoint: bool,
-    state_path: String,
-    state_hash: String,
-    state_filename: String,
-    state_name: String,
-    state_description: String,
-    screenshot_id: Option<Uuid>,
-    replay_id: Option<Uuid>,
-    creator_id: Option<Uuid>,
-    state_replay_index: Option<i32>,
-    state_derived_from: Option<Uuid>,
-    created_on: Option<OffsetDateTime>,
+    pub state_id: Uuid,
+    pub instance_id: Uuid,
+    pub is_checkpoint: bool,
+    pub state_path: String,
+    pub state_hash: String,
+    pub state_filename: String,
+    pub state_name: String,
+    pub state_description: String,
+    pub screenshot_id: Option<Uuid>,
+    pub replay_id: Option<Uuid>,
+    pub creator_id: Option<Uuid>,
+    pub state_replay_index: Option<i32>,
+    pub state_derived_from: Option<Uuid>,
+    pub created_on: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -543,7 +539,6 @@ impl DBModel for Image {
 
 #[async_trait]
 impl DBHashable for Image {
-    type Hashable = Image;
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -791,7 +786,6 @@ impl Environment {
 
 #[async_trait]
 impl DBHashable for Object {
-    type Hashable = Object;
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -1244,6 +1238,44 @@ impl DBModel for State {
 
     async fn delete_by_id(_conn: &mut PgConnection, _id: Uuid) -> sqlx::Result<PgQueryResult> {
         todo!()
+    }
+}
+
+#[async_trait]
+impl DBHashable for State {
+    async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT state_id,
+                instance_id,
+                is_checkpoint,
+                state_path,
+                state_hash,
+                state_filename,
+                state_name,
+                state_description,
+                screenshot_id,
+                replay_id,
+                creator_id,
+                state_replay_index,
+                state_derived_from,
+                created_on
+                FROM state
+                WHERE state_hash = $1
+                "#,
+            hash
+        )
+        .fetch_optional(conn)
+        .await
+    }
+    fn dest_file_path(&self) -> &str {
+        &self.state_path
+    }
+    fn hash(&self) -> &str {
+        &self.state_hash
+    }
+    fn filename(&self) -> &str {
+        &self.state_filename
     }
 }
 

@@ -9,7 +9,7 @@ use args::{
 use clap::Parser;
 use gisstlib::models::DBLinked;
 use gisstlib::{
-    models::{DBHashable, DBModel, Environment, Image, Instance, Object, Work},
+    models::{DBHashable, DBModel, Environment, Image, Instance, Object, State, Work},
     storage::StorageHandler,
 };
 use log::{debug, error, info, warn};
@@ -81,7 +81,7 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::State(state) => match state.command {
-            BaseSubcommand::Create(create) => create_state(create, db).await?,
+            BaseSubcommand::Create(create) => create_state(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_state(delete, db).await?,
             BaseSubcommand::Locate(_locate) => (),
@@ -606,7 +606,92 @@ async fn create_image(
 async fn create_replay(_c: CreateReplay, _db: PgPool) -> Result<(), GISSTCliError> {
     Ok(())
 }
-async fn create_state(_c: CreateState, _db: PgPool) -> Result<(), GISSTCliError> {
+async fn create_state(
+    CreateState {
+        link,
+        depth,
+        force_uuid,
+        file,
+        state_name,
+        state_description,
+        screenshot_id,
+        replay_id,
+        creator_id,
+        state_replay_index,
+        state_derived_from,
+        created_on,
+    }: CreateState,
+    db: PgPool,
+    storage_path: String,
+) -> Result<(), GISSTCliError> {
+    let file = Path::new(&file);
+    if !file.exists() || !file.is_file() {
+        return Err(GISSTCliError::CreateState(format!(
+            "File not found: {}",
+            file.to_string_lossy()
+        )));
+    }
+
+    let mut conn = db.acquire().await?;
+    let data = &read(file)?;
+    let mut state = State {
+        state_id: force_uuid.unwrap_or_else(|| Uuid::new_v4()),
+        instance_id: link,
+        is_checkpoint: replay_id.is_some(),
+        state_path: Default::default(),
+        state_name: state_name.clone(),
+        state_hash: StorageHandler::get_md5_hash(data),
+        state_filename: file.file_name().unwrap().to_string_lossy().to_string(),
+        state_description: state_description.unwrap_or_else(|| state_name.clone()),
+        screenshot_id,
+        created_on: created_on.and_then(|s| {
+            time::OffsetDateTime::parse(
+                &s,
+                &time::format_description::well_known::iso8601::Iso8601::DEFAULT,
+            )
+            .map_err(|e| GISSTCliError::CreateState(e.to_string()))
+            .ok()
+        }),
+        replay_id,
+        creator_id,
+        state_replay_index,
+        state_derived_from,
+    };
+    if let Some(found_hash) = State::get_by_hash(&mut conn, &state.state_hash).await? {
+        return Err(GISSTCliError::CreateState(format!(
+            "Found state {}:{} with matching hash value {} to state {}:{}, skipping...",
+            found_hash.state_id,
+            found_hash.state_filename,
+            found_hash.state_hash,
+            state.state_id,
+            state.state_filename,
+        )));
+    }
+
+    let s_handler = StorageHandler::init(storage_path.to_string(), depth);
+
+    match s_handler
+        .write_file_to_uuid_folder(state.state_id, &state.state_filename, data)
+        .await
+    {
+        Ok(file_info) => {
+            info!(
+                "Wrote file {} to {}",
+                file_info.dest_filename, file_info.dest_path
+            );
+            let state_uuid = state.state_id;
+            state.state_path = file_info.dest_path;
+            if let Err(e) = State::insert(&mut conn, state).await {
+                s_handler
+                    .delete_file_with_uuid(state_uuid, &file_info.dest_filename)
+                    .await?;
+                return Err(GISSTCliError::NewModel(e));
+            };
+        }
+        Err(e) => {
+            error!("Error writing state file to database, aborting...\n{e}");
+        }
+    }
     Ok(())
 }
 async fn create_save(_c: CreateSave, _db: PgPool) -> Result<(), GISSTCliError> {
