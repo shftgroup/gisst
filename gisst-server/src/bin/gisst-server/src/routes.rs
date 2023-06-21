@@ -8,7 +8,7 @@ use axum::{
 };
 use bytes::Bytes;
 use gisstlib::{
-    models::{Creator, DBHashable, DBLinked, DBModel, Environment, Image, Instance, Object, Work},
+    models::{DBHashable, DBLinked, DBModel, Environment, Image, Instance, Object, Work},
     storage::StorageHandler,
     GISSTError,
 };
@@ -83,22 +83,22 @@ pub fn work_router() -> Router {
 }
 
 // CREATOR method handlers
-#[derive(Deserialize)]
-struct CreatorsGetQueryParams {
-    limit: Option<i64>,
-}
+// #[derive(Deserialize)]
+// struct CreatorsGetQueryParams {
+//     limit: Option<i64>,
+// }
 
-async fn get_creators(
-    app_state: Extension<Arc<ServerState>>,
-    Query(params): Query<CreatorsGetQueryParams>,
-) -> Result<Json<Vec<Creator>>, GISSTError> {
-    let mut conn = app_state.pool.acquire().await?;
-    if let Ok(creators) = Creator::get_all(&mut conn, params.limit).await {
-        Ok(creators.into())
-    } else {
-        Ok(Json(vec![]))
-    }
-}
+// async fn get_creators(
+//     app_state: Extension<Arc<ServerState>>,
+//     Query(params): Query<CreatorsGetQueryParams>,
+// ) -> Result<Json<Vec<Creator>>, GISSTError> {
+//     let mut conn = app_state.pool.acquire().await?;
+//     if let Ok(creators) = Creator::get_all(&mut conn, params.limit).await {
+//         Ok(creators.into())
+//     } else {
+//         Ok(Json(vec![]))
+//     }
+// }
 
 // ENVIRONMENT method handlers
 #[derive(Deserialize)]
@@ -142,7 +142,7 @@ async fn edit_environment(
     Ok(Json(
         Environment::update(&mut conn, environment)
             .await
-            .map_err(|e| GISSTError::RecordUpdateError(e))?,
+            .map_err(GISSTError::RecordUpdateError)?,
     ))
 }
 
@@ -203,7 +203,7 @@ async fn create_image(
     let mut conn = app_state.pool.acquire().await?;
 
     if hash.is_some()
-        && Image::get_by_hash(&mut conn, &hash.as_ref().unwrap())
+        && Image::get_by_hash(&mut conn, hash.as_ref().unwrap())
             .await?
             .is_none()
     {
@@ -256,7 +256,7 @@ async fn edit_image(
     Ok(Json(
         Image::update(&mut conn, image)
             .await
-            .map_err(|e| GISSTError::RecordUpdateError(e))?,
+            .map_err(GISSTError::RecordUpdateError)?,
     ))
 }
 
@@ -390,7 +390,7 @@ async fn create_object(
     let mut conn = app_state.pool.acquire().await?;
 
     if hash.is_some()
-        && Object::get_by_hash(&mut conn, &hash.as_ref().unwrap())
+        && Object::get_by_hash(&mut conn, hash.as_ref().unwrap())
             .await?
             .is_none()
     {

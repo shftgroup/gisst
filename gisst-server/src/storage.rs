@@ -56,9 +56,8 @@ impl StorageHandler {
             path_buf.pop();
         }
         for component in path_buf.components() {
-            match component {
-                Component::Normal(_) => depth += 1,
-                _ => (),
+            if let Component::Normal(_) = component {
+                depth += 1;
             }
         }
         depth - 1

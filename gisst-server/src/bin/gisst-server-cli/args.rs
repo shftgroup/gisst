@@ -7,25 +7,25 @@ use uuid::Uuid;
 #[derive(Debug, Error)]
 pub enum GISSTCliError {
     #[error("create object error")]
-    CreateObjectError(String),
+    CreateObject(String),
     #[error("create object error")]
-    CreateImageError(String),
+    CreateImage(String),
     #[error("create instance error")]
-    CreateInstanceError(String),
+    CreateInstance(String),
     #[error("create instance error")]
-    CreateWorkError(String),
+    CreateWork(String),
     #[error("directory traversal error")]
-    DirectoryError(#[from] walkdir::Error),
+    Directory(#[from] walkdir::Error),
     #[error("file read error")]
-    IoError(#[from] std::io::Error),
+    Io(#[from] std::io::Error),
     #[error("database error")]
-    SqlError(#[from] sqlx::Error),
+    Sql(#[from] sqlx::Error),
     #[error("gisst new model error")]
-    NewModelError(#[from] gisstlib::models::NewRecordError),
+    NewModel(#[from] gisstlib::models::NewRecordError),
     #[error("json parse error")]
-    JsonParseError(#[from] serde_json::Error),
+    JsonParse(#[from] serde_json::Error),
     #[error("record not found error")]
-    RecordNotFoundError(Uuid),
+    RecordNotFound(Uuid),
 }
 
 #[derive(Debug, Parser)]
