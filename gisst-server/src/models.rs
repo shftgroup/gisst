@@ -1232,12 +1232,67 @@ impl DBModel for State {
         .await
     }
 
-    async fn insert(_conn: &mut PgConnection, _model: Self) -> Result<Self, NewRecordError> {
-        todo!()
+    async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, NewRecordError> {
+        // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
+        // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
+        sqlx::query_as!(
+            State,
+            r#"INSERT INTO state (
+            state_id,
+            instance_id,
+            is_checkpoint,
+            state_path,
+            state_hash,
+            state_filename,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+ )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            RETURNING state_id,
+            instance_id,
+            is_checkpoint,
+            state_path,
+            state_hash,
+            state_filename,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            "#,
+            state.state_id,
+            state.instance_id,
+            state.is_checkpoint,
+            state.state_path,
+            state.state_hash,
+            state.state_filename,
+            state.state_name,
+            state.state_description,
+            state.screenshot_id,
+            state.replay_id,
+            state.creator_id,
+            state.state_replay_index,
+            state.state_derived_from,
+            state.created_on,
+        )
+        .fetch_one(conn)
+        .await
+        .map_err(|_| NewRecordError::State)
     }
 
-    async fn delete_by_id(_conn: &mut PgConnection, _id: Uuid) -> sqlx::Result<PgQueryResult> {
-        todo!()
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM state WHERE state_id = $1", id)
+            .execute(conn)
+            .await
     }
 }
 
