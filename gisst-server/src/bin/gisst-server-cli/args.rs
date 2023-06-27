@@ -16,6 +16,8 @@ pub enum GISSTCliError {
     CreateWork(String),
     #[error("create state error")]
     CreateState(String),
+    #[error("create replay error")]
+    CreateReplay(String),
     #[error("directory traversal error")]
     Directory(#[from] walkdir::Error),
     #[error("file read error")]
@@ -356,7 +358,33 @@ pub struct UpdateState {}
 #[derive(Debug, Args)]
 pub struct ExportState {}
 #[derive(Debug, Args)]
-pub struct CreateReplay {}
+pub struct CreateReplay {
+    /// Link to a specific instance based on UUID
+    #[arg(short, long)]
+    pub link: Uuid,
+
+    /// Folder depth to use for input file to path based off of characters in assigned UUID
+    #[arg(short, long, default_value_t = 4)]
+    pub depth: u8,
+
+    /// (DEBUG) Force the use of specific state UUID
+    #[arg(long = "force-uuid")]
+    pub force_uuid: Option<Uuid>,
+
+    /// Paths of file to create in the database, must be a regular file
+    #[arg(long)]
+    pub file: String,
+
+    #[arg(long = "creator-id")]
+    pub creator_id: Option<Uuid>,
+
+    #[arg(long = "replay-forked-from")]
+    pub replay_forked_from: Option<Uuid>,
+
+    #[arg(long = "created-on")]
+    pub created_on: Option<String>,
+
+}
 #[derive(Debug, Args)]
 pub struct UpdateReplay {}
 #[derive(Debug, Args)]
