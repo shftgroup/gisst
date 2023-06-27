@@ -6,6 +6,8 @@ use uuid::Uuid;
 
 #[derive(Debug, Error)]
 pub enum GISSTCliError {
+    #[error("create creator error")]
+    CreateCreator(String),
     #[error("create object error")]
     CreateObject(String),
     #[error("create object error")]
@@ -390,7 +392,16 @@ pub struct UpdateReplay {}
 #[derive(Debug, Args)]
 pub struct ExportReplay {}
 #[derive(Debug, Args)]
-pub struct CreateCreator {}
+#[group(required = true, multiple = false)]
+pub struct CreateCreator {
+    /// Provide a JSON string to create work
+    #[arg(long = "json-string")]
+    pub json_string: Option<serde_json::Value>,
+
+    /// Provide a JSON file to create work
+    #[arg(long = "json-file")]
+    pub json_file: Option<String>,
+}
 #[derive(Debug, Args)]
 pub struct UpdateCreator {}
 #[derive(Debug, Args)]
