@@ -92,10 +92,10 @@ pub trait DBHashable: Sized {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Creator {
-    creator_id: Uuid,
-    creator_username: String,
-    creator_full_name: String,
-    created_on: Option<OffsetDateTime>,
+    pub creator_id: Uuid,
+    pub creator_username: String,
+    pub creator_full_name: String,
+    pub created_on: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
