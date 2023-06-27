@@ -3,8 +3,10 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 use async_trait::async_trait;
 use std::{fmt, str::FromStr};
 
-use sqlx::postgres::PgQueryResult;
-use sqlx::PgConnection;
+use sqlx::postgres::{
+    PgQueryResult,
+    PgConnection,
+};
 use time::OffsetDateTime;
 
 use uuid::Uuid;
@@ -79,10 +81,6 @@ pub trait DBModel: Sized {
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult>;
 }
 
-#[async_trait]
-pub trait DBLinked {
-    async fn unlink_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult>;
-}
 
 #[async_trait]
 pub trait DBHashable: Sized {
@@ -94,10 +92,10 @@ pub trait DBHashable: Sized {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Creator {
-    creator_id: Uuid,
-    creator_username: String,
-    creator_full_name: String,
-    created_on: Option<OffsetDateTime>,
+    pub creator_id: Uuid,
+    pub creator_username: String,
+    pub creator_full_name: String,
+    pub created_on: Option<OffsetDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -193,6 +191,7 @@ pub struct Save {
     pub save_description: String,
     pub save_filename: String,
     pub save_path: String,
+    pub save_hash: String,
     pub creator_id: Uuid,
     pub created_on: Option<OffsetDateTime>,
 }
@@ -386,23 +385,6 @@ impl DBModel for Instance {
     }
 }
 
-#[async_trait]
-impl DBLinked for Instance {
-    async fn unlink_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM instanceObject WHERE instance_id = $1", id)
-            .execute(conn)
-            .await
-        // sqlx::query!("DELETE FROM save WHERE instance_id = $1", id)
-        //     .execute(conn)
-        //     .await
-        // sqlx::query!("DELETE FROM state WHERE instance_id = $1", id)
-        //     .execute(conn)
-        //     .await
-        // sqlx::query!("DELETE FROM replay WHERE instance_id = $1", id)
-        //     .execute(conn)
-        //     .await
-    }
-}
 
 impl Instance {
     pub async fn update(
@@ -426,6 +408,22 @@ impl Instance {
             .fetch_one(conn)
             .await
             .map_err(|_| UpdateRecordError::Instance)
+    }
+
+    pub async fn get_all_for_work_id(
+        conn: &mut PgConnection,
+        work_id: Uuid,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT instance_id, environment_id, work_id, instance_framework, instance_config, created_on
+            FROM instance
+            WHERE work_id = $1
+            "#,
+            work_id
+        )
+            .fetch_all(conn)
+            .await
     }
 }
 
@@ -569,14 +567,6 @@ impl DBHashable for Image {
     }
 }
 
-#[async_trait]
-impl DBLinked for Image {
-    async fn unlink_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM environmentImage WHERE image_id = $1", id)
-            .execute(conn)
-            .await
-    }
-}
 
 impl Image {
     pub async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, UpdateRecordError> {
@@ -889,14 +879,6 @@ impl DBModel for Object {
     }
 }
 
-#[async_trait]
-impl DBLinked for Object {
-    async fn unlink_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM instanceObject WHERE object_id = $1", id)
-            .execute(conn)
-            .await
-    }
-}
 
 impl Object {
     pub async fn update(
@@ -1052,13 +1034,74 @@ impl DBModel for Replay {
         .await
     }
 
-    async fn insert(_conn: &mut PgConnection, _model: Self) -> Result<Self, NewRecordError> {
-        todo!()
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Replay,
+            r#"INSERT INTO replay (
+            replay_id,
+            instance_id,
+            creator_id,
+            replay_forked_from,
+            replay_filename,
+            replay_hash,
+            replay_path,
+            created_on
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING
+            replay_id,
+            instance_id,
+            creator_id,
+            replay_forked_from,
+            replay_filename,
+            replay_hash,
+            replay_path,
+            created_on
+            "#,
+            model.replay_id,
+            model.instance_id,
+            model.creator_id,
+            model.replay_forked_from,
+            model.replay_filename,
+            model.replay_hash,
+            model.replay_path,
+            model.created_on,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::Replay)
     }
 
-    async fn delete_by_id(_conn: &mut PgConnection, _id: Uuid) -> sqlx::Result<PgQueryResult> {
-        todo!()
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM replay WHERE replay_id = $1", id)
+            .execute(conn)
+            .await
     }
+}
+
+#[async_trait]
+impl DBHashable for Replay {
+    async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
+       sqlx::query_as!(
+           Self,
+           r#"SELECT
+           replay_id,
+           instance_id,
+           creator_id,
+           replay_forked_from,
+           replay_filename,
+           replay_hash,
+           replay_path,
+           created_on
+           FROM replay WHERE replay_hash = $1"#,
+           hash
+       )
+           .fetch_optional(conn)
+           .await
+    }
+
+    fn dest_file_path(&self) -> &str { &self.replay_path }
+    fn hash(&self) -> &str { &self.replay_hash }
+    fn filename(&self) -> &str { &self.replay_filename }
 }
 
 #[async_trait]
@@ -1075,6 +1118,7 @@ impl DBModel for Save {
             ("save_description".to_string(), "String".to_string()),
             ("save_filename".to_string(), "String".to_string()),
             ("save_path".to_string(), "String".to_string()),
+            ("save_hash".to_string(), "String".to_string()),
             ("creator_id".to_string(), "Uuid".to_string()),
             ("created_on".to_string(), "OffsetDateTime".to_string()),
         ]
@@ -1088,6 +1132,7 @@ impl DBModel for Save {
             Some(self.save_description.to_string()),
             Some(self.save_filename.to_string()),
             Some(self.save_path.to_string()),
+            Some(self.save_hash.to_string()),
             Some(self.creator_id.to_string()),
             unwrap_to_option_string(&self.created_on),
         ]
@@ -1103,6 +1148,7 @@ impl DBModel for Save {
             save_description,
             save_filename,
             save_path,
+            save_hash,
             creator_id,
             created_on
             FROM save WHERE save_id = $1"#,
@@ -1122,6 +1168,7 @@ impl DBModel for Save {
             save_description,
             save_filename,
             save_path,
+            save_hash,
             creator_id,
             created_on
             FROM save ORDER BY created_on DESC LIMIT $1"#,
@@ -1131,13 +1178,81 @@ impl DBModel for Save {
         .await
     }
 
-    async fn insert(_conn: &mut PgConnection, _model: Self) -> Result<Self, NewRecordError> {
-        todo!()
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Self,
+            r#"INSERT INTO save (
+            save_id,
+            instance_id,
+            save_short_desc,
+            save_description,
+            save_filename,
+            save_path,
+            save_hash,
+            creator_id,
+            created_on
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING
+            save_id,
+            instance_id,
+            save_short_desc,
+            save_description,
+            save_filename,
+            save_path,
+            save_hash,
+            creator_id,
+            created_on
+            "#,
+            model.save_id,
+            model.instance_id,
+            model.save_short_desc,
+            model.save_description,
+            model.save_filename,
+            model.save_path,
+            model.save_hash,
+            model.creator_id,
+            model.created_on,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::Save)
     }
 
-    async fn delete_by_id(_conn: &mut PgConnection, _id: Uuid) -> sqlx::Result<PgQueryResult> {
-        todo!()
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM save WHERE save_id = $1", id)
+            .execute(conn)
+            .await
     }
+}
+
+#[async_trait]
+impl DBHashable for Save {
+    async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT
+            save_id,
+            instance_id,
+            save_short_desc,
+            save_description,
+            save_filename,
+            save_path,
+            save_hash,
+            creator_id,
+            created_on
+            FROM save WHERE save_hash = $1
+            "#,
+            hash
+        )
+            .fetch_optional(conn)
+            .await
+    }
+
+    fn dest_file_path(&self) -> &str { &self.save_path }
+
+    fn hash(&self) -> &str { &self.save_hash }
+
+    fn filename(&self) -> &str { &self.save_filename }
 }
 
 #[async_trait]
@@ -1380,17 +1495,7 @@ impl DBModel for Work {
             .await
     }
 
-    async fn insert(_conn: &mut PgConnection, _model: Self) -> Result<Self, NewRecordError> {
-        todo!()
-    }
-
-    async fn delete_by_id(_conn: &mut PgConnection, _id: Uuid) -> sqlx::Result<PgQueryResult> {
-        todo!()
-    }
-}
-
-impl Work {
-    pub async fn insert(conn: &mut PgConnection, work: Work) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, NewRecordError> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
@@ -1406,16 +1511,19 @@ impl Work {
             work.work_platform,
             work.created_on,
         )
-        .fetch_one(conn)
-        .await
-        .map_err(|_| NewRecordError::Work)
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::Work)
     }
 
-    pub async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM work WHERE work_id = $1", id)
             .execute(conn)
             .await
     }
+}
+
+impl Work {
 
     pub async fn update(conn: &mut PgConnection, work: Work) -> Result<Self, UpdateRecordError> {
         sqlx::query_as!(
@@ -1458,6 +1566,7 @@ impl Work {
             .fetch_all(conn)
             .await
     }
+
 }
 
 enum Framework {

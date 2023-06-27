@@ -1,4 +1,5 @@
 -- Add down migration script here
+DROP TYPE IF EXISTS object_role;
 
 ALTER TABLE environment DROP CONSTRAINT environment_environment_derived_from_fkey;
 
