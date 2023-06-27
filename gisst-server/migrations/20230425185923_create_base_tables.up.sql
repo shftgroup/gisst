@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS save (
     save_short_desc     varchar(100) NOT NULL,
     save_description    text NOT NULL,
     save_filename       text NOT NULL,
+    save_hash           text NOT NULL,
     save_path           text NOT NULL,
     creator_id          uuid NOT NULL,
     created_on          timestamptz DEFAULT current_timestamp
@@ -119,29 +120,29 @@ CREATE TABLE IF NOT EXISTS work (
 -- Add foreign key constraints for all tables
 ALTER TABLE environment ADD FOREIGN KEY (environment_derived_from) REFERENCES environment(environment_id);
 
-ALTER TABLE environmentImage ADD FOREIGN KEY (environment_id) REFERENCES environment(environment_id);
-ALTER TABLE environmentImage ADD FOREIGN KEY (image_id) REFERENCES image(image_id);
+ALTER TABLE environmentImage ADD FOREIGN KEY (environment_id) REFERENCES environment(environment_id) ON DELETE CASCADE;
+ALTER TABLE environmentImage ADD FOREIGN KEY (image_id) REFERENCES image(image_id) ON DELETE CASCADE;
 
-ALTER TABLE instance ADD FOREIGN KEY (environment_id) REFERENCES environment(environment_id);
-ALTER TABLE instance ADD FOREIGN KEY (work_id) REFERENCES work(work_id);
+ALTER TABLE instance ADD FOREIGN KEY (environment_id) REFERENCES environment(environment_id) ON DELETE CASCADE;
+ALTER TABLE instance ADD FOREIGN KEY (work_id) REFERENCES work(work_id) ON DELETE CASCADE;
 
-ALTER TABLE instanceObject ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id);
-ALTER TABLE instanceObject ADD FOREIGN KEY (object_id) REFERENCES object(object_id);
+ALTER TABLE instanceObject ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id) ON DELETE CASCADE;
+ALTER TABLE instanceObject ADD FOREIGN KEY (object_id) REFERENCES object(object_id) ON DELETE CASCADE;
 
 ALTER TABLE save ADD FOREIGN KEY (creator_id) REFERENCES creator(creator_id);
-ALTER TABLE save ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id);
+ALTER TABLE save ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id) ON DELETE CASCADE;
 
 
-ALTER TABLE replay ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id);
-ALTER TABLE replay ADD FOREIGN KEY (replay_forked_from) REFERENCES replay(replay_id);
+ALTER TABLE replay ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id) ON DELETE CASCADE;
+ALTER TABLE replay ADD FOREIGN KEY (replay_forked_from) REFERENCES replay(replay_id) ON DELETE CASCADE;
 ALTER TABLE replay ADD FOREIGN KEY (creator_id) REFERENCES creator(creator_id);
 
 ALTER TABLE state ADD FOREIGN KEY (replay_id) REFERENCES replay(replay_id);
-ALTER TABLE state ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id);
+ALTER TABLE state ADD FOREIGN KEY (instance_id) REFERENCES instance(instance_id) ON DELETE CASCADE;
 ALTER TABLE state ADD FOREIGN KEY (creator_id) REFERENCES creator(creator_id);
-ALTER TABLE state ADD FOREIGN KEY (state_derived_from) REFERENCES state(state_id);
+ALTER TABLE state ADD FOREIGN KEY (state_derived_from) REFERENCES state(state_id) ON DELETE CASCADE;
 ALTER TABLE state ADD FOREIGN KEY (screenshot_id) REFERENCES screenshot(screenshot_id);
 
 -- Add indexes for specific fields
-CREATE UNIQUE INDEX idx_content_hash ON object(object_hash);
+CREATE UNIQUE INDEX idx_object_hash ON object(object_hash);
 CREATE UNIQUE INDEX idx_image_hash ON image(image_hash);
