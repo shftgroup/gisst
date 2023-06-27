@@ -59,7 +59,6 @@ pub enum BaseSubcommand<
     C: clap::FromArgMatches + clap::Args,
     U: clap::FromArgMatches + clap::Args,
     D: clap::FromArgMatches + clap::Args,
-    L: clap::FromArgMatches + clap::Args,
     E: clap::FromArgMatches + clap::Args,
 > {
     /// Create record(s)
@@ -71,9 +70,6 @@ pub enum BaseSubcommand<
     /// Delete an existing record
     Delete(D),
 
-    /// Locate records in CLI interface
-    Locate(L),
-
     /// Export records
     Export(E),
 }
@@ -83,13 +79,13 @@ pub enum RecordType {
     /// Manage object records and files
     Object(
         GISSTCommand<
-            BaseSubcommand<CreateObject, UpdateObject, DeleteRecord, LocateObject, ExportObject>,
+            BaseSubcommand<CreateObject, UpdateObject, DeleteRecord, ExportObject>,
         >,
     ),
     /// Manage image records and files
     Image(
         GISSTCommand<
-            BaseSubcommand<CreateImage, UpdateImage, DeleteRecord, LocateImage, ExportImage>,
+            BaseSubcommand<CreateImage, UpdateImage, DeleteRecord, ExportImage>,
         >,
     ),
     /// Manage instance records
@@ -98,22 +94,20 @@ pub enum RecordType {
             BaseSubcommand<
                 CreateInstance,
                 UpdateInstance,
-                DeleteInstance,
-                LocateInstance,
+                DeleteRecord,
                 ExportInstance,
             >,
         >,
     ),
     /// Manage work records
-    Work(GISSTCommand<BaseSubcommand<CreateWork, UpdateWork, DeleteWork, LocateWork, ExportWork>>),
+    Work(GISSTCommand<BaseSubcommand<CreateWork, UpdateWork, DeleteRecord, ExportWork>>),
     /// Manage creator records
     Creator(
         GISSTCommand<
             BaseSubcommand<
                 CreateCreator,
                 UpdateCreator,
-                DeleteCreator,
-                LocateCreator,
+                DeleteRecord,
                 ExportCreator,
             >,
         >,
@@ -124,24 +118,23 @@ pub enum RecordType {
             BaseSubcommand<
                 CreateEnvironment,
                 UpdateEnvironment,
-                DeleteEnvironment,
-                LocateEnvironment,
+                DeleteRecord,
                 ExportEnvironment,
             >,
         >,
     ),
     /// Manage save records
-    Save(GISSTCommand<BaseSubcommand<CreateSave, UpdateSave, DeleteSave, LocateSave, ExportSave>>),
+    Save(GISSTCommand<BaseSubcommand<CreateSave, UpdateSave, DeleteRecord, ExportSave>>),
     /// Manage state records
     State(
         GISSTCommand<
-            BaseSubcommand<CreateState, UpdateState, DeleteState, LocateState, ExportState>,
+            BaseSubcommand<CreateState, UpdateState, DeleteRecord, ExportState>,
         >,
     ),
     /// Manage replay records
     Replay(
         GISSTCommand<
-            BaseSubcommand<CreateReplay, UpdateReplay, DeleteReplay, LocateReplay, ExportReplay>,
+            BaseSubcommand<CreateReplay, UpdateReplay, DeleteRecord, ExportReplay>,
         >,
     ),
 }
@@ -204,14 +197,6 @@ pub struct UpdateObject {
     pub json_file: String,
 }
 
-#[derive(Debug, Args)]
-pub struct DeleteObject {
-    /// Uuid to delete from the database, this will also disconnect the object from any associated instances
-    pub id: Uuid,
-}
-
-#[derive(Debug, Args)]
-pub struct LocateObject {}
 
 #[derive(Debug, Args)]
 pub struct ExportObject {}
@@ -244,8 +229,6 @@ pub struct DeleteInstance {
 }
 #[derive(Debug, Args)]
 pub struct ExportInstance {}
-#[derive(Debug, Args)]
-pub struct LocateInstance {}
 #[derive(Debug, Args)]
 pub struct CreateImage {
     /// Will skip requests for a description for an image and default to using the image's filename
@@ -280,8 +263,6 @@ pub struct DeleteImage {
 }
 #[derive(Debug, Args)]
 pub struct ExportImage {}
-#[derive(Debug, Args)]
-pub struct LocateImage {}
 
 #[derive(Debug, Args)]
 pub struct CreateEnvironment {
@@ -304,15 +285,7 @@ pub struct CreateEnvironment {
 #[derive(Debug, Args)]
 pub struct UpdateEnvironment {}
 #[derive(Debug, Args)]
-pub struct DeleteEnvironment {
-    /// Uuid to delete from the database, this will also disconnect the environment from any associated images
-    pub id: Uuid,
-}
-#[derive(Debug, Args)]
 pub struct ExportEnvironment {}
-#[derive(Debug, Args)]
-pub struct LocateEnvironment {}
-
 #[derive(Debug, Args)]
 #[group(required = true, multiple = false)]
 pub struct CreateWork {
@@ -334,8 +307,6 @@ pub struct DeleteWork {
 #[derive(Debug, Args)]
 pub struct UpdateWork {}
 #[derive(Debug, Args)]
-pub struct LocateWork {}
-#[derive(Debug, Args)]
 pub struct ExportWork {}
 #[derive(Debug, Args)]
 pub struct CreateSave {}
@@ -343,8 +314,6 @@ pub struct CreateSave {}
 pub struct UpdateSave {}
 #[derive(Debug, Args)]
 pub struct DeleteSave {}
-#[derive(Debug, Args)]
-pub struct LocateSave {}
 #[derive(Debug, Args)]
 pub struct ExportSave {}
 #[derive(Debug, Args)]
@@ -385,28 +354,16 @@ pub struct CreateState {
 #[derive(Debug, Args)]
 pub struct UpdateState {}
 #[derive(Debug, Args)]
-pub struct DeleteState {}
-#[derive(Debug, Args)]
-pub struct LocateState {}
-#[derive(Debug, Args)]
 pub struct ExportState {}
 #[derive(Debug, Args)]
 pub struct CreateReplay {}
 #[derive(Debug, Args)]
 pub struct UpdateReplay {}
 #[derive(Debug, Args)]
-pub struct DeleteReplay {}
-#[derive(Debug, Args)]
-pub struct LocateReplay {}
-#[derive(Debug, Args)]
 pub struct ExportReplay {}
 #[derive(Debug, Args)]
 pub struct CreateCreator {}
 #[derive(Debug, Args)]
 pub struct UpdateCreator {}
-#[derive(Debug, Args)]
-pub struct DeleteCreator {}
-#[derive(Debug, Args)]
-pub struct LocateCreator {}
 #[derive(Debug, Args)]
 pub struct ExportCreator {}

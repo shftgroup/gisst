@@ -3,13 +3,12 @@ mod args;
 use anyhow::Result;
 use args::{
     BaseSubcommand, CreateEnvironment, CreateImage, CreateInstance, CreateObject, CreateReplay,
-    CreateSave, CreateState, CreateWork, DeleteEnvironment, DeleteInstance, DeleteRecord,
-    DeleteReplay, DeleteSave, DeleteState, DeleteWork, GISSTCli, GISSTCliError, RecordType,
+    CreateSave, CreateState, CreateWork, DeleteRecord,
+    GISSTCli, GISSTCliError, RecordType,
 };
 use clap::Parser;
-use gisstlib::models::DBLinked;
 use gisstlib::{
-    models::{DBHashable, DBModel, Environment, Image, Instance, Object, State, Work},
+    models::{DBHashable, DBModel, Environment, Image, Instance, Object, State, Save, Work},
     storage::StorageHandler,
 };
 use log::{debug, error, info, warn};
@@ -19,6 +18,7 @@ use std::path::{Path, PathBuf};
 use std::{fs, fs::read, io};
 use uuid::Uuid;
 use walkdir::WalkDir;
+use gisstlib::models::Replay;
 
 #[tokio::main]
 async fn main() -> Result<(), GISSTCliError> {
@@ -43,62 +43,50 @@ async fn main() -> Result<(), GISSTCliError> {
         RecordType::Object(object) => match object.command {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => {
-                delete_linked_file_record::<Object>(delete, db, storage_root).await?
-            }
-            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Delete(delete) => delete_file_record::<Object>(delete, db, storage_root).await?,
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Creator(_creator) => {}
         RecordType::Environment(environment) => match environment.command {
             BaseSubcommand::Create(create) => create_environment(create, db).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_environment(delete, db).await?,
-            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Delete(delete) => delete_record::<Environment>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Image(image) => match image.command {
             BaseSubcommand::Create(create) => create_image(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => {
-                delete_linked_file_record::<Image>(delete, db, storage_root).await?
-            }
-            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Delete(delete) => delete_file_record::<Image>(delete, db, storage_root).await?,
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Instance(instance) => match instance.command {
             BaseSubcommand::Create(create) => create_instance(create, db).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_instance(delete, db).await?,
-            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Delete(delete) => delete_record::<Instance>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Work(work) => match work.command {
             BaseSubcommand::Create(create) => create_work(create, db).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_work(delete, db).await?,
-            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Delete(delete) => delete_record::<Work>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::State(state) => match state.command {
             BaseSubcommand::Create(create) => create_state(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_state(delete, db).await?,
-            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Delete(delete) => delete_file_record::<State>(delete, db, storage_root).await?,
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Save(save) => match save.command {
             BaseSubcommand::Create(create) => create_save(create, db).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_save(delete, db).await?,
-            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Delete(delete) => delete_file_record::<Save>(delete, db, storage_root).await?,
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Replay(replay) => match replay.command {
             BaseSubcommand::Create(create) => create_replay(create, db).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_replay(delete, db).await?,
-            BaseSubcommand::Locate(_locate) => (),
+            BaseSubcommand::Delete(delete) => delete_file_record::<Replay>(delete, db, storage_root).await?,
             BaseSubcommand::Export(_export) => (),
         },
     }
@@ -187,7 +175,7 @@ async fn create_object(
             continue;
         }
 
-        if ignore {
+        if !ignore {
             let mut description = Default::default();
             println!(
                 "Please enter an object description for file: {}",
@@ -229,7 +217,7 @@ async fn create_object(
 }
 
 #[allow(dead_code)]
-async fn delete_record<T: DBModel>(d: &DeleteRecord, db: PgPool) -> Result<(), GISSTCliError>
+async fn delete_record<T: DBModel>(d: DeleteRecord, db: PgPool) -> Result<(), GISSTCliError>
 where
     T: DBModel,
 {
@@ -241,24 +229,8 @@ where
     Ok(())
 }
 
-#[allow(dead_code)]
-async fn delete_linked_record<T: DBModel + DBLinked>(
-    d: &DeleteRecord,
-    db: PgPool,
-) -> Result<(), GISSTCliError> {
-    let mut conn = db.acquire().await?;
-    T::unlink_by_id(&mut conn, d.id)
-        .await
-        .map_err(GISSTCliError::Sql)?;
-    info!("Unlinked record with uuid {}", d.id);
-    T::delete_by_id(&mut conn, d.id)
-        .await
-        .map_err(GISSTCliError::Sql)?;
-    info!("Deleted record with uuid {}", d.id);
-    Ok(())
-}
 
-async fn delete_linked_file_record<T: DBModel + DBHashable + DBLinked>(
+async fn delete_file_record<T: DBModel + DBHashable>(
     d: DeleteRecord,
     db: PgPool,
     storage_path: String,
@@ -267,10 +239,6 @@ async fn delete_linked_file_record<T: DBModel + DBHashable + DBLinked>(
     let model = T::get_by_id(&mut conn, d.id)
         .await?
         .ok_or(GISSTCliError::RecordNotFound(d.id))?;
-    T::unlink_by_id(&mut conn, d.id)
-        .await
-        .map_err(GISSTCliError::Sql)?;
-    info!("Unlinked record with uuid {}", d.id);
 
     T::delete_by_id(&mut conn, d.id)
         .await
@@ -362,25 +330,6 @@ async fn create_instance(
     }
 }
 
-async fn delete_instance(d: DeleteInstance, db: PgPool) -> Result<(), GISSTCliError> {
-    let mut conn = db.acquire().await?;
-    if let Some(instance) = Instance::get_by_id(&mut conn, d.id).await? {
-        info!(
-            "Deleting unlinking images for instance record with uuid {}",
-            d.id
-        );
-        //Instance:/delete_instance_object_links_by_id(&mut conn, instance.instance_id).await?;
-
-        info!("Deleting instance record with uuid {}", d.id);
-
-        Instance::delete_by_id(&mut conn, instance.instance_id).await?;
-    } else {
-        warn!("Instance with uuid {} not found in database.", d.id);
-    }
-
-    Ok(())
-}
-
 async fn create_environment(
     CreateEnvironment {
         json_file,
@@ -436,25 +385,6 @@ async fn create_environment(
     }
 }
 
-async fn delete_environment(d: DeleteEnvironment, db: PgPool) -> Result<(), GISSTCliError> {
-    let mut conn = db.acquire().await?;
-    if let Some(environment) = Environment::get_by_id(&mut conn, d.id).await? {
-        info!(
-            "Deleting unlinking images for environment record with uuid {}",
-            d.id
-        );
-        Environment::delete_environment_image_links_by_id(&mut conn, environment.environment_id)
-            .await?;
-
-        info!("Deleting environment record with uuid {}", d.id);
-
-        Environment::delete_by_id(&mut conn, environment.environment_id).await?;
-    } else {
-        warn!("Environment with uuid {} not found in database.", d.id);
-    }
-    Ok(())
-}
-
 async fn create_work(
     CreateWork {
         json_file,
@@ -486,16 +416,6 @@ async fn create_work(
     }
 }
 
-async fn delete_work(d: DeleteWork, db: PgPool) -> Result<(), GISSTCliError> {
-    let mut conn = db.acquire().await?;
-    if let Some(work) = Work::get_by_id(&mut conn, d.id).await? {
-        info!("Deleting work record with uuid {}", d.id);
-        Work::delete_by_id(&mut conn, work.work_id).await?;
-    } else {
-        warn!("Work with uuid {} not found in database.", d.id);
-    }
-    Ok(())
-}
 
 async fn create_image(
     CreateImage {
@@ -698,16 +618,8 @@ async fn create_save(_c: CreateSave, _db: PgPool) -> Result<(), GISSTCliError> {
     Ok(())
 }
 
-async fn delete_replay(_d: DeleteReplay, _db: PgPool) -> Result<(), GISSTCliError> {
-    Ok(())
-}
-async fn delete_save(_d: DeleteSave, _db: PgPool) -> Result<(), GISSTCliError> {
-    Ok(())
-}
-async fn delete_state(_d: DeleteState, _db: PgPool) -> Result<(), GISSTCliError> {
-    Ok(())
-}
-
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {
     PoolOptions::new().connect(&db_url).await
 }
+
+
