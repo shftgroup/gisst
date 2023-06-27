@@ -3,12 +3,12 @@ mod args;
 use anyhow::Result;
 use args::{
     BaseSubcommand, CreateEnvironment, CreateImage, CreateInstance, CreateObject, CreateReplay,
-    CreateSave, CreateState, CreateWork, DeleteRecord,
+    CreateSave, CreateState, CreateWork, CreateCreator, DeleteRecord,
     GISSTCli, GISSTCliError, RecordType,
 };
 use clap::Parser;
 use gisstlib::{
-    models::{DBHashable, DBModel, Environment, Image, Instance, Object, State, Save, Work, Replay},
+    models::{DBHashable, DBModel, Environment, Image, Instance, Object, State, Save, Work, Replay, Creator},
     storage::StorageHandler,
 };
 use log::{debug, error, info, warn};
@@ -45,7 +45,12 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Delete(delete) => delete_file_record::<Object>(delete, db, storage_root).await?,
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Creator(_creator) => {}
+        RecordType::Creator(creator) => match creator.command {
+            BaseSubcommand::Create(create) => create_creator(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => delete_record::<Creator>(delete, db).await?,
+            BaseSubcommand::Export(_export) => (),
+        },
         RecordType::Environment(environment) => match environment.command {
             BaseSubcommand::Create(create) => create_environment(create, db).await?,
             BaseSubcommand::Update(_update) => (),
@@ -380,6 +385,37 @@ async fn create_environment(
         }
         _ => Err(GISSTCliError::CreateInstance(
             "Need to provide a JSON string or file to create environment record.".to_string(),
+        )),
+    }
+}
+
+async fn create_creator(
+    CreateCreator {
+        json_file,
+        json_string,
+        ..
+    }: CreateCreator,
+    db: PgPool,
+) -> Result<(), GISSTCliError> {
+    let creator_from_json: Option<Creator> = match (&json_file, &json_string) {
+        (Some(file_path), None) => {
+            let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::Io)?;
+            Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?)
+        }
+        (None, Some(json_value)) => {
+            Some(serde_json::from_value(json_value.clone()).map_err(GISSTCliError::JsonParse)?)
+        }
+        (_, _) => unreachable!(),
+    };
+
+    match creator_from_json {
+        Some(creator) => {
+            let mut conn = db.acquire().await?;
+            Creator::insert(&mut conn, creator).await?;
+            Ok(())
+        }
+        None => Err(GISSTCliError::CreateCreator(
+            "Please provide JSON to parse for creating a creator record.".to_string(),
         )),
     }
 }
