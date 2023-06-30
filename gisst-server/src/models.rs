@@ -10,6 +10,7 @@ use sqlx::postgres::{
 use time::OffsetDateTime;
 
 use uuid::Uuid;
+use crate::model_enums::Framework;
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
@@ -102,8 +103,9 @@ pub struct Creator {
 pub struct Environment {
     pub environment_id: Uuid,
     pub environment_name: String,
-    pub core_name: String,
-    pub core_version: String,
+    pub environment_framework: Framework,
+    pub environment_core_name: String,
+    pub environment_core_version: String,
     pub environment_derived_from: Option<Uuid>,
     pub environment_config: Option<sqlx::types::JsonValue>,
     pub created_on: Option<OffsetDateTime>,
@@ -126,7 +128,6 @@ pub struct Instance {
     pub instance_id: Uuid,
     pub work_id: Uuid,
     pub environment_id: Uuid,
-    pub instance_framework: String,
     pub instance_config: Option<sqlx::types::JsonValue>,
     pub created_on: Option<OffsetDateTime>,
 }
@@ -311,7 +312,6 @@ impl DBModel for Instance {
             ("instance_id".to_string(), "Uuid".to_string()),
             ("environment_id".to_string(), "Uuid".to_string()),
             ("work_id".to_string(), "Uuid".to_string()),
-            ("instance_framework".to_string(), "String".to_string()),
             ("instance_config".to_string(), "Json".to_string()),
             ("created_on".to_string(), "OffsetDateTime".to_string()),
         ]
@@ -322,7 +322,6 @@ impl DBModel for Instance {
             Some(self.instance_id.to_string()),
             Some(self.environment_id.to_string()),
             Some(self.work_id.to_string()),
-            Some(self.instance_framework.to_string()),
             unwrap_to_option_string(&self.instance_config),
             unwrap_to_option_string(&self.created_on),
         ]
@@ -331,7 +330,7 @@ impl DBModel for Instance {
     async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT instance_id, environment_id, work_id, instance_framework, instance_config, created_on
+            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on
             FROM instance WHERE instance_id = $1
             "#,
             id
@@ -343,7 +342,7 @@ impl DBModel for Instance {
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT instance_id, environment_id, work_id, instance_framework, instance_config, created_on
+            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on
             FROM instance
             ORDER BY created_on DESC
             LIMIT $1
@@ -360,16 +359,14 @@ impl DBModel for Instance {
             instance_id,
             environment_id,
             work_id,
-            instance_framework,
             instance_config,
             created_on
             )
-            VALUES($1, $2, $3, $4, $5, $6)
-            RETURNING instance_id, environment_id, work_id, instance_framework, instance_config, created_on"#,
+            VALUES($1, $2, $3, $4, $5)
+            RETURNING instance_id, environment_id, work_id, instance_config, created_on"#,
             model.instance_id,
             model.environment_id,
             model.work_id,
-            model.instance_framework,
             model.instance_config,
             model.created_on
         )
@@ -394,13 +391,12 @@ impl Instance {
         sqlx::query_as!(
             Instance,
             r#"UPDATE instance SET
-            (environment_id, work_id, instance_framework, instance_config, created_on) =
-            ($1, $2, $3, $4, $5)
-            WHERE instance_id = $6
-            RETURNING instance_id, environment_id, work_id, instance_framework, instance_config, created_on"#,
+            (environment_id, work_id, instance_config, created_on) =
+            ($1, $2, $3, $4)
+            WHERE instance_id = $5
+            RETURNING instance_id, environment_id, work_id, instance_config, created_on"#,
             instance.environment_id,
             instance.work_id,
-            instance.instance_framework,
             instance.instance_config,
             instance.created_on,
             instance.instance_id,
@@ -416,7 +412,7 @@ impl Instance {
     ) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT instance_id, environment_id, work_id, instance_framework, instance_config, created_on
+            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on
             FROM instance
             WHERE work_id = $1
             "#,
@@ -635,8 +631,9 @@ impl DBModel for Environment {
         vec![
             ("environment_id".to_string(), "Uuid".to_string()),
             ("environment_name".to_string(), "String".to_string()),
-            ("core_name".to_string(), "String".to_string()),
-            ("core_version".to_string(), "String".to_string()),
+            ("environment_framework".to_string(), "String".to_string()),
+            ("environment_core_name".to_string(), "String".to_string()),
+            ("environment_core_version".to_string(), "String".to_string()),
             ("environment_derive_from".to_string(), "Uuid".to_string()),
             ("environment_config".to_string(), "Json".to_string()),
             ("created_on".to_string(), "OffsetDateTime".to_string()),
@@ -647,8 +644,9 @@ impl DBModel for Environment {
         vec![
             Some(self.environment_id.to_string()),
             Some(self.environment_name.to_string()),
-            Some(self.core_name.to_string()),
-            Some(self.core_version.to_string()),
+            Some(self.environment_framework.to_string()),
+            Some(self.environment_core_name.to_string()),
+            Some(self.environment_core_version.to_string()),
             unwrap_to_option_string(&self.environment_derived_from),
             unwrap_to_option_string(&self.environment_config),
             unwrap_to_option_string(&self.created_on),
@@ -658,7 +656,7 @@ impl DBModel for Environment {
     async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT environment_id, environment_name, core_name, core_version, environment_derived_from, environment_config, created_on
+            r#"SELECT environment_id, environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on
             FROM environment
             WHERE environment_id = $1"#,
             id
@@ -670,7 +668,7 @@ impl DBModel for Environment {
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT environment_id, environment_name, core_name, core_version, environment_derived_from, environment_config, created_on
+            r#"SELECT environment_id, environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on
             FROM environment
             ORDER BY created_on DESC LIMIT $1"#,
             limit
@@ -682,14 +680,15 @@ impl DBModel for Environment {
     async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, NewRecordError> {
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO environment (environment_id, environment_name, core_name, core_version, environment_derived_from, environment_config, created_on)
-            VALUES($1, $2, $3, $4, $5, $6, $7)
-            RETURNING environment_id, environment_name, core_name, core_version, environment_derived_from, environment_config, created_on
+            r#"INSERT INTO environment (environment_id, environment_name, environment_framework, environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on)
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING environment_id, environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on
             "#,
             model.environment_id,
             model.environment_name,
-            model.core_name,
-            model.core_version,
+            model.environment_framework as _,
+            model.environment_core_name,
+            model.environment_core_version,
             model.environment_derived_from,
             model.environment_config,
             model.created_on
@@ -713,18 +712,20 @@ impl Environment {
             r#"INSERT INTO environment(
             environment_id,
             environment_name,
-            core_name,
-            core_version,
+            environment_framework,
+            environment_core_name,
+            environment_core_version,
             environment_derived_from,
             environment_config,
             created_on
             )
-            VALUES($1, $2, $3, $4, $5, $6, $7)
-            RETURNING environment_id, environment_name, core_name, core_version, environment_derived_from, environment_config, created_on"#,
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING environment_id, environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on"#,
             env.environment_id,
             env.environment_name,
-            env.core_name,
-            env.core_version,
+            env.environment_framework as _,
+            env.environment_core_name,
+            env.environment_core_version,
             env.environment_derived_from,
             env.environment_config,
             env.created_on
@@ -741,13 +742,14 @@ impl Environment {
         sqlx::query_as!(
             Environment,
             r#"UPDATE environment SET
-            (environment_name, core_name, core_version, environment_derived_from, environment_config, created_on) =
-            ($1, $2, $3, $4, $5, $6)
-            WHERE environment_id = $7
-            RETURNING environment_id, environment_name, core_name, core_version, environment_derived_from, environment_config, created_on"#,
+            (environment_name, environment_framework, environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on) =
+            ($1, $2, $3, $4, $5, $6, $7)
+            WHERE environment_id = $8
+            RETURNING environment_id, environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on"#,
             env.environment_name,
-            env.core_name,
-            env.core_version,
+            env.environment_framework as _,
+            env.environment_core_name,
+            env.environment_core_version,
             env.environment_derived_from,
             env.environment_config,
             env.created_on,
@@ -1567,42 +1569,6 @@ impl Work {
             .await
     }
 
-}
-
-enum Framework {
-    RetroArch,
-    V86,
-}
-
-impl TryFrom<String> for Framework {
-    type Error = &'static str;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match &*value {
-            "retroarch" => Ok(Framework::RetroArch),
-            "v86" => Ok(Framework::V86),
-            _ => Err("Attempting to convert Framework that does not exist."),
-        }
-    }
-}
-
-pub enum Platform {
-    NES,
-    SNES,
-    DOS,
-}
-
-impl TryFrom<String> for Platform {
-    type Error = &'static str;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match &*value {
-            "Microsoft Disk Operating System" => Ok(Platform::DOS),
-            "Nintendo Entertainment System" => Ok(Platform::NES),
-            "Super Nintendo Entertainment System" => Ok(Platform::SNES),
-            _ => Err("Attempting to convert Platform that does not exist"),
-        }
-    }
 }
 
 fn unwrap_to_option_string<T: ToString>(o: &Option<T>) -> Option<String> {
