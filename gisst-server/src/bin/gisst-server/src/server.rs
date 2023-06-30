@@ -87,6 +87,7 @@ struct PlayerTemplateInfo {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(tag = "type", content = "data", rename_all = "lowercase")]
 enum PlayerStartTemplateInfo {
     Cold,
     State(State),
