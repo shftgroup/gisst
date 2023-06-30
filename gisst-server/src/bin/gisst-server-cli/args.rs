@@ -81,66 +81,31 @@ pub enum BaseSubcommand<
 #[derive(Debug, Subcommand)]
 pub enum RecordType {
     /// Manage object records and files
-    Object(
-        GISSTCommand<
-            BaseSubcommand<CreateObject, UpdateObject, DeleteRecord, ExportObject>,
-        >,
-    ),
+    Object(GISSTCommand<BaseSubcommand<CreateObject, UpdateObject, DeleteRecord, ExportObject>>),
     /// Manage image records and files
-    Image(
-        GISSTCommand<
-            BaseSubcommand<CreateImage, UpdateImage, DeleteRecord, ExportImage>,
-        >,
-    ),
+    Image(GISSTCommand<BaseSubcommand<CreateImage, UpdateImage, DeleteRecord, ExportImage>>),
     /// Manage instance records
     Instance(
-        GISSTCommand<
-            BaseSubcommand<
-                CreateInstance,
-                UpdateInstance,
-                DeleteRecord,
-                ExportInstance,
-            >,
-        >,
+        GISSTCommand<BaseSubcommand<CreateInstance, UpdateInstance, DeleteRecord, ExportInstance>>,
     ),
     /// Manage work records
     Work(GISSTCommand<BaseSubcommand<CreateWork, UpdateWork, DeleteRecord, ExportWork>>),
     /// Manage creator records
     Creator(
-        GISSTCommand<
-            BaseSubcommand<
-                CreateCreator,
-                UpdateCreator,
-                DeleteRecord,
-                ExportCreator,
-            >,
-        >,
+        GISSTCommand<BaseSubcommand<CreateCreator, UpdateCreator, DeleteRecord, ExportCreator>>,
     ),
     /// Manage environment records
     Environment(
         GISSTCommand<
-            BaseSubcommand<
-                CreateEnvironment,
-                UpdateEnvironment,
-                DeleteRecord,
-                ExportEnvironment,
-            >,
+            BaseSubcommand<CreateEnvironment, UpdateEnvironment, DeleteRecord, ExportEnvironment>,
         >,
     ),
     /// Manage save records
     Save(GISSTCommand<BaseSubcommand<CreateSave, UpdateSave, DeleteRecord, ExportSave>>),
     /// Manage state records
-    State(
-        GISSTCommand<
-            BaseSubcommand<CreateState, UpdateState, DeleteRecord, ExportState>,
-        >,
-    ),
+    State(GISSTCommand<BaseSubcommand<CreateState, UpdateState, DeleteRecord, ExportState>>),
     /// Manage replay records
-    Replay(
-        GISSTCommand<
-            BaseSubcommand<CreateReplay, UpdateReplay, DeleteRecord, ExportReplay>,
-        >,
-    ),
+    Replay(GISSTCommand<BaseSubcommand<CreateReplay, UpdateReplay, DeleteRecord, ExportReplay>>),
 }
 
 #[derive(Debug, Args)]
@@ -200,7 +165,6 @@ pub struct UpdateObject {
     #[arg(long = "json-file", group = "json_input")]
     pub json_file: String,
 }
-
 
 #[derive(Debug, Args)]
 pub struct ExportObject {}
@@ -385,7 +349,6 @@ pub struct CreateReplay {
 
     #[arg(long = "created-on")]
     pub created_on: Option<String>,
-
 }
 #[derive(Debug, Args)]
 pub struct UpdateReplay {}
@@ -396,7 +359,7 @@ pub struct ExportReplay {}
 pub struct CreateCreator {
     /// Provide a JSON string to create work
     #[arg(long = "json-string")]
-    pub json_string: Option<serde_json::Value>,
+    pub json_string: Option<String>,
 
     /// Provide a JSON file to create work
     #[arg(long = "json-file")]
