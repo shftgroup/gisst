@@ -22,6 +22,6 @@ window.onload = function() {
     // v86.init(content_folder, config_file.filename, entryState, movie);
   } else {
     (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-ra.png";
-    ra.init(config.environment.core_name, config.manifest);
+    ra.init(config.environment.core_name, config.start, config.manifest);
   }
 };
