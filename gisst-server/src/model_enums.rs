@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase", type_name = "object_role")]
+#[sqlx(rename_all = "lowercase", type_name = "environment_framework")]
 #[serde(rename_all = "lowercase")]
 pub enum Framework {
     RetroArch,
@@ -31,7 +31,7 @@ impl fmt::Display for Framework {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase", type_name = "object_role")]
+#[sqlx(rename_all = "lowercase", type_name = "platform")]
 #[serde(rename_all = "lowercase")]
 pub enum Platform {
     NES,
