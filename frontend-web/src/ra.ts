@@ -23,27 +23,54 @@ export interface ObjectLink {
   object_id:string,
 }
 
-export function init(core:string, manifest:ObjectLink[]) {
+export interface ColdStart {
+  type:string
+}
+
+export interface StartStateData {
+  is_checkpoint:boolean,
+  state_description:string,
+  state_filename:string,
+  state_hash:string,
+  state_id:string,
+  state_path:string
+}
+
+export interface StateStart {
+  type:string,
+  data:StartStateData
+}
+
+export interface StartReplayData {
+  replay_filename:string,
+  replay_hash:string,
+  replay_id:string,
+  replay_path:string
+}
+
+export interface ReplayStart {
+  type:string,
+  data:StartReplayData
+}
+
+export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
   let content = manifest.find((o) => o.object_role=="content")!;
   let content_file = content.object_filename!;
   let dash_point = content_file.indexOf("-");
   let content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
-  
-  // TODO implement based on other inputs, add a parameter to take the whole config instead of the manifest
-  let entryState = false;
-  let movie = false;
+  const entryState = start.type == "state";
+  const movie = start.type == "replay";
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
   }
   if (movie) {
     retro_args.push("-P");
-    retro_args.push(state_dir+"/"+content_base+".replay0");
+    retro_args.push(state_dir+"/"+content_base+".replay1");
   } else {
     retro_args.push("-R");
-    retro_args.push(state_dir+"/"+content_base+".replay0");
+    retro_args.push(state_dir+"/"+content_base+".replay1");
   }
-  // END TODO
 
   retro_args.push("--appendconfig");
   retro_args.push("/home/web_user/content/retroarch.cfg");
@@ -55,20 +82,25 @@ export function init(core:string, manifest:ObjectLink[]) {
       fetchfs.mkdirp("/home/web_user/content");
 
       let proms = [];
+      
       proms.push(fetchfs.registerFetchFS(("/assets/frontend/bundle/.index-xhr"), "/assets/frontend/bundle", "/home/web_user/retroarch/bundle", true));
 
       for(let file of manifest) {
         let file_prom = fetchfs.fetchFile("/storage/"+file.object_dest_path+"/"+file.object_hash+"-"+file.object_filename,"/home/web_user/content/"+file.object_source_path,true);
         proms.push(file_prom);
       }
-      // // TODO
-      // if (entryState) {
-      //   xfs_content_files["entry_state"] = null;
-      // }
-      // if (movie) {
-      //   xfs_content_files["replay.replay"] = null;
-      // }
-      // // END TODO
+      if (entryState) {
+        // Cast: This one is definitely a statestart because the type is state
+        let data = (start as StateStart).data;
+        console.log(data, "/storage/"+data.state_path+"/"+data.state_hash+"-"+data.state_filename,"/home/web_user/content/entry_state");
+        proms.push(fetchfs.fetchFile("/storage/"+data.state_path+"/"+data.state_hash+"-"+data.state_filename,"/home/web_user/content/entry_state",false));
+      }
+      if (movie) {
+        // Cast: This one is definitely a replaystart because the type is state
+        let data = (start as ReplayStart).data;
+        console.log(data, "/storage/"+data.replay_path+"/"+data.replay_hash+"-"+data.replay_filename,"/home/web_user/content/replay.replay1");
+        proms.push(fetchfs.fetchFile("/storage/"+data.replay_path+"/"+data.replay_hash+"-"+data.replay_filename,"/home/web_user/content/replay.replay1",false));
+      }
       proms.push(fetchfs.registerFetchFS({"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/", false));
       fetchfs.mkdirp(saves_dir);
       fetchfs.mkdirp(state_dir);
@@ -87,15 +119,16 @@ export function init(core:string, manifest:ObjectLink[]) {
           }
         }
         if (movie) {
-          copyFile("/home/web_user/content/replay.replay0",
-            state_dir + "/" + content_base + ".replay0");
+          console.log("Put movie in",state_dir + "/" + content_base + ".replay1");
+          copyFile("/home/web_user/content/replay.replay1",
+            state_dir + "/" + content_base + ".replay1");
           // if(file_exists("/home/web_user/content/entry_state.png")) {
           //   copyFile("/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
           // } else {
           //   fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
           // }
         } else {
-          const f = FS.open(state_dir+"/"+content_base+".replay0", 'w');
+          const f = FS.open(state_dir+"/"+content_base+".replay1", 'w');
           const te = new TextEncoder();
           FS.write(f, te.encode("\0"), 0, 1);
           FS.close(f);
@@ -116,7 +149,7 @@ function retroReady(): void {
     <HTMLDivElement>document.getElementById("ui")!,
       {
         "load_state": (num: number) => load_state_slot(num),
-        "load_checkpoint": (_num: number) => alert("nyi"),
+        "load_checkpoint": (num: number) => load_state_slot(num),
         "play_replay": (num: number) => play_replay_slot(num),
         "download_file": (category: "state" | "save" | "replay", file_name: string) => {
           let path = "/home/web_user/retroarch/userdata";
@@ -277,6 +310,7 @@ function checkChangedStatesAndSaves() {
       if(!(file_exists(state_dir+"/"+png_file) && file_exists(state_dir+"/"+state_file))) {
         continue;
       }
+      console.log("check state file",state);
       const replay = ra_util.replay_of_state((FS.readFile(state_dir+"/"+state_file)));
       let known_replay = false;
       if(replay) {
