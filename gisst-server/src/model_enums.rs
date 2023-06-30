@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{str::FromStr};
+use std::{fmt, str::FromStr};
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(rename_all = "lowercase", type_name = "object_role")]
@@ -17,6 +17,15 @@ impl FromStr for Framework {
             "retroarch" => Ok(Framework::RetroArch),
             "v86" => Ok(Framework::V86),
             _ => Err("Attempting to convert Framework that does not exist."),
+        }
+    }
+}
+
+impl fmt::Display for Framework {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Framework::RetroArch => write!(f, "retroarch"),
+            Framework::V86 => write!(f, "v86")
         }
     }
 }
