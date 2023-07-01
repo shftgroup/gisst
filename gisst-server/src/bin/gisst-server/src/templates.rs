@@ -47,9 +47,9 @@ pub const PLAYER_TEMPLATE: &str = r#"
     <title>GISST Player</title>
     <script type="module" crossorigin src="/assets/index.js"></script>
     <link rel="stylesheet" href="/assets/index.css">
-    {% if player_params.instance.instance_framework == "retroarch" %}
+    {% if player_params.environment.environment_framework == "retroarch" %}
     <script src="/ra/libretro_adapter.js"></script>
-    {% elif player_params.instance.instance_framework == "v86" %}
+    {% elif player_params.environment.environment_framework == "v86" %}
     <script src="/v86/libv86.js"></script>
     {% endif %}
     <script id="config" type="application/json">
