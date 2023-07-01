@@ -1,5 +1,6 @@
 -- Add up migration script here
 CREATE TYPE object_role AS ENUM ('content', 'dependency', 'config');
+CREATE TYPE environment_framework AS ENUM ('retroarch', 'v86');
 
 CREATE TABLE IF NOT EXISTS creator (
     creator_id        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -11,8 +12,9 @@ CREATE TABLE IF NOT EXISTS creator (
 CREATE TABLE IF NOT EXISTS environment (
     environment_id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     environment_name                text NOT NULL,
-    core_name                       text NOT NULL,
-    core_version                    text NOT NULL,
+    environment_framework           environment_framework NOT NULL,
+    environment_core_name           text NOT NULL,
+    environment_core_version        text NOT NULL,
     environment_derived_from        uuid,
     environment_config              jsonb,
     created_on                      timestamptz DEFAULT current_timestamp
@@ -29,7 +31,6 @@ CREATE TABLE IF NOT EXISTS instance (
     instance_id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     environment_id          uuid NOT NULL,
     work_id                 uuid NOT NULL,
-    instance_framework      text NOT NULL,
     instance_config         jsonb,
     created_on              timestamptz DEFAULT current_timestamp
 );
