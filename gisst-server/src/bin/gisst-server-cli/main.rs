@@ -372,7 +372,6 @@ async fn create_environment(
     match (environment_from_json, environment_config_json) {
         (Some(environment), environment_config) => {
             let mut conn = db.acquire().await?;
-            println!("{:?}", environment);
             Environment::insert(
                 &mut conn,
                 Environment {
