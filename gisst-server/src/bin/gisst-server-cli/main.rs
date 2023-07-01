@@ -2,13 +2,16 @@ mod args;
 
 use anyhow::Result;
 use args::{
-    BaseSubcommand, CreateEnvironment, CreateImage, CreateInstance, CreateObject, CreateReplay,
-    CreateSave, CreateState, CreateWork, CreateCreator, DeleteRecord,
-    GISSTCli, GISSTCliError, RecordType,
+    BaseSubcommand, CreateCreator, CreateEnvironment, CreateImage, CreateInstance, CreateObject,
+    CreateReplay, CreateSave, CreateState, CreateWork, DeleteRecord, GISSTCli, GISSTCliError,
+    RecordType,
 };
 use clap::Parser;
 use gisstlib::{
-    models::{DBHashable, DBModel, Environment, Image, Instance, Object, State, Save, Work, Replay, Creator},
+    models::{
+        Creator, DBHashable, DBModel, Environment, Image, Instance, Object, Replay, Save, State,
+        Work,
+    },
     storage::StorageHandler,
 };
 use log::{debug, error, info, warn};
@@ -16,7 +19,7 @@ use sqlx::pool::PoolOptions;
 use sqlx::PgPool;
 use std::path::{Path, PathBuf};
 use std::{fs, fs::read, io};
-use uuid::{Uuid,uuid};
+use uuid::{uuid, Uuid};
 use walkdir::WalkDir;
 
 #[tokio::main]
@@ -42,7 +45,9 @@ async fn main() -> Result<(), GISSTCliError> {
         RecordType::Object(object) => match object.command {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_file_record::<Object>(delete, db, storage_root).await?,
+            BaseSubcommand::Delete(delete) => {
+                delete_file_record::<Object>(delete, db, storage_root).await?
+            }
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Creator(creator) => match creator.command {
@@ -60,7 +65,9 @@ async fn main() -> Result<(), GISSTCliError> {
         RecordType::Image(image) => match image.command {
             BaseSubcommand::Create(create) => create_image(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_file_record::<Image>(delete, db, storage_root).await?,
+            BaseSubcommand::Delete(delete) => {
+                delete_file_record::<Image>(delete, db, storage_root).await?
+            }
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Instance(instance) => match instance.command {
@@ -78,19 +85,25 @@ async fn main() -> Result<(), GISSTCliError> {
         RecordType::State(state) => match state.command {
             BaseSubcommand::Create(create) => create_state(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_file_record::<State>(delete, db, storage_root).await?,
+            BaseSubcommand::Delete(delete) => {
+                delete_file_record::<State>(delete, db, storage_root).await?
+            }
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Save(save) => match save.command {
             BaseSubcommand::Create(create) => create_save(create, db).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_file_record::<Save>(delete, db, storage_root).await?,
+            BaseSubcommand::Delete(delete) => {
+                delete_file_record::<Save>(delete, db, storage_root).await?
+            }
             BaseSubcommand::Export(_export) => (),
         },
         RecordType::Replay(replay) => match replay.command {
             BaseSubcommand::Create(create) => create_replay(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_file_record::<Replay>(delete, db, storage_root).await?,
+            BaseSubcommand::Delete(delete) => {
+                delete_file_record::<Replay>(delete, db, storage_root).await?
+            }
             BaseSubcommand::Export(_export) => (),
         },
     }
@@ -232,7 +245,6 @@ where
     info!("Deleted record with uuid {}", d.id);
     Ok(())
 }
-
 
 async fn delete_file_record<T: DBModel + DBHashable>(
     d: DeleteRecord,
@@ -397,13 +409,13 @@ async fn create_creator(
     }: CreateCreator,
     db: PgPool,
 ) -> Result<(), GISSTCliError> {
-    let creator_from_json: Option<Creator> = match (&json_file, &json_string) {
+    let creator_from_json: Option<Creator> = match (json_file, json_string) {
         (Some(file_path), None) => {
             let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::Io)?;
             Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?)
         }
         (None, Some(json_value)) => {
-            Some(serde_json::from_value(json_value.clone()).map_err(GISSTCliError::JsonParse)?)
+            Some(serde_json::from_str(&json_value).map_err(GISSTCliError::JsonParse)?)
         }
         (_, _) => unreachable!(),
     };
@@ -450,7 +462,6 @@ async fn create_work(
         )),
     }
 }
-
 
 async fn create_image(
     CreateImage {
@@ -559,14 +570,14 @@ async fn create_image(
 }
 
 async fn create_replay(
-    CreateReplay{
+    CreateReplay {
         link,
         depth,
         force_uuid,
         file,
         creator_id,
         replay_forked_from,
-        created_on
+        created_on,
     }: CreateReplay,
     db: PgPool,
     storage_path: String,
@@ -581,7 +592,7 @@ async fn create_replay(
 
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
-    let mut replay = Replay{
+    let mut replay = Replay {
         replay_id: force_uuid.unwrap_or_else(|| Uuid::new_v4()),
         instance_id: link,
         creator_id: creator_id.unwrap_or_else(|| uuid!("00000000-0000-0000-0000-000000000000")),
@@ -594,8 +605,8 @@ async fn create_replay(
                 &s,
                 &time::format_description::well_known::iso8601::Iso8601::DEFAULT,
             )
-                .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
-                .ok()
+            .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
+            .ok()
         }),
     };
     if let Some(found_hash) = Replay::get_by_hash(&mut conn, &replay.replay_hash).await? {
@@ -622,7 +633,7 @@ async fn create_replay(
             );
             let replay_uuid = replay.replay_id;
             replay.replay_path = file_info.dest_path;
-            if let Err(e) = Replay::insert(&mut conn, replay).await {
+            if let Err(e) = Replay::insert(&mut conn, dbg!(replay)).await {
                 s_handler
                     .delete_file_with_uuid(replay_uuid, &file_info.dest_filename)
                     .await?;

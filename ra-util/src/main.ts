@@ -5,6 +5,7 @@ enum RASTATE_BLOCK {
   END="END "
 }
 const RASTATE_MAGIC="RASTATE";
+const RZIP_MAGIC="#RZIPv1#";
 
 export interface ReplayInfo {
   id:string;
