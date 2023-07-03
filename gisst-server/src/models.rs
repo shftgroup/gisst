@@ -3,14 +3,11 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 use async_trait::async_trait;
 use std::{fmt, str::FromStr};
 
-use sqlx::postgres::{
-    PgQueryResult,
-    PgConnection,
-};
+use sqlx::postgres::{PgConnection, PgQueryResult};
 use time::OffsetDateTime;
 
-use uuid::Uuid;
 use crate::model_enums::Framework;
+use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
@@ -81,7 +78,6 @@ pub trait DBModel: Sized {
     async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError>;
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult>;
 }
-
 
 #[async_trait]
 pub trait DBHashable: Sized {
@@ -335,8 +331,8 @@ impl DBModel for Instance {
             "#,
             id
         )
-            .fetch_optional(conn)
-            .await
+        .fetch_optional(conn)
+        .await
     }
 
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
@@ -349,8 +345,8 @@ impl DBModel for Instance {
             "#,
             limit
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
     async fn insert(conn: &mut PgConnection, model: Instance) -> Result<Self, NewRecordError> {
         sqlx::query_as!(
@@ -370,9 +366,9 @@ impl DBModel for Instance {
             model.instance_config,
             model.created_on
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| NewRecordError::Instance)
+        .fetch_one(conn)
+        .await
+        .map_err(|_| NewRecordError::Instance)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -381,7 +377,6 @@ impl DBModel for Instance {
             .await
     }
 }
-
 
 impl Instance {
     pub async fn update(
@@ -401,9 +396,9 @@ impl Instance {
             instance.created_on,
             instance.instance_id,
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| UpdateRecordError::Instance)
+        .fetch_one(conn)
+        .await
+        .map_err(|_| UpdateRecordError::Instance)
     }
 
     pub async fn get_all_for_work_id(
@@ -418,8 +413,8 @@ impl Instance {
             "#,
             work_id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 }
 
@@ -562,7 +557,6 @@ impl DBHashable for Image {
         &self.image_filename
     }
 }
-
 
 impl Image {
     pub async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, UpdateRecordError> {
@@ -881,7 +875,6 @@ impl DBModel for Object {
     }
 }
 
-
 impl Object {
     pub async fn update(
         conn: &mut PgConnection,
@@ -1068,9 +1061,12 @@ impl DBModel for Replay {
             model.replay_path,
             model.created_on,
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| NewRecordError::Replay)
+        .fetch_one(conn)
+        .await
+        .map_err(|e| {
+            dbg!(e);
+            NewRecordError::Replay
+        })
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1083,9 +1079,9 @@ impl DBModel for Replay {
 #[async_trait]
 impl DBHashable for Replay {
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
-       sqlx::query_as!(
-           Self,
-           r#"SELECT
+        sqlx::query_as!(
+            Self,
+            r#"SELECT
            replay_id,
            instance_id,
            creator_id,
@@ -1095,15 +1091,21 @@ impl DBHashable for Replay {
            replay_path,
            created_on
            FROM replay WHERE replay_hash = $1"#,
-           hash
-       )
-           .fetch_optional(conn)
-           .await
+            hash
+        )
+        .fetch_optional(conn)
+        .await
     }
 
-    fn dest_file_path(&self) -> &str { &self.replay_path }
-    fn hash(&self) -> &str { &self.replay_hash }
-    fn filename(&self) -> &str { &self.replay_filename }
+    fn dest_file_path(&self) -> &str {
+        &self.replay_path
+    }
+    fn hash(&self) -> &str {
+        &self.replay_hash
+    }
+    fn filename(&self) -> &str {
+        &self.replay_filename
+    }
 }
 
 #[async_trait]
@@ -1215,9 +1217,9 @@ impl DBModel for Save {
             model.creator_id,
             model.created_on,
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| NewRecordError::Save)
+        .fetch_one(conn)
+        .await
+        .map_err(|_| NewRecordError::Save)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1246,15 +1248,21 @@ impl DBHashable for Save {
             "#,
             hash
         )
-            .fetch_optional(conn)
-            .await
+        .fetch_optional(conn)
+        .await
     }
 
-    fn dest_file_path(&self) -> &str { &self.save_path }
+    fn dest_file_path(&self) -> &str {
+        &self.save_path
+    }
 
-    fn hash(&self) -> &str { &self.save_hash }
+    fn hash(&self) -> &str {
+        &self.save_hash
+    }
 
-    fn filename(&self) -> &str { &self.save_filename }
+    fn filename(&self) -> &str {
+        &self.save_filename
+    }
 }
 
 #[async_trait]
@@ -1513,9 +1521,9 @@ impl DBModel for Work {
             work.work_platform,
             work.created_on,
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| NewRecordError::Work)
+        .fetch_one(conn)
+        .await
+        .map_err(|_| NewRecordError::Work)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1526,7 +1534,6 @@ impl DBModel for Work {
 }
 
 impl Work {
-
     pub async fn update(conn: &mut PgConnection, work: Work) -> Result<Self, UpdateRecordError> {
         sqlx::query_as!(
             Work,
@@ -1568,7 +1575,6 @@ impl Work {
             .fetch_all(conn)
             .await
     }
-
 }
 
 fn unwrap_to_option_string<T: ToString>(o: &Option<T>) -> Option<String> {

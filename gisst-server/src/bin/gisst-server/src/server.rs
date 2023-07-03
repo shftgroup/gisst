@@ -77,7 +77,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     Ok(())
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct PlayerTemplateInfo {
     instance: Instance,
     environment: Environment,
@@ -86,7 +86,7 @@ struct PlayerTemplateInfo {
     manifest: Vec<models::ObjectLink>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(tag = "type", content = "data", rename_all = "lowercase")]
 enum PlayerStartTemplateInfo {
     Cold,
@@ -102,9 +102,11 @@ struct PlayerParams {
 
 async fn get_player(
     app_state: Extension<Arc<ServerState>>,
+    headers: axum::http::HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
-) -> Result<Html<String>, GISSTError> {
+) -> Result<axum::response::Response, GISSTError> {
+    use axum::response::IntoResponse;
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
         .await?
@@ -112,7 +114,7 @@ async fn get_player(
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
         .ok_or(GISSTError::Generic)?;
-    let start = match (params.state, params.replay) {
+    let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => PlayerStartTemplateInfo::State(
             State::get_by_id(&mut conn, id)
                 .await?
@@ -127,17 +129,41 @@ async fn get_player(
         (_, _) => return Err(GISSTError::Generic),
     };
     let manifest =
-        models::ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
-    Ok(Html(render!(
-        PLAYER_TEMPLATE,
-        player_params => PlayerTemplateInfo {
-            environment,
-            instance,
-            save: None,
-            start,
-            manifest
-        }
-    )))
+        dbg!(models::ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
+    let accept = dbg!(headers
+        .get("Accept")
+        .map(|hv| hv.to_str())
+        .and_then(|hv| hv.ok()));
+    Ok((
+        [("Access-Control-Allow-Origin", "*")],
+        if accept.is_none() || accept.is_some_and(|hv| hv.contains("text/html")) {
+            Html(render!(
+                PLAYER_TEMPLATE,
+                player_params => PlayerTemplateInfo {
+                    environment,
+                    instance,
+                    save: None,
+                    start,
+                    manifest
+                }
+            ))
+            .into_response()
+        } else if accept.is_some_and(|hv| hv.contains("application/json")) {
+            println!("send json response");
+            axum::Json(PlayerTemplateInfo {
+                environment,
+                instance,
+                save: None,
+                start,
+                manifest,
+            })
+            .into_response()
+        } else {
+            println!("send error response");
+            Err(GISSTError::Generic)?
+        },
+    )
+        .into_response())
 }
 
 // #[derive(Serialize)]
