@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, IpcMainEvent } from 'electron';
+import { app, BrowserWindow, ipcMain, IpcMainEvent, net } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as proc from 'child_process';
@@ -9,6 +9,45 @@ import * as ra_util from 'ra-util';
 // whether you're running in development or production).
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
+
+export interface ObjectLink {
+  object_role:string,
+  object_dest_path:string,
+  object_filename:string,
+  object_source_path:string,
+  object_hash:string,
+  object_id:string,
+}
+
+export interface ColdStart {
+  type:string
+}
+
+export interface StartStateData {
+  is_checkpoint:boolean,
+  state_description:string,
+  state_filename:string,
+  state_hash:string,
+  state_id:string,
+  state_path:string
+}
+
+export interface StateStart {
+  type:string,
+  data:StartStateData
+}
+
+export interface StartReplayData {
+  replay_filename:string,
+  replay_hash:string,
+  replay_id:string,
+  replay_path:string
+}
+
+export interface ReplayStart {
+  type:string,
+  data:StartReplayData
+}
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -31,8 +70,6 @@ const createWindow = (): void => {
   fs.mkdirSync(path.join(config_dir, "remaps"), {recursive:true});
 
   fs.rmSync(content_dir, {recursive:true,force:true});
-  // TODO replace with downloading from a URL in handle_run_retroarch
-  fs.cpSync(path.join(resource_dir,"content"), content_dir, {recursive:true});
 
   let cfg = fs.readFileSync(path.join(resource_dir, 'ra-config-base.cfg'), {encoding:"utf8"});
   cfg = cfg.replace(/\$RESOURCE/g, resource_dir);
@@ -104,14 +141,20 @@ let seenSaves:string[] = [];
 let seenReplays:Record<string,string> = {};
 let seenCheckpoints:string[] = [];
 let seenStates:Record<string, Uint8Array> = {};
-async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string,entryState:boolean,replay:boolean) {
+async function handle_run_retroarch(evt:IpcMainEvent, core:string,start:ColdStart|StateStart|ReplayStart, manifest:ObjectLink[]) {
   seenStates = {};
   seenSaves = [];
   seenReplays = {};
   seenCheckpoints = [];
+  const host = "http://localhost:3000";
+  let content = manifest.find((o) => o.object_role=="content")!;
+  let content_file = content.object_filename!;
+  let dash_point = content_file.indexOf("-");
+  let content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
+  let entryState = start.type == "state";
+  let replay = start.type == "replay";
   console.assert(!(entryState && replay), "It is invalid to have both an entry state and play back a replay");
   clear_current_replay(evt);
-  const content_base = content.substring(0, content.lastIndexOf("."));
   const retro_args = ["-v", "-c", path.join(cache_dir, "retroarch.cfg"), "--appendconfig", path.join(content_dir, "retroarch.cfg"), "-L", core];
   if (entryState) {
     retro_args.push("-e");
@@ -119,13 +162,23 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string
   }
   if (replay) {
     retro_args.push("-P");
-    retro_args.push(path.join(states_dir, content_base+".replay0"));
+    retro_args.push(path.join(states_dir, content_base+".replay1"));
   } else {
     retro_args.push("-R");
-    retro_args.push(path.join(states_dir, content_base+".replay0"));
+    retro_args.push(path.join(states_dir, content_base+".replay1"));
   }
-  retro_args.push(path.join(content_dir, content));
+  retro_args.push(path.join(content_dir, content.object_filename));
   console.log(retro_args);
+
+  fs.rmSync(content_dir, {recursive:true,force:true});
+  fs.mkdirSync(content_dir, {recursive:true});
+  let proms = [];
+  // copy all files from manifest
+  for(let file of manifest) {
+    proms.push(get_storage_file(host, file.object_dest_path, file.object_hash, file.object_filename, path.join(content_dir, file.object_source_path)));
+  }
+  await Promise.all(proms);
+  proms = null;
 
   if(save_listener != null) {
     save_listener.close();
@@ -213,6 +266,9 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string
   });
 
   if (entryState) {
+    // Cast: This one is definitely a statestart because the type is state
+    let data = (start as StateStart).data;
+    await get_storage_file(host, data.state_path, data.state_hash, data.state_filename, path.join(content_dir, "entry_state"));
     fs.cpSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1.entry"));
     fs.cpSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1"));
     if(fs.existsSync(path.join(content_dir, "entry_state.png"))){
@@ -222,9 +278,11 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,content:string
     }
   }
   if (replay) {
-    fs.cpSync(path.join(content_dir, "replay.replay"), path.join(cache_dir, "states", content_base+".replay0"));
+    let data = (start as ReplayStart).data;
+    await get_storage_file(host, data.replay_path, data.replay_hash, data.replay_filename, path.join(content_dir, "replay.replay"));
+    fs.cpSync(path.join(content_dir, "replay.replay"), path.join(cache_dir, "states", content_base+".replay1"));
   } else {
-    let f = fs.openSync(path.join(cache_dir, "states", content_base+".replay0"), 'w');
+    let f = fs.openSync(path.join(cache_dir, "states", content_base+".replay1"), 'w');
     fs.writeSync(f, Buffer.from("\0"), 0, 1);
     fs.closeSync(f);
   }
@@ -389,4 +447,9 @@ function nonnull(obj:any):asserts obj {
   if(obj == null) {
     throw "Must be non-null";
   }
+}
+async function get_storage_file(host:string, storage_base:string, hash:string, filename:string, local_dest:string) {
+  let resp = await net.fetch(host+"/"+storage_base+"/"+hash+"-"+filename,{"mode":"no-cors"});
+  let bytes = await resp.bytes();
+  await fs.writeFile(local_dest, bytes, (err) => console.log(err));
 }

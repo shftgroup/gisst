@@ -19,7 +19,7 @@ window.onload = function() {
     // let movie = false;
     // (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-v86.png";
     // // TODO: get this to work with images
-    // v86.init(content_folder, config_file.filename, entryState, movie);
+    // v86.init(config.environment, config.start, config.manifest);
   } else {
     (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-ra.png";
     ra.init(config.environment.environment_core_name, config.manifest);

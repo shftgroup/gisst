@@ -102,9 +102,11 @@ struct PlayerParams {
 
 async fn get_player(
     app_state: Extension<Arc<ServerState>>,
+    headers: axum::http::HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
-) -> Result<Html<String>, GISSTError> {
+) -> Result<axum::response::Response, GISSTError> {
+    use axum::response::IntoResponse;
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
         .await?
@@ -128,16 +130,36 @@ async fn get_player(
     };
     let manifest =
         models::ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
-    Ok(Html(render!(
-        PLAYER_TEMPLATE,
-        player_params => PlayerTemplateInfo {
+    let accept = dbg!(headers
+        .get("Accept")
+        .map(|hv| hv.to_str())
+        .and_then(|hv| hv.ok()));
+    if accept.is_none() || accept.is_some_and(|hv| hv.contains("text/html")) {
+        Ok(Html(render!(
+            PLAYER_TEMPLATE,
+            player_params => PlayerTemplateInfo {
+                environment,
+                instance,
+                save: None,
+                start,
+                manifest
+            }
+        ))
+        .into_response())
+    } else if accept.is_some_and(|hv| hv.contains("application/json")) {
+        println!("send json response");
+        Ok(axum::Json(PlayerTemplateInfo {
             environment,
             instance,
             save: None,
             start,
-            manifest
-        }
-    )))
+            manifest,
+        })
+        .into_response())
+    } else {
+        println!("send error response");O
+        Err(GISSTError::Generic)
+    }
 }
 
 // #[derive(Serialize)]
