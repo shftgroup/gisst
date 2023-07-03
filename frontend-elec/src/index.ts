@@ -133,16 +133,6 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,start:ColdStar
   retro_args.push(path.join(content_dir, content.object_filename));
   console.log(retro_args);
 
-  fs.rmSync(content_dir, {recursive:true,force:true});
-  fs.mkdirSync(content_dir, {recursive:true});
-  let proms = [];
-  // copy all files from manifest
-  for(let file of manifest) {
-    proms.push(get_storage_file(host, file.object_dest_path, file.object_hash, file.object_filename, path.join(content_dir, file.object_source_path)));
-  }
-  await Promise.all(proms);
-  proms = null;
-
   if(save_listener != null) {
     save_listener.close();
     save_listener = null;
@@ -151,10 +141,21 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,start:ColdStar
     state_listener.close();
     state_listener = null;
   }
+
   fs.rmSync(saves_dir, {recursive:true,force:true});
   fs.rmSync(states_dir, {recursive:true,force:true});
+  fs.rmSync(content_dir, {recursive:true,force:true});
   fs.mkdirSync(saves_dir, {recursive:true});
   fs.mkdirSync(states_dir, {recursive:true});
+  fs.mkdirSync(content_dir, {recursive:true});
+  
+  let proms = [];
+  // copy all files from manifest
+  for(let file of manifest) {
+    proms.push(get_storage_file(host, file.object_dest_path, file.object_hash, file.object_filename, path.join(content_dir, file.object_source_path)));
+  }
+  await Promise.all(proms);
+  proms = null;
 
   save_listener = fs.watch(saves_dir, {"persistent":false}, function(file_evt, name) {
     console.log("saves",file_evt,name);
@@ -232,18 +233,18 @@ async function handle_run_retroarch(evt:IpcMainEvent, core:string,start:ColdStar
     // Cast: This one is definitely a statestart because the type is state
     let data = (start as StateStart).data;
     await get_storage_file(host, data.state_path, data.state_hash, data.state_filename, path.join(content_dir, "entry_state"));
-    fs.cpSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1.entry"));
-    fs.cpSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1"));
+    fs.copyFileSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1.entry"));
+    fs.copyFileSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1"));
     if(fs.existsSync(path.join(content_dir, "entry_state.png"))){
-      fs.cpSync(path.join(content_dir,"entry_state.png"), path.join(cache_dir, "states", content_base+".state1.png"));
+      fs.copyFileSync(path.join(content_dir,"entry_state.png"), path.join(cache_dir, "states", content_base+".state1.png"));
     } else {
-      fs.cpSync(path.join(resource_dir,"init_state.png"), path.join(cache_dir, "states", content_base+".state1.png"));
+      fs.copyFileSync(path.join(resource_dir,"init_state.png"), path.join(cache_dir, "states", content_base+".state1.png"));
     }
   }
   if (replay) {
     let data = (start as ReplayStart).data;
     await get_storage_file(host, data.replay_path, data.replay_hash, data.replay_filename, path.join(content_dir, "replay.replay"));
-    fs.cpSync(path.join(content_dir, "replay.replay"), path.join(cache_dir, "states", content_base+".replay1"));
+    fs.copyFileSync(path.join(content_dir, "replay.replay"), path.join(cache_dir, "states", content_base+".replay1"));
   } else {
     let f = fs.openSync(path.join(cache_dir, "states", content_base+".replay1"), 'w');
     fs.writeSync(f, Buffer.from("\0"), 0, 1);
@@ -378,7 +379,12 @@ function find_checkpoints_inner(evt:IpcMainEvent) {
   for(let state_file in seenStates) {
     if(seenCheckpoints.includes(state_file)) { continue; }
     console.log("Check ",state_file);
-    const replay = ra_util.replay_of_state(new Uint8Array(fs.readFileSync(path.join(states_dir,state_file)).buffer));
+    const buf = fs.readFileSync(path.join(states_dir,state_file)).buffer;
+    if(buf.length < 8) {
+      console.log("State file is too small");
+      continue;
+    }
+    const replay = ra_util.replay_of_state(new Uint8Array(buf));
     console.log("Replay info",replay,"vs",current_replay);
     if(replay && replay.id == current_replay.id) {
       seenCheckpoints.push(state_file);
@@ -412,7 +418,8 @@ function nonnull(obj:any):asserts obj {
   }
 }
 async function get_storage_file(host:string, storage_base:string, hash:string, filename:string, local_dest:string) {
-  let resp = await net.fetch(host+"/"+storage_base+"/"+hash+"-"+filename,{"mode":"no-cors"});
+  let resp = await net.fetch(host+"/storage/"+storage_base+"/"+hash+"-"+filename,{"mode":"no-cors"});
   let bytes = await resp.arrayBuffer();
-  await fs.writeFile(local_dest, new Uint8Array(bytes), (err) => console.log(err));
+  console.log(host,storage_base,hash,filename,resp,local_dest,bytes.byteLength);
+  await fs.writeFileSync(local_dest, new Uint8Array(bytes));
 }

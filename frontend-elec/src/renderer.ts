@@ -90,12 +90,11 @@ api.on_replay_checkpoints_changed(checkpoints_updated);
 
 async function run(content:string, entryState:string, movie:string) {
   ui_state.clear();
-  let data_resp = await fetch("http://localhost:3000/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {mode:"no-cors", headers:[["Accept","application/json"]]});
+  let data_resp = await fetch("http://localhost:3000/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
   console.log(data_resp);
-  let config_data = await data_resp.json();
-  let config = JSON.parse(config_data);
+  let config = await data_resp.json();
   console.log(config);
-  let core_kind = config.instance.instance_framework;
+  let core_kind = config.environment.environment_framework;
   v86.clear();
   if(core_kind == "v86") {
     active_core = "v86";
@@ -104,7 +103,7 @@ async function run(content:string, entryState:string, movie:string) {
     // This one operates entirely within the renderer side of things
     //v86.run(config.environment, config.start, config.manifest);
   } else {
-    active_core = config.environment.core_name;
+    active_core = config.environment.environment_core_name;
     (document.getElementById("v86-controls")!).classList.add("hidden");
     (document.getElementById("v86-container")!).classList.add("hidden");
     api.run_retroarch(active_core, config.start, config.manifest);
