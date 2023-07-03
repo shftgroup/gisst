@@ -31,7 +31,7 @@ import {IpcRendererEvent} from 'electron';
 import {UI} from 'gisst-player';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {saveAs} from './util';
-import {SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo} from './api';
+import {SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo} from './types';
 
 let ui_state:UI;
 let active_core:string|null = null;
