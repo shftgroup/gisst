@@ -1,22 +1,8 @@
 import { ipcRenderer, IpcRendererEvent } from 'electron';
+import {StartStateData, StateStart, StartReplayData, ReplayStart, ColdStart, ObjectLink, SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo} from '../types';
 
-export async function run_retroarch(core:string, content:string, entryState:boolean, movie:boolean) {
-  ipcRenderer.send('gisst:run_retroarch',core,content,entryState,movie);
-}
-
-export interface SavefileInfo {
-  file:string;
-}
-export interface StatefileInfo {
-  file:string;
-  thumbnail:string;
-}
-export interface ReplayfileInfo {
-  file:string;
-}
-export interface ReplayCheckpointInfo {
-  added:[StatefileInfo];
-  delete_old?:boolean;
+export async function run_retroarch(core:string, start:ColdStart|StateStart|ReplayStart, manifest:ObjectLink[]) {
+  ipcRenderer.send('gisst:run_retroarch',core,start,manifest);
 }
 
 export function on_saves_changed(f:(evt:IpcRendererEvent, info:SavefileInfo) => void) {

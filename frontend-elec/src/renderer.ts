@@ -31,7 +31,7 @@ import {IpcRendererEvent} from 'electron';
 import {UI} from 'gisst-player';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {saveAs} from './util';
-import {SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo} from './api';
+import {SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo} from './types';
 
 let ui_state:UI;
 let active_core:string|null = null;
@@ -88,41 +88,47 @@ function checkpoints_updated(evt:IpcRendererEvent, info:ReplayCheckpointInfo) {
 }
 api.on_replay_checkpoints_changed(checkpoints_updated);
 
-async function run(core:string, content:string, entryState:boolean, movie:boolean) {
+async function run(content:string, entryState:string, movie:string) {
   ui_state.clear();
-  active_core = core;
+  let data_resp = await fetch("http://localhost:3000/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
+  console.log(data_resp);
+  let config = await data_resp.json();
+  console.log(config);
+  let core_kind = config.environment.environment_framework;
   v86.clear();
-  if(core == "v86") {
+  if(core_kind == "v86") {
+    active_core = "v86";
     (document.getElementById("v86-container")!).classList.remove("hidden");
     (document.getElementById("v86-controls")!).classList.remove("hidden");
     // This one operates entirely within the renderer side of things
-    v86.run(content, entryState, movie);
+    //v86.run(config.environment, config.start, config.manifest);
   } else {
+    active_core = config.environment.environment_core_name;
     (document.getElementById("v86-controls")!).classList.add("hidden");
     (document.getElementById("v86-container")!).classList.add("hidden");
-    api.run_retroarch(core, content, entryState, movie);
+    api.run_retroarch(active_core, config.start, config.manifest);
   }
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  document
-    .querySelector("#run-v86-cold-button")
-    ?.addEventListener("click", () => run("v86", "freedos722-root.json", false, false));
-  document
-    .querySelector("#run-v86-entry-button")
-    ?.addEventListener("click", () => run("v86", "freedos722-root.json", true, false));
-  document
-    .querySelector("#run-v86-movie-button")
-    ?.addEventListener("click", () => run("v86", "freedos722-root.json", false, true));
+  // document
+  //   .querySelector("#run-v86-cold-button")
+  //   ?.addEventListener("click", () => run("freedos722-root.json", false, false));
+  // document
+  //   .querySelector("#run-v86-entry-button")
+  //   ?.addEventListener("click", () => run("freedos722-root.json", true, false));
+  // document
+  //   .querySelector("#run-v86-movie-button")
+  //   ?.addEventListener("click", () => run("freedos722-root.json", false, true));
   document
     .querySelector("#run-cold-button")
-    ?.addEventListener("click", () => run("fceumm", "bfight.nes", false, false));
+    ?.addEventListener("click", () => run("00000000000000000000000000000000", null, null));
   document
     .querySelector("#run-entry-button")
-    ?.addEventListener("click", () => run("fceumm", "bfight.nes", true, false));
+    ?.addEventListener("click", () => run("00000000000000000000000000000000", "00000000000000000000000000000000", null));
   document
     .querySelector("#run-movie-button")
-    ?.addEventListener("click", () => run("fceumm", "bfight.nes", false, true));
+    ?.addEventListener("click", () => run("00000000000000000000000000000000", null, "00000000000000000000000000000000"));
   document.getElementById("v86_save")?.addEventListener("click",
     () => v86.save_state()
   );
