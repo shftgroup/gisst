@@ -142,7 +142,7 @@ export class EmbedV86 {
       }
     }
   }
-  async run(content:string, entryState:boolean, movie:boolean) {
+  async run(content:string|any, entryState:string|null, movie:string|null) {
     this.clear();
     const content_folder = this.config.content_root;
     const config:V86StarterConfig = {
@@ -155,11 +155,11 @@ export class EmbedV86 {
     }
     // TODO: avoid use of /, get explicit paths or a path joining function as arguments or config props
     if(entryState) {
-      config["initial_state"] = {url:content_folder+"/entry_state"}
+      config["initial_state"] = {url:content_folder+"/"+entryState}
     }
     if(movie) {
       // do nothing for now
-      const replay_resp = await fetch(content_folder+"/replay.replay");
+      const replay_resp = await fetch(content_folder+"/"+movie);
       if(!replay_resp.ok) { alert("Failed to load replay movie"); return; }
       const replay_data = await replay_resp.arrayBuffer();
       const replay = await Replay.deserialize(replay_data);
@@ -167,9 +167,14 @@ export class EmbedV86 {
       this.config.register_replay("replay"+this.replays.length.toString());
       this.replays.push(replay);
     }
-    const content_resp = await fetch(content_folder+"/"+content);
-    if(!content_resp.ok) { alert("Failed to load content"); return; }
-    const content_json = await content_resp.json();
+    let content_json;
+    if (typeof content == "string") {
+      const content_resp = await fetch(content_folder+"/"+content);
+      if(!content_resp.ok) { alert("Failed to load content"); return; }
+      content_json = await content_resp.json();
+    } else {
+      content_json = content;
+    }
     setup_image("bios", content_json, config, this.config.bios_root);
     setup_image("vga_bios", content_json, config, this.config.bios_root);
     setup_image("fda", content_json, config, content_folder);
