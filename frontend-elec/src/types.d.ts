@@ -1,3 +1,13 @@
+export interface Environment {
+  created_on:string,
+  environment_config:object,
+  environment_core_name:string,
+  environment_core_version:string,
+  environment_derived_from:string,
+  environment_framework:string,
+  environment_id:string,
+  environment_name:string
+}
 
 export interface ObjectLink {
   object_role:string,
