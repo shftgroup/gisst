@@ -16,6 +16,22 @@ use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
 
+pub fn file_record_router<T>() -> Router {
+    Router::new()
+        .route("/", get(get_resource::<T>))
+        .route("/create", post(create_file_record::<T>))
+        .route(
+            "/:id",
+            get(get_single_record::<T>)
+                .put(edit_single_record::<T>)
+                .delete(delete_file_record::<T>),
+        )
+}
+
+pub fn record_router<T>() -> Router {
+
+}
+
 // Nested Router structs for easier reading and manipulation
 // pub fn creator_router() -> Router {
 //     Router::new()
@@ -144,6 +160,23 @@ async fn edit_environment(
             .await
             .map_err(GISSTError::RecordUpdateError)?,
     ))
+}
+
+async fn delete_record<T: DBModel>(
+    app_state: Extension<Arc<ServerState>>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    T::delete_by_id(&mut conn, id).await?;
+    Ok(StatusCode::OK)
+}
+
+async fn delete_file_record<T:DBModel + DBHashable>(
+    app_state: Extension<Arc<ServerState>>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, GISSTError> {
+
+    Ok(StatusCode::OK)
 }
 
 async fn delete_environment(
