@@ -3,13 +3,13 @@
   "productName": "frontend-elec",
   "version": "1.0.0",
   "description": "My Electron application description",
-  "main": ".webpack/main",
+  "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "echo \"No linting configured\""
   },
   "keywords": [],
   "author": {
@@ -18,29 +18,20 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@electron-forge/cli": "~6.2",
-    "@electron-forge/maker-deb": "~6.2",
-    "@electron-forge/maker-rpm": "~6.2",
-    "@electron-forge/maker-squirrel": "~6.2",
-    "@electron-forge/maker-zip": "~6.2",
-    "@electron-forge/plugin-webpack": "~6.2",
-    "@typescript-eslint/eslint-plugin": "~5.60.0",
-    "@typescript-eslint/parser": "~5.60.0",
-    "@vercel/webpack-asset-relocator-loader": "~1.7.3",
-    "copy-webpack-plugin": "~11.0.0",
-    "css-loader": "~6.8",
-    "electron": "~25.2",
-    "eslint": "~8.44.0",
-    "eslint-plugin-import": "~2.27.5",
-    "fork-ts-checker-webpack-plugin": "~8.0.0",
-    "node-loader": "~2.0.0",
-    "style-loader": "~3.3.1",
-    "ts-loader": "~9.4.2",
-    "ts-node": "~10.9.1",
-    "typescript": "~5.1"
+    "@electron-forge/cli": "^6.2.1",
+    "@electron-forge/maker-deb": "^6.2.1",
+    "@electron-forge/maker-rpm": "^6.2.1",
+    "@electron-forge/maker-squirrel": "^6.2.1",
+    "@electron-forge/maker-zip": "^6.2.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^6.2.1",
+    "@electron-forge/plugin-vite": "^6.2.1",
+    "electron": "25.3.0",
+    "typescript": "^5.1.6",
+    "vite-plugin-checker": "^0.6.1",
+    "vite-plugin-static-copy": "^0.16.0"
   },
   "dependencies": {
-    "electron-squirrel-startup": "~1.0.0",
+    "electron-squirrel-startup": "^1.0.0",
     "embedv86": "file:../embedv86",
     "gisst-player": "file:../gisst-player-ui",
     "ra-util": "file:../ra-util"

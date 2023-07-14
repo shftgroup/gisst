@@ -35,7 +35,7 @@ import {SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo, Envir
 
 let ui_state:UI;
 let active_core:string|null = null;
-const host = "http://localhost:3000/";
+const host = "http://localhost:3000";
 let v86:EmbedV86 = new EmbedV86({
   wasm_root:"renderer-resources/v86",
   bios_root:"renderer-resources/v86/bios",
@@ -118,7 +118,7 @@ api.on_replay_checkpoints_changed(checkpoints_updated);
 
 async function run(content:string, entryState:string, movie:string) {
   ui_state.clear();
-  let data_resp = await fetch(host+"play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
+  let data_resp = await fetch(host+"/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
   console.log(data_resp);
   let config = await data_resp.json();
   console.log(config);
@@ -139,15 +139,15 @@ async function run(content:string, entryState:string, movie:string) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  // document
-  //   .querySelector("#run-v86-cold-button")
-  //   ?.addEventListener("click", () => run("freedos722-root.json", false, false));
-  // document
-  //   .querySelector("#run-v86-entry-button")
-  //   ?.addEventListener("click", () => run("freedos722-root.json", true, false));
-  // document
-  //   .querySelector("#run-v86-movie-button")
-  //   ?.addEventListener("click", () => run("freedos722-root.json", false, true));
+  document
+    .querySelector("#run-v86-cold-button")
+    ?.addEventListener("click", () => run("00000000000000000000000000000001", null, null));
+  document
+    .querySelector("#run-v86-entry-button")
+    ?.addEventListener("click", () => run("00000000000000000000000000000001", "00000000000000000000000000000001", null));
+  document
+    .querySelector("#run-v86-movie-button")
+    ?.addEventListener("click", () => run("00000000000000000000000000000001", null, "00000000000000000000000000000001"));
   document
     .querySelector("#run-cold-button")
     ?.addEventListener("click", () => run("00000000000000000000000000000000", null, null));
