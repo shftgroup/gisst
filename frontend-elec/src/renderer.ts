@@ -138,25 +138,31 @@ async function run(content:string, entryState:string, movie:string) {
   }
 }
 
+function bootCold() {
+  let instance = <HTMLInputElement>document.getElementById("boot-instance")!;
+  run(instance.value, null, null);
+}
+function bootState() {
+  let instance = <HTMLInputElement>document.getElementById("boot-instance")!;
+  let state = <HTMLInputElement>document.getElementById("boot-state")!;
+  run(instance.value, state.value, null);
+}
+function bootReplay() {
+  let instance = <HTMLInputElement>document.getElementById("boot-instance")!;
+  let replay = <HTMLInputElement>document.getElementById("boot-replay")!;
+  run(instance.value, null, replay.value);
+}
+
 window.addEventListener("DOMContentLoaded", () => {
-  document
-    .querySelector("#run-v86-cold-button")
-    ?.addEventListener("click", () => run("00000000000000000000000000000001", null, null));
-  document
-    .querySelector("#run-v86-entry-button")
-    ?.addEventListener("click", () => run("00000000000000000000000000000001", "00000000000000000000000000000001", null));
-  document
-    .querySelector("#run-v86-movie-button")
-    ?.addEventListener("click", () => run("00000000000000000000000000000001", null, "00000000000000000000000000000001"));
-  document
-    .querySelector("#run-cold-button")
-    ?.addEventListener("click", () => run("00000000000000000000000000000000", null, null));
-  document
-    .querySelector("#run-entry-button")
-    ?.addEventListener("click", () => run("00000000000000000000000000000000", "00000000000000000000000000000000", null));
-  document
-    .querySelector("#run-movie-button")
-    ?.addEventListener("click", () => run("00000000000000000000000000000000", null, "00000000000000000000000000000000"));
+  document.getElementById("boot-cold-button")?.addEventListener("click",
+    () => bootCold()
+  );
+  document.getElementById("boot-state-button")?.addEventListener("click",
+    () => bootState()
+  );
+  document.getElementById("boot-replay-button")?.addEventListener("click",
+    () => bootReplay()
+  );
   document.getElementById("v86_save")?.addEventListener("click",
     () => v86.save_state()
   );
