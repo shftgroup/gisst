@@ -31,14 +31,15 @@ import {IpcRendererEvent} from 'electron';
 import {UI} from 'gisst-player';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {saveAs} from './util';
-import {SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo} from './types';
+import {SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo, Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
 
 let ui_state:UI;
 let active_core:string|null = null;
+const host = "http://localhost:3000";
 let v86:EmbedV86 = new EmbedV86({
   wasm_root:"renderer-resources/v86",
   bios_root:"renderer-resources/v86/bios",
-  content_root:"renderer-resources/content",
+  content_root:host,
   container: <HTMLDivElement>document.getElementById("v86-container")!,
   register_replay:(nom:string)=>ui_state.newReplay(nom),
   stop_replay:()=>{
@@ -61,6 +62,33 @@ let v86:EmbedV86 = new EmbedV86({
     }
   },
 });
+
+function nested_replace(obj:any, target:string, replacement:string) {
+  for(let key in obj) {
+    if(obj[key] == target) {
+      obj[key] = replacement;
+    } else if(typeof(obj[key]) == "object") {
+      nested_replace(obj[key], target, replacement);
+    }
+  }
+}
+
+function init_v86(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
+  let content = manifest.find((o) => o.object_role=="content")!;
+  let content_path = "storage/"+content.object_dest_path+"/"+content.object_hash+"-"+content.object_filename;
+  nested_replace(environment.environment_config, "$CONTENT", content_path);
+  let entry_state:string|null = null;
+  if (start.type == "state") {
+    let data = (start as StateStart).data;
+    entry_state = "storage/"+data.state_path+"/"+data.state_hash+"-"+data.state_filename;
+  }
+  let movie:string|null = null;
+  if (start.type == "replay") {
+    let data = (start as ReplayStart).data;
+    movie = "storage/"+data.replay_path+"/"+data.replay_hash+"-"+data.replay_filename;
+  }
+  v86.run(environment.environment_config, entry_state, movie);
+}
 
 function saves_updated(evt:IpcRendererEvent, saveinfo:SavefileInfo) {
   console.log("new save",saveinfo);
@@ -90,7 +118,7 @@ api.on_replay_checkpoints_changed(checkpoints_updated);
 
 async function run(content:string, entryState:string, movie:string) {
   ui_state.clear();
-  let data_resp = await fetch("http://localhost:3000/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
+  let data_resp = await fetch(host+"/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
   console.log(data_resp);
   let config = await data_resp.json();
   console.log(config);
@@ -101,7 +129,7 @@ async function run(content:string, entryState:string, movie:string) {
     (document.getElementById("v86-container")!).classList.remove("hidden");
     (document.getElementById("v86-controls")!).classList.remove("hidden");
     // This one operates entirely within the renderer side of things
-    //v86.run(config.environment, config.start, config.manifest);
+    init_v86(config.environment, config.start, config.manifest);
   } else {
     active_core = config.environment.environment_core_name;
     (document.getElementById("v86-controls")!).classList.add("hidden");
@@ -111,15 +139,15 @@ async function run(content:string, entryState:string, movie:string) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  // document
-  //   .querySelector("#run-v86-cold-button")
-  //   ?.addEventListener("click", () => run("freedos722-root.json", false, false));
-  // document
-  //   .querySelector("#run-v86-entry-button")
-  //   ?.addEventListener("click", () => run("freedos722-root.json", true, false));
-  // document
-  //   .querySelector("#run-v86-movie-button")
-  //   ?.addEventListener("click", () => run("freedos722-root.json", false, true));
+  document
+    .querySelector("#run-v86-cold-button")
+    ?.addEventListener("click", () => run("00000000000000000000000000000001", null, null));
+  document
+    .querySelector("#run-v86-entry-button")
+    ?.addEventListener("click", () => run("00000000000000000000000000000001", "00000000000000000000000000000001", null));
+  document
+    .querySelector("#run-v86-movie-button")
+    ?.addEventListener("click", () => run("00000000000000000000000000000001", null, "00000000000000000000000000000001"));
   document
     .querySelector("#run-cold-button")
     ?.addEventListener("click", () => run("00000000000000000000000000000000", null, null));
