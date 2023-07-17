@@ -13,12 +13,19 @@
 
   <body>
     <div class="container">
-      <button id="run-v86-cold-button" type="button">Run v86 cold</button>
-      <button id="run-v86-entry-button" type="button">Run v86 from entry state</button>
-      <button id="run-v86-movie-button" type="button">Run v86 from movie</button>
-      <button id="run-cold-button" type="button">Run Game cold</button>
-      <button id="run-entry-button" type="button">Run Game from entry state</button>
-      <button id="run-movie-button" type="button">Run Game from movie</button>
+      <form id="boot">
+        <label for="boot-instance">Instance:</label>
+        <input id="boot-instance" name="instance" value="00000000000000000000000000000001" size="40"/>
+        <input type="button" value="Boot cold" id="boot-cold-button" />
+        <br/>
+        <label for="boot-state">State:</label>
+        <input id="boot-state" name="state" value="00000000000000000000000000000001" size="40" />
+        <input type="button" value="Boot state" id="boot-state-button" />
+        <br/>
+        <label for="boot-replay">Replay:</label>
+        <input id="boot-replay" name="replay" value="00000000000000000000000000000001" size="40" />
+        <input type="button" value="Boot replay" id="boot-replay-button" />
+      </form>
     </div>
     <div id="v86-container" class="hidden">
       <div style="white-space: pre; font: 14px monospace; line-height: 14px" id="webplayer-textmode"></div>
