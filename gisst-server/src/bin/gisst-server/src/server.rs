@@ -3,6 +3,7 @@ use gisstlib::{
     storage::StorageHandler,
     GISSTError,
 };
+use tower::{Layer, ServiceBuilder};
 
 use crate::{
     db,
@@ -19,8 +20,9 @@ use crate::{
 };
 use anyhow::Result;
 use axum::{
+    error_handling::HandleErrorLayer,
     extract::{Path, Query},
-    response::Html,
+    response::{Html, IntoResponse},
     routing::get,
     Extension, Router, Server,
 };
@@ -31,7 +33,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
-use tower_http::services::ServeDir;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 use uuid::Uuid;
 
 pub struct ServerState {
@@ -60,7 +62,25 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/objects", object_router())
         .nest("/works", work_router())
         .nest_service("/", ServeDir::new("../frontend-web/dist"))
-        .nest_service("/storage", ServeDir::new("storage"))
+        .nest_service(
+            "/storage",
+            ServiceBuilder::new()
+                .layer(
+                    CorsLayer::new()
+                        .allow_origin(tower_http::cors::AllowOrigin::any())
+                        .expose_headers([
+                            axum::http::header::ACCEPT_RANGES,
+                            axum::http::header::CONTENT_LENGTH,
+                            axum::http::header::RANGE,
+                            axum::http::header::CONTENT_RANGE,
+                        ])
+                        .allow_methods([axum::http::Method::GET]),
+                )
+                .layer(HandleErrorLayer::new(handle_error))
+                // This map_err is needed to get the types to work out after handleerror and before servedir.
+                .map_err(|e| panic!("{:?}", e))
+                .service(ServeDir::new("storage")),
+        )
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432));
 
@@ -76,7 +96,12 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 
     Ok(())
 }
-
+async fn handle_error(error: axum::BoxError) -> impl axum::response::IntoResponse {
+    (
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+        format!("Unhandled internal error: {}", error),
+    )
+}
 #[derive(Deserialize, Serialize, Debug)]
 struct PlayerTemplateInfo {
     instance: Instance,
@@ -106,7 +131,6 @@ async fn get_player(
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
 ) -> Result<axum::response::Response, GISSTError> {
-    use axum::response::IntoResponse;
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
         .await?

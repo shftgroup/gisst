@@ -308,8 +308,8 @@ async fn create_instance(
             let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::Io)?;
             Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?)
         }
-        (None, Some(json_value)) => {
-            Some(serde_json::from_value(json_value).map_err(GISSTCliError::JsonParse)?)
+        (None, Some(json_str)) => {
+            Some(serde_json::from_str(&json_str).map_err(GISSTCliError::JsonParse)?)
         }
         (_, _) => None,
     };
@@ -320,8 +320,8 @@ async fn create_instance(
                 let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::Io)?;
                 Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?)
             }
-            (None, Some(json_value)) => {
-                Some(serde_json::from_value(json_value.clone()).map_err(GISSTCliError::JsonParse)?)
+            (None, Some(json_str)) => {
+                Some(serde_json::from_str(json_str).map_err(GISSTCliError::JsonParse)?)
             }
             (_, _) => None,
         };
@@ -361,8 +361,8 @@ async fn create_environment(
             let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::Io)?;
             Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?)
         }
-        (None, Some(json_value)) => {
-            Some(serde_json::from_value(json_value).map_err(GISSTCliError::JsonParse)?)
+        (None, Some(json_str)) => {
+            Some(serde_json::from_str(&json_str).map_err(GISSTCliError::JsonParse)?)
         }
         (_, _) => None,
     };
@@ -375,8 +375,8 @@ async fn create_environment(
             let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::Io)?;
             Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?)
         }
-        (None, Some(json_value)) => {
-            Some(serde_json::from_value(json_value.clone()).map_err(GISSTCliError::JsonParse)?)
+        (None, Some(json_str)) => {
+            Some(serde_json::from_str(json_str).map_err(GISSTCliError::JsonParse)?)
         }
         (_, _) => None,
     };
@@ -445,8 +445,8 @@ async fn create_work(
             let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::Io)?;
             Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?)
         }
-        (None, Some(json_value)) => {
-            Some(serde_json::from_value(json_value.clone()).map_err(GISSTCliError::JsonParse)?)
+        (None, Some(json_str)) => {
+            Some(serde_json::from_str(json_str).map_err(GISSTCliError::JsonParse)?)
         }
         (_, _) => unreachable!(),
     };
@@ -593,7 +593,7 @@ async fn create_replay(
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
     let mut replay = Replay {
-        replay_id: force_uuid.unwrap_or_else(|| Uuid::new_v4()),
+        replay_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
         creator_id: creator_id.unwrap_or_else(|| uuid!("00000000-0000-0000-0000-000000000000")),
         replay_forked_from,
@@ -676,7 +676,7 @@ async fn create_state(
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
     let mut state = State {
-        state_id: force_uuid.unwrap_or_else(|| Uuid::new_v4()),
+        state_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
         is_checkpoint: replay_id.is_some(),
         state_path: Default::default(),

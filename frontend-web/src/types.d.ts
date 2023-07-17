@@ -8,7 +8,6 @@ export interface Environment {
   environment_id:string,
   environment_name:string
 }
-
 export interface ObjectLink {
   object_role:string,
   object_dest_path:string,
@@ -46,20 +45,4 @@ export interface StartReplayData {
 export interface ReplayStart {
   type:string,
   data:StartReplayData
-}
-
-
-export interface SavefileInfo {
-  file:string;
-}
-export interface StatefileInfo {
-  file:string;
-  thumbnail:string;
-}
-export interface ReplayfileInfo {
-  file:string;
-}
-export interface ReplayCheckpointInfo {
-  added:[StatefileInfo];
-  delete_old?:boolean;
 }
