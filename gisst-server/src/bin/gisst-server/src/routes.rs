@@ -12,7 +12,7 @@ use gisstlib::{
     storage::StorageHandler,
     GISSTError,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
