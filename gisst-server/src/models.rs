@@ -2,12 +2,14 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 
 use async_trait::async_trait;
 use std::{fmt, str::FromStr};
+use std::path::Path;
 
 use sqlx::postgres::{PgConnection, PgQueryResult};
 use time::OffsetDateTime;
 
 use crate::model_enums::Framework;
 use uuid::Uuid;
+use crate::storage::FileInformation;
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
@@ -76,12 +78,14 @@ pub trait DBModel: Sized {
     async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>>;
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>>;
     async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError>;
+    async fn update(conn: &mut PgConnection, model: Self) -> Result<Self, UpdateRecordError>;
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult>;
 }
 
 #[async_trait]
 pub trait DBHashable: Sized {
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>>;
+    fn add_file_information(&self, rm: &FileInformation) -> Self;
     fn dest_file_path(&self) -> &str;
     fn hash(&self) -> &str;
     fn filename(&self) -> &str;
@@ -290,6 +294,24 @@ impl DBModel for Creator {
         .map_err(|_| NewRecordError::Creator)
     }
 
+    async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, UpdateRecordError> {
+        sqlx::query_as!(
+            Creator,
+            r#"UPDATE creator SET
+            (creator_username, creator_full_name, created_on) =
+            ($1, $2, $3)
+            WHERE creator_id = $4
+            RETURNING creator_id, creator_username, creator_full_name, created_on"#,
+            creator.creator_username,
+            creator.creator_full_name,
+            creator.created_on,
+            creator.creator_id,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::Creator)
+    }
+
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM creator WHERE creator_id = $1", id)
             .execute(conn)
@@ -371,15 +393,7 @@ impl DBModel for Instance {
         .map_err(|_| NewRecordError::Instance)
     }
 
-    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM instance WHERE instance_id = $1", id)
-            .execute(conn)
-            .await
-    }
-}
-
-impl Instance {
-    pub async fn update(
+    async fn update(
         conn: &mut PgConnection,
         instance: Instance,
     ) -> Result<Self, UpdateRecordError> {
@@ -396,10 +410,19 @@ impl Instance {
             instance.created_on,
             instance.instance_id,
         )
-        .fetch_one(conn)
-        .await
-        .map_err(|_| UpdateRecordError::Instance)
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::Instance)
     }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM instance WHERE instance_id = $1", id)
+            .execute(conn)
+            .await
+    }
+}
+
+impl Instance {
 
     pub async fn get_all_for_work_id(
         conn: &mut PgConnection,
@@ -519,6 +542,28 @@ impl DBModel for Image {
             .map_err(|_| NewRecordError::Image)
     }
 
+    async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, UpdateRecordError> {
+        sqlx::query_as!(
+            Image,
+            r#"UPDATE image SET
+            (image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on) =
+            ($1, $2, $3, $4, $5, $6, $7)
+            WHERE image_id = $8
+            RETURNING image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on"#,
+            image.image_filename,
+            image.image_source_path,
+            image.image_dest_path,
+            image.image_hash,
+            image.image_config,
+            image.image_description,
+            image.created_on,
+            image.image_id,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::Image)
+    }
+
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM image WHERE image_id = $1", id)
             .execute(conn)
@@ -559,27 +604,6 @@ impl DBHashable for Image {
 }
 
 impl Image {
-    pub async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, UpdateRecordError> {
-        sqlx::query_as!(
-            Image,
-            r#"UPDATE image SET
-            (image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on) =
-            ($1, $2, $3, $4, $5, $6, $7)
-            WHERE image_id = $8
-            RETURNING image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on"#,
-            image.image_filename,
-            image.image_source_path,
-            image.image_dest_path,
-            image.image_hash,
-            image.image_config,
-            image.image_description,
-            image.created_on,
-            image.image_id,
-        )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| UpdateRecordError::Image)
-    }
 
     pub async fn link_image_to_environment(
         conn: &mut PgConnection,
@@ -697,39 +721,8 @@ impl DBModel for Environment {
             .execute(conn)
             .await
     }
-}
 
-impl Environment {
-    pub async fn insert(conn: &mut PgConnection, env: Environment) -> Result<Self, NewRecordError> {
-        sqlx::query_as!(
-            Environment,
-            r#"INSERT INTO environment(
-            environment_id,
-            environment_name,
-            environment_framework,
-            environment_core_name,
-            environment_core_version,
-            environment_derived_from,
-            environment_config,
-            created_on
-            )
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING environment_id, environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on"#,
-            env.environment_id,
-            env.environment_name,
-            env.environment_framework as _,
-            env.environment_core_name,
-            env.environment_core_version,
-            env.environment_derived_from,
-            env.environment_config,
-            env.created_on
-        )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| NewRecordError::Environment)
-    }
-
-    pub async fn update(
+    async fn update(
         conn: &mut PgConnection,
         env: Environment,
     ) -> Result<Self, UpdateRecordError> {
@@ -753,12 +746,9 @@ impl Environment {
             .await
             .map_err(|_| UpdateRecordError::Environment)
     }
+}
 
-    pub async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM environment WHERE environment_id = $1", id)
-            .execute(conn)
-            .await
-    }
+impl Environment {
 
     pub async fn delete_environment_image_links_by_id(
         conn: &mut PgConnection,
@@ -868,15 +858,7 @@ impl DBModel for Object {
             .map_err(|_| NewRecordError::Object)
     }
 
-    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM object WHERE object_id = $1", id)
-            .execute(conn)
-            .await
-    }
-}
-
-impl Object {
-    pub async fn update(
+    async fn update(
         conn: &mut PgConnection,
         object: Object,
     ) -> Result<Self, UpdateRecordError> {
@@ -899,6 +881,14 @@ impl Object {
             .await
             .map_err(|_| UpdateRecordError::Object)
     }
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM object WHERE object_id = $1", id)
+            .execute(conn)
+            .await
+    }
+}
+
+impl Object {
 
     pub async fn link_object_to_instance(
         conn: &mut PgConnection,
@@ -1069,6 +1059,28 @@ impl DBModel for Replay {
         })
     }
 
+    async fn update(conn: &mut PgConnection, replay: Replay) -> Result<Self, UpdateRecordError> {
+        sqlx::query_as!(
+            Replay,
+            r#"UPDATE replay SET
+            (instance_id, creator_id, replay_forked_from, replay_filename, replay_hash, replay_path, created_on) =
+            ($1, $2, $3, $4, $5, $6, $7)
+            WHERE replay_id = $8
+            RETURNING replay_id, instance_id, creator_id, replay_forked_from, replay_filename, replay_hash, replay_path, created_on"#,
+            replay.instance_id,
+            replay.creator_id,
+            replay.replay_forked_from,
+            replay.replay_filename,
+            replay.replay_hash,
+            replay.replay_path,
+            replay.created_on,
+            replay.replay_id,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::Replay)
+    }
+
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM replay WHERE replay_id = $1", id)
             .execute(conn)
@@ -1220,6 +1232,29 @@ impl DBModel for Save {
         .fetch_one(conn)
         .await
         .map_err(|_| NewRecordError::Save)
+    }
+
+    async fn update(conn: &mut PgConnection, save: Save) -> Result<Self, UpdateRecordError> {
+        sqlx::query_as!(
+            Save,
+            r#"UPDATE save SET
+            (instance_id, save_short_desc, save_description, save_filename, save_path, save_hash, creator_id, created_on) =
+            ($1, $2, $3, $4, $5, $6, $7, $8)
+            WHERE save_id = $9
+            RETURNING save_id, instance_id, save_short_desc, save_description, save_filename, save_path, save_hash, creator_id, created_on"#,
+            save.instance_id,
+            save.save_short_desc,
+            save.save_description,
+            save.save_filename,
+            save.save_path,
+            save.save_hash,
+            save.creator_id,
+            save.created_on,
+            save.save_id,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::Save)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1414,6 +1449,34 @@ impl DBModel for State {
         .map_err(|_| NewRecordError::State)
     }
 
+    async fn update(conn: &mut PgConnection, state: State) -> Result<Self, UpdateRecordError> {
+        sqlx::query_as!(
+            State,
+            r#"UPDATE state SET
+            (instance_id, is_checkpoint, state_path, state_hash, state_filename, state_name, state_description, screenshot_id, replay_id, creator_id, state_replay_index, state_derived_from, created_on) =
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            WHERE state_id = $14
+            RETURNING state_id, instance_id, is_checkpoint, state_path, state_hash, state_filename, state_name, state_description, screenshot_id, replay_id, creator_id, state_replay_index, state_derived_from, created_on"#,
+            state.instance_id,
+            state.is_checkpoint,
+            state.state_path,
+            state.state_hash,
+            state.state_filename,
+            state.state_name,
+            state.state_description,
+            state.screenshot_id,
+            state.replay_id,
+            state.creator_id,
+            state.state_replay_index,
+            state.state_derived_from,
+            state.created_on,
+            state.state_id,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::State)
+    }
+
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM state WHERE state_id = $1", id)
             .execute(conn)
@@ -1526,15 +1589,7 @@ impl DBModel for Work {
         .map_err(|_| NewRecordError::Work)
     }
 
-    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM work WHERE work_id = $1", id)
-            .execute(conn)
-            .await
-    }
-}
-
-impl Work {
-    pub async fn update(conn: &mut PgConnection, work: Work) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, work: Work) -> Result<Self, UpdateRecordError> {
         sqlx::query_as!(
             Work,
             r#"UPDATE work SET
@@ -1548,10 +1603,19 @@ impl Work {
             work.created_on,
             work.work_id,
         )
-        .fetch_one(conn)
-        .await
-        .map_err(|_| UpdateRecordError::Work)
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::Work)
     }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM work WHERE work_id = $1", id)
+            .execute(conn)
+            .await
+    }
+}
+
+impl Work {
 
     pub async fn get_by_name(conn: &mut PgConnection, name: &str) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
