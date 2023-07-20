@@ -12,25 +12,10 @@ use gisstlib::{
     storage::StorageHandler,
     GISSTError,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-pub fn file_record_router<T>() -> Router {
-    Router::new()
-        .route("/", get(get_resource::<T>))
-        .route("/create", post(create_file_record::<T>))
-        .route(
-            "/:id",
-            get(get_single_record::<T>)
-                .put(edit_single_record::<T>)
-                .delete(delete_file_record::<T>),
-        )
-}
-
-pub fn record_router<T>() -> Router {
-
-}
 
 // Nested Router structs for easier reading and manipulation
 // pub fn creator_router() -> Router {
@@ -141,6 +126,8 @@ async fn create_environment(
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(Environment::insert(&mut conn, environment).await?))
 }
+
+
 
 async fn get_single_environment(
     app_state: Extension<Arc<ServerState>>,
