@@ -9,7 +9,17 @@ use uuid::Uuid;
 
 pub struct StorageHandler {
     root_storage_path: String,
+    temp_storage_path: String,
     folder_depth: u8,
+    pending_uploads: std::collections::HashMap<Uuid, tokio::sync::Mutex<PendingUpload>>
+}
+
+pub struct PendingUpload {
+    resource_metadata: FileInformation,
+    chunk_size: usize,
+    length: u64,
+    chunks_remaining: usize,
+    file: File,
 }
 
 pub struct FileInformation {

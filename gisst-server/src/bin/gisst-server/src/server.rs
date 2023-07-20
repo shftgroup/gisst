@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+use std::future::Pending;
 use gisstlib::{
     models::{self, DBModel, Environment, Instance, Image, Object, Work, Replay, Save, State, DBHashable},
-    storage::StorageHandler,
+    storage::{StorageHandler, FileInformation},
     GISSTError,
 };
 
@@ -31,26 +33,18 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
-use axum::http::HeaderMap;
 use tower_http::services::ServeDir;
 use uuid::Uuid;
 use crate::routes::{
     //file_record_router,
     record_router};
 
-pub struct PendingUpload<T:DBModel + DBHashable> {
-    model: T,
-    resource_metadata: ResourceMetadata,
-    chunk_size: u32,
-    length: u64,
-    chunks_remaining: u32,
-}
 
 pub struct ServerState {
     pub pool: PgPool,
     pub storage: StorageHandler,
     pub templates: TemplateHandler,
-    pub pending_uploads: Vec<PendingUpload<dyn DBModel + DBHashable>>
+    pub pending_uploads: HashMap<Uuid, tokio::sync::Mutex<PendingUpload>>,
 }
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
@@ -67,9 +61,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
         .route("/resources/:id", head(tus_head)
-            .patch(tus_patch)
-            .option(tus_options)
-            .post(tus_creation))
+            .patch(tus_patch))
+        .route("/resources", post(tus_creation))
         // .nest("/creators", creator_router())
         .nest("/environments", environment_router())
         .nest("/instances", instance_router())
