@@ -13,14 +13,22 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('gisst', process.execPath, [path.resolve(process.argv[1])])
+  }
+} else {
+  app.setAsDefaultProtocolClient('gisst')
+}
+let mainWindow:BrowserWindow;
 const cache_dir = path.join(app.getPath("temp"),"gisst");
 const resource_dir = path.resolve(__dirname, 'resources');
 const config_dir = app.getPath("userData");
 const content_dir = path.join(cache_dir, "content");
 const saves_dir = path.join(cache_dir, "saves");
 const states_dir = path.join(cache_dir, "states")
-
-const createWindow = (): void => {
+let main_contents:number = 0;
+const createWindow = async (): Promise<void> => {
   //app.setAsDefaultProtocolClient(protocol[, path, args]);
 
   fs.mkdirSync(path.join(cache_dir, "core-options"), {recursive:true});
@@ -56,7 +64,7 @@ const createWindow = (): void => {
   ipcMain.on('gisst:download_file',handle_download_file);
   
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     height: 600,
     width: 800,
     webPreferences: {
@@ -67,19 +75,64 @@ const createWindow = (): void => {
   // and load the index.html of the app.
   console.log(MAIN_WINDOW_VITE_DEV_SERVER_URL, MAIN_WINDOW_VITE_NAME);
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+    await mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+    await mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
 };
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+if(process.platform==="darwin") {
+  // Some APIs can only be used after this event occurs.
+  app.whenReady().then(() => 
+    createWindow()
+  ).then(() => 
+    // if there's a CLI argument, run_url it
+    run_cli()
+  )
+
+  // Handle the protocol. In this case, we choose to show an Error Box.
+  app.on('open-url', (event, url) => {
+    run_url(url)
+  })
+} else {
+  const gotTheLock = app.requestSingleInstanceLock()
+
+  if (!gotTheLock) {
+    app.quit()
+  } else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+      // Someone tried to run a second instance, we should focus our window.
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.focus()
+      }
+      let url = commandLine.pop();
+      run_url(url);
+    })
+
+    // Create mainWindow, load the rest of the app, etc...
+    app.whenReady().then(() => 
+      createWindow()
+    ).then(() => 
+      // if there's a CLI argument, run_url it
+      run_cli()
+    )
+  }
+}
+
+function run_cli() {
+  if (process.argv.length > 1) {
+    return run_url(process.argv[1]);
+  }
+}
+
+function run_url(url:string) {
+  console.log("main run URL",url);
+  mainWindow!.webContents.send("gisst:handle_url",url);
+}
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
@@ -105,12 +158,11 @@ let seenSaves:string[] = [];
 let seenReplays:Record<string,string> = {};
 let seenCheckpoints:string[] = [];
 let seenStates:Record<string, Buffer> = {};
-async function handle_run_retroarch(evt:IpcMainEvent, core:string,start:ColdStart|StateStart|ReplayStart, manifest:ObjectLink[]) {
+async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,start:ColdStart|StateStart|ReplayStart, manifest:ObjectLink[]) {
   seenStates = {};
   seenSaves = [];
   seenReplays = {};
   seenCheckpoints = [];
-  const host = "http://localhost:3000";
   let content = manifest.find((o) => o.object_role=="content")!;
   let content_file = content.object_filename!;
   let dash_point = content_file.indexOf("-");
