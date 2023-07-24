@@ -64,14 +64,26 @@ pub struct StorageConfig {
     pub root_folder_path: String,
     #[serde(default = "default_folder_depth")]
     pub folder_depth: u8,
+    #[serde(default = "default_temp_folder_path")]
+    pub temp_folder_path: String,
+    #[serde(default = "default_upload_chunk_size")]
+    pub chunk_size: usize,
 }
 
 fn default_root_folder_path() -> String {
     "./storage".to_string()
 }
 
+fn default_temp_folder_path() -> String {
+    "./tmp".to_string()
+}
+
 fn default_folder_depth() -> u8 {
     4
+}
+
+fn default_upload_chunk_size() -> usize {
+    10485760
 }
 
 impl Default for StorageConfig {
@@ -79,6 +91,8 @@ impl Default for StorageConfig {
         Self {
             root_folder_path: default_root_folder_path(),
             folder_depth: default_folder_depth(),
+            temp_folder_path: default_temp_folder_path(),
+            chunk_size: default_upload_chunk_size(),
         }
     }
 }

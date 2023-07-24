@@ -16,6 +16,8 @@ pub enum GISSTError {
     SqlError(#[from] sqlx::Error),
     #[error("storage error")]
     StorageError(#[from] std::io::Error),
+    #[error("file not found")]
+    FileNotFoundError,
     #[error("record creation error")]
     RecordCreateError(#[from] models::NewRecordError),
     #[error("record creation error")]
@@ -24,6 +26,8 @@ pub enum GISSTError {
     TemplateError,
     #[error("path prefix error")]
     PathPrefixError(#[from] std::path::StripPrefixError),
+    #[error("tokio task error")]
+    JoinError(#[from] tokio::task::JoinError),
     #[error("generic error")]
     Generic,
 }
@@ -43,6 +47,8 @@ impl IntoResponse for GISSTError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "file creation error")
             }
             GISSTError::TemplateError => (StatusCode::INTERNAL_SERVER_ERROR, "template error"),
+            GISSTError::JoinError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "tokio task error"),
+            GISSTError::FileNotFoundError => (StatusCode::NOT_FOUND, "file not found"),
             GISSTError::Generic => (StatusCode::INTERNAL_SERVER_ERROR, "generic error"),
         };
 

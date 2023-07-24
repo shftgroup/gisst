@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::fs;
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct TemplateHandler {
     templates: HashMap<String, String>,
 }
@@ -30,12 +31,12 @@ impl TemplateHandler {
         Ok(Self { templates })
     }
 
-    // pub fn get_template(&self, template_name: &str) -> Result<&str, GISSTError> {
-    //     match self.templates.get(template_name) {
-    //         Some(template) => Ok(template),
-    //         None => Err(GISSTError::TemplateError),
-    //     }
-    // }
+    pub fn get_template(&self, template_name: &str) -> Result<&str, GISSTError> {
+        match self.templates.get(template_name) {
+            Some(template) => Ok(template),
+            None => Err(GISSTError::TemplateError),
+        }
+    }
 }
 
 pub const PLAYER_TEMPLATE: &str = r#"
