@@ -35,33 +35,7 @@ import {SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo, Envir
 
 let ui_state:UI;
 let active_core:string|null = null;
-const host = "http://localhost:3000";
-let v86:EmbedV86 = new EmbedV86({
-  wasm_root:"renderer-resources/v86",
-  bios_root:"renderer-resources/v86/bios",
-  content_root:host,
-  container: <HTMLDivElement>document.getElementById("v86-container")!,
-  register_replay:(nom:string)=>ui_state.newReplay(nom),
-  stop_replay:()=>{
-    ui_state.clearCheckpoints();
-  },
-  states_changed:(added:StateInfo[], removed:StateInfo[]) => {
-    for(let si of removed) {
-      ui_state.removeState(si.name);
-    }
-    for(let si of added) {
-      ui_state.newState(si.name,si.thumbnail);
-    }
-  },
-  replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
-    for(let si of removed) {
-      ui_state.removeCheckpoint(si.name);
-    }
-    for(let si of added) {
-      ui_state.newCheckpoint(si.name,si.thumbnail);
-    }
-  },
-});
+let v86:EmbedV86;
 
 function nested_replace(obj:any, target:string, replacement:string) {
   for(let key in obj) {
@@ -73,7 +47,35 @@ function nested_replace(obj:any, target:string, replacement:string) {
   }
 }
 
-function init_v86(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
+function init_v86(host:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
+  if(v86) { v86.clear(); }
+  v86 = new EmbedV86({
+    wasm_root:"renderer-resources/v86",
+    bios_root:"renderer-resources/v86/bios",
+    content_root:host,
+    container: <HTMLDivElement>document.getElementById("v86-container")!,
+    register_replay:(nom:string)=>ui_state.newReplay(nom),
+    stop_replay:()=>{
+      ui_state.clearCheckpoints();
+    },
+    states_changed:(added:StateInfo[], removed:StateInfo[]) => {
+      for(let si of removed) {
+        ui_state.removeState(si.name);
+      }
+      for(let si of added) {
+        ui_state.newState(si.name,si.thumbnail);
+      }
+    },
+    replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
+      for(let si of removed) {
+        ui_state.removeCheckpoint(si.name);
+      }
+      for(let si of added) {
+        ui_state.newCheckpoint(si.name,si.thumbnail);
+      }
+    },
+  });
+
   let content = manifest.find((o) => o.object_role=="content")!;
   let content_path = "storage/"+content.object_dest_path+"/"+content.object_hash+"-"+content.object_filename;
   nested_replace(environment.environment_config, "$CONTENT", content_path);
@@ -116,41 +118,89 @@ function checkpoints_updated(evt:IpcRendererEvent, info:ReplayCheckpointInfo) {
 }
 api.on_replay_checkpoints_changed(checkpoints_updated);
 
-async function run(content:string, entryState:string, movie:string) {
+async function run(host:string, content:string, entryState:string, movie:string) {
   ui_state.clear();
   let data_resp = await fetch(host+"/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
   console.log(data_resp);
   let config = await data_resp.json();
   console.log(config);
   let core_kind = config.environment.environment_framework;
-  v86.clear();
+  if(v86) {
+    v86.clear();
+  }
   if(core_kind == "v86") {
     active_core = "v86";
     (document.getElementById("v86-container")!).classList.remove("hidden");
     (document.getElementById("v86-controls")!).classList.remove("hidden");
     // This one operates entirely within the renderer side of things
-    init_v86(config.environment, config.start, config.manifest);
+    init_v86(host, config.environment, config.start, config.manifest);
   } else {
     active_core = config.environment.environment_core_name;
     (document.getElementById("v86-controls")!).classList.add("hidden");
     (document.getElementById("v86-container")!).classList.add("hidden");
-    api.run_retroarch(active_core, config.start, config.manifest);
+    api.run_retroarch(host, active_core, config.start, config.manifest);
   }
 }
 
+async function run_url(evt:IpcRendererEvent, url:string) {
+  (<HTMLInputElement>document.getElementById("boot-host"))!.value = "";
+  (<HTMLInputElement>document.getElementById("boot-instance"))!.value = "";
+  (<HTMLInputElement>document.getElementById("boot-state"))!.value = "";
+  (<HTMLInputElement>document.getElementById("boot-replay"))!.value = "";
+  // gisst://host/UUID?state=XXXX or //host/UUID?replay=XXXX or //UUID
+  console.log("RUN URL", url);
+  let split = url.split("/");
+  console.log(split);
+  let host = "http://"+split[2];
+  if(split[3] == "play") {
+    split.splice(3,1);
+  }
+  (<HTMLInputElement>document.getElementById("boot-host"))!.value = host;
+  let which = split[3];
+  let qmark = which.indexOf("?");
+  let content = which.slice(0, qmark > 0 ? qmark : which.length);
+  (<HTMLInputElement>document.getElementById("boot-instance"))!.value = content;
+  let state = null;
+  let replay = null;
+  if(qmark > 0) {
+    let eq = which.indexOf("=", qmark);
+    if(eq < 0) {
+      throw "Invalid URL query parameter/value";
+    }
+    let state_or_replay = which.slice(qmark+1, eq);
+    let state_or_replay_id = which.slice(eq+1);
+    if(state_or_replay == "state") {
+      (<HTMLInputElement>document.getElementById("boot-state"))!.value = state_or_replay_id;
+      return run(host, content, state_or_replay_id, null);
+    } else if(state_or_replay == "replay") {
+      (<HTMLInputElement>document.getElementById("boot-replay"))!.value = state_or_replay_id;
+      return run(host, content, null, state_or_replay_id);
+    } else {
+      throw "Invalid URL query parameter"
+    }
+  } else {
+    return run(host, content, null, null);
+  }
+}
+
+api.on_handle_url(run_url);
+
 function bootCold() {
+  let host = <HTMLInputElement>document.getElementById("boot-host")!;
   let instance = <HTMLInputElement>document.getElementById("boot-instance")!;
-  run(instance.value, null, null);
+  run(host.value, instance.value, null, null);
 }
 function bootState() {
+  let host = <HTMLInputElement>document.getElementById("boot-host")!;
   let instance = <HTMLInputElement>document.getElementById("boot-instance")!;
   let state = <HTMLInputElement>document.getElementById("boot-state")!;
-  run(instance.value, state.value, null);
+  run(host.value, instance.value, state.value, null);
 }
 function bootReplay() {
+  let host = <HTMLInputElement>document.getElementById("boot-host")!;
   let instance = <HTMLInputElement>document.getElementById("boot-instance")!;
   let replay = <HTMLInputElement>document.getElementById("boot-replay")!;
-  run(instance.value, null, replay.value);
+  run(host.value, instance.value, null, replay.value);
 }
 
 window.addEventListener("DOMContentLoaded", () => {

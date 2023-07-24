@@ -1,8 +1,12 @@
 import { ipcRenderer, IpcRendererEvent } from 'electron';
 import {StartStateData, StateStart, StartReplayData, ReplayStart, ColdStart, ObjectLink, SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo} from '../types';
 
-export async function run_retroarch(core:string, start:ColdStart|StateStart|ReplayStart, manifest:ObjectLink[]) {
-  ipcRenderer.send('gisst:run_retroarch',core,start,manifest);
+export async function run_retroarch(host:string, core:string, start:ColdStart|StateStart|ReplayStart, manifest:ObjectLink[]) {
+  ipcRenderer.send('gisst:run_retroarch',host,core,start,manifest);
+}
+
+export function on_handle_url(f:(evt:IpcRendererEvent, url:string) => void) {
+  ipcRenderer.on('gisst:handle_url',f);
 }
 
 export function on_saves_changed(f:(evt:IpcRendererEvent, info:SavefileInfo) => void) {
