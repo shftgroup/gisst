@@ -2,14 +2,12 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 
 use async_trait::async_trait;
 use std::{fmt, str::FromStr};
-use std::path::Path;
 
 use sqlx::postgres::{PgConnection, PgQueryResult};
 use time::OffsetDateTime;
 
 use crate::model_enums::Framework;
 use uuid::Uuid;
-use crate::storage::FileInformation;
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
@@ -17,6 +15,8 @@ pub enum NewRecordError {
     Creator,
     #[error("could not insert environment record into database")]
     Environment,
+    #[error("could not insert file record into database")]
+    File,
     #[error("could not insert instance record into database")]
     Instance,
     #[error("could not insert image record into database")]
@@ -39,6 +39,8 @@ pub enum UpdateRecordError {
     Creator,
     #[error("could not update environment record in database")]
     Environment,
+    #[error("could not update file record in database")]
+    File,
     #[error("could not update instance record into database")]
     Instance,
     #[error("could not update image record in database")]
@@ -85,10 +87,6 @@ pub trait DBModel: Sized {
 #[async_trait]
 pub trait DBHashable: Sized {
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>>;
-    fn add_file_information(&self, rm: &FileInformation) -> Self;
-    fn dest_file_path(&self) -> &str;
-    fn hash(&self) -> &str;
-    fn filename(&self) -> &str;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -112,12 +110,20 @@ pub struct Environment {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct File {
+    pub file_id: Uuid,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+    pub file_size: i64, //PostgeSQL does not have native uint support
+    pub created_on: Option<OffsetDateTime>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Image {
     pub image_id: Uuid,
-    pub image_filename: String,
-    pub image_source_path: String,
-    pub image_dest_path: String,
-    pub image_hash: String,
+    pub file_id: Uuid,
     pub image_description: Option<String>,
     pub image_config: Option<sqlx::types::JsonValue>,
     pub created_on: Option<OffsetDateTime>,
@@ -164,10 +170,7 @@ pub struct InstanceObject {
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Object {
     pub object_id: Uuid,
-    pub object_hash: String,
-    pub object_filename: String,
-    pub object_source_path: String,
-    pub object_dest_path: String,
+    pub file_id: Uuid,
     pub object_description: Option<String>,
     pub created_on: Option<OffsetDateTime>,
 }
@@ -178,9 +181,7 @@ pub struct Replay {
     pub instance_id: Uuid,
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
-    pub replay_filename: String,
-    pub replay_path: String,
-    pub replay_hash: String,
+    pub file_id: Uuid,
     pub created_on: Option<OffsetDateTime>,
 }
 
@@ -190,9 +191,7 @@ pub struct Save {
     pub instance_id: Uuid,
     pub save_short_desc: String,
     pub save_description: String,
-    pub save_filename: String,
-    pub save_path: String,
-    pub save_hash: String,
+    pub file_id: Uuid,
     pub creator_id: Uuid,
     pub created_on: Option<OffsetDateTime>,
 }
@@ -202,9 +201,7 @@ pub struct State {
     pub state_id: Uuid,
     pub instance_id: Uuid,
     pub is_checkpoint: bool,
-    pub state_path: String,
-    pub state_hash: String,
-    pub state_filename: String,
+    pub file_id: Uuid,
     pub state_name: String,
     pub state_description: String,
     pub screenshot_id: Option<Uuid>,
@@ -314,6 +311,118 @@ impl DBModel for Creator {
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM creator WHERE creator_id = $1", id)
+            .execute(conn)
+            .await
+    }
+}
+
+#[async_trait]
+impl DBModel for File {
+    fn id(&self) -> &Uuid {
+        &self.file_id
+    }
+    fn fields() -> Vec<(String, String)> {
+        vec![
+            ("file_id".to_string(), "Uuid".to_string()),
+            ("file_hash".to_string(), "String".to_string()),
+            ("file_filename".to_string(), "String".to_string()),
+            ("file_dest_path".to_string(), "String".to_string()),
+            ("file_source_path".to_string(), "String".to_string()),
+            ("file_size".to_string(), "u64".to_string()),
+        ]
+    }
+
+    fn values_to_strings(&self) -> Vec<Option<String>> {
+        vec![
+            Some(self.file_id.to_string()),
+            Some(self.file_hash.to_string()),
+            Some(self.file_filename.to_string()),
+            Some(self.file_dest_path.to_string()),
+            Some(self.file_size.to_string()),
+            Some(self.file_source_path.to_string()),
+        ]
+    }
+
+    async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT file_id,
+            file_hash,
+            file_filename,
+            file_dest_path,
+            file_source_path,
+            file_size,
+            created_on
+            FROM file WHERE file_id = $1
+            "#,
+            id
+        )
+            .fetch_optional(conn)
+            .await
+    }
+
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT file_id,
+            file_hash,
+            file_filename,
+            file_dest_path,
+            file_source_path,
+            file_size,
+            created_on
+            FROM file
+            ORDER BY created_on DESC
+            LIMIT $1"#,
+            limit
+        )
+            .fetch_all(conn)
+            .await
+    }
+
+    async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Self,
+            r#"INSERT INTO file(file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on)
+            VALUES($1, $2, $3, $4, $5, $6, $7)
+            RETURNING file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on
+            "#,
+            model.file_id,
+            model.file_hash,
+            model.file_filename,
+            model.file_source_path,
+            model.file_dest_path,
+            model.file_size,
+            model.created_on
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::File)
+    }
+
+    async fn update(conn: &mut PgConnection, file: File) -> Result<Self, UpdateRecordError> {
+        sqlx::query_as!(
+            File,
+            r#"UPDATE file SET
+            (file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on) =
+            ($1, $2, $3, $4, $5, $6)
+            WHERE file_id = $7
+            RETURNING file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on"#,
+            file.file_hash,
+            file.file_filename,
+            file.file_source_path,
+            file.file_dest_path,
+            file.file_size,
+            file.created_on,
+            file.file_id,
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::File)
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM file WHERE file_id = $1", id)
             .execute(conn)
             .await
     }
@@ -450,10 +559,7 @@ impl DBModel for Image {
     fn fields() -> Vec<(String, String)> {
         vec![
             ("image_id".to_string(), "Uuid".to_string()),
-            ("image_filename".to_string(), "String".to_string()),
-            ("image_source_path".to_string(), "String".to_string()),
-            ("image_dest_path".to_string(), "String".to_string()),
-            ("image_hash".to_string(), "String".to_string()),
+            ("file_id".to_string(), "String".to_string()),
             ("image_config".to_string(), "Json".to_string()),
             ("image_description".to_string(), "String".to_string()),
             ("created_on".to_string(), "OffsetDateTime".to_string()),
@@ -463,10 +569,7 @@ impl DBModel for Image {
     fn values_to_strings(&self) -> Vec<Option<String>> {
         vec![
             Some(self.image_id.to_string()),
-            Some(self.image_filename.to_string()),
-            Some(self.image_source_path.to_string()),
-            Some(self.image_dest_path.to_string()),
-            Some(self.image_hash.to_string()),
+            Some(self.file_id.to_string()),
             unwrap_to_option_string(&self.image_config),
             unwrap_to_option_string(&self.image_description),
             unwrap_to_option_string(&self.created_on),
@@ -477,10 +580,7 @@ impl DBModel for Image {
         sqlx::query_as!(
             Self,
             r#"SELECT image_id,
-            image_filename,
-            image_source_path,
-            image_dest_path,
-            image_hash,
+            file_id,
             image_config,
             image_description,
             created_on
@@ -496,10 +596,7 @@ impl DBModel for Image {
         sqlx::query_as!(
             Self,
             r#"SELECT image_id,
-            image_filename,
-            image_source_path,
-            image_dest_path,
-            image_hash,
+            file_id,
             image_config,
             image_description,
             created_on
@@ -518,21 +615,15 @@ impl DBModel for Image {
             Image,
             r#"INSERT INTO image(
             image_id,
-            image_filename,
-            image_source_path,
-            image_dest_path,
-            image_hash,
+            file_id,
             image_config,
             image_description,
             created_on
             )
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on"#,
+            VALUES($1, $2, $3, $4, $5)
+            RETURNING image_id, file_id, image_config, image_description, created_on"#,
             model.image_id,
-            model.image_filename,
-            model.image_source_path,
-            model.image_dest_path,
-            model.image_hash,
+            model.file_id,
             model.image_config,
             model.image_description,
             model.created_on
@@ -546,14 +637,11 @@ impl DBModel for Image {
         sqlx::query_as!(
             Image,
             r#"UPDATE image SET
-            (image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on) =
-            ($1, $2, $3, $4, $5, $6, $7)
-            WHERE image_id = $8
-            RETURNING image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, created_on"#,
-            image.image_filename,
-            image.image_source_path,
-            image.image_dest_path,
-            image.image_hash,
+            (file_id, image_config, image_description, created_on) =
+            ($1, $2, $3, $4)
+            WHERE image_id = $5
+            RETURNING image_id, file_id, image_config, image_description, created_on"#,
+            image.file_id,
             image.image_config,
             image.image_description,
             image.created_on,
@@ -576,31 +664,21 @@ impl DBHashable for Image {
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT image_id,
-                image_filename,
-                image_source_path,
-                image_dest_path,
-                image_hash,
-                image_config,
-                image_description,
-                created_on
+            r#"SELECT image.image_id,
+                image.file_id,
+                image.image_config,
+                image.image_description,
+                image.created_on
                 FROM image
-                WHERE image_hash = $1
+                JOIN file USING(file_id)
+                WHERE file.file_hash = $1
                 "#,
             hash
         )
         .fetch_optional(conn)
         .await
     }
-    fn dest_file_path(&self) -> &str {
-        &self.image_dest_path
-    }
-    fn hash(&self) -> &str {
-        &self.image_hash
-    }
-    fn filename(&self) -> &str {
-        &self.image_filename
-    }
+
 }
 
 impl Image {
@@ -626,7 +704,7 @@ impl Image {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT image_id, image_filename, image_source_path, image_dest_path, image_hash, image_config, image_description, image.created_on
+            SELECT image_id, file_id, image_config, image_description, image.created_on
             FROM image
             JOIN environmentImage USING(image_id)
             JOIN environment USING(environment_id)
@@ -765,22 +843,14 @@ impl DBHashable for Object {
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
+            r#"SELECT object.object_id, object.file_id, object.object_description, object.created_on
             FROM object
-            WHERE object_hash = $1"#,
+            JOIN file USING(file_id)
+            WHERE file.file_hash = $1"#,
             hash
         )
             .fetch_optional(conn)
             .await
-    }
-    fn dest_file_path(&self) -> &str {
-        &self.object_dest_path
-    }
-    fn hash(&self) -> &str {
-        &self.object_hash
-    }
-    fn filename(&self) -> &str {
-        &self.object_filename
     }
 }
 
@@ -792,10 +862,7 @@ impl DBModel for Object {
     fn fields() -> Vec<(String, String)> {
         vec![
             ("object_id".to_string(), "Uuid".to_string()),
-            ("object_hash".to_string(), "String".to_string()),
-            ("object_filename".to_string(), "String".to_string()),
-            ("object_source_path".to_string(), "String".to_string()),
-            ("object_dest_path".to_string(), "String".to_string()),
+            ("file_id".to_string(), "String".to_string()),
             ("object_description".to_string(), "String".to_string()),
             ("created_on".to_string(), "OffsetDateTime".to_string()),
         ]
@@ -804,10 +871,7 @@ impl DBModel for Object {
     fn values_to_strings(&self) -> Vec<Option<String>> {
         vec![
             Some(self.object_id.to_string()),
-            Some(self.object_hash.to_string()),
-            Some(self.object_filename.to_string()),
-            Some(self.object_source_path.to_string()),
-            Some(self.object_dest_path.to_string()),
+            Some(self.file_id.to_string()),
             unwrap_to_option_string(&self.object_description),
             unwrap_to_option_string(&self.created_on),
         ]
@@ -816,7 +880,7 @@ impl DBModel for Object {
     async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
+            r#"SELECT object_id, file_id, object_description, created_on
             FROM object
             WHERE object_id = $1"#,
             id
@@ -828,7 +892,7 @@ impl DBModel for Object {
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
+            r#"SELECT object_id, file_id, object_description, created_on
             FROM object
             ORDER BY created_on DESC LIMIT $1
             "#,
@@ -837,21 +901,18 @@ impl DBModel for Object {
             .fetch_all(conn)
             .await
     }
-    async fn insert(conn: &mut PgConnection, model: Object) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, NewRecordError> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(Object,
             r#"INSERT INTO object (
-            object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on )
-            VALUES ($1, $2, $3, $4, $5, $6, current_timestamp)
-            RETURNING object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on
+            object_id, file_id, object_description, created_on )
+            VALUES ($1, $2, $3, current_timestamp)
+            RETURNING object_id, file_id, object_description, created_on
             "#,
-            model.object_id,
-            model.object_hash,
-            model.object_filename,
-            model.object_source_path,
-            model.object_dest_path,
-            model.object_description,
+            object.object_id,
+            object.file_id,
+            object.object_description
         )
             .fetch_one(conn)
             .await
@@ -865,14 +926,11 @@ impl DBModel for Object {
         sqlx::query_as!(
             Object,
             r#"UPDATE object SET
-            (object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on) =
-            ($1, $2, $3, $4, $5, $6)
-            WHERE object_id = $7
-            RETURNING object_id, object_hash, object_filename, object_source_path, object_dest_path, object_description, created_on"#,
-            object.object_hash,
-            object.object_filename,
-            object.object_source_path,
-            object.object_dest_path,
+            (file_id, object_description, created_on) =
+            ($1, $2, $3)
+            WHERE object_id = $4
+            RETURNING object_id, file_id, object_description, created_on"#,
+            object.file_id,
             object.object_description,
             object.created_on,
             object.object_id,
@@ -927,10 +985,7 @@ impl Object {
 pub struct ObjectLink {
     pub object_id: Uuid,
     pub object_role: ObjectRole,
-    pub object_hash: String,
-    pub object_filename: String,
-    pub object_source_path: String,
-    pub object_dest_path: String,
+    pub file_id: Uuid,
 }
 impl ObjectLink {
     pub async fn get_all_for_instance_id(
@@ -940,7 +995,7 @@ impl ObjectLink {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT object_id, instanceObject.object_role as "object_role:_", object_hash, object_filename, object_source_path, object_dest_path
+            SELECT object_id, instanceObject.object_role as "object_role:_", file_id
             FROM object
             JOIN instanceObject USING(object_id)
             JOIN instance USING(instance_id)
@@ -962,10 +1017,8 @@ impl DBModel for Replay {
         vec![
             ("replay_id".to_string(), "Uuid".to_string()),
             ("creator_id".to_string(), "Uuid".to_string()),
+            ("file_id".to_string(), "Uuid".to_string()),
             ("replay_forked_from".to_string(), "Uuid".to_string()),
-            ("replay_hash".to_string(), "String".to_string()),
-            ("replay_filename".to_string(), "String".to_string()),
-            ("replay_path".to_string(), "String".to_string()),
             ("created_on".to_string(), "OffsetDateTime".to_string()),
         ]
     }
@@ -974,9 +1027,8 @@ impl DBModel for Replay {
         vec![
             Some(self.replay_id.to_string()),
             Some(self.creator_id.to_string()),
+            Some(self.file_id.to_string()),
             unwrap_to_option_string(&self.replay_forked_from),
-            Some(self.replay_filename.to_string()),
-            Some(self.replay_path.to_string()),
             unwrap_to_option_string(&self.created_on),
         ]
     }
@@ -987,10 +1039,8 @@ impl DBModel for Replay {
             r#"SELECT replay_id,
             instance_id,
             creator_id,
+            file_id,
             replay_forked_from,
-            replay_filename,
-            replay_hash,
-            replay_path,
             created_on
             FROM replay WHERE replay_id = $1
             "#,
@@ -1006,10 +1056,8 @@ impl DBModel for Replay {
             r#"SELECT replay_id,
             instance_id,
             creator_id,
+            file_id,
             replay_forked_from,
-            replay_filename,
-            replay_hash,
-            replay_path,
             created_on
             FROM replay ORDER BY created_on DESC LIMIT $1
             "#,
@@ -1026,29 +1074,23 @@ impl DBModel for Replay {
             replay_id,
             instance_id,
             creator_id,
+            file_id,
             replay_forked_from,
-            replay_filename,
-            replay_hash,
-            replay_path,
             created_on
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ) VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING
             replay_id,
             instance_id,
             creator_id,
+            file_id,
             replay_forked_from,
-            replay_filename,
-            replay_hash,
-            replay_path,
             created_on
             "#,
             model.replay_id,
             model.instance_id,
             model.creator_id,
             model.replay_forked_from,
-            model.replay_filename,
-            model.replay_hash,
-            model.replay_path,
+            model.file_id,
             model.created_on,
         )
         .fetch_one(conn)
@@ -1063,16 +1105,14 @@ impl DBModel for Replay {
         sqlx::query_as!(
             Replay,
             r#"UPDATE replay SET
-            (instance_id, creator_id, replay_forked_from, replay_filename, replay_hash, replay_path, created_on) =
-            ($1, $2, $3, $4, $5, $6, $7)
-            WHERE replay_id = $8
-            RETURNING replay_id, instance_id, creator_id, replay_forked_from, replay_filename, replay_hash, replay_path, created_on"#,
+            (instance_id, creator_id, replay_forked_from, file_id, created_on) =
+            ($1, $2, $3, $4, $5)
+            WHERE replay_id = $6
+            RETURNING replay_id, instance_id, creator_id, replay_forked_from, file_id, created_on"#,
             replay.instance_id,
             replay.creator_id,
             replay.replay_forked_from,
-            replay.replay_filename,
-            replay.replay_hash,
-            replay.replay_path,
+            replay.file_id,
             replay.created_on,
             replay.replay_id,
         )
@@ -1094,30 +1134,21 @@ impl DBHashable for Replay {
         sqlx::query_as!(
             Self,
             r#"SELECT
-           replay_id,
-           instance_id,
-           creator_id,
-           replay_forked_from,
-           replay_filename,
-           replay_hash,
-           replay_path,
-           created_on
-           FROM replay WHERE replay_hash = $1"#,
+           replay.replay_id,
+           replay.instance_id,
+           replay.creator_id,
+           replay.replay_forked_from,
+           replay.file_id,
+           replay.created_on
+           FROM replay
+           JOIN file USING (file_id)
+           WHERE file.file_hash = $1"#,
             hash
         )
         .fetch_optional(conn)
         .await
     }
 
-    fn dest_file_path(&self) -> &str {
-        &self.replay_path
-    }
-    fn hash(&self) -> &str {
-        &self.replay_hash
-    }
-    fn filename(&self) -> &str {
-        &self.replay_filename
-    }
 }
 
 #[async_trait]
@@ -1132,9 +1163,7 @@ impl DBModel for Save {
             ("instance_id".to_string(), "Uuid".to_string()),
             ("save_short_desc".to_string(), "Uuid".to_string()),
             ("save_description".to_string(), "String".to_string()),
-            ("save_filename".to_string(), "String".to_string()),
-            ("save_path".to_string(), "String".to_string()),
-            ("save_hash".to_string(), "String".to_string()),
+            ("file_id".to_string(), "String".to_string()),
             ("creator_id".to_string(), "Uuid".to_string()),
             ("created_on".to_string(), "OffsetDateTime".to_string()),
         ]
@@ -1146,9 +1175,7 @@ impl DBModel for Save {
             Some(self.instance_id.to_string()),
             Some(self.save_short_desc.to_string()),
             Some(self.save_description.to_string()),
-            Some(self.save_filename.to_string()),
-            Some(self.save_path.to_string()),
-            Some(self.save_hash.to_string()),
+            Some(self.file_id.to_string()),
             Some(self.creator_id.to_string()),
             unwrap_to_option_string(&self.created_on),
         ]
@@ -1162,9 +1189,7 @@ impl DBModel for Save {
             instance_id,
             save_short_desc,
             save_description,
-            save_filename,
-            save_path,
-            save_hash,
+            file_id,
             creator_id,
             created_on
             FROM save WHERE save_id = $1"#,
@@ -1182,9 +1207,7 @@ impl DBModel for Save {
             instance_id,
             save_short_desc,
             save_description,
-            save_filename,
-            save_path,
-            save_hash,
+            file_id,
             creator_id,
             created_on
             FROM save ORDER BY created_on DESC LIMIT $1"#,
@@ -1202,20 +1225,16 @@ impl DBModel for Save {
             instance_id,
             save_short_desc,
             save_description,
-            save_filename,
-            save_path,
-            save_hash,
+            file_id,
             creator_id,
             created_on
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING
             save_id,
             instance_id,
             save_short_desc,
             save_description,
-            save_filename,
-            save_path,
-            save_hash,
+            file_id,
             creator_id,
             created_on
             "#,
@@ -1223,9 +1242,7 @@ impl DBModel for Save {
             model.instance_id,
             model.save_short_desc,
             model.save_description,
-            model.save_filename,
-            model.save_path,
-            model.save_hash,
+            model.file_id,
             model.creator_id,
             model.created_on,
         )
@@ -1238,16 +1255,14 @@ impl DBModel for Save {
         sqlx::query_as!(
             Save,
             r#"UPDATE save SET
-            (instance_id, save_short_desc, save_description, save_filename, save_path, save_hash, creator_id, created_on) =
-            ($1, $2, $3, $4, $5, $6, $7, $8)
-            WHERE save_id = $9
-            RETURNING save_id, instance_id, save_short_desc, save_description, save_filename, save_path, save_hash, creator_id, created_on"#,
+            (instance_id, save_short_desc, save_description, file_id, creator_id, created_on) =
+            ($1, $2, $3, $4, $5, $6)
+            WHERE save_id = $7
+            RETURNING save_id, instance_id, save_short_desc, save_description, file_id, creator_id, created_on"#,
             save.instance_id,
             save.save_short_desc,
             save.save_description,
-            save.save_filename,
-            save.save_path,
-            save.save_hash,
+            save.file_id,
             save.creator_id,
             save.created_on,
             save.save_id,
@@ -1270,33 +1285,21 @@ impl DBHashable for Save {
         sqlx::query_as!(
             Self,
             r#"SELECT
-            save_id,
-            instance_id,
-            save_short_desc,
-            save_description,
-            save_filename,
-            save_path,
-            save_hash,
-            creator_id,
-            created_on
-            FROM save WHERE save_hash = $1
+            save.save_id,
+            save.instance_id,
+            save.save_short_desc,
+            save.save_description,
+            save.file_id,
+            save.creator_id,
+            save.created_on
+            FROM save
+            JOIN file USING (file_id)
+            WHERE file.file_hash = $1
             "#,
             hash
         )
         .fetch_optional(conn)
         .await
-    }
-
-    fn dest_file_path(&self) -> &str {
-        &self.save_path
-    }
-
-    fn hash(&self) -> &str {
-        &self.save_hash
-    }
-
-    fn filename(&self) -> &str {
-        &self.save_filename
     }
 }
 
@@ -1311,8 +1314,7 @@ impl DBModel for State {
             ("state_id".to_string(), "Uuid".to_string()),
             ("instance_id".to_string(), "Uuid".to_string()),
             ("is_checkpoint".to_string(), "bool".to_string()),
-            ("state_filename".to_string(), "String".to_string()),
-            ("state_path".to_string(), "String".to_string()),
+            ("file_id".to_string(), "String".to_string()),
             ("state_name".to_string(), "String".to_string()),
             ("state_description".to_string(), "String".to_string()),
             ("screenshot_id".to_string(), "Uuid".to_string()),
@@ -1329,8 +1331,7 @@ impl DBModel for State {
             Some(self.state_id.to_string()),
             Some(self.instance_id.to_string()),
             Some(self.is_checkpoint.to_string()),
-            Some(self.state_filename.to_string()),
-            Some(self.state_path.to_string()),
+            Some(self.file_id.to_string()),
             Some(self.state_name.to_string()),
             Some(self.state_description.to_string()),
             unwrap_to_option_string(&self.screenshot_id),
@@ -1348,9 +1349,7 @@ impl DBModel for State {
             r#"SELECT state_id,
             instance_id,
             is_checkpoint,
-            state_filename,
-            state_path,
-            state_hash,
+            file_id,
             state_name,
             state_description,
             screenshot_id,
@@ -1373,9 +1372,7 @@ impl DBModel for State {
             r#"SELECT state_id,
             instance_id,
             is_checkpoint,
-            state_filename,
-            state_path,
-            state_hash,
+            file_id,
             state_name,
             state_description,
             screenshot_id,
@@ -1401,9 +1398,7 @@ impl DBModel for State {
             state_id,
             instance_id,
             is_checkpoint,
-            state_path,
-            state_hash,
-            state_filename,
+            file_id,
             state_name,
             state_description,
             screenshot_id,
@@ -1413,13 +1408,11 @@ impl DBModel for State {
             state_derived_from,
             created_on
  )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING state_id,
             instance_id,
             is_checkpoint,
-            state_path,
-            state_hash,
-            state_filename,
+            file_id,
             state_name,
             state_description,
             screenshot_id,
@@ -1432,9 +1425,7 @@ impl DBModel for State {
             state.state_id,
             state.instance_id,
             state.is_checkpoint,
-            state.state_path,
-            state.state_hash,
-            state.state_filename,
+            state.file_id,
             state.state_name,
             state.state_description,
             state.screenshot_id,
@@ -1453,15 +1444,34 @@ impl DBModel for State {
         sqlx::query_as!(
             State,
             r#"UPDATE state SET
-            (instance_id, is_checkpoint, state_path, state_hash, state_filename, state_name, state_description, screenshot_id, replay_id, creator_id, state_replay_index, state_derived_from, created_on) =
-            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            WHERE state_id = $14
-            RETURNING state_id, instance_id, is_checkpoint, state_path, state_hash, state_filename, state_name, state_description, screenshot_id, replay_id, creator_id, state_replay_index, state_derived_from, created_on"#,
+            (instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on) =
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            WHERE state_id = $12
+            RETURNING state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on"#,
             state.instance_id,
             state.is_checkpoint,
-            state.state_path,
-            state.state_hash,
-            state.state_filename,
+            state.file_id,
             state.state_name,
             state.state_description,
             state.screenshot_id,
@@ -1489,36 +1499,26 @@ impl DBHashable for State {
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT state_id,
-                instance_id,
-                is_checkpoint,
-                state_path,
-                state_hash,
-                state_filename,
-                state_name,
-                state_description,
-                screenshot_id,
-                replay_id,
-                creator_id,
-                state_replay_index,
-                state_derived_from,
-                created_on
+            r#"SELECT state.state_id,
+                state.instance_id,
+                state.is_checkpoint,
+                state.file_id,
+                state.state_name,
+                state.state_description,
+                state.screenshot_id,
+                state.replay_id,
+                state.creator_id,
+                state.state_replay_index,
+                state.state_derived_from,
+                state.created_on
                 FROM state
-                WHERE state_hash = $1
+                JOIN file USING (file_id)
+                WHERE file.file_hash = $1
                 "#,
             hash
         )
         .fetch_optional(conn)
         .await
-    }
-    fn dest_file_path(&self) -> &str {
-        &self.state_path
-    }
-    fn hash(&self) -> &str {
-        &self.state_hash
-    }
-    fn filename(&self) -> &str {
-        &self.state_filename
     }
 }
 

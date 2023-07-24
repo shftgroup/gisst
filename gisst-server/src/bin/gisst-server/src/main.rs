@@ -3,6 +3,8 @@ mod serverconfig;
 mod server;
 mod templates;
 mod routes;
+mod tus;
+mod utils;
 
 use anyhow::Result;
 use tracing::debug;
