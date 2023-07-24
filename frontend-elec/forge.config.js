@@ -1,5 +1,12 @@
 module.exports = {
-  packagerConfig: {},
+  packagerConfig: {
+    "protocols": [
+      {
+        "name": "GISST",
+        "schemes": ["gisst"]
+      }
+    ]
+  },
   rebuildConfig: {},
   makers: [
     {
@@ -12,7 +19,9 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-deb',
-      config: {},
+      "config": {
+        "mimeType": ["x-scheme-handler/gisst"]
+      }
     },
     {
       name: '@electron-forge/maker-rpm',
