@@ -159,7 +159,7 @@ pub struct UpdateObject {
 
     /// Update object based on a provided JSON string
     #[arg(long = "json-string", group = "json_input")]
-    pub json_string: serde_json::Value,
+    pub json_string: String,
 
     /// Update object based on a provided JSON file
     #[arg(long = "json-file", group = "json_input")]
@@ -173,7 +173,7 @@ pub struct ExportObject {}
 pub struct CreateInstance {
     /// Provide a JSON string to create instance
     #[arg(long = "json-string", group = "json_input")]
-    pub json_string: Option<serde_json::Value>,
+    pub json_string: Option<String>,
 
     /// Provide a JSON file to create instance
     #[arg(long = "json-file", group = "json_input")]
@@ -185,7 +185,7 @@ pub struct CreateInstance {
 
     /// Provide a JSON string for instance configuration
     #[arg(long = "instance-config-string", group = "config_input")]
-    pub instance_config_json_string: Option<serde_json::Value>,
+    pub instance_config_json_string: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -236,7 +236,7 @@ pub struct ExportImage {}
 pub struct CreateEnvironment {
     /// Provide a JSON string to create instance
     #[arg(long = "json-string", group = "json_input")]
-    pub json_string: Option<serde_json::Value>,
+    pub json_string: Option<String>,
 
     /// Provide a JSON file to create instance
     #[arg(long = "json-file", group = "json_input")]
@@ -248,7 +248,7 @@ pub struct CreateEnvironment {
 
     /// Provide a JSON string for environment configuration
     #[arg(long = "environment-config-string", group = "config_input")]
-    pub environment_config_json_string: Option<serde_json::Value>,
+    pub environment_config_json_string: Option<String>,
 }
 #[derive(Debug, Args)]
 pub struct UpdateEnvironment {}
@@ -259,7 +259,7 @@ pub struct ExportEnvironment {}
 pub struct CreateWork {
     /// Provide a JSON string to create work
     #[arg(long = "json-string")]
-    pub json_string: Option<serde_json::Value>,
+    pub json_string: Option<String>,
 
     /// Provide a JSON file to create work
     #[arg(long = "json-file")]

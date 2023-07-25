@@ -36,5 +36,5 @@ export declare class EmbedV86 {
     download_file(category: "state" | "save" | "replay", file_name: string): Promise<[Blob, string]>;
     replay_log(evt: Evt, val: any): void;
     replay_tick(): void;
-    run(content: string, entryState: boolean, movie: boolean): Promise<void>;
+    run(content: string | any, entryState: string | null, movie: string | null): Promise<void>;
 }

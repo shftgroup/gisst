@@ -16,5 +16,5 @@
     }
   },
   "include": ["src/**/*"],
-  "files":["src/index.d.ts","src/types.d.ts"]
+  "files":["src/main.d.ts","src/types.d.ts"]
 }
