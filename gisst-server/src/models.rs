@@ -87,6 +87,7 @@ pub trait DBModel: Sized {
 #[async_trait]
 pub trait DBHashable: Sized {
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>>;
+    fn file_id(&self) -> &Uuid;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -679,6 +680,9 @@ impl DBHashable for Image {
         .await
     }
 
+    fn file_id(&self) -> &Uuid {
+        &self.file_id
+    }
 }
 
 impl Image {
@@ -851,6 +855,10 @@ impl DBHashable for Object {
         )
             .fetch_optional(conn)
             .await
+    }
+
+    fn file_id(&self) -> &Uuid {
+        &self.file_id
     }
 }
 
@@ -1149,6 +1157,9 @@ impl DBHashable for Replay {
         .await
     }
 
+    fn file_id(&self) -> &Uuid {
+        &self.file_id
+    }
 }
 
 #[async_trait]
@@ -1300,6 +1311,10 @@ impl DBHashable for Save {
         )
         .fetch_optional(conn)
         .await
+    }
+
+    fn file_id(&self) -> &Uuid {
+        &self.file_id
     }
 }
 
@@ -1519,6 +1534,10 @@ impl DBHashable for State {
         )
         .fetch_optional(conn)
         .await
+    }
+
+    fn file_id(&self) -> &Uuid {
+        &self.file_id
     }
 }
 

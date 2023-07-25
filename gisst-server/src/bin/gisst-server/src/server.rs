@@ -12,6 +12,9 @@ use crate::{
         image_router,
         instance_router,
         object_router,
+        replay_router,
+        save_router,
+        state_router,
         work_router,
     },
     serverconfig::ServerConfig,
@@ -72,6 +75,9 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/environments", environment_router())
         .nest("/instances", instance_router())
         .nest("/images", image_router())
+        .nest("/replays", replay_router())
+        .nest("/saves", save_router())
+        .nest("/states", state_router())
         .nest("/objects", object_router())
         .nest("/works", work_router())
         .nest_service("/", ServeDir::new("../frontend-web/dist"))
