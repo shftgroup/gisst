@@ -4,6 +4,7 @@ import * as fetchfs from './fetchfs';
 import {UI} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
+import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
 
 const FS_CHECK_INTERVAL = 1000;
 
@@ -13,45 +14,6 @@ const saves_dir = "/home/web_user/retroarch/userdata/saves";
 const retro_args = ["-v"];
 
 let ui_state:UI;
-
-export interface ObjectLink {
-  object_role:string,
-  object_dest_path:string,
-  object_filename:string,
-  object_source_path:string,
-  object_hash:string,
-  object_id:string,
-}
-
-export interface ColdStart {
-  type:string
-}
-
-export interface StartStateData {
-  is_checkpoint:boolean,
-  state_description:string,
-  state_filename:string,
-  state_hash:string,
-  state_id:string,
-  state_path:string
-}
-
-export interface StateStart {
-  type:string,
-  data:StartStateData
-}
-
-export interface StartReplayData {
-  replay_filename:string,
-  replay_hash:string,
-  replay_id:string,
-  replay_path:string
-}
-
-export interface ReplayStart {
-  type:string,
-  data:StartReplayData
-}
 
 export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
   let content = manifest.find((o) => o.object_role=="content")!;
