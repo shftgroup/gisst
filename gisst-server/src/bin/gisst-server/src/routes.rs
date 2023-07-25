@@ -1,20 +1,18 @@
 use crate::server::ServerState;
-use axum::extract::Multipart;
 use axum::http::StatusCode;
 use axum::{
     extract::{Json, Path, Query},
     routing::{get, post},
     Extension, Router,
 };
-use bytes::Bytes;
 use gisstlib::{
-    models::{DBHashable, DBModel, Environment, Image, Instance, Object, Work},
-    storage::StorageHandler,
+    models::{DBModel, Environment, Image, Instance, Object, Replay, Save, State, Work},
     GISSTError,
 };
-use serde::Deserialize;
-use std::sync::Arc;
+use serde::{Deserialize};
 use uuid::Uuid;
+use gisstlib::models::File;
+
 
 // Nested Router structs for easier reading and manipulation
 // pub fn creator_router() -> Router {
@@ -72,6 +70,41 @@ pub fn object_router() -> Router {
         )
 }
 
+pub fn replay_router() -> Router {
+    Router::new()
+        .route("/", get(get_replays))
+        .route("/create", post(create_replay))
+        .route(
+            "/:id",
+            get(get_single_replay)
+                .put(edit_replay)
+                .delete(delete_replay),
+        )
+}
+pub fn save_router() -> Router {
+    Router::new()
+        .route("/", get(get_saves))
+        .route("/create", post(create_save))
+        .route(
+            "/:id",
+            get(get_single_save)
+                .put(edit_save)
+                .delete(delete_save),
+        )
+}
+
+pub fn state_router() -> Router {
+    Router::new()
+        .route("/", get(get_states))
+        .route("/create", post(create_state))
+        .route(
+            "/:id",
+            get(get_single_state)
+                .put(edit_state)
+                .delete(delete_state),
+        )
+}
+
 pub fn work_router() -> Router {
     Router::new()
         .route("/", get(get_works))
@@ -102,13 +135,13 @@ pub fn work_router() -> Router {
 
 // ENVIRONMENT method handlers
 #[derive(Deserialize)]
-struct EnvironmentsGetQueryParams {
+struct GetQueryParams {
     limit: Option<i64>,
 }
 
 async fn get_environments(
-    app_state: Extension<Arc<ServerState>>,
-    Query(params): Query<EnvironmentsGetQueryParams>,
+    app_state: Extension<ServerState>,
+    Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Environment>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Ok(environments) = Environment::get_all(&mut conn, params.limit).await {
@@ -119,15 +152,17 @@ async fn get_environments(
 }
 
 async fn create_environment(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Query(environment): Query<Environment>,
 ) -> Result<Json<Environment>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(Environment::insert(&mut conn, environment).await?))
 }
 
+
+
 async fn get_single_environment(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Environment>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -135,7 +170,7 @@ async fn get_single_environment(
 }
 
 async fn edit_environment(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Query(environment): Query<Environment>,
 ) -> Result<Json<Environment>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -147,7 +182,7 @@ async fn edit_environment(
 }
 
 async fn delete_environment(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -157,14 +192,10 @@ async fn delete_environment(
 }
 
 // IMAGE method handlers
-#[derive(Deserialize)]
-struct ImagesGetQueryParams {
-    limit: Option<i64>,
-}
 
 async fn get_images(
-    app_state: Extension<Arc<ServerState>>,
-    Query(params): Query<ImagesGetQueryParams>,
+    app_state: Extension<ServerState>,
+    Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Image>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Ok(images) = Image::get_all(&mut conn, params.limit).await {
@@ -175,73 +206,21 @@ async fn get_images(
 }
 
 async fn create_image(
-    app_state: Extension<Arc<ServerState>>,
-    mut multipart: Multipart,
+    app_state: Extension<ServerState>,
+    Query(image): Query<Image>,
 ) -> Result<Json<Image>, GISSTError> {
-    let mut filename: Option<String> = None;
-    let mut data: Option<Bytes> = None;
-    let mut hash: Option<String> = None;
-    let mut image_description: Option<String> = None;
-    let mut image_config_json: Option<sqlx::types::JsonValue> = None;
-
-    while let Some(field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap();
-        match name {
-            "image_file" => {
-                filename = Some(field.file_name().unwrap().to_string());
-                data = Some(field.bytes().await.unwrap());
-                hash = Some(StorageHandler::get_md5_hash(&data.clone().unwrap()))
-            }
-            "image_description" => image_description = Some(field.text().await.unwrap()),
-            "image_config_json" => {
-                image_config_json = Some(serde_json::Value::from(&*field.bytes().await.unwrap()))
-            }
-            _ => (),
-        }
-    }
-
     let mut conn = app_state.pool.acquire().await?;
 
-    if hash.is_some()
-        && Image::get_by_hash(&mut conn, hash.as_ref().unwrap())
-            .await?
-            .is_none()
-    {
-        let new_uuid = Uuid::new_v4();
-        if let Ok(file_info) = app_state
-            .storage
-            .write_file_to_uuid_folder(new_uuid, &filename.unwrap(), &data.unwrap())
-            .await
-        {
-            if let Ok(image) = Image::insert(
-                &mut conn,
-                Image {
-                    image_id: new_uuid,
-                    image_hash: hash.unwrap(),
-                    image_description,
-                    image_filename: file_info.source_filename,
-                    image_source_path: file_info.source_path,
-                    image_dest_path: file_info.dest_path,
-                    created_on: None,
-                    image_config: image_config_json,
-                },
-            )
-            .await
-            {
-                return Ok(Json(image));
-            } else {
-                app_state
-                    .storage
-                    .delete_file_with_uuid(new_uuid, &file_info.dest_filename)
-                    .await?;
-            }
-        }
+    if File::get_by_id(&mut conn, image.file_id).await?.is_some() {
+        Ok(Json(Image::insert(&mut conn, image).await?))
+    } else {
+        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::Image))
     }
-    Err(GISSTError::Generic)
 }
 
+
 async fn get_single_image(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Image>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -249,7 +228,7 @@ async fn get_single_image(
 }
 
 async fn edit_image(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Query(image): Query<Image>,
 ) -> Result<Json<Image>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -261,7 +240,7 @@ async fn edit_image(
 }
 
 async fn delete_image(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -269,14 +248,10 @@ async fn delete_image(
     Ok(StatusCode::OK)
 }
 // INSTANCE method handlers
-#[derive(Deserialize)]
-struct InstancesGetQueryParams {
-    limit: Option<i64>,
-}
 
 async fn get_instances(
-    app_state: Extension<Arc<ServerState>>,
-    Query(params): Query<InstancesGetQueryParams>,
+    app_state: Extension<ServerState>,
+    Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Instance>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Ok(instances) = Instance::get_all(&mut conn, params.limit).await {
@@ -287,7 +262,7 @@ async fn get_instances(
 }
 
 async fn create_instance(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Query(instance): Query<Instance>,
 ) -> Result<Json<Instance>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -295,7 +270,7 @@ async fn create_instance(
 }
 
 async fn get_single_instance(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Instance>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -303,7 +278,7 @@ async fn get_single_instance(
 }
 
 async fn edit_instance(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Query(instance): Query<Instance>,
 ) -> Result<Json<Instance>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -311,7 +286,7 @@ async fn edit_instance(
 }
 
 async fn delete_instance(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -320,14 +295,10 @@ async fn delete_instance(
 }
 
 // OBJECT method handlers
-#[derive(Deserialize)]
-struct ObjectsGetQueryParams {
-    limit: Option<i64>,
-}
 
 async fn get_objects(
-    app_state: Extension<Arc<ServerState>>,
-    Query(params): Query<ObjectsGetQueryParams>,
+    app_state: Extension<ServerState>,
+    Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Object>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Ok(objects) = Object::get_all(&mut conn, params.limit).await {
@@ -338,15 +309,28 @@ async fn get_objects(
 }
 
 async fn get_single_object(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Object>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(Object::get_by_id(&mut conn, id).await?.unwrap()))
 }
 
+async fn create_object(
+    app_state: Extension<ServerState>,
+    Query(object): Query<Object>,
+) -> Result<Json<Object>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+
+    if File::get_by_id(&mut conn, object.file_id).await?.is_some() {
+        Ok(Json(Object::insert(&mut conn, object).await?))
+    } else {
+        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::Object))
+    }
+}
+
 async fn edit_object(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Query(object): Query<Object>,
 ) -> Result<Json<Object>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -354,85 +338,177 @@ async fn edit_object(
 }
 
 async fn delete_object(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     Object::delete_by_id(&mut conn, id).await?;
-    Object::delete_object_instance_links_by_id(&mut conn, id).await?;
+    Ok(StatusCode::OK)
+}
+// Replay method handlers
+
+
+async fn get_replays(
+    app_state: Extension<ServerState>,
+    Query(params): Query<GetQueryParams>,
+) -> Result<Json<Vec<Replay>>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    if let Ok(replays) = Replay::get_all(&mut conn, params.limit).await {
+        Ok(replays.into())
+    } else {
+        Ok(Json(vec![]))
+    }
+}
+
+async fn get_single_replay(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Replay>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Replay::get_by_id(&mut conn, id).await?.unwrap()))
+}
+
+async fn edit_replay(
+    app_state: Extension<ServerState>,
+    Query(replay): Query<Replay>,
+) -> Result<Json<Replay>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Replay::update(&mut conn, replay).await?))
+}
+
+async fn delete_replay(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Replay::delete_by_id(&mut conn, id).await?;
     Ok(StatusCode::OK)
 }
 
-async fn create_object(
-    app_state: Extension<Arc<ServerState>>,
-    mut multipart: Multipart,
-) -> Result<Json<Object>, GISSTError> {
-    let mut filename: Option<String> = None;
-    let mut data: Option<Bytes> = None;
-    let mut hash: Option<String> = None;
-    let mut object_description: Option<String> = None;
 
-    while let Some(field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap();
-        match name {
-            "object_file" => {
-                filename = Some(field.file_name().unwrap().to_string());
-                data = Some(field.bytes().await.unwrap());
-                hash = Some(StorageHandler::get_md5_hash(&data.clone().unwrap()))
-            }
-            "object_description" => object_description = Some(field.text().await.unwrap()),
-            _ => (),
-        }
-    }
-
+async fn create_replay(
+    app_state: Extension<ServerState>,
+    Query(replay): Query<Replay>,
+) -> Result<Json<Replay>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
 
-    if hash.is_some()
-        && Object::get_by_hash(&mut conn, hash.as_ref().unwrap())
-            .await?
-            .is_none()
-    {
-        let new_uuid = Uuid::new_v4();
-        if let Ok(file_info) = app_state
-            .storage
-            .write_file_to_uuid_folder(new_uuid, &filename.unwrap(), &data.unwrap())
-            .await
-        {
-            if let Ok(object) = Object::insert(
-                &mut conn,
-                Object {
-                    object_id: new_uuid,
-                    object_hash: hash.unwrap(),
-                    object_description,
-                    object_filename: file_info.source_filename.to_string(),
-                    object_source_path: file_info.source_filename.to_string(),
-                    object_dest_path: file_info.dest_path,
-                    created_on: None,
-                },
-            )
-            .await
-            {
-                return Ok(Json(object));
-            } else {
-                app_state
-                    .storage
-                    .delete_file_with_uuid(new_uuid, &file_info.dest_filename)
-                    .await?;
-            }
-        }
+    if File::get_by_id(&mut conn, replay.file_id).await?.is_some() {
+        Ok(Json(Replay::insert(&mut conn, replay).await?))
+    } else {
+        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::Replay))
     }
-    Err(GISSTError::Generic)
+}
+// Save method handlers
+
+
+async fn get_saves(
+    app_state: Extension<ServerState>,
+    Query(params): Query<GetQueryParams>,
+) -> Result<Json<Vec<Save>>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    if let Ok(saves) = Save::get_all(&mut conn, params.limit).await {
+        Ok(saves.into())
+    } else {
+        Ok(Json(vec![]))
+    }
+}
+
+async fn get_single_save(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Save>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Save::get_by_id(&mut conn, id).await?.unwrap()))
+}
+
+async fn edit_save(
+    app_state: Extension<ServerState>,
+    Query(save): Query<Save>,
+) -> Result<Json<Save>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Save::update(&mut conn, save).await?))
+}
+
+async fn delete_save(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Save::delete_by_id(&mut conn, id).await?;
+    Ok(StatusCode::OK)
+}
+
+
+async fn create_save(
+    app_state: Extension<ServerState>,
+    Query(save): Query<Save>,
+) -> Result<Json<Save>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+
+    if File::get_by_id(&mut conn, save.file_id).await?.is_some() {
+        Ok(Json(Save::insert(&mut conn, save).await?))
+    } else {
+        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::Save))
+    }
+}
+// State method handlers
+
+
+async fn get_states(
+    app_state: Extension<ServerState>,
+    Query(params): Query<GetQueryParams>,
+) -> Result<Json<Vec<State>>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    if let Ok(states) = State::get_all(&mut conn, params.limit).await {
+        Ok(states.into())
+    } else {
+        Ok(Json(vec![]))
+    }
+}
+
+async fn get_single_state(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<State>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(State::get_by_id(&mut conn, id).await?.unwrap()))
+}
+
+async fn edit_state(
+    app_state: Extension<ServerState>,
+    Query(state): Query<State>,
+) -> Result<Json<State>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(State::update(&mut conn, state).await?))
+}
+
+async fn delete_state(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    State::delete_by_id(&mut conn, id).await?;
+    Ok(StatusCode::OK)
+}
+
+
+async fn create_state(
+    app_state: Extension<ServerState>,
+    Query(state): Query<State>,
+) -> Result<Json<State>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+
+    if File::get_by_id(&mut conn, state.file_id).await?.is_some() {
+        Ok(Json(State::insert(&mut conn, state).await?))
+    } else {
+        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::State))
+    }
 }
 
 // WORK method handlers
-#[derive(Deserialize)]
-struct WorksGetQueryParams {
-    limit: Option<i64>,
-}
-//
 async fn get_works(
-    app_state: Extension<Arc<ServerState>>,
-    Query(params): Query<WorksGetQueryParams>,
+    app_state: Extension<ServerState>,
+    Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Work>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Ok(works) = Work::get_all(&mut conn, params.limit).await {
@@ -443,7 +519,7 @@ async fn get_works(
 }
 
 async fn get_single_work(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Work>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -451,7 +527,7 @@ async fn get_single_work(
 }
 
 async fn create_work(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Query(work): Query<Work>,
 ) -> Result<Json<Work>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -459,7 +535,7 @@ async fn create_work(
 }
 
 async fn edit_work(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Query(work): Query<Work>,
 ) -> Result<Json<Work>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -467,7 +543,7 @@ async fn edit_work(
 }
 
 async fn delete_work(
-    app_state: Extension<Arc<ServerState>>,
+    app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
