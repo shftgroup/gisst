@@ -1,6 +1,6 @@
+use std::collections::HashMap;
 use gisstlib::{
     models::{self, DBModel, Environment, Instance, Replay, Save, State},
-    storage::StorageHandler,
     GISSTError,
 };
 use tower::{Layer, ServiceBuilder};
@@ -13,17 +13,21 @@ use crate::{
         image_router,
         instance_router,
         object_router,
+        replay_router,
+        save_router,
+        state_router,
         work_router,
     },
     serverconfig::ServerConfig,
     templates::{TemplateHandler, PLAYER_TEMPLATE},
+    tus::{tus_head, tus_patch, tus_creation},
 };
 use anyhow::Result;
 use axum::{
     error_handling::HandleErrorLayer,
     extract::{Path, Query},
-    response::{Html, IntoResponse},
-    routing::get,
+    response::Html,
+    routing::method_routing::{get, post, patch},
     Extension, Router, Server,
 };
 
@@ -32,33 +36,50 @@ use minijinja::render;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
-use std::sync::Arc;
+use axum::http::{HeaderMap};
+use axum::response::IntoResponse;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use uuid::Uuid;
+use gisstlib::storage::{PendingUpload, StorageHandler};
+use std::sync::{RwLock,Arc};
 
+#[derive(Clone)]
 pub struct ServerState {
     pub pool: PgPool,
-    pub storage: StorageHandler,
+    pub root_storage_path: String,
+    pub temp_storage_path: String,
+    pub folder_depth: u8,
+    pub default_chunk_size: usize,
+    pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: TemplateHandler,
 }
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
-    // Arc is needed to allow for thread safety, see: https://docs.rs/axum/latest/axum/struct.Extension.html
-    let app_state = Arc::new(ServerState {
+    StorageHandler::init_storage(&config.storage.root_folder_path, &config.storage.temp_folder_path)?;
+    let app_state =  ServerState{
         pool: db::new_pool(config).await?,
-        storage: StorageHandler::init(
-            config.storage.root_folder_path.to_string(),
-            config.storage.folder_depth,
-        ),
+        root_storage_path: config.storage.root_folder_path.clone(),
+        temp_storage_path: config.storage.temp_folder_path.clone(),
+        folder_depth: config.storage.folder_depth.clone(),
+        default_chunk_size: config.storage.chunk_size.clone(),
+        pending_uploads: Default::default(),
         templates: TemplateHandler::new("src/bin/gisst-server/src/templates")?,
-    });
+    };
 
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
+        .route("/resources/:id",
+               patch(tus_patch)
+                   .head(tus_head))
+        .route("/resources", post(tus_creation))
+        .route("/debug/tus_test", get(get_upload_form))
         // .nest("/creators", creator_router())
         .nest("/environments", environment_router())
         .nest("/instances", instance_router())
         .nest("/images", image_router())
+        .nest("/replays", replay_router())
+        .nest("/saves", save_router())
+        .nest("/states", state_router())
         .nest("/objects", object_router())
         .nest("/works", work_router())
         .nest_service("/", ServeDir::new("../frontend-web/dist"))
@@ -86,7 +107,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
-        config.http.listen_port,
+        config.http.listen_port.clone(),
     );
 
     Server::bind(&addr)
@@ -126,8 +147,8 @@ struct PlayerParams {
 }
 
 async fn get_player(
-    app_state: Extension<Arc<ServerState>>,
-    headers: axum::http::HeaderMap,
+    app_state: Extension<ServerState>,
+    headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
 ) -> Result<axum::response::Response, GISSTError> {
@@ -190,6 +211,8 @@ async fn get_player(
         .into_response())
 }
 
+
+
 // #[derive(Serialize)]
 // struct ModelInfo {
 //     name: String,
@@ -199,22 +222,11 @@ async fn get_player(
 // #[derive(Serialize)]
 // struct ModelField { name: String, field_type: String }
 //
-// async fn get_upload_form(app_state: Extension<Arc<ServerState>>, Path(model): Path<String>) -> Result<Html<String>, GISSTError> {
-//
-//     let mut model_name = model.clone();
-//     make_ascii_title_case(&mut model_name);
-//
-//     let model_schema = get_model_by_string(&model_name).fields();
-//     println!("{:?}", model_schema);
-//
-//     Ok(Html(render!(
-//         app_state.templates.get_template("debug_upload")?,
-//         model => ModelInfo{
-//             name: model,
-//             fields: convert_model_field_vec_to_form_fields(model_schema)
-//         }
-//     )))
-// }
+async fn get_upload_form(app_state: Extension<ServerState>) -> Result<Html<String>, GISSTError> {
+    Ok(Html(render!(
+        app_state.templates.get_template("debug_upload")?,
+    )))
+}
 
 // Utility Functions
 

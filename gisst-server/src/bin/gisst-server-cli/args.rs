@@ -134,7 +134,7 @@ pub struct CreateObject {
 
     /// Link to a specific instance based on UUID
     #[arg(short, long)]
-    pub link: Uuid,
+    pub link: Option<Uuid>,
 
     /// Object role for instance link. Must be one of "content", "dependency", or "config".
     #[arg(long)]
