@@ -160,17 +160,25 @@ async fn create_object(
 
     for path in &valid_paths {
         let data = &read(path)?;
-        let mut object = Object {
-            object_id: Uuid::new_v4(),
-            object_hash: StorageHandler::get_md5_hash(data),
-            object_filename: path
+
+        let mut file_record = gisstlib::models::File {
+            file_id: Uuid::new_v4(),
+            file_hash: StorageHandler::get_md5_hash(data),
+            file_filename: path
                 .to_path_buf()
                 .file_name()
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
-            object_source_path: path.to_path_buf().to_string_lossy().to_string(),
-            object_dest_path: Default::default(),
+            file_source_path: path.to_path_buf().to_string_lossy().to_string(),
+            file_dest_path: Default::default(),
+            file_size: 0,
+            created_on: None,
+        };
+
+        let mut object = Object {
+            object_id: Uuid::new_v4(),
+            file_id: file_record.file_id.clone(),
             object_description: Some(path.to_path_buf().to_string_lossy().to_string()),
             created_on: None,
         };
@@ -180,14 +188,15 @@ async fn create_object(
             object.object_id = force_uuid;
         }
 
-        if let Some(found_hash) = Object::get_by_hash(&mut conn, &object.object_hash).await? {
+        if let Some(found_hash) = Object::get_by_hash(&mut conn, &file_record.file_hash).await? {
+            let found_file = gisstlib::models::File::get_by_id(&mut conn, found_hash.file_id.clone()).await?.unwrap();
             warn!(
                 "Found object {}:{} with matching hash value {} to object {}:{}, skipping...",
                 found_hash.object_id,
-                found_hash.object_filename,
-                found_hash.object_hash,
+                found_file.file_filename,
+                found_file.file_hash,
                 object.object_id,
-                object.object_filename,
+                file_record.file_filename,
             );
             continue;
         }
@@ -202,26 +211,28 @@ async fn create_object(
             object.object_description = Some(description.trim().to_string());
         }
 
-        let s_handler = StorageHandler::init(storage_path.to_string(), depth);
-
-        match s_handler
-            .write_file_to_uuid_folder(object.object_id, &object.object_filename, data)
-            .await
-        {
+        match StorageHandler::write_file_to_uuid_folder(&storage_path,
+                                                        depth,
+                                                        file_record.file_id.clone(),
+                                                        &file_record.file_filename,
+                                                        data)
+            .await {
             Ok(file_info) => {
                 info!(
                     "Wrote file {} to {}",
                     file_info.dest_filename, file_info.dest_path
                 );
-                let obj_uuid = object.object_id;
-                object.object_dest_path = file_info.dest_path;
-                if let Ok(object) = Object::insert(&mut conn, object).await {
-                    Object::link_object_to_instance(&mut conn, object.object_id, link, role)
-                        .await?;
+                let obj_uuid = object.object_id.clone();
+                let file_uuid = file_record.file_id.clone();
+                file_record.file_dest_path = file_info.dest_path;
+
+                if gisstlib::models::File::insert(&mut conn, file_record).await.is_ok() &&
+                    Object::insert(&mut conn, object).await.is_ok() {
+                    if let Some(link) = link {
+                        Object::link_object_to_instance(&mut conn, obj_uuid, link, role).await?;
+                    }
                 } else {
-                    s_handler
-                        .delete_file_with_uuid(obj_uuid, &file_info.dest_filename)
-                        .await?;
+                    StorageHandler::delete_file_with_uuid(&storage_path, depth, file_uuid, &file_info.dest_filename).await?;
                 }
             }
             Err(e) => {
@@ -255,6 +266,15 @@ async fn delete_file_record<T: DBModel + DBHashable>(
     let model = T::get_by_id(&mut conn, d.id)
         .await?
         .ok_or(GISSTCliError::RecordNotFound(d.id))?;
+    let linked_file_record = gisstlib::models::File::get_by_id(&mut conn, model.file_id().clone())
+        .await?
+        .ok_or(GISSTCliError::RecordNotFound(model.file_id().clone()))?;
+
+    gisstlib::models::File::delete_by_id(&mut conn, linked_file_record.file_id)
+        .await
+        .map_err(GISSTCliError::Sql)?;
+
+    info!("Deleted file record with uuid {}", d.id);
 
     T::delete_by_id(&mut conn, d.id)
         .await
@@ -263,26 +283,24 @@ async fn delete_file_record<T: DBModel + DBHashable>(
 
     debug!(
         "File path depth is set to {}",
-        StorageHandler::get_folder_depth_from_path(Path::new(model.dest_file_path()), None)
+        StorageHandler::get_folder_depth_from_path(Path::new(&linked_file_record.file_dest_path), None)
     );
 
-    StorageHandler::init(
-        storage_path,
-        StorageHandler::get_folder_depth_from_path(Path::new(model.dest_file_path()), None),
+    StorageHandler::delete_file_with_uuid(
+        &storage_path,
+        StorageHandler::get_folder_depth_from_path(Path::new(&linked_file_record.file_dest_path), None),
+        linked_file_record.file_id,
+        &linked_file_record.file_filename
     )
-    .delete_file_with_uuid(
-        d.id,
-        &StorageHandler::get_dest_filename(model.hash(), model.filename()),
-    )
-    .await
-    .map_err(GISSTCliError::Io)?;
+        .await
+        .map_err(GISSTCliError::Io)?;
 
     info!(
-        "Deleted object file at path:{}",
-        Path::new(model.dest_file_path())
+        "Deleted file at path:{}",
+        Path::new(&linked_file_record.file_dest_path)
             .join(Path::new(&StorageHandler::get_dest_filename(
-                model.hash(),
-                model.filename()
+                &linked_file_record.file_hash,
+                &linked_file_record.file_filename
             )))
             .to_string_lossy()
     );
@@ -495,17 +513,24 @@ async fn create_image(
 
     for path in &valid_paths {
         let data = &read(path)?;
-        let mut image = Image {
-            image_id: Uuid::new_v4(),
-            image_hash: StorageHandler::get_md5_hash(data),
-            image_filename: path
+
+        let mut file_record = gisstlib::models::File {
+            file_id: Uuid::new_v4(),
+            file_hash: StorageHandler::get_md5_hash(data),
+            file_filename: path
                 .to_path_buf()
                 .file_name()
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
-            image_source_path: path.to_path_buf().to_string_lossy().to_string(),
-            image_dest_path: Default::default(),
+            file_source_path: path.to_path_buf().to_string_lossy().to_string(),
+            file_dest_path: Default::default(),
+            file_size: 0,
+            created_on: None,
+        };
+        let mut image = Image {
+            image_id: Uuid::new_v4(),
+            file_id: file_record.file_id.clone(),
             image_description: Some(path.to_path_buf().to_string_lossy().to_string()),
             image_config: None,
             created_on: None,
@@ -516,14 +541,15 @@ async fn create_image(
             image.image_id = force_uuid;
         }
 
-        if let Some(found_hash) = Image::get_by_hash(&mut conn, &image.image_hash).await? {
+        if let Some(found_hash) = Image::get_by_hash(&mut conn, &file_record.file_hash).await? {
+            let found_file = gisstlib::models::File::get_by_id(&mut conn, found_hash.file_id).await?.unwrap();
             warn!(
                 "Found image {}:{} with matching hash value {} to image {}:{}, skipping...",
                 found_hash.image_id,
-                found_hash.image_filename,
-                found_hash.image_hash,
+                found_file.file_filename,
+                found_file.file_hash,
                 image.image_id,
-                image.image_filename,
+                file_record.file_filename,
             );
             continue;
         }
@@ -538,10 +564,13 @@ async fn create_image(
             image.image_description = Some(description.trim().to_string());
         }
 
-        let s_handler = StorageHandler::init(storage_path.to_string(), depth);
-
-        match s_handler
-            .write_file_to_uuid_folder(image.image_id, &image.image_filename, data)
+        match StorageHandler::write_file_to_uuid_folder(
+            &storage_path,
+            depth,
+            file_record.file_id,
+            &file_record.file_filename,
+            data
+        )
             .await
         {
             Ok(file_info) => {
@@ -549,16 +578,17 @@ async fn create_image(
                     "Wrote file {} to {}",
                     file_info.dest_filename, file_info.dest_path
                 );
-                let image_uuid = image.image_id;
-                image.image_dest_path = file_info.dest_path;
-                if let Ok(image) = Image::insert(&mut conn, image).await {
+                let image_uuid = image.image_id.clone();
+                let file_uuid = file_record.file_id.clone();
+                file_record.file_dest_path = file_info.dest_path;
+
+                if gisstlib::models::File::insert(&mut conn, file_record).await.is_ok() &&
+                    Image::insert(&mut conn, image).await.is_ok() {
                     if let Some(link) = link {
-                        Image::link_image_to_environment(&mut conn, image.image_id, link).await?;
+                        Image::link_image_to_environment(&mut conn, image_uuid, link).await?;
                     }
                 } else {
-                    s_handler
-                        .delete_file_with_uuid(image_uuid, &file_info.dest_filename)
-                        .await?;
+                    StorageHandler::delete_file_with_uuid(&storage_path, depth, file_uuid, &file_info.dest_filename).await?;
                 }
             }
             Err(e) => {
@@ -592,14 +622,26 @@ async fn create_replay(
 
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
-    let mut replay = Replay {
+    let mut file_record = gisstlib::models::File {
+        file_id: Uuid::new_v4(),
+        file_hash: StorageHandler::get_md5_hash(data),
+        file_filename: file
+            .to_path_buf()
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+        file_source_path: file.to_path_buf().to_string_lossy().to_string(),
+        file_dest_path: Default::default(),
+        file_size: 0,
+        created_on: None,
+    };
+    let replay = Replay {
         replay_id: force_uuid.unwrap_or_else(|| Uuid::new_v4()),
         instance_id: link,
         creator_id: creator_id.unwrap_or_else(|| uuid!("00000000-0000-0000-0000-000000000000")),
         replay_forked_from,
-        replay_path: Default::default(),
-        replay_hash: StorageHandler::get_md5_hash(data),
-        replay_filename: file.file_name().unwrap().to_string_lossy().to_string(),
+        file_id: file_record.file_id.clone(),
         created_on: created_on.and_then(|s| {
             time::OffsetDateTime::parse(
                 &s,
@@ -609,21 +651,26 @@ async fn create_replay(
             .ok()
         }),
     };
-    if let Some(found_hash) = Replay::get_by_hash(&mut conn, &replay.replay_hash).await? {
+    if let Some(found_hash) = Replay::get_by_hash(&mut conn, &file_record.file_hash).await? {
+        let found_file = gisstlib::models::File::get_by_id(&mut conn, found_hash.file_id).await?.unwrap();
         return Err(GISSTCliError::CreateReplay(format!(
             "Found replay {}:{} with matching hash value {} to replay {}:{}, skipping...",
             found_hash.replay_id,
-            found_hash.replay_filename,
-            found_hash.replay_hash,
+            found_file.file_filename,
+            found_file.file_hash,
             replay.replay_id,
-            replay.replay_filename,
+            file_record.file_filename,
         )));
     }
 
-    let s_handler = StorageHandler::init(storage_path.to_string(), depth);
 
-    match s_handler
-        .write_file_to_uuid_folder(replay.replay_id, &replay.replay_filename, data)
+    match StorageHandler::write_file_to_uuid_folder(
+        &storage_path,
+        depth,
+        file_record.file_id,
+        &file_record.file_filename,
+        data
+    )
         .await
     {
         Ok(file_info) => {
@@ -631,12 +678,11 @@ async fn create_replay(
                 "Wrote file {} to {}",
                 file_info.dest_filename, file_info.dest_path
             );
-            let replay_uuid = replay.replay_id;
-            replay.replay_path = file_info.dest_path;
+            let file_uuid = file_record.file_id.clone();
+            file_record.file_dest_path = file_info.dest_path;
+            gisstlib::models::File::insert(&mut conn, file_record).await?;
             if let Err(e) = Replay::insert(&mut conn, dbg!(replay)).await {
-                s_handler
-                    .delete_file_with_uuid(replay_uuid, &file_info.dest_filename)
-                    .await?;
+                StorageHandler::delete_file_with_uuid(&storage_path, depth, file_uuid, &file_info.dest_filename).await?;
                 return Err(GISSTCliError::NewModel(e));
             };
         }
@@ -675,14 +721,27 @@ async fn create_state(
 
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
-    let mut state = State {
+
+    let mut file_record = gisstlib::models::File {
+        file_id: Uuid::new_v4(),
+        file_hash: StorageHandler::get_md5_hash(data),
+        file_filename: file
+            .to_path_buf()
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+        file_source_path: file.to_path_buf().to_string_lossy().to_string(),
+        file_dest_path: Default::default(),
+        file_size: 0,
+        created_on: None,
+    };
+    let state = State {
         state_id: force_uuid.unwrap_or_else(|| Uuid::new_v4()),
         instance_id: link,
         is_checkpoint: replay_id.is_some(),
-        state_path: Default::default(),
+        file_id: file_record.file_id.clone(),
         state_name: state_name.clone(),
-        state_hash: StorageHandler::get_md5_hash(data),
-        state_filename: file.file_name().unwrap().to_string_lossy().to_string(),
         state_description: state_description.unwrap_or_else(|| state_name.clone()),
         screenshot_id,
         created_on: created_on.and_then(|s| {
@@ -698,21 +757,25 @@ async fn create_state(
         state_replay_index,
         state_derived_from,
     };
-    if let Some(found_hash) = State::get_by_hash(&mut conn, &state.state_hash).await? {
+    if let Some(found_hash) = State::get_by_hash(&mut conn, &file_record.file_hash).await? {
+        let found_file = gisstlib::models::File::get_by_id(&mut conn, found_hash.file_id).await?.unwrap();
         return Err(GISSTCliError::CreateState(format!(
             "Found state {}:{} with matching hash value {} to state {}:{}, skipping...",
             found_hash.state_id,
-            found_hash.state_filename,
-            found_hash.state_hash,
+            found_file.file_filename,
+            found_file.file_hash,
             state.state_id,
-            state.state_filename,
+            file_record.file_filename,
         )));
     }
 
-    let s_handler = StorageHandler::init(storage_path.to_string(), depth);
-
-    match s_handler
-        .write_file_to_uuid_folder(state.state_id, &state.state_filename, data)
+    match StorageHandler::write_file_to_uuid_folder(
+        &storage_path,
+        depth,
+        file_record.file_id,
+        &file_record.file_filename,
+        data
+    )
         .await
     {
         Ok(file_info) => {
@@ -720,12 +783,11 @@ async fn create_state(
                 "Wrote file {} to {}",
                 file_info.dest_filename, file_info.dest_path
             );
-            let state_uuid = state.state_id;
-            state.state_path = file_info.dest_path;
+            let file_uuid = file_record.file_id.clone();
+            file_record.file_dest_path = file_info.dest_path;
+            gisstlib::models::File::insert(&mut conn, file_record).await?;
             if let Err(e) = State::insert(&mut conn, state).await {
-                s_handler
-                    .delete_file_with_uuid(state_uuid, &file_info.dest_filename)
-                    .await?;
+                StorageHandler::delete_file_with_uuid(&storage_path, depth, file_uuid, &file_info.dest_filename).await?;
                 return Err(GISSTCliError::NewModel(e));
             };
         }
