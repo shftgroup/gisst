@@ -13,3 +13,29 @@ This project packages Retroarch (and maybe soon v86) for web-embedding and for d
 1. Copy a ROM and optionally save state (a file called =entry_state=) and BSV input recording (=movie.bsv=) into =simple/content/=, then modify =simple/libretro_embed.js= with the name of the ROM and core.
 2. Execute =./run.sh= to copy these to the =retroarch-web/= folder and starts a Python http server.
 3. Hit up =localhost:8080/embed_one.html= to play a game.
+
+* Ingesting ROM sets (retroarch)
+
+In the gisst-server directory:
+
+#+BEGIN_src sh
+mkdir -p tmp-download
+cd tmp-download
+pushd .
+git clone -n --depth=1 --filter=blob:none --sparse git@github.com:libretro/libretro-database.git rdb-repo
+cd rdb-repo
+git sparse-checkout set --no-cone rdb
+git checkout
+popd
+pushd .
+git clone -n --depth=1 --filter=blob:none --sparse git@github.com:libretro/retroarch.git
+cd retroarch
+git sparse-checkout set --no-cone libretro-common libretro-db
+git checkout
+popd
+cd ..
+mv tmp-download/rdb/rdb .
+mkdir -p libretro-util
+mv tmp-download/retroarch/libretro-* libretro-util
+rm -rf tmp-download
+#+END_src
