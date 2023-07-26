@@ -1,4 +1,4 @@
-use gisstlib::GISSTError;
+use crate::error::GISSTError;
 use std::collections::HashMap;
 use std::fs;
 

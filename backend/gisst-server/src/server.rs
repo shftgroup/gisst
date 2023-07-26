@@ -1,8 +1,6 @@
+use crate::error::GISSTError;
+use gisst::models::{self, DBModel, Environment, Instance, Replay, Save, State};
 use std::collections::HashMap;
-use gisstlib::{
-    models::{self, DBModel, Environment, Instance, Replay, Save, State},
-    GISSTError,
-};
 use tower::{Layer, ServiceBuilder};
 
 use crate::{
@@ -20,28 +18,28 @@ use crate::{
     },
     serverconfig::ServerConfig,
     templates::{TemplateHandler, PLAYER_TEMPLATE},
-    tus::{tus_head, tus_patch, tus_creation},
+    tus::{tus_creation, tus_head, tus_patch},
 };
 use anyhow::Result;
 use axum::{
     error_handling::HandleErrorLayer,
     extract::{Path, Query},
     response::Html,
-    routing::method_routing::{get, post, patch},
+    routing::method_routing::{get, patch, post},
     Extension, Router, Server,
 };
 
 use axum::extract::DefaultBodyLimit;
+use axum::http::HeaderMap;
+use axum::response::IntoResponse;
+use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::render;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
-use axum::http::{HeaderMap};
-use axum::response::IntoResponse;
+use std::sync::{Arc, RwLock};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use uuid::Uuid;
-use gisstlib::storage::{PendingUpload, StorageHandler};
-use std::sync::{RwLock,Arc};
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -55,22 +53,23 @@ pub struct ServerState {
 }
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
-    StorageHandler::init_storage(&config.storage.root_folder_path, &config.storage.temp_folder_path)?;
-    let app_state =  ServerState{
+    StorageHandler::init_storage(
+        &config.storage.root_folder_path,
+        &config.storage.temp_folder_path,
+    )?;
+    let app_state = ServerState {
         pool: db::new_pool(config).await?,
         root_storage_path: config.storage.root_folder_path.clone(),
         temp_storage_path: config.storage.temp_folder_path.clone(),
-        folder_depth: config.storage.folder_depth.clone(),
-        default_chunk_size: config.storage.chunk_size.clone(),
+        folder_depth: config.storage.folder_depth,
+        default_chunk_size: config.storage.chunk_size,
         pending_uploads: Default::default(),
-        templates: TemplateHandler::new("src/bin/gisst-server/src/templates")?,
+        templates: TemplateHandler::new("gisst-server/src/templates")?,
     };
 
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
-        .route("/resources/:id",
-               patch(tus_patch)
-                   .head(tus_head))
+        .route("/resources/:id", patch(tus_patch).head(tus_head))
         .route("/resources", post(tus_creation))
         .route("/debug/tus_test", get(get_upload_form))
         // .nest("/creators", creator_router())
@@ -211,8 +210,6 @@ async fn get_player(
         .into_response())
 }
 
-
-
 // #[derive(Serialize)]
 // struct ModelInfo {
 //     name: String,
@@ -223,9 +220,9 @@ async fn get_player(
 // struct ModelField { name: String, field_type: String }
 //
 async fn get_upload_form(app_state: Extension<ServerState>) -> Result<Html<String>, GISSTError> {
-    Ok(Html(render!(
-        app_state.templates.get_template("debug_upload")?,
-    )))
+    Ok(Html(render!(app_state
+        .templates
+        .get_template("debug_upload")?,)))
 }
 
 // Utility Functions

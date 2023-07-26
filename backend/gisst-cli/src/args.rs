@@ -27,7 +27,7 @@ pub enum GISSTCliError {
     #[error("database error")]
     Sql(#[from] sqlx::Error),
     #[error("gisst new model error")]
-    NewModel(#[from] gisstlib::models::NewRecordError),
+    NewModel(#[from] gisst::models::NewRecordError),
     #[error("json parse error")]
     JsonParse(#[from] serde_json::Error),
     #[error("record not found error")]
@@ -138,7 +138,7 @@ pub struct CreateObject {
 
     /// Object role for instance link. Must be one of "content", "dependency", or "config".
     #[arg(long)]
-    pub role: gisstlib::models::ObjectRole,
+    pub role: gisst::models::ObjectRole,
 
     /// Folder depth to use for input file to path based off of characters in assigned UUID
     #[arg(short, long, default_value_t = 4)]
