@@ -16,26 +16,27 @@ This project packages Retroarch (and maybe soon v86) for web-embedding and for d
 
 * Ingesting ROM sets (retroarch)
 
-In the gisst-server directory:
+In the rdb-sys directory:
 
 #+BEGIN_src sh
-mkdir -p tmp-download
-cd tmp-download
-pushd .
-git clone -n --depth=1 --filter=blob:none --sparse git@github.com:libretro/libretro-database.git rdb-repo
-cd rdb-repo
-git sparse-checkout set --no-cone rdb
-git checkout
-popd
-pushd .
 git clone -n --depth=1 --filter=blob:none --sparse git@github.com:libretro/retroarch.git
 cd retroarch
 git sparse-checkout set --no-cone libretro-common libretro-db
 git checkout
-popd
 cd ..
-mv tmp-download/rdb/rdb .
-mkdir -p libretro-util
-mv tmp-download/retroarch/libretro-* libretro-util
-rm -rf tmp-download
+mkdir libretro-util
+mv retroarch/libretro-* libretro-util
+rm -rf retroarch
+#+END_src
+
+In the backend directory:
+
+#+BEGIN_src sh
+git clone -n --depth=1 --filter=blob:none --sparse git@github.com:libretro/libretro-database.git rdb-repo
+cd rdb-repo
+git sparse-checkout set --no-cone rdb
+git checkout
+cd ..
+mv rdb-repo/rdb .
+rm -rf rdb-repo
 #+END_src

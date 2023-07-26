@@ -106,7 +106,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
-        config.http.listen_port.clone(),
+        config.http.listen_port,
     );
 
     Server::bind(&addr)
