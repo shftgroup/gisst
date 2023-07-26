@@ -1,8 +1,9 @@
 mod db;
-mod serverconfig;
-mod server;
-mod templates;
+mod error;
 mod routes;
+mod server;
+mod serverconfig;
+mod templates;
 mod tus;
 mod utils;
 
