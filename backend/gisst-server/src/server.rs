@@ -61,10 +61,10 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         pool: db::new_pool(config).await?,
         root_storage_path: config.storage.root_folder_path.clone(),
         temp_storage_path: config.storage.temp_folder_path.clone(),
-        folder_depth: config.storage.folder_depth.clone(),
-        default_chunk_size: config.storage.chunk_size.clone(),
+        folder_depth: config.storage.folder_depth,
+        default_chunk_size: config.storage.chunk_size,
         pending_uploads: Default::default(),
-        templates: TemplateHandler::new("src/bin/gisst-server/src/templates")?,
+        templates: TemplateHandler::new("gisst-server/src/templates")?,
     };
 
     let app = Router::new()
