@@ -178,7 +178,7 @@ async fn create_object(
 
         let mut object = Object {
             object_id: Uuid::new_v4(),
-            file_id: file_record.file_id.clone(),
+            file_id: file_record.file_id,
             object_description: Some(path.to_path_buf().to_string_lossy().to_string()),
             created_on: None,
         };
@@ -189,7 +189,7 @@ async fn create_object(
         }
 
         if let Some(found_hash) = Object::get_by_hash(&mut conn, &file_record.file_hash).await? {
-            let found_file = gisst::models::File::get_by_id(&mut conn, found_hash.file_id.clone())
+            let found_file = gisst::models::File::get_by_id(&mut conn, found_hash.file_id)
                 .await?
                 .unwrap();
             warn!(
@@ -216,7 +216,7 @@ async fn create_object(
         match StorageHandler::write_file_to_uuid_folder(
             &storage_path,
             depth,
-            file_record.file_id.clone(),
+            file_record.file_id,
             &file_record.file_filename,
             data,
         )
@@ -227,8 +227,8 @@ async fn create_object(
                     "Wrote file {} to {}",
                     file_info.dest_filename, file_info.dest_path
                 );
-                let obj_uuid = object.object_id.clone();
-                let file_uuid = file_record.file_id.clone();
+                let obj_uuid = object.object_id;
+                let file_uuid = file_record.file_id;
                 file_record.file_dest_path = file_info.dest_path;
 
                 if gisst::models::File::insert(&mut conn, file_record)
@@ -280,9 +280,9 @@ async fn delete_file_record<T: DBModel + DBHashable>(
     let model = T::get_by_id(&mut conn, d.id)
         .await?
         .ok_or(GISSTCliError::RecordNotFound(d.id))?;
-    let linked_file_record = gisst::models::File::get_by_id(&mut conn, model.file_id().clone())
+    let linked_file_record = gisst::models::File::get_by_id(&mut conn, *model.file_id())
         .await?
-        .ok_or(GISSTCliError::RecordNotFound(model.file_id().clone()))?;
+        .ok_or(GISSTCliError::RecordNotFound(*model.file_id()))?;
 
     gisst::models::File::delete_by_id(&mut conn, linked_file_record.file_id)
         .await
@@ -550,7 +550,7 @@ async fn create_image(
         };
         let mut image = Image {
             image_id: Uuid::new_v4(),
-            file_id: file_record.file_id.clone(),
+            file_id: file_record.file_id,
             image_description: Some(path.to_path_buf().to_string_lossy().to_string()),
             image_config: None,
             created_on: None,
@@ -600,8 +600,8 @@ async fn create_image(
                     "Wrote file {} to {}",
                     file_info.dest_filename, file_info.dest_path
                 );
-                let image_uuid = image.image_id.clone();
-                let file_uuid = file_record.file_id.clone();
+                let image_uuid = image.image_id;
+                let file_uuid = file_record.file_id;
                 file_record.file_dest_path = file_info.dest_path;
 
                 if gisst::models::File::insert(&mut conn, file_record)
@@ -744,10 +744,10 @@ async fn create_state(
         created_on: None,
     };
     let state = State {
-        state_id: force_uuid.unwrap_or_else(|| Uuid::new_v4()),
+        state_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
         is_checkpoint: replay_id.is_some(),
-        file_id: file_record.file_id.clone(),
+        file_id: file_record.file_id,
         state_name: state_name.clone(),
         state_description: state_description.unwrap_or_else(|| state_name.clone()),
         screenshot_id,
@@ -792,7 +792,7 @@ async fn create_state(
                 "Wrote file {} to {}",
                 file_info.dest_filename, file_info.dest_path
             );
-            let file_uuid = file_record.file_id.clone();
+            let file_uuid = file_record.file_id;
             file_record.file_dest_path = file_info.dest_path;
             gisst::models::File::insert(&mut conn, file_record).await?;
             if let Err(e) = State::insert(&mut conn, state).await {

@@ -120,23 +120,11 @@ impl StorageHandler {
         temp_path: &str,
         file_info: &FileInformation,
     ) -> Result<(), StorageError> {
-        let mut path = Self::get_dest_file_path(&root_path, &file_info);
-        println!(
-            "{}",
-            format!(
-                "In rename_file, dest_path is {}",
-                path.to_string_lossy().to_string()
-            )
-        );
+        let mut path = Self::get_dest_file_path(root_path, file_info);
+        println!("In rename_file, dest_path is {}", path.to_string_lossy());
 
         path.pop();
-        println!(
-            "{}",
-            format!(
-                "In rename_file, dest_path is {}",
-                path.to_string_lossy().to_string()
-            )
-        );
+        println!("In rename_file, dest_path is {}", path.to_string_lossy());
 
         if !path.is_dir() {
             create_dir_all(path.as_path()).await?
