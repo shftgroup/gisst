@@ -5,8 +5,8 @@ use crate::{
     utils::{check_header, parse_header, get_metadata}
 };
 
-use gisstlib::GISSTError;
-use gisstlib::models::{File as GFile, DBModel};
+use crate::error::GISSTError;
+use gisst::models::{File as GFile, DBModel};
 use bytes::Bytes;
 use uuid::Uuid;
 
@@ -22,7 +22,7 @@ use axum::{
 };
 
 use axum_macros::debug_handler;
-use gisstlib::storage::{FileInformation, PendingUpload, StorageHandler};
+use gisst::storage::{FileInformation, PendingUpload, StorageHandler};
 
 
 pub async fn tus_head(
