@@ -650,85 +650,55 @@ async fn create_replay(
             file.to_string_lossy()
         )));
     }
-
+    let created_on = created_on.and_then(|s| {
+        time::OffsetDateTime::parse(
+            &s,
+            &time::format_description::well_known::iso8601::Iso8601::DEFAULT,
+        )
+        .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
+        .ok()
+    });
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
-    let mut file_record = gisst::models::File {
-        file_id: Uuid::new_v4(),
-        file_hash: StorageHandler::get_md5_hash(data),
-        file_filename: file
-            .to_path_buf()
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .to_string(),
-        file_source_path: file.to_path_buf().to_string_lossy().to_string(),
-        file_dest_path: Default::default(),
-        file_size: 0,
-        created_on: None,
+    let hash = StorageHandler::get_md5_hash(data);
+    let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut conn, &hash).await? {
+        info!("File exists in DB already");
+        file.file_id
+    } else {
+        let uuid = Uuid::new_v4();
+        let filename = file.file_name().unwrap().to_string_lossy().to_string();
+        let file_info =
+            StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, data)
+                .await?;
+        info!(
+            "Wrote file {} to {}",
+            file_info.dest_filename, file_info.dest_path
+        );
+        let file_record = gisst::models::File {
+            file_id: uuid,
+            file_hash: hash,
+            file_filename: filename,
+            file_source_path: file.to_string_lossy().to_string(),
+            file_dest_path: file_info.dest_path,
+            file_size: data.len() as i64,
+            created_on,
+        };
+        gisst::models::File::insert(&mut conn, file_record).await?;
+        uuid
     };
+    info!("File ID: {file_id}");
     let replay = Replay {
-        replay_id: force_uuid.unwrap_or_else(|| Uuid::new_v4()),
+        replay_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
         creator_id: creator_id.unwrap_or_else(|| uuid!("00000000-0000-0000-0000-000000000000")),
         replay_forked_from,
-        file_id: file_record.file_id.clone(),
-        created_on: created_on.and_then(|s| {
-            time::OffsetDateTime::parse(
-                &s,
-                &time::format_description::well_known::iso8601::Iso8601::DEFAULT,
-            )
-            .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
-            .ok()
-        }),
+        file_id,
+        created_on,
     };
-    if let Some(found_hash) = Replay::get_by_hash(&mut conn, &file_record.file_hash).await? {
-        let found_file = gisst::models::File::get_by_id(&mut conn, found_hash.file_id)
-            .await?
-            .unwrap();
-        return Err(GISSTCliError::CreateReplay(format!(
-            "Found replay {}:{} with matching hash value {} to replay {}:{}, skipping...",
-            found_hash.replay_id,
-            found_file.file_filename,
-            found_file.file_hash,
-            replay.replay_id,
-            file_record.file_filename,
-        )));
-    }
-
-    match StorageHandler::write_file_to_uuid_folder(
-        &storage_path,
-        depth,
-        file_record.file_id,
-        &file_record.file_filename,
-        data,
-    )
-    .await
-    {
-        Ok(file_info) => {
-            info!(
-                "Wrote file {} to {}",
-                file_info.dest_filename, file_info.dest_path
-            );
-            let file_uuid = file_record.file_id.clone();
-            file_record.file_dest_path = file_info.dest_path;
-            gisst::models::File::insert(&mut conn, file_record).await?;
-            if let Err(e) = Replay::insert(&mut conn, dbg!(replay)).await {
-                StorageHandler::delete_file_with_uuid(
-                    &storage_path,
-                    depth,
-                    file_uuid,
-                    &file_info.dest_filename,
-                )
-                .await?;
-                return Err(GISSTCliError::NewModel(e));
-            };
-        }
-        Err(e) => {
-            error!("Error writing replay file to database, aborting...\n{e}");
-        }
-    }
-    Ok(())
+    Replay::insert(&mut conn, replay)
+        .await
+        .map(|_| ())
+        .map_err(GISSTCliError::NewModel)
 }
 
 async fn create_state(
