@@ -6,7 +6,6 @@ use rdb_sys::*;
 use sqlx::pool::PoolOptions;
 use sqlx::PgPool;
 
-
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -69,9 +68,18 @@ async fn main() -> Result<(), IngestError> {
         .init();
     let rdb_path_c = std::ffi::CString::new(rdb)?;
     unsafe {
-        let db: *mut RetroDB = std::ptr::null_mut();
-        let cursor: *mut RetroCursor = std::ptr::null_mut();
-        let rval: *mut RVal = std::ptr::null_mut();
+        let db: *mut RetroDB = libretrodb_new();
+        if db.is_null() {
+            return Err(IngestError::RDB());
+        }
+        let cursor: *mut RetroCursor = libretrodb_cursor_new();
+        if cursor.is_null() {
+            return Err(IngestError::RDB());
+        }
+        let mut rval: RVal = RVal {
+            tag: RType::Null,
+            value: RValInner { int_: 0 },
+        };
         info!("opening DB");
         if libretrodb_open(rdb_path_c.as_ptr(), db) != 0 {
             error!("Not opened {rdb_path_c:?}");
@@ -83,10 +91,10 @@ async fn main() -> Result<(), IngestError> {
             return Err(IngestError::RDB());
         }
         info!("Got cursor");
-        while libretrodb_cursor_read_item(cursor, rval) == 0 {
+        while libretrodb_cursor_read_item(cursor, &mut rval) == 0 {
             info!("Read item");
-            rmsgpack_dom_value_print(rval);
-            rmsgpack_dom_value_free(rval);
+            rmsgpack_dom_value_print(&rval);
+            rmsgpack_dom_value_free(&mut rval);
         }
         libretrodb_cursor_close(cursor);
         libretrodb_cursor_free(cursor);
