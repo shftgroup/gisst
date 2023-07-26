@@ -13,5 +13,5 @@ storage
 .env
 backend/config/local.toml
 backend/test_content/
-backend/ingest/libretro-util
+backend/rdb-sys/libretro-util
 backend/ingest/rdb

@@ -21,5 +21,3 @@ clap-verbosity-flag = "2.0.1"
 anyhow = "1.0.70"
 gisst = { path = "../gisst" }
 
-[build-dependencies]
-cc = "1.0"
