@@ -1,17 +1,27 @@
-use crate::GISSTError;
 use tokio::fs::{create_dir_all, remove_file, File};
 
-use std::fs::{OpenOptions};
+use std::fs::OpenOptions;
 use std::io::{BufWriter, Write};
 
 use log::info;
 use std::path::{Component, Path, PathBuf};
-use tokio::io::{AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 
-use uuid::{Uuid};
 use bytes::Bytes;
-use crate::GISSTError::StorageError;
+use uuid::Uuid;
 
+use thiserror::Error;
+#[derive(Debug, Error)]
+pub enum StorageError {
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
+    #[error("tokio task error")]
+    JoinError(#[from] tokio::task::JoinError),
+    #[error("path prefix error")]
+    PathPrefixError(#[from] std::path::StripPrefixError),
+    #[error("Storage file not found")]
+    FileNotFoundError,
+}
 
 pub struct StorageHandler;
 
@@ -31,7 +41,7 @@ pub struct FileInformation {
 }
 
 impl StorageHandler {
-    pub fn init_storage(root_path: &str, temp_path: &str) -> Result<(), GISSTError> {
+    pub fn init_storage(root_path: &str, temp_path: &str) -> Result<(), StorageError> {
         if !Path::new(root_path).is_dir() {
             std::fs::create_dir_all(root_path)?;
         }
@@ -98,19 +108,35 @@ impl StorageHandler {
         dest_filename: &str,
     ) -> tokio::io::Result<()> {
         info!("Deleting file with filename: {}", dest_filename);
-        let mut path = Path::new(root_path)
-            .join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
+        let mut path =
+            Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
         path.push(dest_filename);
         info!("Deleting file at path: {}", path.to_string_lossy());
         remove_file(path).await
     }
 
-    pub async fn rename_file_from_temp_to_storage(root_path: &str, temp_path: &str, file_info:&FileInformation) -> Result<(), GISSTError> {
+    pub async fn rename_file_from_temp_to_storage(
+        root_path: &str,
+        temp_path: &str,
+        file_info: &FileInformation,
+    ) -> Result<(), StorageError> {
         let mut path = Self::get_dest_file_path(&root_path, &file_info);
-        println!("{}", format!("In rename_file, dest_path is {}", path.to_string_lossy().to_string()));
+        println!(
+            "{}",
+            format!(
+                "In rename_file, dest_path is {}",
+                path.to_string_lossy().to_string()
+            )
+        );
 
         path.pop();
-        println!("{}", format!("In rename_file, dest_path is {}", path.to_string_lossy().to_string()));
+        println!(
+            "{}",
+            format!(
+                "In rename_file, dest_path is {}",
+                path.to_string_lossy().to_string()
+            )
+        );
 
         if !path.is_dir() {
             create_dir_all(path.as_path()).await?
@@ -118,18 +144,22 @@ impl StorageHandler {
 
         tokio::fs::rename(
             Self::get_temp_file_path(temp_path, file_info),
-            Self::get_dest_file_path(root_path, file_info))
-            .await
-            .map_err(|e| StorageError(e))
+            Self::get_dest_file_path(root_path, file_info),
+        )
+        .await
+        .map_err(StorageError::IO)
     }
 
-
-    pub async fn add_bytes_to_file(temp_path: &str, file_info: &FileInformation, mut bytes: Bytes) -> Result<(), GISSTError>  {
+    pub async fn add_bytes_to_file(
+        temp_path: &str,
+        file_info: &FileInformation,
+        mut bytes: Bytes,
+    ) -> Result<(), StorageError> {
         let temp_path = Self::get_temp_file_path(temp_path, file_info);
 
         // This should never trigger, but may as well check
         if !temp_path.as_path().exists() {
-            return Err(GISSTError::FileNotFoundError)
+            return Err(StorageError::FileNotFoundError);
         }
 
         tokio::task::spawn_blocking(move || {
@@ -146,10 +176,13 @@ impl StorageHandler {
             bytes.clear();
             Ok(())
         })
-            .await?
+        .await?
     }
 
-    pub async fn create_temp_file(temp_path: &str, file_info:&FileInformation) -> Result<(), GISSTError> {
+    pub async fn create_temp_file(
+        temp_path: &str,
+        file_info: &FileInformation,
+    ) -> Result<(), StorageError> {
         let temp_path = Self::get_temp_file_path(temp_path, file_info);
         tokio::task::spawn_blocking(move || {
             OpenOptions::new()
@@ -158,12 +191,11 @@ impl StorageHandler {
                 .truncate(true)
                 .create_new(true)
                 .open(temp_path)
-                .map_err(|e| GISSTError::StorageError(e))?;
+                .map_err(StorageError::IO)?;
             Ok(())
         })
-            .await?
+        .await?
     }
-
 
     pub async fn write_file_to_uuid_folder(
         root_path: &str,
@@ -171,9 +203,9 @@ impl StorageHandler {
         uuid: Uuid,
         filename: &str,
         file_data: &[u8],
-    ) -> Result<FileInformation, GISSTError> {
-        let mut path = Path::new(root_path)
-            .join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
+    ) -> Result<FileInformation, StorageError> {
+        let mut path =
+            Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
 
         if !path.is_dir() {
             create_dir_all(path.as_path())
@@ -197,10 +229,7 @@ impl StorageHandler {
             // TODO: take in a path and not just a filename, and do away with filename?
             source_path: filename.to_string(),
             dest_filename: save_filename,
-            dest_path: path
-                .strip_prefix(root_path)?
-                .to_string_lossy()
-                .to_string(),
+            dest_path: path.strip_prefix(root_path)?.to_string_lossy().to_string(),
             file_hash: hash_string.to_string(),
         })
     }

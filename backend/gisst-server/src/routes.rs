@@ -5,13 +5,13 @@ use axum::{
     routing::{get, post},
     Extension, Router,
 };
-use gisstlib::{
+use gisst::{
     models::{DBModel, Environment, Image, Instance, Object, Replay, Save, State, Work},
-    GISSTError,
 };
+use crate::error::GISSTError;
 use serde::{Deserialize};
 use uuid::Uuid;
-use gisstlib::models::File;
+use gisst::models::File;
 
 
 // Nested Router structs for easier reading and manipulation
@@ -214,7 +214,7 @@ async fn create_image(
     if File::get_by_id(&mut conn, image.file_id).await?.is_some() {
         Ok(Json(Image::insert(&mut conn, image).await?))
     } else {
-        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::Image))
+        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::Image))
     }
 }
 
@@ -325,7 +325,7 @@ async fn create_object(
     if File::get_by_id(&mut conn, object.file_id).await?.is_some() {
         Ok(Json(Object::insert(&mut conn, object).await?))
     } else {
-        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::Object))
+        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::Object))
     }
 }
 
@@ -395,7 +395,7 @@ async fn create_replay(
     if File::get_by_id(&mut conn, replay.file_id).await?.is_some() {
         Ok(Json(Replay::insert(&mut conn, replay).await?))
     } else {
-        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::Replay))
+        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::Replay))
     }
 }
 // Save method handlers
@@ -448,7 +448,7 @@ async fn create_save(
     if File::get_by_id(&mut conn, save.file_id).await?.is_some() {
         Ok(Json(Save::insert(&mut conn, save).await?))
     } else {
-        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::Save))
+        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::Save))
     }
 }
 // State method handlers
@@ -501,7 +501,7 @@ async fn create_state(
     if File::get_by_id(&mut conn, state.file_id).await?.is_some() {
         Ok(Json(State::insert(&mut conn, state).await?))
     } else {
-        Err(GISSTError::RecordCreateError(gisstlib::models::NewRecordError::State))
+        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::State))
     }
 }
 

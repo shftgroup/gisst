@@ -1,10 +1,5 @@
-use std::{ffi::OsString, str::FromStr};
-
 fn main() {
-    if dbg!(std::env::var_os("CARGO_BIN_NAME")) != Some(OsString::from_str("ingest").unwrap()) {
-        return;
-    }
-    println!("rerun-if-changed=libretro-util");
+    // println!("rerun-if-changed=libretro-util");
     const LDB_DIR: &str = "libretro-util/libretro-db";
     const LC_DIR: &str = "libretro-util/libretro-common";
     let files = vec![
@@ -31,5 +26,8 @@ fn main() {
         .includes(includes)
         .files(files)
         .static_flag(true)
+        .flag("-g")
+        .flag("-O2")
+        .define("NDEBUG",None)
         .compile("retro-db");
 }

@@ -1,12 +1,9 @@
-pub mod models;
-pub mod storage;
-pub mod model_enums;
-
 use axum::{
     extract::{multipart::MultipartError, Json},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use gisst::models;
 use serde_json::json;
 use thiserror::Error;
 
@@ -15,9 +12,11 @@ pub enum GISSTError {
     #[error("database error")]
     SqlError(#[from] sqlx::Error),
     #[error("storage error")]
-    StorageError(#[from] std::io::Error),
+    StorageError(#[from] gisst::storage::StorageError),
     #[error("file not found")]
     FileNotFoundError,
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
     #[error("record creation error")]
     RecordCreateError(#[from] models::NewRecordError),
     #[error("record creation error")]
@@ -36,6 +35,7 @@ impl IntoResponse for GISSTError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
             GISSTError::SqlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database error"),
+            GISSTError::IO(_) => (StatusCode::INTERNAL_SERVER_ERROR, "IO error"),
             GISSTError::StorageError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
             GISSTError::RecordCreateError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "record creation error")
