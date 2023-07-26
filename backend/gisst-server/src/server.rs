@@ -1,7 +1,7 @@
 use crate::error::GISSTError;
-use gisst::models::{self, DBModel, Environment, Instance, Replay, Save, State};
+use gisst::models::{DBModel, Environment, Instance, Save};
 use std::collections::HashMap;
-use tower::{Layer, ServiceBuilder};
+use tower::ServiceBuilder;
 
 use crate::{
     db,
@@ -122,21 +122,138 @@ async fn handle_error(error: axum::BoxError) -> impl axum::response::IntoRespons
         format!("Unhandled internal error: {}", error),
     )
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ObjectLink {
+    pub object_id: Uuid,
+    pub object_role: gisst::models::ObjectRole,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+impl ObjectLink {
+    pub async fn get_all_for_instance_id(
+        conn: &mut sqlx::PgConnection,
+        id: Uuid,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"
+            SELECT object_id, instanceObject.object_role as "object_role:_", file.file_hash as file_hash, file.file_filename as file_filename, file.file_source_path as file_source_path, file.file_dest_path as file_dest_path
+            FROM object
+            JOIN instanceObject USING(object_id)
+            JOIN instance USING(instance_id)
+            JOIN file USING(file_id)
+            WHERE instance_id = $1
+            "#,
+            id
+        )
+        .fetch_all(conn)
+        .await
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ReplayLink {
+    pub replay_id: Uuid,
+    pub instance_id: Uuid,
+    pub creator_id: Uuid,
+    pub replay_forked_from: Option<Uuid>,
+    pub created_on: Option<time::OffsetDateTime>,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+impl ReplayLink {
+    pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT replay_id,
+            instance_id,
+            creator_id,
+            replay_forked_from,
+            replay.created_on,
+            file.file_hash as file_hash,
+            file.file_filename as file_filename,
+            file.file_source_path as file_source_path,
+            file.file_dest_path as file_dest_path
+            FROM replay
+            JOIN file USING(file_id)
+            WHERE replay_id = $1
+            "#,
+            id,
+        )
+        .fetch_optional(conn)
+        .await
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct StateLink {
+    pub state_id: Uuid,
+    pub instance_id: Uuid,
+    pub is_checkpoint: bool,
+    pub state_name: String,
+    pub state_description: String,
+    pub screenshot_id: Option<Uuid>,
+    pub replay_id: Option<Uuid>,
+    pub creator_id: Option<Uuid>,
+    pub state_replay_index: Option<i32>,
+    pub state_derived_from: Option<Uuid>,
+    pub created_on: Option<time::OffsetDateTime>,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+impl StateLink {
+    pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT
+            state_id,
+            instance_id,
+            is_checkpoint,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            state.created_on,
+            file.file_hash as file_hash,
+            file.file_filename as file_filename,
+            file.file_source_path as file_source_path,
+            file.file_dest_path as file_dest_path
+            FROM state
+            JOIN file USING(file_id)
+            WHERE state_id = $1
+            "#,
+            id,
+        )
+        .fetch_optional(conn)
+        .await
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 struct PlayerTemplateInfo {
     instance: Instance,
     environment: Environment,
     save: Option<Save>,
     start: PlayerStartTemplateInfo,
-    manifest: Vec<models::ObjectLink>,
+    manifest: Vec<ObjectLink>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(tag = "type", content = "data", rename_all = "lowercase")]
 enum PlayerStartTemplateInfo {
     Cold,
-    State(State),
-    Replay(Replay),
+    State(StateLink),
+    Replay(ReplayLink),
 }
 
 #[derive(Deserialize)]
@@ -160,12 +277,12 @@ async fn get_player(
         .ok_or(GISSTError::Generic)?;
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => PlayerStartTemplateInfo::State(
-            State::get_by_id(&mut conn, id)
+            StateLink::get_by_id(&mut conn, id)
                 .await?
                 .ok_or(GISSTError::Generic)?,
         ),
         (None, Some(id)) => PlayerStartTemplateInfo::Replay(
-            Replay::get_by_id(&mut conn, id)
+            ReplayLink::get_by_id(&mut conn, id)
                 .await?
                 .ok_or(GISSTError::Generic)?,
         ),
@@ -173,7 +290,7 @@ async fn get_player(
         (_, _) => return Err(GISSTError::Generic),
     };
     let manifest =
-        dbg!(models::ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
+        dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
     let accept = dbg!(headers
         .get("Accept")
         .map(|hv| hv.to_str())

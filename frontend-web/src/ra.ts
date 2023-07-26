@@ -17,7 +17,7 @@ let ui_state:UI;
 
 export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
   let content = manifest.find((o) => o.object_role=="content")!;
-  let content_file = content.object_filename!;
+  let content_file = content.file_filename!;
   let dash_point = content_file.indexOf("-");
   let content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
@@ -48,20 +48,20 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       proms.push(fetchfs.registerFetchFS(("/assets/frontend/bundle/.index-xhr"), "/assets/frontend/bundle", "/home/web_user/retroarch/bundle", true));
 
       for(let file of manifest) {
-        let file_prom = fetchfs.fetchFile("/storage/"+file.object_dest_path+"/"+file.object_hash+"-"+file.object_filename,"/home/web_user/content/"+file.object_source_path,true);
+        let file_prom = fetchfs.fetchFile("/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
         proms.push(file_prom);
       }
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
         let data = (start as StateStart).data;
-        console.log(data, "/storage/"+data.state_path+"/"+data.state_hash+"-"+data.state_filename,"/home/web_user/content/entry_state");
-        proms.push(fetchfs.fetchFile("/storage/"+data.state_path+"/"+data.state_hash+"-"+data.state_filename,"/home/web_user/content/entry_state",false));
+        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
+        proms.push(fetchfs.fetchFile("/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state",false));
       }
       if (movie) {
         // Cast: This one is definitely a replaystart because the type is state
         let data = (start as ReplayStart).data;
-        console.log(data, "/storage/"+data.replay_path+"/"+data.replay_hash+"-"+data.replay_filename,"/home/web_user/content/replay.replay1");
-        proms.push(fetchfs.fetchFile("/storage/"+data.replay_path+"/"+data.replay_hash+"-"+data.replay_filename,"/home/web_user/content/replay.replay1",false));
+        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
+        proms.push(fetchfs.fetchFile("/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1",false));
       }
       proms.push(fetchfs.registerFetchFS({"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/", false));
       fetchfs.mkdirp(saves_dir);
