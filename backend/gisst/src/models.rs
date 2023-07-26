@@ -318,6 +318,32 @@ impl DBModel for Creator {
 }
 
 #[async_trait]
+impl DBHashable for File {
+    async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT file_id,
+                file_hash,
+                file_filename,
+                file_dest_path,
+                file_source_path,
+                file_size,
+                created_on
+                FROM file
+                WHERE file_hash = $1
+                "#,
+            hash
+        )
+        .fetch_optional(conn)
+        .await
+    }
+
+    fn file_id(&self) -> &Uuid {
+        &self.file_id
+    }
+}
+
+#[async_trait]
 impl DBModel for File {
     fn id(&self) -> &Uuid {
         &self.file_id
@@ -1062,8 +1088,8 @@ impl DBModel for Replay {
             model.replay_id,
             model.instance_id,
             model.creator_id,
-            model.replay_forked_from,
             model.file_id,
+            model.replay_forked_from,
             model.created_on,
         )
         .fetch_one(conn)
