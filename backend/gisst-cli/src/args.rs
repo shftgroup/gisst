@@ -30,6 +30,8 @@ pub enum GISSTCliError {
     NewModel(#[from] gisst::models::NewRecordError),
     #[error("json parse error")]
     JsonParse(#[from] serde_json::Error),
+    #[error("storage error")]
+    Storage(#[from] gisst::storage::StorageError),
     #[error("record not found error")]
     RecordNotFound(Uuid),
 }
