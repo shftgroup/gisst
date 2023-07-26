@@ -164,7 +164,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
   seenReplays = {};
   seenCheckpoints = [];
   let content = manifest.find((o) => o.object_role=="content")!;
-  let content_file = content.object_filename!;
+  let content_file = content.file_filename!;
   let dash_point = content_file.indexOf("-");
   let content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
   let entryState = start.type == "state";
@@ -183,7 +183,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
     retro_args.push("-R");
     retro_args.push(path.join(states_dir, content_base+".replay1"));
   }
-  retro_args.push(path.join(content_dir, content.object_filename));
+  retro_args.push(path.join(content_dir, content.file_filename));
   console.log(retro_args);
 
   if(save_listener != null) {
@@ -205,7 +205,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
   let proms = [];
   // copy all files from manifest
   for(let file of manifest) {
-    proms.push(get_storage_file(host, file.object_dest_path, file.object_hash, file.object_filename, path.join(content_dir, file.object_source_path)));
+    proms.push(get_storage_file(host, file.file_dest_path, file.file_hash, file.file_filename, path.join(content_dir, file.file_source_path)));
   }
   await Promise.all(proms);
   proms = null;
@@ -285,7 +285,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
   if (entryState) {
     // Cast: This one is definitely a statestart because the type is state
     let data = (start as StateStart).data;
-    await get_storage_file(host, data.state_path, data.state_hash, data.state_filename, path.join(content_dir, "entry_state"));
+    await get_storage_file(host, data.file_dest_path, data.file_hash, data.file_filename, path.join(content_dir, "entry_state"));
     fs.copyFileSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1.entry"));
     fs.copyFileSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1"));
     if(fs.existsSync(path.join(content_dir, "entry_state.png"))){
@@ -296,7 +296,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
   }
   if (replay) {
     let data = (start as ReplayStart).data;
-    await get_storage_file(host, data.replay_path, data.replay_hash, data.replay_filename, path.join(content_dir, "replay.replay"));
+    await get_storage_file(host, data.file_dest_path, data.file_hash, data.file_filename, path.join(content_dir, "replay.replay"));
     fs.copyFileSync(path.join(content_dir, "replay.replay"), path.join(cache_dir, "states", content_base+".replay1"));
   } else {
     let f = fs.openSync(path.join(cache_dir, "states", content_base+".replay1"), 'w');
