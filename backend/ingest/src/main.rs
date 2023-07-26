@@ -1,10 +1,11 @@
 use anyhow::Result;
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
-use log::{debug, error, info, warn};
+use log::{error, info};
+use rdb_sys::*;
 use sqlx::pool::PoolOptions;
 use sqlx::PgPool;
-use walkdir::WalkDir;
+
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]

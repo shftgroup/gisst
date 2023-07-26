@@ -15,9 +15,11 @@ serde_json = { version = "1.0.96", features = ["raw_value"] }
 thiserror = "1.0.40"
 md5 = "0.7.0"
 log = "0.4.17"
+tokio = { version = "1.27.0", features = ["full"] }
+sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "postgres", "uuid", "time", "json"] }
 env_logger = "0.10.0"
 clap = { version = "4.2.1", features = ["derive", "cargo", "env"] }
 clap-verbosity-flag = "2.0.1"
 anyhow = "1.0.70"
 gisst = { path = "../gisst" }
-
+rdb-sys = { path = "../rdb-sys" }
