@@ -42,7 +42,7 @@ pub struct DatabaseConfig {
 }
 
 fn default_database_url() -> Secret<String> {
-    Secret::new("postgresql://eric.kaltman@localhost/testdb".to_owned())
+    Secret::new("postgresql://postgres:postgres@localhost/gisstdb".to_owned())
 }
 
 impl Default for DatabaseConfig {

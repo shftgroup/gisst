@@ -1,0 +1,6 @@
+[database]
+database_url = "postgresql://postgres:postgres@localhost/gisstdb"
+
+[storage]
+root_folder_path = "./storage"
+temp_folder_path = "./tmp"
