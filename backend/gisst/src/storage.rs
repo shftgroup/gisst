@@ -67,7 +67,7 @@ impl StorageHandler {
         format!("{:x}", md5::compute(data))
     }
     pub fn get_dest_filename(hash: &str, filename: &str) -> String {
-        format!("{}-{}", hash, filename).to_lowercase()
+        format!("{}-{}", hash, filename)
     }
 
     pub fn get_dest_file_path(root_path: &str, file_info: &FileInformation) -> PathBuf {
@@ -95,10 +95,6 @@ impl StorageHandler {
             }
         }
         depth - 1
-    }
-
-    fn remove_whitespace(s: &str) -> String {
-        s.chars().filter(|c| !c.is_whitespace()).collect()
     }
 
     pub async fn delete_file_with_uuid(
@@ -202,11 +198,11 @@ impl StorageHandler {
         }
 
         let hash_string = Self::get_md5_hash(file_data);
-        let dest_filename = Self::remove_whitespace(filename).to_lowercase();
-        let save_filename = Self::get_dest_filename(&hash_string, &dest_filename);
+        let dest_filename = filename;
+        let save_filename = Self::get_dest_filename(&hash_string, dest_filename);
 
         path.push(&save_filename);
-
+        info!("writing path {:?}", path);
         let mut file = File::create(path.to_path_buf()).await?;
         file.write_all(file_data).await?;
 
