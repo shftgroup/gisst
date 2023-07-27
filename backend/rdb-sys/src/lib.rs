@@ -28,7 +28,7 @@ pub struct RStr {
 #[repr(C)]
 pub struct RBin {
     pub len: u32,
-    pub buf: *mut c_char,
+    pub buf: *mut u8,
 }
 
 #[repr(C)]
@@ -93,7 +93,7 @@ extern "C" {
     pub fn libretrodb_find_entry(
         db: *const RetroDB,
         index_name: *const c_char,
-        key: *const c_void,
+        key: *const u8,
         out: *mut RVal,
     ) -> c_int;
 }

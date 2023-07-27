@@ -27,7 +27,7 @@ fn main() {
         .static_flag(true)
         .warnings(false)
         .flag("-g")
-        .flag("-O2")
         .define("NDEBUG", None)
+        .flag("-O0")
         .compile("retro-db");
 }
