@@ -1,6 +1,5 @@
 use clap::{Args, Parser, Subcommand};
-
-use clap_verbosity_flag::Verbosity;
+use clap_verbosity_flag::{InfoLevel, Verbosity};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -32,6 +31,8 @@ pub enum GISSTCliError {
     JsonParse(#[from] serde_json::Error),
     #[error("storage error")]
     Storage(#[from] gisst::storage::StorageError),
+    #[error("configuration error")]
+    Config(#[from] config::ConfigError),
     #[error("record not found error")]
     RecordNotFound(Uuid),
 }
@@ -43,15 +44,11 @@ pub struct GISSTCli {
     pub record_type: RecordType,
 
     #[command(flatten)]
-    pub verbose: Verbosity,
+    pub verbose: Verbosity<InfoLevel>,
 
-    /// GISST_CLI_DB_URL environment variable must be set to PostgreSQL path
+    /// GISST_CONFIG_PATH environment variable must be set
     #[clap(env)]
-    pub gisst_cli_db_url: String,
-
-    /// GISST_STORAGE_ROOT_PATH environment variable must be set
-    #[clap(env)]
-    pub gisst_storage_root_path: String,
+    pub gisst_config_path: String,
 }
 
 #[derive(Debug, Args)]
