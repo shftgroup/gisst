@@ -1,4 +1,5 @@
 mod args;
+mod cliconfig;
 
 use anyhow::Result;
 use args::{
@@ -21,25 +22,34 @@ use std::path::{Path, PathBuf};
 use std::{fs, fs::read, io};
 use uuid::{uuid, Uuid};
 use walkdir::WalkDir;
+use crate::cliconfig::CLIConfig;
 
 #[tokio::main]
 async fn main() -> Result<(), GISSTCliError> {
     let args = GISSTCli::parse();
-    info!(
-        "Connecting to database: {}",
-        args.gisst_cli_db_url.to_string()
-    );
-    let db: PgPool = get_db_by_url(args.gisst_cli_db_url.to_string()).await?;
-    info!("DB connection successful.");
-    let storage_root = args.gisst_storage_root_path.to_string();
-    info!(
-        "Storage root is set to: {}",
-        args.gisst_storage_root_path.to_string()
-    );
 
     env_logger::Builder::new()
         .filter_level(args.verbose.log_level_filter())
         .init();
+
+    info!(
+        "Found config file at path: {}",
+        args.gisst_config_path.to_string()
+    );
+    let cli_config:CLIConfig = CLIConfig::new(&args.gisst_config_path)?;
+
+    info!(
+        "Connecting to database: {}",
+        cli_config.database.database_url.to_string()
+    );
+    let db: PgPool = get_db_by_url(cli_config.database.database_url.to_string()).await?;
+    info!("DB connection successful.");
+    let storage_root = cli_config.storage.root_folder_path.to_string();
+    info!(
+        "Storage root is set to: {}",
+        cli_config.storage.root_folder_path.to_string()
+    );
+
 
     match dbg!(args).record_type {
         RecordType::Object(object) => match object.command {
@@ -284,16 +294,16 @@ async fn delete_file_record<T: DBModel + DBHashable>(
         .await?
         .ok_or(GISSTCliError::RecordNotFound(*model.file_id()))?;
 
+    T::delete_by_id(&mut conn, d.id)
+        .await
+        .map_err(GISSTCliError::Sql)?;
+    info!("Deleted record with uuid {}", d.id);
+
     gisst::models::File::delete_by_id(&mut conn, linked_file_record.file_id)
         .await
         .map_err(GISSTCliError::Sql)?;
 
     info!("Deleted file record with uuid {}", d.id);
-
-    T::delete_by_id(&mut conn, d.id)
-        .await
-        .map_err(GISSTCliError::Sql)?;
-    info!("Deleted record with uuid {}", d.id);
 
     debug!(
         "File path depth is set to {}",
@@ -310,7 +320,9 @@ async fn delete_file_record<T: DBModel + DBHashable>(
             None,
         ),
         linked_file_record.file_id,
-        &linked_file_record.file_filename,
+        &StorageHandler::get_dest_filename(
+            &linked_file_record.file_hash,
+            &linked_file_record.file_filename)
     )
     .await
     .map_err(GISSTCliError::Io)?;
