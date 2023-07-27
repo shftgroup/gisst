@@ -1,5 +1,4 @@
 fn main() {
-    // println!("rerun-if-changed=libretro-util");
     const LDB_DIR: &str = "libretro-util/libretro-db";
     const LC_DIR: &str = "libretro-util/libretro-common";
     let files = vec![
@@ -26,8 +25,9 @@ fn main() {
         .includes(includes)
         .files(files)
         .static_flag(true)
+        .warnings(false)
         .flag("-g")
-        .flag("-O2")
-        .define("NDEBUG",None)
+        .define("NDEBUG", None)
+        .flag("-O0")
         .compile("retro-db");
 }
