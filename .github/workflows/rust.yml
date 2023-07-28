@@ -19,6 +19,3 @@ jobs:
     - name: Clippy
       working-directory: backend
       run: cargo clippy --verbose
-    - name: Build
-      working-directory: backend
-      run: cargo build --verbose
