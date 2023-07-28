@@ -1,0 +1,3211 @@
+{
+  "db": "PostgreSQL",
+  "048ea0afde03c8d7f8847f976f74e7f4547cda98269a40e8865d85b36da0ddd2": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM work WHERE work_id = $1"
+  },
+  "09b1c5e775a12e2110d1481f10637e07689dfc961ee57e6273cbda9feae85da3": {
+    "describe": {
+      "columns": [
+        {
+          "name": "object_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "object_role:_",
+          "ordinal": 1,
+          "type_info": {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "content",
+                  "dependency",
+                  "config"
+                ]
+              },
+              "name": "object_role"
+            }
+          }
+        },
+        {
+          "name": "file_hash",
+          "ordinal": 2,
+          "type_info": "Bpchar"
+        },
+        {
+          "name": "file_filename",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_source_path",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_dest_path",
+          "ordinal": 5,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n            SELECT object_id, instanceObject.object_role as \"object_role:_\", file.file_hash as file_hash, file.file_filename as file_filename, file.file_source_path as file_source_path, file.file_dest_path as file_dest_path\n            FROM object\n            JOIN instanceObject USING(object_id)\n            JOIN instance USING(instance_id)\n            JOIN file USING(file_id)\n            WHERE instance_id = $1\n            "
+  },
+  "0b7f6e4689d116919ba64ec98ef7208ed76ce08a6b9eaabbfd37e6e71702c24a": {
+    "describe": {
+      "columns": [
+        {
+          "name": "image_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "image_config",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "image_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Jsonb",
+          "Text",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE image SET\n            (file_id, image_config, image_description, created_on) =\n            ($1, $2, $3, $4)\n            WHERE image_id = $5\n            RETURNING image_id, file_id, image_config, image_description, created_on"
+  },
+  "0ed6dc2a5dba22d691c8684595302329edeb27c1a7e7020e7aefd4b3575590d6": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM file WHERE file_id = $1"
+  },
+  "11d4f2cd2ff61f275515a35647e4b4cce93959705f38a27b654e4c71ea652c8d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "save_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "save_short_desc",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "save_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Varchar",
+          "Text",
+          "Uuid",
+          "Uuid",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE save SET\n            (instance_id, save_short_desc, save_description, file_id, creator_id, created_on) =\n            ($1, $2, $3, $4, $5, $6)\n            WHERE save_id = $7\n            RETURNING save_id, instance_id, save_short_desc, save_description, file_id, creator_id, created_on"
+  },
+  "1b875ac568bd337fb12c5a94388476032420693d6fd06a87205eda9ae151324f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "state_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "is_checkpoint",
+          "ordinal": 2,
+          "type_info": "Bool"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_name",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "state_description",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "screenshot_id",
+          "ordinal": 6,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_id",
+          "ordinal": 7,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 8,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_replay_index",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "state_derived_from",
+          "ordinal": 10,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 11,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      }
+    },
+    "query": "SELECT state.state_id,\n                state.instance_id,\n                state.is_checkpoint,\n                state.file_id,\n                state.state_name,\n                state.state_description,\n                state.screenshot_id,\n                state.replay_id,\n                state.creator_id,\n                state.state_replay_index,\n                state.state_derived_from,\n                state.created_on\n                FROM state\n                JOIN file USING (file_id)\n                WHERE file.file_hash = $1\n                "
+  },
+  "1bb7d7fb4a7ab3cb30be2a38cf5d81e15f5724986efdf8bff217d869978cc4c4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "object_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_object_config",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "object_role:_",
+          "ordinal": 3,
+          "type_info": {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "content",
+                  "dependency",
+                  "config"
+                ]
+              },
+              "name": "object_role"
+            }
+          }
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT object_id, instance_id, instance_object_config, object_role as \"object_role:_\" FROM instanceObject WHERE object_id = $1 AND instance_id = $2"
+  },
+  "1d61c07142aa3ff0318244ea7a62eb6ef20345a3bee5e10473764241d6ed5758": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM state WHERE state_id = $1"
+  },
+  "1f112d5b8cab812cd06b04e7df805871fe018b866ed26f067b2aa635801b6e44": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM creator WHERE creator_id = $1"
+  },
+  "2d4b69bcd647d51ead6dd57dd35fb811939d2d8758ec472822f0d2b9d3899c9f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "state_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "is_checkpoint",
+          "ordinal": 2,
+          "type_info": "Bool"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_name",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "state_description",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "screenshot_id",
+          "ordinal": 6,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_id",
+          "ordinal": 7,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 8,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_replay_index",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "state_derived_from",
+          "ordinal": 10,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 11,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          "Bool",
+          "Uuid",
+          "Text",
+          "Text",
+          "Uuid",
+          "Uuid",
+          "Uuid",
+          "Int4",
+          "Uuid",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO state (\n            state_id,\n            instance_id,\n            is_checkpoint,\n            file_id,\n            state_name,\n            state_description,\n            screenshot_id,\n            replay_id,\n            creator_id,\n            state_replay_index,\n            state_derived_from,\n            created_on\n )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)\n            RETURNING state_id,\n            instance_id,\n            is_checkpoint,\n            file_id,\n            state_name,\n            state_description,\n            screenshot_id,\n            replay_id,\n            creator_id,\n            state_replay_index,\n            state_derived_from,\n            created_on\n            "
+  },
+  "3316b17e8737180c1784ab0581ab7747c70c9aa8b2caffd7f8fc1ff71467a4f7": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM object WHERE object_id = $1"
+  },
+  "3593f944d61cfbb28a090f0ef9c45ffb4d57d13acb894a0936e2026afb1638d1": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM environment WHERE environment_id = $1"
+  },
+  "37632f6d6c27bdb2992b587327691c804d8f30a7ab495ef5dd2e45cf8fb2931f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "object_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "object_description",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      }
+    },
+    "query": "SELECT object.object_id, object.file_id, object.object_description, object.created_on\n            FROM object\n            JOIN file USING(file_id)\n            WHERE file.file_hash = $1"
+  },
+  "390e7998895c5e895992c166f19ebf2434e566aa35715e6ba153d6511a3ec74a": {
+    "describe": {
+      "columns": [
+        {
+          "name": "creator_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_username",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "creator_full_name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT creator_id,\n            creator_username,\n            creator_full_name,\n            created_on\n            FROM creator\n            ORDER BY created_on DESC\n            LIMIT $1"
+  },
+  "391f4919c729927bd3156b100ba4a210770c68ecbf0ac1617c65aa67ee34129e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "creator_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_username",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "creator_full_name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT creator_id,\n            creator_username,\n            creator_full_name,\n            created_on\n            FROM creator WHERE creator_id = $1\n            "
+  },
+  "3ac9d413a8499d860b486149c4c984088f60f9402dcdd8f1b32e8ee34b93451b": {
+    "describe": {
+      "columns": [
+        {
+          "name": "replay_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_forked_from",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          "Uuid",
+          "Uuid",
+          "Uuid",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO replay (\n            replay_id,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            ) VALUES ($1, $2, $3, $4, $5, $6)\n            RETURNING\n            replay_id,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            "
+  },
+  "4449374fceec35fd694dce49a9b0cecf338e616ff3c6724211f799f8ade5ac72": {
+    "describe": {
+      "columns": [
+        {
+          "name": "image_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "image_config",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "image_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT image_id,\n            file_id,\n            image_config,\n            image_description,\n            created_on\n            FROM image\n            ORDER BY created_on DESC\n            LIMIT $1\n            "
+  },
+  "54c9928674ff4d3092a609bacfcf4e32d22d66f67db203ee7af2da8a1a12bbc9": {
+    "describe": {
+      "columns": [
+        {
+          "name": "save_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "save_short_desc",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "save_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT\n            save_id,\n            instance_id,\n            save_short_desc,\n            save_description,\n            file_id,\n            creator_id,\n            created_on\n            FROM save WHERE save_id = $1"
+  },
+  "57d4e7008ccbcc31d0df3d447768d6e7c948748ba6caa24669ac27175953d876": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM save WHERE save_id = $1"
+  },
+  "5de0cbf34968ab5a9e495cda0602e52a526d37ba8bd3f614ff8e54b989f38231": {
+    "describe": {
+      "columns": [
+        {
+          "name": "file_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_hash",
+          "ordinal": 1,
+          "type_info": "Bpchar"
+        },
+        {
+          "name": "file_filename",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_source_path",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_dest_path",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_size",
+          "ordinal": 5,
+          "type_info": "Int8"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Bpchar",
+          "Text",
+          "Text",
+          "Text",
+          "Int8",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO file(file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on)\n            VALUES($1, $2, $3, $4, $5, $6, $7)\n            RETURNING file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on\n            "
+  },
+  "5e3c5a4246e8e641f8d999bc3ba7b69e9fd533eee558bcffe8515b9e05a361a1": {
+    "describe": {
+      "columns": [
+        {
+          "name": "work_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_version",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_platform",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text",
+          "Text",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE work SET\n            (work_name, work_version, work_platform, created_on) =\n            ($1, $2, $3, $4)\n            WHERE work_id = $5\n            RETURNING work_id, work_name, work_version, work_platform, created_on"
+  },
+  "5e94aaf11f9baea209a7b77fe2a772158a15783d8d76edb7094342ecd34dc70b": {
+    "describe": {
+      "columns": [
+        {
+          "name": "replay_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_forked_from",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT replay_id,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            FROM replay ORDER BY created_on DESC LIMIT $1\n            "
+  },
+  "611b10e26a50b1ac62c4a5bea2e46e4dcdcc0808b96d65931307fc29a2255819": {
+    "describe": {
+      "columns": [
+        {
+          "name": "environment_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_framework:_",
+          "ordinal": 2,
+          "type_info": {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "retroarch",
+                  "v86"
+                ]
+              },
+              "name": "environment_framework"
+            }
+          }
+        },
+        {
+          "name": "environment_core_name",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_core_version",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_derived_from",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_config",
+          "ordinal": 6,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT environment_id, environment_name, environment_framework as \"environment_framework:_\", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on\n            FROM environment\n            WHERE environment_id = $1"
+  },
+  "63592d4c62fc6074329c8472ac237a6a9e58ab53738e4e3b224325b8e6fc1981": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "INSERT INTO environmentImage (environment_id, image_id) VALUES ($1, $2)"
+  },
+  "6908e38bdea69833e5aa45f26376561ac9b210f2a1c2bfe4484a83a41543d2f6": {
+    "describe": {
+      "columns": [
+        {
+          "name": "state_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "is_checkpoint",
+          "ordinal": 2,
+          "type_info": "Bool"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_name",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "state_description",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "screenshot_id",
+          "ordinal": 6,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_id",
+          "ordinal": 7,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 8,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_replay_index",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "state_derived_from",
+          "ordinal": 10,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 11,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT state_id,\n            instance_id,\n            is_checkpoint,\n            file_id,\n            state_name,\n            state_description,\n            screenshot_id,\n            replay_id,\n            creator_id,\n            state_replay_index,\n            state_derived_from,\n            created_on\n            FROM state WHERE state_id = $1\n            "
+  },
+  "73a1976b15b20511b4cca4775e053b489587899c07070095928726e066ebc8ce": {
+    "describe": {
+      "columns": [
+        {
+          "name": "file_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_hash",
+          "ordinal": 1,
+          "type_info": "Bpchar"
+        },
+        {
+          "name": "file_filename",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_dest_path",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_source_path",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_size",
+          "ordinal": 5,
+          "type_info": "Int8"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      }
+    },
+    "query": "SELECT file_id,\n                file_hash,\n                file_filename,\n                file_dest_path,\n                file_source_path,\n                file_size,\n                created_on\n                FROM file\n                WHERE file_hash = $1\n                "
+  },
+  "75c25459bc6adeb23e1308d0575fdd38ed5efe3c11680cc62ad3d3d9d3f74166": {
+    "describe": {
+      "columns": [
+        {
+          "name": "instance_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_config",
+          "ordinal": 3,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          "Uuid",
+          "Jsonb",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO instance(\n            instance_id,\n            environment_id,\n            work_id,\n            instance_config,\n            created_on\n            )\n            VALUES($1, $2, $3, $4, $5)\n            RETURNING instance_id, environment_id, work_id, instance_config, created_on"
+  },
+  "78ef228433d90164b1838a0beecf093f2279ca01ae13d3d7067fe30d9da89b1d": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM instance WHERE instance_id = $1"
+  },
+  "7a918d43d11aadf6ef5978aec250d219595b690cda7e97be3a9d550a0c251da5": {
+    "describe": {
+      "columns": [
+        {
+          "name": "replay_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_forked_from",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          "Uuid",
+          "Uuid",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE replay SET\n            (instance_id, creator_id, replay_forked_from, file_id, created_on) =\n            ($1, $2, $3, $4, $5)\n            WHERE replay_id = $6\n            RETURNING replay_id, instance_id, creator_id, replay_forked_from, file_id, created_on"
+  },
+  "82a1e5bf655433726807261cb60bd0c968ddd0835946c5c244c8dd6f8f418a9c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "image_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "image_config",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "image_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT image_id,\n            file_id,\n            image_config,\n            image_description,\n            created_on\n            FROM image WHERE image_id = $1\n            "
+  },
+  "870610a4b3729d742f341f80e6d4f4b4aeda37c951d7bb9f9a9a58f67f63af08": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM image WHERE image_id = $1"
+  },
+  "895356354ae97451b97f4da3ccc99ae90f6fdd01091c5537e82f246b9d837cd8": {
+    "describe": {
+      "columns": [
+        {
+          "name": "work_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_version",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_platform",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_platform = $1"
+  },
+  "8b534cbf9800afa5d1bc9a398c95eab513bca56ff8b7794fb1ec8fd9c9834175": {
+    "describe": {
+      "columns": [
+        {
+          "name": "state_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "is_checkpoint",
+          "ordinal": 2,
+          "type_info": "Bool"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_name",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "state_description",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "screenshot_id",
+          "ordinal": 6,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_id",
+          "ordinal": 7,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 8,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_replay_index",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "state_derived_from",
+          "ordinal": 10,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 11,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Bool",
+          "Uuid",
+          "Text",
+          "Text",
+          "Uuid",
+          "Uuid",
+          "Uuid",
+          "Int4",
+          "Uuid",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE state SET\n            (instance_id,\n            is_checkpoint,\n            file_id,\n            state_name,\n            state_description,\n            screenshot_id,\n            replay_id,\n            creator_id,\n            state_replay_index,\n            state_derived_from,\n            created_on) =\n            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\n            WHERE state_id = $12\n            RETURNING state_id,\n            instance_id,\n            is_checkpoint,\n            file_id,\n            state_name,\n            state_description,\n            screenshot_id,\n            replay_id,\n            creator_id,\n            state_replay_index,\n            state_derived_from,\n            created_on"
+  },
+  "8b730e44eb299d41676155b6117cc5a78ff46258eb08474b31571d58ee1c62f2": {
+    "describe": {
+      "columns": [
+        {
+          "name": "save_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "save_short_desc",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "save_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT\n            save_id,\n            instance_id,\n            save_short_desc,\n            save_description,\n            file_id,\n            creator_id,\n            created_on\n            FROM save ORDER BY created_on DESC LIMIT $1"
+  },
+  "8ff08fc36f7b66517b7af91e86a7092b8a915a1ab2ba6133c5b1662bc9f12b90": {
+    "describe": {
+      "columns": [
+        {
+          "name": "object_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "object_description",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT object_id, file_id, object_description, created_on\n            FROM object\n            ORDER BY created_on DESC LIMIT $1\n            "
+  },
+  "966e65d1c5a8bc763a00dd1110ccc483de0b44bf1281e9a4e17782e2f2188229": {
+    "describe": {
+      "columns": [
+        {
+          "name": "work_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_version",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_platform",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_id = $1"
+  },
+  "a28fd847f0dd12de86b622c49dd27566874d342ca57e8727096cb8c70333672c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "object_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "object_description",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE object SET\n            (file_id, object_description, created_on) =\n            ($1, $2, $3)\n            WHERE object_id = $4\n            RETURNING object_id, file_id, object_description, created_on"
+  },
+  "a3a6a2e8a4c21ffc6521acc78401b5ab489aff9fd467edc91556dff27efd0e99": {
+    "describe": {
+      "columns": [
+        {
+          "name": "file_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_hash",
+          "ordinal": 1,
+          "type_info": "Bpchar"
+        },
+        {
+          "name": "file_filename",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_source_path",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_dest_path",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_size",
+          "ordinal": 5,
+          "type_info": "Int8"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar",
+          "Text",
+          "Text",
+          "Text",
+          "Int8",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE file SET\n            (file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on) =\n            ($1, $2, $3, $4, $5, $6)\n            WHERE file_id = $7\n            RETURNING file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on"
+  },
+  "a3eaab8b6503fff89b85b86a82cf65b512db40d3f419a517bae5b05962eceb2f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "file_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_hash",
+          "ordinal": 1,
+          "type_info": "Bpchar"
+        },
+        {
+          "name": "file_filename",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_dest_path",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_source_path",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_size",
+          "ordinal": 5,
+          "type_info": "Int8"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT file_id,\n            file_hash,\n            file_filename,\n            file_dest_path,\n            file_source_path,\n            file_size,\n            created_on\n            FROM file WHERE file_id = $1\n            "
+  },
+  "a4780da2a6bc746225aa59b8c410150bba6227485d90f947e40b6a7d6219e277": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM environmentImage WHERE environment_id = $1"
+  },
+  "a6f846552d1cdaef304f18fc76df8ac9a45f950698ee44b4acc87e29998c463b": {
+    "describe": {
+      "columns": [
+        {
+          "name": "instance_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_config",
+          "ordinal": 3,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT instance_id, environment_id, work_id, instance_config, created_on\n            FROM instance\n            WHERE work_id = $1\n            "
+  },
+  "a6fe70e24e7e846bb804bd1ecf3386f3c078cb2131adedfc1961ef3737333742": {
+    "describe": {
+      "columns": [
+        {
+          "name": "object_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "object_description",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          "Text"
+        ]
+      }
+    },
+    "query": "INSERT INTO object (\n            object_id, file_id, object_description, created_on )\n            VALUES ($1, $2, $3, current_timestamp)\n            RETURNING object_id, file_id, object_description, created_on\n            "
+  },
+  "a7d7e5e0eca0a439c2bfa949283924579e9c183c3350cc2443d073022a9f0ad3": {
+    "describe": {
+      "columns": [
+        {
+          "name": "image_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "image_config",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "image_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          "Jsonb",
+          "Text",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO image(\n            image_id,\n            file_id,\n            image_config,\n            image_description,\n            created_on\n            )\n            VALUES($1, $2, $3, $4, $5)\n            RETURNING image_id, file_id, image_config, image_description, created_on"
+  },
+  "a8e111b0cd4a3de5d478a13f12cc06a9383eeb7c45c052d3804a972ddce9ef7c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "creator_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_username",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "creator_full_name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Varchar",
+          "Varchar",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO creator(creator_id, creator_username, creator_full_name, created_on)\n            VALUES($1, $2, $3, $4)\n            RETURNING creator_id, creator_username, creator_full_name, created_on\n            "
+  },
+  "aa7046491c29799959037c892f8dcda6db12fb1118b2b8556d1e802e7100a76e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "work_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_version",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_platform",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_name = $1"
+  },
+  "b3a7448523d828423656afdc158b548ea5a9fe6d432acdca5879ad6e75acd21d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "environment_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_framework:_",
+          "ordinal": 2,
+          "type_info": {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "retroarch",
+                  "v86"
+                ]
+              },
+              "name": "environment_framework"
+            }
+          }
+        },
+        {
+          "name": "environment_core_name",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_core_version",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_derived_from",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_config",
+          "ordinal": 6,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "retroarch",
+                  "v86"
+                ]
+              },
+              "name": "environment_framework"
+            }
+          },
+          "Text",
+          "Text",
+          "Uuid",
+          "Jsonb",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO environment (environment_id, environment_name, environment_framework, environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on)\n            VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n            RETURNING environment_id, environment_name, environment_framework as \"environment_framework:_\", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on\n            "
+  },
+  "b44a510eb9b4630f737196a28578de797421aab817328daa9e36fa61dc8176b5": {
+    "describe": {
+      "columns": [
+        {
+          "name": "image_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "image_config",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "image_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      }
+    },
+    "query": "SELECT image.image_id,\n                image.file_id,\n                image.image_config,\n                image.image_description,\n                image.created_on\n                FROM image\n                JOIN file USING(file_id)\n                WHERE file.file_hash = $1\n                "
+  },
+  "b646880b0be8d8ec4b67b32c4eda34904a1581abe3b5fadd2d18109c8a068bc3": {
+    "describe": {
+      "columns": [
+        {
+          "name": "work_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_version",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_platform",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT work_id, work_name, work_version, work_platform, created_on FROM work ORDER BY created_on DESC LIMIT $1"
+  },
+  "b736184dec78cd0f8874c4dc14d71aa7e712e184bcb8e4d5ea75ec2809aa1a21": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM replay WHERE replay_id = $1"
+  },
+  "bc022bcead06b7d9bc5d83e149839514dddc60710956164c6ee9d488dd8159e9": {
+    "describe": {
+      "columns": [
+        {
+          "name": "work_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_version",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "work_platform",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          "Text",
+          "Text",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO work (\n            work_id, work_name, work_version, work_platform, created_on )\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING work_id, work_name, work_version, work_platform, created_on\n            "
+  },
+  "c17f2257067d2f192df4b7eaa26c6024cbcf99967917abc35c04fbd9543b040a": {
+    "describe": {
+      "columns": [
+        {
+          "name": "file_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_hash",
+          "ordinal": 1,
+          "type_info": "Bpchar"
+        },
+        {
+          "name": "file_filename",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_dest_path",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_source_path",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_size",
+          "ordinal": 5,
+          "type_info": "Int8"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT file_id,\n            file_hash,\n            file_filename,\n            file_dest_path,\n            file_source_path,\n            file_size,\n            created_on\n            FROM file\n            ORDER BY created_on DESC\n            LIMIT $1"
+  },
+  "c743ffb44bff84055fae3f89e3011bee6350e27826be01ea64244eeade0cb71b": {
+    "describe": {
+      "columns": [
+        {
+          "name": "object_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "object_description",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT object_id, file_id, object_description, created_on\n            FROM object\n            WHERE object_id = $1"
+  },
+  "c823369073da24910b5570604100f87f5331ae009c144785b663ac00678fb6a8": {
+    "describe": {
+      "columns": [
+        {
+          "name": "instance_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_config",
+          "ordinal": 3,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          "Jsonb",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE instance SET\n            (environment_id, work_id, instance_config, created_on) =\n            ($1, $2, $3, $4)\n            WHERE instance_id = $5\n            RETURNING instance_id, environment_id, work_id, instance_config, created_on"
+  },
+  "cd9ce8def359365c8fe574f4750789b8e3e0468f14ad8ff6fdfce798914f8c5d": {
+    "describe": {
+      "columns": [
+        {
+          "name": "instance_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_config",
+          "ordinal": 3,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT instance_id, environment_id, work_id, instance_config, created_on\n            FROM instance WHERE instance_id = $1\n            "
+  },
+  "d5e5efeee6c91c46e8308bc2cd575c808e5ed3985f0908a8c8de1bc0e6cf57ff": {
+    "describe": {
+      "columns": [
+        {
+          "name": "environment_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_framework:_",
+          "ordinal": 2,
+          "type_info": {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "retroarch",
+                  "v86"
+                ]
+              },
+              "name": "environment_framework"
+            }
+          }
+        },
+        {
+          "name": "environment_core_name",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_core_version",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_derived_from",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_config",
+          "ordinal": 6,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT environment_id, environment_name, environment_framework as \"environment_framework:_\", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on\n            FROM environment\n            ORDER BY created_on DESC LIMIT $1"
+  },
+  "d6850436e4bca9a6391957795828641cdfa05ab27c216cceaa3ff205912507c9": {
+    "describe": {
+      "columns": [
+        {
+          "name": "save_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "save_short_desc",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "save_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          "Varchar",
+          "Text",
+          "Uuid",
+          "Uuid",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO save (\n            save_id,\n            instance_id,\n            save_short_desc,\n            save_description,\n            file_id,\n            creator_id,\n            created_on\n            ) VALUES ($1, $2, $3, $4, $5, $6, $7)\n            RETURNING\n            save_id,\n            instance_id,\n            save_short_desc,\n            save_description,\n            file_id,\n            creator_id,\n            created_on\n            "
+  },
+  "e617f00dce0071883326907c45db1a4d972a8885ad2e0b24ac148085152cde39": {
+    "describe": {
+      "columns": [
+        {
+          "name": "image_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "image_config",
+          "ordinal": 2,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "image_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "\n            SELECT image_id, file_id, image_config, image_description, image.created_on\n            FROM image\n            JOIN environmentImage USING(image_id)\n            JOIN environment USING(environment_id)\n            WHERE environment_id = $1\n            "
+  },
+  "e7b73784ae7c02d9e386b327cceb4e97f4990ef7ad8b704c43891f7f3c2482e7": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM instanceObject WHERE object_id = $1"
+  },
+  "e85076ef518320822b0547e1a811b1995cb581ee4ca384c9c60a1228b9cda3cc": {
+    "describe": {
+      "columns": [
+        {
+          "name": "replay_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_forked_from",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "file_hash",
+          "ordinal": 5,
+          "type_info": "Bpchar"
+        },
+        {
+          "name": "file_filename",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_source_path",
+          "ordinal": 7,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_dest_path",
+          "ordinal": 8,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT replay_id,\n            instance_id,\n            creator_id,\n            replay_forked_from,\n            replay.created_on,\n            file.file_hash as file_hash,\n            file.file_filename as file_filename,\n            file.file_source_path as file_source_path,\n            file.file_dest_path as file_dest_path\n            FROM replay\n            JOIN file USING(file_id)\n            WHERE replay_id = $1\n            "
+  },
+  "ec2ac1e64dafdecb4ef0b2fd438f1fd26a85f54de9d8c6300bb113dbb2296114": {
+    "describe": {
+      "columns": [
+        {
+          "name": "save_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "save_short_desc",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "save_description",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 6,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      }
+    },
+    "query": "SELECT\n            save.save_id,\n            save.instance_id,\n            save.save_short_desc,\n            save.save_description,\n            save.file_id,\n            save.creator_id,\n            save.created_on\n            FROM save\n            JOIN file USING (file_id)\n            WHERE file.file_hash = $1\n            "
+  },
+  "ec498bd460eb379eef9c8944e2250c719901df73e443cf7e509f48fc4dfa1697": {
+    "describe": {
+      "columns": [
+        {
+          "name": "instance_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "work_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_config",
+          "ordinal": 3,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 4,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT instance_id, environment_id, work_id, instance_config, created_on\n            FROM instance\n            ORDER BY created_on DESC\n            LIMIT $1\n            "
+  },
+  "ec99a7c705ed74d1604c9a708d0fa2f3ef07c3e477922541741baea8f919ac44": {
+    "describe": {
+      "columns": [
+        {
+          "name": "state_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "is_checkpoint",
+          "ordinal": 2,
+          "type_info": "Bool"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_name",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "state_description",
+          "ordinal": 5,
+          "type_info": "Text"
+        },
+        {
+          "name": "screenshot_id",
+          "ordinal": 6,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_id",
+          "ordinal": 7,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 8,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_replay_index",
+          "ordinal": 9,
+          "type_info": "Int4"
+        },
+        {
+          "name": "state_derived_from",
+          "ordinal": 10,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 11,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      }
+    },
+    "query": "SELECT state_id,\n            instance_id,\n            is_checkpoint,\n            file_id,\n            state_name,\n            state_description,\n            screenshot_id,\n            replay_id,\n            creator_id,\n            state_replay_index,\n            state_derived_from,\n            created_on\n            FROM state ORDER BY created_on DESC LIMIT $1\n            "
+  },
+  "ecc389e22454a8da25c06b3d663c36cf187249ddcaa2d0a2d203fb1b0c4f85d3": {
+    "describe": {
+      "columns": [
+        {
+          "name": "replay_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_forked_from",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT replay_id,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            FROM replay WHERE replay_id = $1\n            "
+  },
+  "edab26d0527085c3e25445c02a4543bb1f15dbf8fd9d6ed6ebcafbb0f2d1de80": {
+    "describe": {
+      "columns": [
+        {
+          "name": "creator_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_username",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "creator_full_name",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 3,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE creator SET\n            (creator_username, creator_full_name, created_on) =\n            ($1, $2, $3)\n            WHERE creator_id = $4\n            RETURNING creator_id, creator_username, creator_full_name, created_on"
+  },
+  "ee2a7483f69d2ac71d8023837bc5e6fec8e62fcb5752c97e5ba892d9e3a2e2a4": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "content",
+                  "dependency",
+                  "config"
+                ]
+              },
+              "name": "object_role"
+            }
+          }
+        ]
+      }
+    },
+    "query": "INSERT INTO instanceObject(instance_id, object_id, object_role)  VALUES ($1, $2, $3)"
+  },
+  "f90b62631d234c8b9ad54ab3d9fe6a0bf906cfd302466a00ddaa36b1f37d00fe": {
+    "describe": {
+      "columns": [
+        {
+          "name": "environment_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_framework:_",
+          "ordinal": 2,
+          "type_info": {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "retroarch",
+                  "v86"
+                ]
+              },
+              "name": "environment_framework"
+            }
+          }
+        },
+        {
+          "name": "environment_core_name",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_core_version",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "environment_derived_from",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "environment_config",
+          "ordinal": 6,
+          "type_info": "Jsonb"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 7,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "retroarch",
+                  "v86"
+                ]
+              },
+              "name": "environment_framework"
+            }
+          },
+          "Text",
+          "Text",
+          "Uuid",
+          "Jsonb",
+          "Timestamptz",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE environment SET\n            (environment_name, environment_framework, environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on) =\n            ($1, $2, $3, $4, $5, $6, $7)\n            WHERE environment_id = $8\n            RETURNING environment_id, environment_name, environment_framework as \"environment_framework:_\", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on"
+  },
+  "fd510e0b31bbfee36b2b817f938b53ddb1dd1b0a683ac345df866420340ba78f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "replay_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 2,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_forked_from",
+          "ordinal": 3,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "file_id",
+          "ordinal": 4,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 5,
+          "type_info": "Timestamptz"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        true
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      }
+    },
+    "query": "SELECT\n           replay.replay_id,\n           replay.instance_id,\n           replay.creator_id,\n           replay.replay_forked_from,\n           replay.file_id,\n           replay.created_on\n           FROM replay\n           JOIN file USING (file_id)\n           WHERE file.file_hash = $1"
+  },
+  "fda66aa034a9d866f3ed6847cf8649e873491205dca20fc222ba93f9db29aa17": {
+    "describe": {
+      "columns": [
+        {
+          "name": "state_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "instance_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "is_checkpoint",
+          "ordinal": 2,
+          "type_info": "Bool"
+        },
+        {
+          "name": "state_name",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "state_description",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "screenshot_id",
+          "ordinal": 5,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "replay_id",
+          "ordinal": 6,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "creator_id",
+          "ordinal": 7,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "state_replay_index",
+          "ordinal": 8,
+          "type_info": "Int4"
+        },
+        {
+          "name": "state_derived_from",
+          "ordinal": 9,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "created_on",
+          "ordinal": 10,
+          "type_info": "Timestamptz"
+        },
+        {
+          "name": "file_hash",
+          "ordinal": 11,
+          "type_info": "Bpchar"
+        },
+        {
+          "name": "file_filename",
+          "ordinal": 12,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_source_path",
+          "ordinal": 13,
+          "type_info": "Text"
+        },
+        {
+          "name": "file_dest_path",
+          "ordinal": 14,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT\n            state_id,\n            instance_id,\n            is_checkpoint,\n            state_name,\n            state_description,\n            screenshot_id,\n            replay_id,\n            creator_id,\n            state_replay_index,\n            state_derived_from,\n            state.created_on,\n            file.file_hash as file_hash,\n            file.file_filename as file_filename,\n            file.file_source_path as file_source_path,\n            file.file_dest_path as file_dest_path\n            FROM state\n            JOIN file USING(file_id)\n            WHERE state_id = $1\n            "
+  }
+}
