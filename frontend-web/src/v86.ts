@@ -62,7 +62,8 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
         v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
       }
-    }
+    },
+    false
   );
 
   document.getElementById("v86_controls")!.classList.remove("hidden");
