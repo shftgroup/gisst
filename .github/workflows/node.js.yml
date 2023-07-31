@@ -56,7 +56,7 @@ jobs:
       run: npm run build
       working-directory: frontend-web
     - name: frontend-elec ci
-      run: npm run ci
+      run: npm ci
       working-directory: frontend-elec
     - name: frontend-elec package
       run: npm run package
