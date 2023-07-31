@@ -31,19 +31,33 @@ jobs:
         cache-dependency-path: '**/package-lock.json'
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
+    - name: ra-util ci
+      run: npm ci
       working-directory: ra-util
-    - run: npm run build
+    - name: ra-util build
+      run: npm run build
       working-directory: ra-util
-    - run: npm ci
+    - name: embedv86 ci
+      run: npm ci
       working-directory: embedv86
-    - run: npm run build
+    - name: embedv86 build
+      run: npm run build
       working-directory: embedv86
-    - run: npm ci
+    - name: ui ci
+      run: npm ci
       working-directory: gisst-player-ui
-    - run: npm run build
+    - name: ui build
+      run: npm run build
       working-directory: gisst-player-ui
-    - run: npm ci
+    - name: frontend-web ci
+      run: npm ci
       working-directory: frontend-web
-    - run: npm run build
+    - name: frontend-web build
+      run: npm run build
       working-directory: frontend-web
+    - name: frontend-elec ci
+      run: npm run ci
+      working-directory: frontend-elec
+    - name: frontend-elec package
+      run: npm run package
+      working-directory: frontend-elec
