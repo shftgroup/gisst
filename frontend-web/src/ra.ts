@@ -127,7 +127,8 @@ function retroReady(): void {
           const data = FS.readFile(path + "/" + file_name);
           saveAs(new Blob([data]), file_name);
         }
-      }
+      },
+    false
   );
 
   let prev = document.getElementById("webplayer-preview")!;
