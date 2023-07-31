@@ -260,5 +260,6 @@ window.addEventListener("DOMContentLoaded", () => {
           api.download_file(category, file_name);
         }
       },
-  });
+    },
+  true);
 });
