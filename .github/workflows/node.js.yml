@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      max-parallel: 1
       matrix:
         node-version: [20.x]
         project: [ra-util, embedv86, gisst-player-ui, frontend-web]
@@ -35,6 +36,7 @@ jobs:
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
+        working-directory: ${{ matrix.project }}
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
