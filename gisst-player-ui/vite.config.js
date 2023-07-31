@@ -19,7 +19,7 @@ export default defineConfig({
       '~bootstrap': resolve(__dirname, 'node_modules/bootstrap'),
     }
   },
-  root: resolve(__dirname, 'src'),
+  // root: resolve(__dirname, 'src'),
   rollupOptions: {
     // make sure to externalize deps that shouldn't be bundled
     // into your library
