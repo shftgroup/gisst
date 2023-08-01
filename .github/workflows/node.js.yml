@@ -61,9 +61,9 @@ jobs:
     - name: frontend-elec tsc
       run: ./node_modules/typescript/bin/tsc
       working-directory: frontend-elec
-    # - name: upload frontend-web/dist
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: web-dist
-    #     path: frontend-web/dist
-    #     retention-days: 1
+    - name: upload frontend-web/dist
+      uses: actions/upload-artifact@v3
+      with:
+        name: web-dist
+        path: frontend-web/dist
+        retention-days: 1
