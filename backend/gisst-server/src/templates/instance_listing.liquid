@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>GISST Instances</title>
+</head>
+<body>
+<h1>Instances</h1>
+<table>
+    <tr>
+        <th>Instance ID</th>
+        <th>Environment ID</th>
+        <th>Work ID</th>
+        <th>Created On</th>
+    </tr>
+    {% for instance in instances %}
+        <tr>
+            <td><a href="/instances/{{ instance.instance_id }}/all">{{ instance.instance_id }}</a></td>
+            <td>{{ instance.environment_id}}</td>
+            <td>{{ instance.work_id }}</td>
+            <td>{{ instance.created_on }}</td>
+        </tr>
+    {% endfor %}
+</table>
+</body>
+</html>

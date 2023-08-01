@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>test view</title>
+</head>
+<body>
+<h1>Instance Information</h1>
+Id: {{ instance.info.instance_id }}
+Environment Id: {{ instance.info.environment_id}}
+Work Id: {{ instance.info.work_id}}
+Created On: {{ instance.info.created_on }}
+<a href="/play/{{ instance.info.instance_id }}">Cold Boot</a>
+<h1>States</h1>
+<table>
+    <tr>
+        <th>Boot</th>
+        <th>State Id</th>
+        <th>Is Checkpoint?</th>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Replay Id</th>
+        <th>Creator Id</th>
+        <th>Replay Time Index</th>
+        <th>Derived From State</th>
+        <th>Created On</th>
+    </tr>
+    {% for state in instance.states %}
+        <tr>
+            <td><a href="/play/{{ instance.info.instance_id }}?state={{ state.record.state_id }}">Boot into State</a></td>
+            <td>{{ state.record.state_id }}</td>
+            <td>{{ state.record.is_checkpoint }}</td>
+            <td>{{ state.record.name}}</td>
+            <td>{{ state.record.description}}</td>
+            <td>{{ state.record.replay_id }}</td>
+            <td>{{ state.record.state_replay_index }}</td>
+            <td>{{ state.record.state_derived_from }}</td>
+            <td>{{ state.record.created_on }}</td>
+        </tr>
+    {% endfor %}
+</table>
+<h1>Replays</h1>
+<table>
+    <tr>
+        <th>Boot</th>
+        <th>Replay Id</th>
+        <th>Creator Id</th>
+        <th>Forked From</th>
+        <th>Created On</th>
+    </tr>
+    {% for replay in instance.replays %}
+        <tr>
+            <td><a href="/play/{{ instance.info.instance_id }}?replay={{ replay.record.replay_id }}">Boot into Replay</a></td>
+            <td>{{ replay.record.replay_id }}</td>
+            <td>{{ replay.record.creator_id }}</td>
+            <td>{{ replay.record.replay_forked_from }}</td>
+            <td>{{ replay.record.created_on }}</td>
+        </tr>
+    {% endfor %}
+</table>
+</body>
+</html>
