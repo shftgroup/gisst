@@ -24,6 +24,8 @@ jobs:
     #     SSH_KEY_PATH: ${{ github.workspace }}/../private.key
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2.5.1
+      with:
+        workspaces: "backend"
     - name: Build backend
       working-directory: backend
       run: cargo build --release
