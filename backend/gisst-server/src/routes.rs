@@ -1,17 +1,23 @@
-use crate::server::ServerState;
-use axum::http::StatusCode;
+use crate::{
+    server::ServerState,
+    error::GISSTError,
+    utils::parse_header,
+};
 use axum::{
     extract::{Json, Path, Query},
+    http::StatusCode,
     routing::{get, post},
     Extension, Router,
+    headers::HeaderMap,
+    response::{Html, IntoResponse},
 };
+use minijinja::render;
 use gisst::{
-    models::{DBModel, Environment, Image, Instance, Object, Replay, Save, State, Work},
+    models::{DBModel, DBHashable, Environment, File, Image, Instance, Object, Replay, Save, State, Work},
 };
-use crate::error::GISSTError;
-use serde::{Deserialize};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use gisst::models::File;
+use gisst::models::FileRecordFlatten;
 
 
 // Nested Router structs for easier reading and manipulation
@@ -56,6 +62,7 @@ pub fn instance_router() -> Router {
                 .put(edit_instance)
                 .delete(delete_instance),
         )
+        .route("/:id/all", get(get_all_for_instance))
 }
 
 pub fn object_router() -> Router {
@@ -149,6 +156,7 @@ async fn get_environments(
     } else {
         Ok(Json(vec![]))
     }
+
 }
 
 async fn create_environment(
@@ -251,13 +259,89 @@ async fn delete_image(
 
 async fn get_instances(
     app_state: Extension<ServerState>,
+    headers: HeaderMap,
     Query(params): Query<GetQueryParams>,
-) -> Result<Json<Vec<Instance>>, GISSTError> {
+) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Ok(instances) = Instance::get_all(&mut conn, params.limit).await {
-        Ok(instances.into())
+    let instances: Vec<Instance> = Instance::get_all(&mut conn, params.limit).await?;
+    let accept:Option<String> = parse_header(&headers, "Accept");
+
+    Ok((
+        if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
+            Html(render!(
+                app_state.templates.get_template("instance_listing")?,
+                instances => instances
+            ))
+                .into_response()
+        } else if accept.as_ref().is_some_and(|hv| hv.contains("application/json")) {
+            Json(instances).into_response()
+        } else {
+            Err(GISSTError::Generic)?
+        }
+    )
+        .into_response())
+}
+
+#[derive(Debug, Serialize)]
+struct FullInstance {
+    info: Instance,
+    states: Vec<FileRecordFlatten<State>>,
+    replays: Vec<FileRecordFlatten<Replay>>,
+    saves: Vec<FileRecordFlatten<Save>>,
+}
+
+async fn get_all_for_instance(
+    app_state: Extension<ServerState>,
+    headers: HeaderMap,
+    Path(id): Path<Uuid>
+) -> Result<axum::response::Response, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    if let Some(instance) = Instance::get_by_id(&mut conn, id).await?{
+        let states = Instance::get_all_states(&mut conn, instance.instance_id).await?;
+        let mut flattened_states: Vec<FileRecordFlatten<State>> = vec![];
+
+        for state in states.iter() {
+            flattened_states.push(State::flatten_file(&mut conn, state.clone()).await?);
+        }
+
+        let replays = Instance::get_all_replays(&mut conn, id).await?;
+        let mut flattened_replays: Vec<FileRecordFlatten<Replay>> = vec![];
+
+        for replay in replays.iter() {
+            flattened_replays.push(Replay::flatten_file(&mut conn, replay.clone()).await?);
+        }
+
+        let saves = Instance::get_all_saves(&mut conn, id).await?;
+        let mut flattened_saves: Vec<FileRecordFlatten<Save>> = vec![];
+
+        for save in saves.iter() {
+            flattened_saves.push(Save::flatten_file(&mut conn, save.clone()).await?);
+        }
+
+        let full_instance = FullInstance {
+            info: instance,
+            states: flattened_states,
+            replays: flattened_replays,
+            saves: flattened_saves,
+        };
+
+        let accept:Option<String> = parse_header(&headers, "Accept");
+
+        Ok((
+            if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
+                Html(render!(
+                    app_state.templates.get_template("instance_all_listing")?,
+                    instance => dbg!(full_instance),
+                ))
+                    .into_response()
+            } else if accept.as_ref().is_some_and(|hv| hv.contains("application/json")) {
+                Json(full_instance).into_response()
+            } else {
+                Err(GISSTError::Generic)?
+            }
+        ).into_response())
     } else {
-        Ok(Json(vec![]))
+        Err(GISSTError::Generic)
     }
 }
 
