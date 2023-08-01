@@ -595,7 +595,19 @@ impl Instance {
     ) -> sqlx::Result<Vec<State>> {
         sqlx::query_as!(
             State,
-            r#"SELECT * FROM state WHERE instance_id = $1"#,
+            r#"SELECT state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            FROM state WHERE instance_id = $1"#,
             instance_id
         )
             .fetch_all(conn)
@@ -608,7 +620,13 @@ impl Instance {
     ) -> sqlx::Result<Vec<Replay>> {
         sqlx::query_as!(
             Replay,
-            r#"SELECT * FROM replay WHERE instance_id = $1"#,
+            r#"SELECT replay_id,
+            instance_id,
+            creator_id,
+            file_id,
+            replay_forked_from,
+            created_on
+            FROM replay WHERE instance_id = $1"#,
             instance_id
         )
             .fetch_all(conn)
@@ -621,7 +639,15 @@ impl Instance {
     ) -> sqlx::Result<Vec<Save>> {
         sqlx::query_as!(
             Save,
-            r#"SELECT * FROM save WHERE instance_id = $1"#,
+            r#"SELECT
+            save_id,
+            instance_id,
+            save_short_desc,
+            save_description,
+            file_id,
+            creator_id,
+            created_on
+            FROM save WHERE instance_id = $1"#,
             instance_id
         )
             .fetch_all(conn)
