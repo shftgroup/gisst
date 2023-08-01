@@ -30,5 +30,8 @@
     "@popperjs/core": "^2.11.7",
     "@types/bootstrap": "^5.2.6",
     "bootstrap": "^5.2.3"
+  },
+  "optionalDependencies": {
+    "@esbuild/darwin-arm64": "^0.16.17"
   }
 }
