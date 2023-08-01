@@ -28,11 +28,11 @@ jobs:
         workspaces: "backend"
     - name: Build backend
       working-directory: backend
-      run: cargo build --release
-    - name: Download web-dist
-      uses: actions/download-artifact@v3
-      with:
-        name: web-dist
+      run: cargo build --release --bin gisst-server
+    # - name: Download web-dist
+    #  uses: actions/download-artifact@v3
+    #  with:
+    #    name: web-dist
     # - name: Deploy server
     #   run: rsync -avzh --rsh "ssh -J jcoa2018@cafe.cs.pomona.edu" frontend-web/dist jcoa2018@gisst.pomona.edu:~/embedulator/frontend-web/
     #   run: rsync -avzh --rsh "ssh -J jcoa2018@cafe.cs.pomona.edu" backend/ jcoa2018@gisst.pomona.edu:~/embedulator/frontend-web/
