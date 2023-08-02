@@ -21,5 +21,8 @@ jobs:
       with:
         workspaces: "backend"
     - name: Clippy
-      working-directory: backend
-      run: cargo clippy --verbose
+      uses: giraffate/clippy-action@v1
+      with:
+        clippy_flags: -- -Dwarnings
+        reporter: 'github-pr-review'
+        workdir: backend
