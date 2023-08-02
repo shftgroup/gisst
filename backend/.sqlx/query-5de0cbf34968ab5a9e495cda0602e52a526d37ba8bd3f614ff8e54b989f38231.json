@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO file(file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on)\n            VALUES($1, $2, $3, $4, $5, $6, $7)\n            RETURNING file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "file_hash",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "file_filename",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "file_source_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "file_dest_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "file_size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "5de0cbf34968ab5a9e495cda0602e52a526d37ba8bd3f614ff8e54b989f38231"
+}

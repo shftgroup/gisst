@@ -177,7 +177,7 @@ impl RVal {
         Some(
             unsafe { &ret.read() }
                 .try_into()
-                .unwrap_or_else(|e| panic!("Invalid type conversion from rval")),
+                .unwrap_or_else(|_e| panic!("Invalid type conversion from rval")),
         )
     }
 }

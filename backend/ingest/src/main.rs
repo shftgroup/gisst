@@ -1,6 +1,6 @@
 use std::{
     ffi::CString,
-    fs::{self, read},
+    fs::read,
 };
 
 use anyhow::Result;
@@ -277,6 +277,7 @@ async fn main() -> Result<(), IngestError> {
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {
     PoolOptions::new().connect(&db_url).await
 }
+#[allow(dead_code)]
 fn char_to_num(c: u8) -> u8 {
     if c <= b'9' {
         c - b'0'
