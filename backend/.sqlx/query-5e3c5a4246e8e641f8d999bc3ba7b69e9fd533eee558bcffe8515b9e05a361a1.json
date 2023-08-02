@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE work SET\n            (work_name, work_version, work_platform, created_on) =\n            ($1, $2, $3, $4)\n            WHERE work_id = $5\n            RETURNING work_id, work_name, work_version, work_platform, created_on",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "work_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "work_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "work_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "work_platform",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "5e3c5a4246e8e641f8d999bc3ba7b69e9fd533eee558bcffe8515b9e05a361a1"
+}

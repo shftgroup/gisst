@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT image_id,\n            file_id,\n            image_config,\n            image_description,\n            created_on\n            FROM image\n            ORDER BY created_on DESC\n            LIMIT $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "image_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "image_config",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "image_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "4449374fceec35fd694dce49a9b0cecf338e616ff3c6724211f799f8ade5ac72"
+}

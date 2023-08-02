@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO instance(\n            instance_id,\n            environment_id,\n            work_id,\n            instance_config,\n            created_on\n            )\n            VALUES($1, $2, $3, $4, $5)\n            RETURNING instance_id, environment_id, work_id, instance_config, created_on",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "environment_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "work_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "instance_config",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Jsonb",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "75c25459bc6adeb23e1308d0575fdd38ed5efe3c11680cc62ad3d3d9d3f74166"
+}

@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE creator SET\n            (creator_username, creator_full_name, created_on) =\n            ($1, $2, $3)\n            WHERE creator_id = $4\n            RETURNING creator_id, creator_username, creator_full_name, created_on",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "creator_username",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_full_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "edab26d0527085c3e25445c02a4543bb1f15dbf8fd9d6ed6ebcafbb0f2d1de80"
+}
