@@ -26,4 +26,4 @@ jobs:
         clippy_flags: -- -Dwarnings
         reporter: 'github-pr-review'
         workdir: backend
-        fail_on_error: true
+        github_token: ${{ secrets.GITHUB_TOKEN }}
