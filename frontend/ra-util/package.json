@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/ra-util.umd.cjs",
   "module": "./dist/ra-util.js",
   "exports": {
@@ -15,12 +17,15 @@
   "types": "./dist/ra-util.d.ts",
   "scripts": {
     "dev": "vite",
-    "check": "tsc",
+    "check": "tsc && npx eslint src",
     "build": "tsc && vite build && cp dist/ra-util.d.ts dist/ra-util.umd.d.ts",
     "preview": "vite preview"
   },
   "devDependencies": {
-    "typescript": "^4.9.3",
+    "@typescript-eslint/eslint-plugin": "^6.2.1",
+    "@typescript-eslint/parser": "^6.2.1",
+    "eslint": "^8.46.0",
+    "typescript": "^4.9.5",
     "vite": "^4.1.0",
     "vite-plugin-dts": "^2.0.2"
   }

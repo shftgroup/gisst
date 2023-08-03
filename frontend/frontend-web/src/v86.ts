@@ -6,22 +6,22 @@ let ui_state:UI;
 
 
 export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
-  let content = manifest.find((o) => o.object_role=="content")!;
-  let content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
+  const content = manifest.find((o) => o.object_role=="content")!;
+  const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
   nested_replace(environment.environment_config, "$CONTENT", content_path);
   let entry_state:string|null = null;
   if (start.type == "state") {
-    let data = (start as StateStart).data;
+    const data = (start as StateStart).data;
     entry_state = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
   }
   let movie:string|null = null;
   if (start.type == "replay") {
-    let data = (start as ReplayStart).data;
+    const data = (start as ReplayStart).data;
     movie = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
   }
 
 
-  let v86:EmbedV86 = new EmbedV86({
+  const v86:EmbedV86 = new EmbedV86({
     wasm_root:"/v86",
     bios_root:"/v86/bios",
     content_root:window.location.origin,
@@ -31,18 +31,18 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       ui_state.clearCheckpoints();
     },
     states_changed:(added:StateInfo[], removed:StateInfo[]) => {
-      for(let si of removed) {
+      for(const si of removed) {
         ui_state.removeState(si.name);
       }
-      for(let si of added) {
+      for(const si of added) {
         ui_state.newState(si.name,si.thumbnail);
       }
     },
     replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
-      for(let si of removed) {
+      for(const si of removed) {
         ui_state.removeCheckpoint(si.name);
       }
-      for(let si of added) {
+      for(const si of added) {
         ui_state.newCheckpoint(si.name,si.thumbnail);
       }
     },
@@ -76,12 +76,12 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   document.getElementById("v86_stop")?.addEventListener("click",
     () => v86.stop_replay()
   );
-  let prev = document.getElementById("webplayer-preview")!;
+  const prev = document.getElementById("webplayer-preview")!;
   prev.classList.add("loaded");
   prev.addEventListener(
     "click",
     async function () {
-      let canv = <HTMLCanvasElement>document.getElementById("canvas")!;
+      const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
       prev.classList.add("hidden");
       document.getElementById("webplayer-textmode")!.classList.remove("hidden");
       v86.run(environment.environment_config, entry_state, movie);

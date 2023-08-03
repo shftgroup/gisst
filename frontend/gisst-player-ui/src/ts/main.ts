@@ -26,7 +26,7 @@ export class UI {
   }
   control:UIController;
 
-  desktop_ui:Boolean;
+  desktop_ui:boolean;
 
   ui_root:HTMLDivElement;
   saves_elt:HTMLOListElement;
@@ -36,7 +36,7 @@ export class UI {
   entries_by_name:Record<string,HTMLElement>;
   
   // ... functions go here
-  constructor(ui_root:HTMLDivElement, control:UIController, desktop_ui:Boolean) {
+  constructor(ui_root:HTMLDivElement, control:UIController, desktop_ui:boolean) {
     this.ui_root = ui_root;
     this.control = control;
     this.desktop_ui = desktop_ui;
@@ -115,14 +115,14 @@ export class UI {
     this.entries_by_name["rp__"+replay_file] = li;
   }
   clearCheckpoints() {
-    let toRemove = [];
-    for(let lit in this.entries_by_name) {
+    const toRemove = [];
+    for(const lit in this.entries_by_name) {
       if(lit.startsWith("cp__")) {
         this.entries_by_name[lit].remove();
         toRemove.push(lit);
       }
     }
-    for(let lit of toRemove) {
+    for(const lit of toRemove) {
       delete this.entries_by_name[lit];
     }
     this.checkpoint_elt.innerHTML = "";
@@ -143,7 +143,7 @@ export class UI {
     this.entries_by_name["cp__"+check_name] = li;
   }
   clear() {
-    for(let lit in this.entries_by_name) {
+    for(const lit in this.entries_by_name) {
       this.entries_by_name[lit].remove();
     }
     this.entries_by_name = {};

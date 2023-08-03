@@ -116,7 +116,7 @@ export class EmbedV86 {
       const rep = this.replays[replay_num];
       const ser_rep = await rep.serialize();
       //TODO remove me, just for testing
-      let unser_rep = await Replay.deserialize(ser_rep);
+      const unser_rep = await Replay.deserialize(ser_rep);
       if(unser_rep.events.length != rep.events.length || unser_rep.checkpoints.length != rep.checkpoints.length) {
         throw "ser roundtrip error";
       }
@@ -135,7 +135,7 @@ export class EmbedV86 {
     nonnull(this.emulator);
     if(this.active_replay != null) {
       const replay = this.replays[this.active_replay];
-      let old_cp_count = replay.checkpoints.length;
+      const old_cp_count = replay.checkpoints.length;
       replay.tick(this.emulator);
       if(old_cp_count < replay.checkpoints.length) {
         this.config.replay_checkpoints_changed(replay.checkpoints.slice(old_cp_count),[]);
