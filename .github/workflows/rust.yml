@@ -22,4 +22,4 @@ jobs:
         workspaces: "backend"
     - name: Clippy
       working-directory: backend
-      run: cargo clippy --verbose
+      run: cargo clippy -- -Dwarnings
