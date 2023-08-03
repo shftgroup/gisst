@@ -15,6 +15,7 @@
   "types": "./dist/ra-util.d.ts",
   "scripts": {
     "dev": "vite",
+    "check": "tsc",
     "build": "tsc && vite build && cp dist/ra-util.d.ts dist/ra-util.umd.d.ts",
     "preview": "vite preview"
   },

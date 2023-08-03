@@ -178,7 +178,7 @@ enum BSVFlags {
 
 async function read_response(wait:boolean): Promise<string | null> {
   const waiting:() => Promise<string|null> = () => new Promise((resolve,_reject) => {
-    let interval:number;
+    let interval:ReturnType<typeof setInterval>;
     const read_cb = () => {
       let resp = retroArchRecv();
       if(resp != null) {
