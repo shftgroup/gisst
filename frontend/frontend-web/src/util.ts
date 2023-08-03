@@ -58,7 +58,7 @@ export function base64EncArr(aBytes:Uint8Array) {
   );
 }
 
-export function nested_replace(obj:any, target:string, replacement:string) {
+export function nested_replace(obj:object, target:string, replacement:string) {
   for(const key in obj) {
     if(obj[key] == target) {
       obj[key] = replacement;

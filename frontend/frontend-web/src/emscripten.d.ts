@@ -12,6 +12,7 @@ declare namespace WebAssembly {
     interface Module {}
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare namespace Emscripten {
     interface FileSystemType {}
     type EnvironmentType = 'WEB' | 'NODE' | 'SHELL' | 'WORKER';
@@ -267,7 +268,7 @@ declare let NODEFS: Emscripten.FileSystemType;
 declare let IDBFS: Emscripten.FileSystemType;
 
 // https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html
-type StringToType<R extends any> = R extends Emscripten.JSType
+type StringToType<R> = R extends Emscripten.JSType
   ? {
       number: number;
       string: string;

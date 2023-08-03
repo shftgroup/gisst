@@ -112,7 +112,7 @@ export class Replay {
     const rem = t - (wraps * (2**32-1));
     return [wraps, rem];
   }
-  log_evt(emulator:V86Starter, code:Evt, val:any) {
+  log_evt(emulator:V86Starter, code:Evt, val:object|number) {
     if(this.mode == ReplayMode.Record) {
       //console.log("R",this.replay_time(emulator.get_instruction_counter()), EvtNames[code], val);
       this.events.push(new ReplayEvent(this.replay_time(emulator.get_instruction_counter()), code, val));
@@ -132,7 +132,7 @@ export class Replay {
     this.last_time = t;
     const real_t = this.replay_time(t);
     switch(this.mode) {
-      case ReplayMode.Record:
+      case ReplayMode.Record: {
         let last_t = 0;
         if(this.checkpoints.length != 0) {
           last_t = this.checkpoints[this.checkpoints.length-1].when;
@@ -140,9 +140,11 @@ export class Replay {
         if(real_t - last_t > REPLAY_CHECKPOINT_INTERVAL) {
           this.make_checkpoint(emulator);
         }
-      break;
-      case ReplayMode.Playback:
+        break;
+      }
+      case ReplayMode.Playback: {
         // What is earlier: next checkpoint or next event?
+        /* eslint-disable no-constant-condition */
         while(true) {
           const event_t = (this.index < this.events.length) ? this.events[this.index].when : Number.MAX_SAFE_INTEGER;
           const checkpoint_t = (this.checkpoint_index < this.checkpoints.length) ? this.checkpoints[this.checkpoint_index].when : Number.MAX_SAFE_INTEGER;
@@ -170,6 +172,7 @@ export class Replay {
           this.finish_playback(emulator);
         }
         break;
+      }
       case ReplayMode.Inactive:
       case ReplayMode.Finished:
         // do nothing
@@ -237,32 +240,32 @@ export class Replay {
     view.setUint32(x,checkpoint_count,true);
     x += 4;
     for(const evt of this.events) {
-      view.setUint8(x,evt.code);
+      view.setUint8(x,evt.code as number);
       x += 1;
       view.setBigUint64(x,BigInt(evt.when),true);
       x += 8;
       switch(evt.code) {
       case Evt.KeyCode:
-        view.setUint8(x,evt.value);
+        view.setUint8(x,evt.value as number);
         x += 1;
         break;
       case Evt.MouseClick:
-        view.setUint8(x,evt.value[0]);
-        view.setUint8(x+1,evt.value[1]);
-        view.setUint8(x+2,evt.value[2]);
+        view.setUint8(x,(evt.value as number[])[0]);
+        view.setUint8(x+1,(evt.value as number[])[1]);
+        view.setUint8(x+2,(evt.value as number[])[2]);
         x += 3;
         break;
       case Evt.MouseDelta:
       case Evt.MouseWheel:
-        view.setFloat64(x,evt.value[0],true);
-        view.setFloat64(x+8,evt.value[1],true);
+        view.setFloat64(x,evt.value as number[][0],true);
+        view.setFloat64(x+8,evt.value as number[][1],true);
         x += 8*2;
         break;
       case Evt.MouseAbsolute:
-        view.setFloat64(x,evt.value[0],true);
-        view.setFloat64(x+8,evt.value[1],true);
-        view.setFloat64(x+16,evt.value[2],true);
-        view.setFloat64(x+24,evt.value[3],true);
+        view.setFloat64(x,evt.value as number[][0],true);
+        view.setFloat64(x+8,evt.value as number[][1],true);
+        view.setFloat64(x+16,evt.value as number[][2],true);
+        view.setFloat64(x+24,evt.value as number[][3],true);
         x += 8*4;
         break;
       default:
@@ -328,7 +331,7 @@ export class Replay {
         console.log(when,when_b);
         throw "When didn't match";
       }
-      let value:any;
+      let value:object|number;
       switch(code) {
       case Evt.KeyCode:
         value = view.getUint8(x);
@@ -406,8 +409,8 @@ export class Replay {
 class ReplayEvent {
   when:number;
   code:Evt;
-  value:any;
-  constructor(when:number, code:Evt, value:any) {
+  value:object|number;
+  constructor(when:number, code:Evt, value:object|number) {
     this.when = when;
     this.code = code;
     this.value = value;
@@ -469,8 +472,10 @@ function bytes_to_uuid(buf:Uint8Array):string {
 
 //https://stackoverflow.com/a/30407959
 function dataURLToBlob(dataurl:string) {
-    let arr = dataurl.split(','), mime = arr[0]!.match(/:(.*?);/)![1],
-        bstr = atob(arr[1]!), n = bstr.length, u8arr = new Uint8Array(n);
+    const arr = dataurl.split(','), mime = arr[0]!.match(/:(.*?);/)![1],
+        bstr = atob(arr[1]!);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
     while(n--){
         u8arr[n] = bstr.charCodeAt(n);
     }
@@ -480,9 +485,9 @@ function dataURLToBlob(dataurl:string) {
 function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = _e => resolve(reader.result as string);
-    reader.onerror = _e => reject(reader.error);
-    reader.onabort = _e => reject(new Error("Read aborted"));
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.onabort = () => reject(new Error("Read aborted"));
     reader.readAsDataURL(blob);
   });
 }

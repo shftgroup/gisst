@@ -20,7 +20,7 @@ export class UI {
   static readonly gisst_states_list_content_id = "gisst-states";
   static readonly gisst_replays_list_content_id = "gisst-replays";
   static readonly gisst_checkpoints_list_content_id = "gisst-checkpoints";
-  ui_date_format:Object = {
+  ui_date_format:Intl.DateTimeFormatOptions = {
     day: "2-digit", year: "numeric", month: "short",
     hour:"numeric", minute:"numeric", second:"numeric"
   }
