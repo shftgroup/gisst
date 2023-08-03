@@ -17,13 +17,16 @@
   "types": "./dist/gisst-player.d.ts",
   "scripts": {
     "dev": "vite",
-    "check": "tsc",
+    "check": "tsc && npx eslint src",
     "build": "tsc && vite build && cp dist/gisst-player.d.ts dist/gisst-player.umd.d.ts",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.2.1",
+    "@typescript-eslint/parser": "^6.2.1",
+    "eslint": "^8.46.0",
     "sass": "^1.60.0",
-    "typescript": "^4.9.3",
+    "typescript": "^4.9.5",
     "vite": "^4.1.0",
     "vite-plugin-dts": "^2.0.2"
   },

@@ -262,9 +262,9 @@ declare namespace FS {
     ): FSNode;
 }
 
-declare var MEMFS: Emscripten.FileSystemType;
-declare var NODEFS: Emscripten.FileSystemType;
-declare var IDBFS: Emscripten.FileSystemType;
+declare let MEMFS: Emscripten.FileSystemType;
+declare let NODEFS: Emscripten.FileSystemType;
+declare let IDBFS: Emscripten.FileSystemType;
 
 // https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html
 type StringToType<R extends any> = R extends Emscripten.JSType
@@ -361,8 +361,8 @@ declare function removeRunDependency(id: any): void;
 declare function addFunction(func: (...args: any[]) => any, signature?: string): number;
 declare function removeFunction(funcPtr: number): void;
 
-declare var ALLOC_NORMAL: number;
-declare var ALLOC_STACK: number;
-declare var ALLOC_STATIC: number;
-declare var ALLOC_DYNAMIC: number;
-declare var ALLOC_NONE: number;
+declare let ALLOC_NORMAL: number;
+declare let ALLOC_STACK: number;
+declare let ALLOC_STATIC: number;
+declare let ALLOC_DYNAMIC: number;
+declare let ALLOC_NONE: number;

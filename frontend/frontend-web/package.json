@@ -5,14 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "check": "tsc",
+    "check": "tsc && npx eslint src",
     "build": "tsc && vite build",
     "dist": "rsync -avzh --delete dist/* ../../backend/web-dist/",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.2.1",
+    "@typescript-eslint/parser": "^6.2.1",
     "coffeescript": "^2.7.0",
-    "typescript": "^4.9.3",
+    "eslint": "^8.46.0",
+    "typescript": "^4.9.5",
     "vite": "^4.1.0",
     "vite-plugin-checker": "^0.5.5"
   },
