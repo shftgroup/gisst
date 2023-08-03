@@ -15,6 +15,7 @@
   "types": "./dist/embedv86.d.ts",
   "scripts": {
     "dev": "vite",
+    "check": "tsc",
     "build": "tsc && vite build && cp dist/embedv86.d.ts dist/embedv86.umd.d.ts",
     "preview": "vite preview"
   },
