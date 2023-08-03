@@ -31,39 +31,18 @@ jobs:
         cache-dependency-path: '**/package-lock.json'
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - name: ra-util ci
+    - name: ci
       run: npm ci
-      working-directory: ra-util
-    - name: ra-util build
-      run: npm run build
-      working-directory: ra-util
-    - name: embedv86 ci
-      run: npm ci
-      working-directory: embedv86
-    - name: embedv86 build
-      run: npm run build
-      working-directory: embedv86
-    - name: ui ci
-      run: npm ci
-      working-directory: gisst-player-ui
-    - name: ui build
-      run: npm run build
-      working-directory: gisst-player-ui
-    - name: frontend-web ci
-      run: npm ci
-      working-directory: frontend-web
-    - name: frontend-web build
-      run: npm run build
-      working-directory: frontend-web
-    - name: frontend-elec ci
-      run: npm ci
-      working-directory: frontend-elec
-    - name: frontend-elec tsc
-      run: ./node_modules/typescript/bin/tsc
-      working-directory: frontend-elec
-    - name: upload frontend-web/dist
-      uses: actions/upload-artifact@v3
-      with:
-        name: web-dist
-        path: frontend-web/dist
-        retention-days: 1
+      working-directory: frontend
+    - name: tsc
+      run: npm run check --workspaces --if-present
+      working-directory: frontend
+    - name: build
+      run: npm run build --workspaces --if-present
+      working-directory: frontend
+    # - name: upload frontend-web/dist
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: web-dist
+    #     path: frontend/frontend-web/dist
+    #     retention-days: 1

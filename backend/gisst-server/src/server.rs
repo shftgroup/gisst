@@ -23,9 +23,9 @@ use crate::{
 use anyhow::Result;
 use axum::{
     error_handling::HandleErrorLayer,
+    extract::{DefaultBodyLimit, Path, Query},
     http::HeaderMap,
-    extract::{DefaultBodyLimit,Path, Query},
-    response::{IntoResponse,Html},
+    response::{Html, IntoResponse},
     routing::method_routing::{get, patch, post},
     Extension, Router, Server,
 };
@@ -79,7 +79,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/states", state_router())
         .nest("/objects", object_router())
         .nest("/works", work_router())
-        .nest_service("/", ServeDir::new("../frontend-web/dist"))
+        .nest_service("/", ServeDir::new("./web-dist"))
         .nest_service(
             "/storage",
             ServiceBuilder::new()

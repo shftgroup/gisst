@@ -1,0 +1,10 @@
+{
+  "name": "embedulator-frontends",
+  "workspaces": [
+    "ra-util",
+    "embedv86",
+    "gisst-player-ui",
+    "frontend-web",
+    "frontend-elec"
+  ]
+}
