@@ -34,11 +34,11 @@ jobs:
     - name: ci
       run: npm ci
       working-directory: frontend
-    - name: tsc
-      run: npm run check --workspaces --if-present
-      working-directory: frontend
     - name: build
       run: npm run build --workspaces --if-present
+      working-directory: frontend
+    - name: tsc
+      run: npm run check --workspaces --if-present
       working-directory: frontend
     # - name: upload frontend-web/dist
     #   uses: actions/upload-artifact@v3
