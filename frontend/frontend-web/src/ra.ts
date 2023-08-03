@@ -16,10 +16,10 @@ const retro_args = ["-v"];
 let ui_state:UI;
 
 export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
-  let content = manifest.find((o) => o.object_role=="content")!;
-  let content_file = content.file_filename!;
-  let dash_point = content_file.indexOf("-");
-  let content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
+  const content = manifest.find((o) => o.object_role=="content")!;
+  const content_file = content.file_filename!;
+  const dash_point = content_file.indexOf("-");
+  const content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
   if (entryState) {
@@ -43,23 +43,23 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
     function () {
       fetchfs.mkdirp("/home/web_user/content");
 
-      let proms = [];
+      const proms = [];
       
       proms.push(fetchfs.registerFetchFS(("/assets/frontend/bundle/.index-xhr"), "/assets/frontend/bundle", "/home/web_user/retroarch/bundle", true));
 
-      for(let file of manifest) {
-        let file_prom = fetchfs.fetchFile("/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
+      for(const file of manifest) {
+        const file_prom = fetchfs.fetchFile("/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
         proms.push(file_prom);
       }
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
-        let data = (start as StateStart).data;
+        const data = (start as StateStart).data;
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
         proms.push(fetchfs.fetchFile("/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state",false));
       }
       if (movie) {
         // Cast: This one is definitely a replaystart because the type is state
-        let data = (start as ReplayStart).data;
+        const data = (start as ReplayStart).data;
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
         proms.push(fetchfs.fetchFile("/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1",false));
       }
@@ -101,7 +101,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
 }
 
 function copyFile(from: string, to: string): void {
-  let buf = FS.readFile(from);
+  const buf = FS.readFile(from);
   FS.writeFile(to, buf);
 }
 
@@ -131,22 +131,22 @@ function retroReady(): void {
     false
   );
 
-  let prev = document.getElementById("webplayer-preview")!;
+  const prev = document.getElementById("webplayer-preview")!;
   prev.classList.add("loaded");
   prev.addEventListener(
     "click",
     function () {
-      let canv = <HTMLCanvasElement>document.getElementById("canvas")!;
+      const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
       prev.classList.add("hidden");
       startRetroArch(canv, retro_args, function () {
-        let canv = document.getElementById("canvas")!;
+        const canv = document.getElementById("canvas")!;
         setInterval(checkChangedStatesAndSaves, FS_CHECK_INTERVAL);
         canv.classList.remove("hidden");
       });
       return false;
     });
 }
-function nonnull(obj:any):asserts obj {
+function nonnull(obj:unknown):asserts obj {
   if(obj == null) {
     throw "Must be non-null";
   }
@@ -158,7 +158,7 @@ function load_state_slot(n:number) {
 async function play_replay_slot(n:number) {
   clear_current_replay();
   send_message("PLAY_REPLAY_SLOT "+n.toString());
-  let resp = await read_response(true);
+  const resp = await read_response(true);
   nonnull(resp);
   const num_str = (resp.match(/PLAY_REPLAY_SLOT ([0-9]+)$/)?.[1]) ?? "0";
   if(num_str == "0") {
@@ -177,10 +177,11 @@ enum BSVFlags {
 }
 
 async function read_response(wait:boolean): Promise<string | null> {
-  const waiting:() => Promise<string|null> = () => new Promise((resolve,_reject) => {
+  const waiting:() => Promise<string|null> = () => new Promise((resolve) => {
+    /* eslint-disable prefer-const */
     let interval:ReturnType<typeof setInterval>;
     const read_cb = () => {
-      let resp = retroArchRecv();
+      const resp = retroArchRecv();
       if(resp != null) {
         clearInterval(interval!);
         resolve(resp);
@@ -207,9 +208,9 @@ async function send_message(msg:string) {
 // Called by timer from time to time
 async function update_checkpoints() {
   await send_message("GET_CONFIG_PARAM active_replay");
-  let resp = await read_response(true);
+  const resp = await read_response(true);
   nonnull(resp);
-  let matches = resp.match(/GET_CONFIG_PARAM active_replay ([0-9]+) ([0-9]+)$/);
+  const matches = resp.match(/GET_CONFIG_PARAM active_replay ([0-9]+) ([0-9]+)$/);
   const id = (matches?.[1]) ?? "0";
   const flags = parseInt((matches?.[2]) ?? "0",10);
   if(id == "0" || flags == 0) {
@@ -219,8 +220,8 @@ async function update_checkpoints() {
     if(current_replay && current_replay.id != id) {
       clear_current_replay();
     }
-    let finished = (flags & BSVFlags.END) != 0;
-    let mode = (flags & BSVFlags.PLAYBACK) != 0 ? ReplayMode.Playback : (flags & BSVFlags.RECORDING ? ReplayMode.Record : ReplayMode.Inactive);
+    const finished = (flags & BSVFlags.END) != 0;
+    const mode = (flags & BSVFlags.PLAYBACK) != 0 ? ReplayMode.Playback : (flags & BSVFlags.RECORDING ? ReplayMode.Record : ReplayMode.Inactive);
     console.log("current replay",id,mode,finished);
     current_replay = {id:id,mode:mode,finished:finished};
   }
@@ -232,7 +233,7 @@ function find_checkpoints_inner() {
   nonnull(current_replay);
   // search state files for states saved of current replay
   console.log(seen_states);
-  for(let state_file in seen_states) {
+  for(const state_file in seen_states) {
     if(state_file in seen_checkpoints) { continue; }
     console.log("Check ",state_file);
     const replay = ra_util.replay_of_state(new Uint8Array(FS.readFile(state_dir+"/"+state_file)));
@@ -261,7 +262,7 @@ const seen_replays:Record<string,string> = {};
 let seen_checkpoints:Record<string,Uint8Array> = {};
 function checkChangedStatesAndSaves() {
   const states = FS.readdir(state_dir);
-  for (let state of states) {
+  for (const state of states) {
     if(state == "." || state == "..") { continue; }
     if(state.endsWith(".png") || state.includes(".state")) {
       const png_file = state.endsWith(".png") ? state : state + ".png";
@@ -277,7 +278,7 @@ function checkChangedStatesAndSaves() {
       const replay = ra_util.replay_of_state((FS.readFile(state_dir+"/"+state_file)));
       let known_replay = false;
       if(replay) {
-        for(let seen in seen_replays) {
+        for(const seen in seen_replays) {
           if(seen_replays[seen] == replay.id) {
             known_replay = true;
           }
@@ -304,7 +305,7 @@ function checkChangedStatesAndSaves() {
     }
   }
   const saves = FS.readdir(saves_dir);
-  for (let save of saves) {
+  for (const save of saves) {
     if(save == "." || save == "..") { continue; }
     if(!(save in seen_saves)) {
       seen_saves[save] = null;

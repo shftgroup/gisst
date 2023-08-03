@@ -108,11 +108,11 @@ export class Replay {
     return wrap_amt;
   }
   cpu_time(t:number):[number,number] {
-    let wraps = Math.floor(t / (2**32-1));
-    let rem = t - (wraps * (2**32-1));
+    const wraps = Math.floor(t / (2**32-1));
+    const rem = t - (wraps * (2**32-1));
     return [wraps, rem];
   }
-  log_evt(emulator:V86Starter, code:Evt, val:any) {
+  log_evt(emulator:V86Starter, code:Evt, val:object|number) {
     if(this.mode == ReplayMode.Record) {
       //console.log("R",this.replay_time(emulator.get_instruction_counter()), EvtNames[code], val);
       this.events.push(new ReplayEvent(this.replay_time(emulator.get_instruction_counter()), code, val));
@@ -132,7 +132,7 @@ export class Replay {
     this.last_time = t;
     const real_t = this.replay_time(t);
     switch(this.mode) {
-      case ReplayMode.Record:
+      case ReplayMode.Record: {
         let last_t = 0;
         if(this.checkpoints.length != 0) {
           last_t = this.checkpoints[this.checkpoints.length-1].when;
@@ -140,14 +140,16 @@ export class Replay {
         if(real_t - last_t > REPLAY_CHECKPOINT_INTERVAL) {
           this.make_checkpoint(emulator);
         }
-      break;
-      case ReplayMode.Playback:
+        break;
+      }
+      case ReplayMode.Playback: {
         // What is earlier: next checkpoint or next event?
+        /* eslint-disable no-constant-condition */
         while(true) {
-          let event_t = (this.index < this.events.length) ? this.events[this.index].when : Number.MAX_SAFE_INTEGER;
-          let checkpoint_t = (this.checkpoint_index < this.checkpoints.length) ? this.checkpoints[this.checkpoint_index].when : Number.MAX_SAFE_INTEGER;
-          let event_is_first = (event_t < checkpoint_t) && event_t < real_t;
-          let checkpoint_is_first = (checkpoint_t <= event_t) && checkpoint_t < real_t;
+          const event_t = (this.index < this.events.length) ? this.events[this.index].when : Number.MAX_SAFE_INTEGER;
+          const checkpoint_t = (this.checkpoint_index < this.checkpoints.length) ? this.checkpoints[this.checkpoint_index].when : Number.MAX_SAFE_INTEGER;
+          const event_is_first = (event_t < checkpoint_t) && event_t < real_t;
+          const checkpoint_is_first = (checkpoint_t <= event_t) && checkpoint_t < real_t;
           if(checkpoint_is_first) {
             const check = this.checkpoints[this.checkpoint_index];
             emulator.restore_state(check.state);
@@ -170,6 +172,7 @@ export class Replay {
           this.finish_playback(emulator);
         }
         break;
+      }
       case ReplayMode.Inactive:
       case ReplayMode.Finished:
         // do nothing
@@ -214,8 +217,8 @@ export class Replay {
     // magic+metadata+frame count+checkpoint count+(frame count * max event size)+(checkpoint count * size of last checkpoint)
     const frame_count = this.events.length;
     const checkpoint_count = this.checkpoints.length;
-    let last_check = this.checkpoints[this.checkpoints.length-1];
-    let size_max = 4+32+4+4+(frame_count*(1+8+4*8))+(checkpoint_count*(8+4+4+4+last_check.state.byteLength+last_check.thumbnail.length));
+    const last_check = this.checkpoints[this.checkpoints.length-1];
+    const size_max = 4+32+4+4+(frame_count*(1+8+4*8))+(checkpoint_count*(8+4+4+4+last_check.state.byteLength+last_check.thumbnail.length));
     const ret = new ArrayBuffer(size_max);
     const view = new DataView(ret);
     // ASCII "VRPL" backwards ("LPRV") so it shows up as "VRPL" in binary
@@ -224,8 +227,8 @@ export class Replay {
     x += 4;
     // metadata: 16 bytes UUID; reserve the rest for later.
     {
-      let id_bytes = uuid_to_bytes(this.id);
-      let dst = new Uint8Array(ret, x, 16);
+      const id_bytes = uuid_to_bytes(this.id);
+      const dst = new Uint8Array(ret, x, 16);
       dst.set(id_bytes);
       x += 16;
     }
@@ -236,40 +239,40 @@ export class Replay {
     x += 4;
     view.setUint32(x,checkpoint_count,true);
     x += 4;
-    for(let evt of this.events) {
-      view.setUint8(x,evt.code);
+    for(const evt of this.events) {
+      view.setUint8(x,evt.code as number);
       x += 1;
       view.setBigUint64(x,BigInt(evt.when),true);
       x += 8;
       switch(evt.code) {
       case Evt.KeyCode:
-        view.setUint8(x,evt.value);
+        view.setUint8(x,evt.value as number);
         x += 1;
         break;
       case Evt.MouseClick:
-        view.setUint8(x,evt.value[0]);
-        view.setUint8(x+1,evt.value[1]);
-        view.setUint8(x+2,evt.value[2]);
+        view.setUint8(x,(evt.value as number[])[0]);
+        view.setUint8(x+1,(evt.value as number[])[1]);
+        view.setUint8(x+2,(evt.value as number[])[2]);
         x += 3;
         break;
       case Evt.MouseDelta:
       case Evt.MouseWheel:
-        view.setFloat64(x,evt.value[0],true);
-        view.setFloat64(x+8,evt.value[1],true);
+        view.setFloat64(x,evt.value as number[][0],true);
+        view.setFloat64(x+8,evt.value as number[][1],true);
         x += 8*2;
         break;
       case Evt.MouseAbsolute:
-        view.setFloat64(x,evt.value[0],true);
-        view.setFloat64(x+8,evt.value[1],true);
-        view.setFloat64(x+16,evt.value[2],true);
-        view.setFloat64(x+24,evt.value[3],true);
+        view.setFloat64(x,evt.value as number[][0],true);
+        view.setFloat64(x+8,evt.value as number[][1],true);
+        view.setFloat64(x+16,evt.value as number[][2],true);
+        view.setFloat64(x+24,evt.value as number[][3],true);
         x += 8*4;
         break;
       default:
         throw "Unhandled event type";
       }
     }
-    for(let check of this.checkpoints) {
+    for(const check of this.checkpoints) {
       // the when
       view.setBigUint64(x,BigInt(check.when),true);
       x += 8;
@@ -277,84 +280,84 @@ export class Replay {
       view.setUint32(x,check.event_index,true);
       x += 4;
       // the thumbnail; TODO decode base64
-      let thumb_bytes = await dataURLToBlob(check.thumbnail).arrayBuffer();
+      const thumb_bytes = await dataURLToBlob(check.thumbnail).arrayBuffer();
       view.setUint32(x,thumb_bytes.byteLength,true);
       x += 4;
       {
-        let dst = new Uint8Array(ret,x,thumb_bytes.byteLength);
+        const dst = new Uint8Array(ret,x,thumb_bytes.byteLength);
         dst.set(new Uint8Array(thumb_bytes));
       }
       x += thumb_bytes.byteLength;
       // the state
       view.setUint32(x,check.state.byteLength,true);
       x += 4;
-      let st_buf = new Uint8Array(check.state);
-      let dst_buf = new Uint8Array(ret,x,check.state.byteLength);
+      const st_buf = new Uint8Array(check.state);
+      const dst_buf = new Uint8Array(ret,x,check.state.byteLength);
       dst_buf.set(st_buf);
       x += check.state.byteLength;
     }
     return ret;
   }
   static async deserialize(buf:ArrayBuffer):Promise<Replay> {
-    let events = [];
-    let checkpoints = [];
+    const events = [];
+    const checkpoints = [];
     const view = new DataView(buf);
     let x = 0;
-    let magic = view.getUint32(x,true);
+    const magic = view.getUint32(x,true);
     x += 4;
     if(magic != 0x4C505256) {
       throw "Invalid magic, not a v86replay file";
     }
     // metadata: 16 bytes UUID; reserve the rest for later.
-    let id = bytes_to_uuid(new Uint8Array(buf,x,16));
+    const id = bytes_to_uuid(new Uint8Array(buf,x,16));
     x += 16;
     // empty metadata bytes
     x += 16;
-    let frame_count = view.getUint32(x,true);
+    const frame_count = view.getUint32(x,true);
     x += 4;
-    let checkpoint_count = view.getUint32(x,true);
+    const checkpoint_count = view.getUint32(x,true);
     x += 4;
     for(let i = 0; i < frame_count; i++) {
-      let code = view.getUint8(x);
+      const code = view.getUint8(x);
       x += 1;
-      let when_b = view.getBigUint64(x,true);
+      const when_b = view.getBigUint64(x,true);
       x += 8;
       if(when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
         console.log(when_b);
         throw "When is too big";
       }
-      let when = Number(when_b);
+      const when = Number(when_b);
       if(BigInt(when) != when_b) {
         console.log(when,when_b);
         throw "When didn't match";
       }
-      let value:any;
+      let value:object|number;
       switch(code) {
       case Evt.KeyCode:
         value = view.getUint8(x);
         x += 1;
         break;
       case Evt.MouseClick: {
-        let a = view.getUint8(x);
-        let b = view.getUint8(x+1);
-        let c = view.getUint8(x+2);
+        const a = view.getUint8(x);
+        const b = view.getUint8(x+1);
+        const c = view.getUint8(x+2);
         x += 3;
         value = [a,b,c];
         break;
       }
       case Evt.MouseDelta:
       case Evt.MouseWheel: {
-        let mx = view.getFloat64(x,true);
-        let my = view.getFloat64(x+8,true);
+        const mx = view.getFloat64(x,true);
+        const my = view.getFloat64(x+8,true);
         value = [mx,my];
         x += 8*2;
         break;
       }
       case Evt.MouseAbsolute: {
-        let mx = view.getFloat64(x,true);
-        let my = view.getFloat64(x+8,true);
-        let w = view.getFloat64(x+16,true);
-        let h = view.getFloat64(x+24,true);
+        const mx = view.getFloat64(x,true);
+        const my = view.getFloat64(x+8,true);
+        const w = view.getFloat64(x+16,true);
+        const h = view.getFloat64(x+24,true);
         value = [mx,my,w,h];
         x += 8*4;
         break;
@@ -365,35 +368,35 @@ export class Replay {
       events.push(new ReplayEvent(when, code, value));
     }
     for(let i = 0; i < checkpoint_count; i++) {
-      let when_b = view.getBigUint64(x,true);
+      const when_b = view.getBigUint64(x,true);
       x += 8;
       if(when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
         console.log(when_b);
         throw "When is too big";
       }
-      let when = Number(when_b);
+      const when = Number(when_b);
       if(BigInt(when) != when_b) {
         console.log(when,when_b);
         throw "When didn't match";
       }
-      let event_index = view.getUint32(x,true);
+      const event_index = view.getUint32(x,true);
       x += 4;
-      let name = "check"+i.toString();
-      let thumb_len = view.getUint32(x,true);
+      const name = "check"+i.toString();
+      const thumb_len = view.getUint32(x,true);
       x += 4;
-      let thumb_bytes = new Uint8Array(thumb_len);
+      const thumb_bytes = new Uint8Array(thumb_len);
       thumb_bytes.set(new Uint8Array(buf,x,thumb_len));
-      let thumb = await blobToDataURL(new Blob([thumb_bytes], {type:"image/png"}));
+      const thumb = await blobToDataURL(new Blob([thumb_bytes], {type:"image/png"}));
       x += thumb_len;
-      let state_len = view.getUint32(x,true);
+      const state_len = view.getUint32(x,true);
       x += 4;
-      let src_buf = new Uint8Array(buf,x,state_len);
-      let state = new Uint8Array(state_len);
+      const src_buf = new Uint8Array(buf,x,state_len);
+      const state = new Uint8Array(state_len);
       state.set(src_buf);
       x += state_len;
       checkpoints.push(new Checkpoint(when, name, event_index, state, thumb));
     }
-    let r = new Replay(id, ReplayMode.Inactive);
+    const r = new Replay(id, ReplayMode.Inactive);
     r.events = events;
     r.checkpoints = checkpoints;
     r.index = 0;
@@ -406,8 +409,8 @@ export class Replay {
 class ReplayEvent {
   when:number;
   code:Evt;
-  value:any;
-  constructor(when:number, code:Evt, value:any) {
+  value:object|number;
+  constructor(when:number, code:Evt, value:object|number) {
     this.when = when;
     this.code = code;
     this.value = value;
@@ -431,7 +434,7 @@ function generateUUID():string { // Public Domain/MIT
 }
 function uuid_to_bytes(s:string):Uint8Array {
   // format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-  let out = new Uint8Array(16);
+  const out = new Uint8Array(16);
   out[0] = parseInt(s.slice(0,2),16);
   out[1] = parseInt(s.slice(2,4),16);
   out[2] = parseInt(s.slice(4,6),16);
@@ -463,14 +466,16 @@ function bytes_to_uuid(buf:Uint8Array):string {
         .join ("");
   }
   // format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-  let s = bufferToHex(buf);
+  const s = bufferToHex(buf);
   return [s.slice(0,8),s.slice(8,12),s.slice(12,16),s.slice(16,20),s.slice(20,32)].join("-");
 }
 
 //https://stackoverflow.com/a/30407959
 function dataURLToBlob(dataurl:string) {
-    var arr = dataurl.split(','), mime = arr[0]!.match(/:(.*?);/)![1],
-        bstr = atob(arr[1]!), n = bstr.length, u8arr = new Uint8Array(n);
+    const arr = dataurl.split(','), mime = arr[0]!.match(/:(.*?);/)![1],
+        bstr = atob(arr[1]!);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
     while(n--){
         u8arr[n] = bstr.charCodeAt(n);
     }
@@ -480,9 +485,9 @@ function dataURLToBlob(dataurl:string) {
 function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = _e => resolve(reader.result as string);
-    reader.onerror = _e => reject(reader.error);
-    reader.onabort = _e => reject(new Error("Read aborted"));
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.onabort = () => reject(new Error("Read aborted"));
     reader.readAsDataURL(blob);
   });
 }

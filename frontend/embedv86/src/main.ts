@@ -13,6 +13,15 @@ export interface EmbedV86Config {
   states_changed:(added:StateInfo[], removed:StateInfo[]) => void;
   replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => void;
 }
+export interface ConfigSettings {
+  bios?:V86Image;
+  vga_bios?:V86Image;
+  fda?:V86Image;
+  fdb?:V86Image;
+  hda?:V86Image;
+  hdb?:V86Image;
+  cdrom?:V86Image;
+}
 
 export class State {
   name:string;
@@ -116,7 +125,7 @@ export class EmbedV86 {
       const rep = this.replays[replay_num];
       const ser_rep = await rep.serialize();
       //TODO remove me, just for testing
-      let unser_rep = await Replay.deserialize(ser_rep);
+      const unser_rep = await Replay.deserialize(ser_rep);
       if(unser_rep.events.length != rep.events.length || unser_rep.checkpoints.length != rep.checkpoints.length) {
         throw "ser roundtrip error";
       }
@@ -125,7 +134,7 @@ export class EmbedV86 {
       throw "Invalid save category";
     }
   }
-  replay_log(evt:Evt, val:any) {
+  replay_log(evt:Evt, val:number|object) {
     nonnull(this.emulator);
     if(this.active_replay != null) {
       this.replays[this.active_replay].log_evt(this.emulator, evt, val);
@@ -135,14 +144,14 @@ export class EmbedV86 {
     nonnull(this.emulator);
     if(this.active_replay != null) {
       const replay = this.replays[this.active_replay];
-      let old_cp_count = replay.checkpoints.length;
+      const old_cp_count = replay.checkpoints.length;
       replay.tick(this.emulator);
       if(old_cp_count < replay.checkpoints.length) {
         this.config.replay_checkpoints_changed(replay.checkpoints.slice(old_cp_count),[]);
       }
     }
   }
-  async run(content:string|any, entryState:string|null, movie:string|null) {
+  async run(content:ConfigSettings|string, entryState:string|null, movie:string|null) {
     this.clear();
     const content_folder = this.config.content_root;
     const config:V86StarterConfig = {
@@ -189,7 +198,7 @@ export class EmbedV86 {
     this.emulator.emulator_bus.register("mouse-delta", (delta:[number,number]) => this.replay_log(Evt.MouseDelta,delta));
     this.emulator.emulator_bus.register("mouse-absolute", (pos:[number,number,number,number]) => this.replay_log(Evt.MouseAbsolute,pos));
     this.emulator.emulator_bus.register("mouse-wheel", (delta:[number,number]) => this.replay_log(Evt.MouseWheel, delta));
-    this.emulator.bus.register("emulator-ticked", (_k:any) => this.replay_tick());
+    this.emulator.bus.register("emulator-ticked", () => this.replay_tick());
     // first time it runs, play_replay_slot 0 if movie is used
     if(movie) {
       const start_initial_replay = () => {
@@ -205,14 +214,17 @@ function nonnull(obj:number|object|null):asserts obj {
     throw "Must be non-null";
   }
 }
-function setup_image(img:"bios"|"vga_bios"|"fda"|"fdb"|"hda"|"hdb"|"cdrom", content_json:any, config:V86StarterConfig, content_folder:string) {
+function setup_image(img:"bios"|"vga_bios"|"fda"|"fdb"|"hda"|"hdb"|"cdrom", content_json:ConfigSettings, config:V86StarterConfig, content_folder:string) {
   if(img in content_json) {
-    if("url" in content_json[img]) {
-      content_json[img]["url"] = content_folder+"/"+content_json[img]["url"];
+    const cjimg = content_json[img]!;
+    if("url" in cjimg) {
+      cjimg["url"] = content_folder+"/"+cjimg["url"]!;
+      if("async" in cjimg) {
+        // nop
+      } else {
+        cjimg["async"] = false;
+      }
     }
-    if(!("async" in content_json[img])) {
-      content_json[img]["async"] = false;
-    }
-    config[img] = content_json[img];
+    config[img] = cjimg;
   }
 }
