@@ -348,7 +348,7 @@ impl DBHashable for File {
     async fn flatten_file(_conn: &mut PgConnection, record:Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         Ok(FileRecordFlatten {
             record: record.clone(),
-            file_record: record.clone(),
+            file_record: record,
         })
     }
 
@@ -785,7 +785,7 @@ impl DBHashable for Image {
     }
 
     async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id.clone()).await?.unwrap();
+        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
             file_record,
@@ -965,7 +965,7 @@ impl DBHashable for Object {
     }
 
     async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error>{
-        let file_record = File::get_by_id(conn, model.file_id.clone()).await?.unwrap();
+        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
             file_record,
@@ -1244,7 +1244,7 @@ impl DBHashable for Replay {
     }
 
     async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id.clone()).await?.unwrap();
+        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
             file_record,
@@ -1408,7 +1408,7 @@ impl DBHashable for Save {
     }
 
     async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id.clone()).await?.unwrap();
+        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
             file_record,
@@ -1639,7 +1639,7 @@ impl DBHashable for State {
     }
 
     async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id.clone()).await?.unwrap();
+        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
             file_record,
