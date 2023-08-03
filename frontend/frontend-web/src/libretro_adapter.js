@@ -1,13 +1,15 @@
+/* eslint-env browser */
+
 const encoder = new TextEncoder();
 const message_queue = [];
 const message_out = [];
 let message_accum = "";
 
-function retroArchSend(msg) {
+export function retroArchSend(msg) {
   let bytes = encoder.encode(msg+"\n");
   message_queue.push([bytes,0]);
 }
-function retroArchRecv() {
+export function retroArchRecv() {
   let out = message_out.shift();
   if(out == null && message_accum != "") {
     out = message_accum;
@@ -65,9 +67,9 @@ var Module =
       },
   };
 
-function startRetroArch(canvas, arguments, initialized_cb) {
+export function startRetroArch(canvas, retro_args, initialized_cb) {
   Module['canvas'] = canvas;
-  Module['arguments'] = arguments;
+  Module['arguments'] = retro_args;
   Module['callMain'](Module['arguments']);
   Module['resumeMainLoop']();
   initialized_cb();
