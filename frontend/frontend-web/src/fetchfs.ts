@@ -21,7 +21,7 @@ function get_file_paths_cache(index:Index, files:string[], root:string) {
   }
 }
 
-function listsEqual(as:object[], bs:object[]):boolean {
+function listsEqual(as:unknown[], bs:unknown[]):boolean {
   if(as.length != bs.length) { return false; }
   for(let i = 0; i < as.length; i++) {
     if(as[i] != bs[i]) { return false; }

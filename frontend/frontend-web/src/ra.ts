@@ -146,7 +146,7 @@ function retroReady(): void {
       return false;
     });
 }
-function nonnull(obj:object):asserts obj {
+function nonnull(obj:unknown):asserts obj {
   if(obj == null) {
     throw "Must be non-null";
   }
@@ -178,7 +178,8 @@ enum BSVFlags {
 
 async function read_response(wait:boolean): Promise<string | null> {
   const waiting:() => Promise<string|null> = () => new Promise((resolve) => {
-    const interval:ReturnType<typeof setInterval>;
+    /* eslint-disable prefer-const */
+    let interval:ReturnType<typeof setInterval>;
     const read_cb = () => {
       const resp = retroArchRecv();
       if(resp != null) {
