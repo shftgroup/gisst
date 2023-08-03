@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && rsync -avzh --delete dist ../../backend/web-dist",
+    "check": "tsc",
+    "build": "tsc && vite build",
+    "dist": "rsync -avzh --delete dist ../../backend/web-dist",
     "preview": "vite preview"
   },
   "devDependencies": {
