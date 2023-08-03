@@ -17,6 +17,7 @@
   "types": "./dist/gisst-player.d.ts",
   "scripts": {
     "dev": "vite",
+    "check": "tsc",
     "build": "tsc && vite build && cp dist/gisst-player.d.ts dist/gisst-player.umd.d.ts",
     "preview": "vite preview"
   },

@@ -3,3 +3,5 @@ members = ["gisst", "gisst-server", "gisst-cli", "ingest", "rdb-sys"]
 
 [profile.dev.package.md5]
 opt-level = 3
+[profile.dev.package.sqlx-macros]
+opt-level = 3
