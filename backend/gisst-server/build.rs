@@ -7,10 +7,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .output()
             .expect("Failed to execute npm install");
         dbg!(Command::new("npm")
-            .args(["build", "--workspaces", "--if-present"])
+            .args(["run", "build", "--workspaces", "--if-present"])
             .current_dir(FRONT_DIR));
         dbg!(Command::new("npm")
-            .args(["dist", "--workspaces", "--if-present"])
+            .args(["run", "dist", "--workspaces", "--if-present"])
             .current_dir(FRONT_DIR))
         .output()
         .expect("Failed to execute npm build");
