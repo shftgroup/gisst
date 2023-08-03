@@ -9,7 +9,7 @@ addEventListener("load", () =>
     let statenum:number = 0;
     let replaynum:number = 0;
     let cpnum:number = 0;
-    let ui_state:ui.UI = new ui.UI(
+    const ui_state:ui.UI = new ui.UI(
       <HTMLDivElement>document.getElementById("ui")!,
       {
         load_state: (sn:number) => console.log("LOAD",sn),
@@ -57,7 +57,7 @@ addEventListener("load", () =>
     (<HTMLAnchorElement>document.getElementById("finish_replay_button")!).addEventListener("click",
       () => ui_state.clearCheckpoints());
 
-    let emulator_window:HTMLDivElement = <HTMLDivElement>document.getElementById(ui.UI.emulator_single_div_id);
+    const emulator_window:HTMLDivElement = <HTMLDivElement>document.getElementById(ui.UI.emulator_single_div_id);
     emulator_window.setAttribute("style", EMULATOR_WINDOW_STYLE);
 
   });

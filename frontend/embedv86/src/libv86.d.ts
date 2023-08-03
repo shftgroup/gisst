@@ -12,8 +12,12 @@ declare class V86Starter {
   remove_listener(evt:string, listener:(any)=>void);
   get_instruction_counter():number;
   v86:V86;
-  bus:any;
-  emulator_bus:any;
+  bus:Bus;
+  emulator_bus:Bus;
+}
+declare class Bus {
+  send(evt:string, val:unknown);
+  register(evt:string, handler:(any) => void)
 }
 declare class V86 {
   cpu:Cpu
@@ -48,4 +52,4 @@ interface V86StarterConfig {
   hdb?:V86Image,
   cdrom?:V86Image,
 }
-type V86Image = {buffer:ArrayBuffer|File} | {url:string} | {url:string, size:number, async:boolean, fixed_chunk_size?: number, use_parts?: boolean};
+type V86Image = {buffer:ArrayBuffer|File} | {url:string, size?:number, async?:boolean, fixed_chunk_size?: number, use_parts?: boolean};
