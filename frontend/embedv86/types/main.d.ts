@@ -13,6 +13,15 @@ export interface EmbedV86Config {
     states_changed: (added: StateInfo[], removed: StateInfo[]) => void;
     replay_checkpoints_changed: (added: StateInfo[], removed: StateInfo[]) => void;
 }
+export interface ConfigSettings {
+    bios?: V86Image;
+    vga_bios?: V86Image;
+    fda?: V86Image;
+    fdb?: V86Image;
+    hda?: V86Image;
+    hdb?: V86Image;
+    cdrom?: V86Image;
+}
 export declare class State {
     name: string;
     state: ArrayBuffer;
@@ -34,7 +43,7 @@ export declare class EmbedV86 {
     load_state_slot(n: number): Promise<void>;
     play_replay_slot(n: number): Promise<void>;
     download_file(category: "state" | "save" | "replay", file_name: string): Promise<[Blob, string]>;
-    replay_log(evt: Evt, val: any): void;
+    replay_log(evt: Evt, val: number | object): void;
     replay_tick(): void;
-    run(content: string | any, entryState: string | null, movie: string | null): Promise<void>;
+    run(content: ConfigSettings | string, entryState: string | null, movie: string | null): Promise<void>;
 }
