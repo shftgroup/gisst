@@ -36,7 +36,7 @@ export declare class Replay {
     current_time(): number;
     replay_time(insn_counter: number): number;
     cpu_time(t: number): [number, number];
-    log_evt(emulator: V86Starter, code: Evt, val: any): void;
+    log_evt(emulator: V86Starter, code: Evt, val: object | number): void;
     make_checkpoint(emulator: V86Starter): Promise<void>;
     tick(emulator: V86Starter): Promise<void>;
     static start_recording(emulator: V86Starter): Promise<Replay>;
@@ -50,7 +50,7 @@ export declare class Replay {
 declare class ReplayEvent {
     when: number;
     code: Evt;
-    value: any;
-    constructor(when: number, code: Evt, value: any);
+    value: object | number;
+    constructor(when: number, code: Evt, value: object | number);
 }
 export {};
