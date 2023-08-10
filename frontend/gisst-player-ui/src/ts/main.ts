@@ -1,5 +1,6 @@
 // Importing main scss file, vite will process and include bootstrap
 import '../scss/styles.scss'
+import * as bootstrap from 'bootstrap'
 
 interface UIController {
   load_state: (state_num:number) => void;
