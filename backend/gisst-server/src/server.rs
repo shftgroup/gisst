@@ -17,7 +17,7 @@ use crate::{
         work_router,
     },
     serverconfig::ServerConfig,
-    templates::{TemplateHandler, PLAYER_TEMPLATE},
+    templates::TemplateHandler,
     tus::{tus_creation, tus_head, tus_patch},
 };
 use anyhow::Result;
@@ -297,7 +297,7 @@ async fn get_player(
         [("Access-Control-Allow-Origin", "*")],
         if accept.is_none() || accept.is_some_and(|hv| hv.contains("text/html")) {
             Html(render!(
-                PLAYER_TEMPLATE,
+                app_state.templates.get_template("player")?,
                 player_params => PlayerTemplateInfo {
                     environment,
                     instance,
