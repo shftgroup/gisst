@@ -16,7 +16,7 @@ export default defineConfig({
   plugins: [dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],})],
   resolve: {
     alias: {
-      '~bootstrap': resolve(__dirname, '../../node_modules/bootstrap'),
+      '~bootstrap': resolve(__dirname, '../node_modules/bootstrap'),
     }
   },
   // root: resolve(__dirname, 'src'),
