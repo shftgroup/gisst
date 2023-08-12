@@ -1,12 +1,15 @@
 // Importing main scss file, vite will process and include bootstrap
 import '../scss/styles.scss'
-import * as bootstrap from 'bootstrap'
+
+import templates from '../html/templates.html'
+import {UITemplateConst, UIIDConst } from "./template_consts";
 
 interface UIController {
   load_state: (state_num:number) => void;
   play_replay: (replay_num:number) => void;
   load_checkpoint: (state_num:number) => void;
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
+  upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: any) => void;
 }
 
 export class UI {
@@ -26,8 +29,9 @@ export class UI {
     hour:"numeric", minute:"numeric", second:"numeric"
   }
   control:UIController;
+  emulator_div:HTMLDivElement;
 
-  desktop_ui:boolean;
+  headless:boolean;
 
   ui_root:HTMLDivElement;
   saves_elt:HTMLOListElement;
@@ -37,11 +41,39 @@ export class UI {
   entries_by_name:Record<string,HTMLElement>;
   
   // ... functions go here
-  constructor(ui_root:HTMLDivElement, control:UIController, desktop_ui:boolean) {
+  constructor(ui_root:HTMLDivElement, control:UIController, headless:boolean) {
     this.ui_root = ui_root;
     this.control = control;
-    this.desktop_ui = desktop_ui;
+    this.headless = headless;
 
+    // Make sure the ui root div has a 'container' bootstrap class
+    if (!this.ui_root.classList.contains("container")){
+      this.ui_root.classList.add("container");
+    }
+
+    this.emulator_div = <HTMLDivElement>elementFromTemplates(UITemplateConst.EMULATOR_SINGLE_DIV);
+
+    // Configure initial UI state
+    // May turn this into a separate set of functions?
+    if (this.headless) {
+      const ui_headless_grid = <HTMLDivElement>elementFromTemplates(UITemplateConst.GRID_CONTAINER_HEADLESS);
+      this.ui_root.appendChild(ui_headless_grid);
+    } else {
+      const ui_embedded_grid = <HTMLDivElement>elementFromTemplates(UITemplateConst.GRID_CONTAINER_EMBEDDED);
+
+      // Attach emulator div to ui root
+      ui_embedded_grid.querySelector("#"+UIIDConst.EMU_EMBEDDED_COL)!
+          .appendChild(this.emulator_div);
+
+      // Create emulator control bar
+      ui_embedded_grid.querySelector("#"+UIIDConst.EMU_CONTROL_BAR_COL)!
+          .appendChild(elementFromTemplates(UITemplateConst.EMULATOR_CONTROL_BAR));
+
+      // Add object information tabs
+      ui_embedded_grid.querySelector("#"+UIIDConst.EMU_CONTEXT_DIV)!
+          .appendChild(elementFromTemplates(UITemplateConst.EMULATOR_OBJECTS_TABS_EMBEDDED));
+      this.ui_root.appendChild(ui_embedded_grid);
+    }
     // Configure emulator manipulation toolbar
     this.saves_elt = <HTMLOListElement>document.createElement("ol");
     this.ui_root.appendChild(this.saves_elt);
@@ -65,8 +97,7 @@ export class UI {
   newState(state_file:string, state_thumbnail:string) {
     console.log("found new state", state_file);
     // Create state list template object
-    const state_list_object_template = <HTMLTemplateElement>document.getElementById("temp_state_list_object");
-    const new_state_list_object = <HTMLDivElement>state_list_object_template.content.cloneNode(true);
+    const new_state_list_object = elementFromTemplates("state_list_object");
 
     // Add img data to state_list_object and create on click load
     // state from img
@@ -167,4 +198,11 @@ export class UI {
   removeCheckpoint(cp_file:string) {
     this.removeLit("cp__"+cp_file);
   }
+}
+
+function elementFromTemplates(template_name: string): Element {
+  const templates_element = <HTMLTemplateElement>document.createElement("template");
+  templates_element.innerHTML = templates.trim();
+  const template_element = <HTMLTemplateElement>templates_element.content.querySelector("#" + template_name)!;
+  return template_element.content.cloneNode(true);
 }
