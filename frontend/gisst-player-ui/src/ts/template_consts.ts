@@ -9,6 +9,7 @@ export class UITemplateConst {
 
 export class UIIDConst {
     static readonly EMU_CONTEXT_DIV:string = "emulator_contextual_div";
+    static readonly EMU_SINGLE_DIV:string = "emulator_single_div";
     static readonly EMU_EMBEDDED_COL:string = "emulator_col";
     static readonly EMU_CONTROL_BAR_COL:string = "emulator_control_bar_col";
 }

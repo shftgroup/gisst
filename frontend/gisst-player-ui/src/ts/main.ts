@@ -1,21 +1,20 @@
 // Importing main scss file, vite will process and include bootstrap
 import '../scss/styles.scss'
 
-import templates from '../html/templates.html'
-import {UITemplateConst, UIIDConst } from "./template_consts";
+import templates from "../html/templates.html?raw"
+import {UITemplateConst, UIIDConst } from "./template_consts"
 
 interface UIController {
   load_state: (state_num:number) => void;
   play_replay: (replay_num:number) => void;
   load_checkpoint: (state_num:number) => void;
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
-  upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: any) => void;
+  // upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: any) => void;
 }
 
 export class UI {
   // static declarations for UI element names
   // assuming a single emulator window right now, will modify for multiple windows
-  static readonly emulator_single_div_id = "emulator_single_div";
   static readonly state_button_id = "state_button";
   static readonly save_button_id = "save_button";
   static readonly checkpoint_button_id = "checkpoint_button";
@@ -97,7 +96,7 @@ export class UI {
   newState(state_file:string, state_thumbnail:string) {
     console.log("found new state", state_file);
     // Create state list template object
-    const new_state_list_object = elementFromTemplates("state_list_object");
+    const new_state_list_object = <HTMLDivElement>elementFromTemplates("state_list_object");
 
     // Add img data to state_list_object and create on click load
     // state from img
@@ -200,7 +199,7 @@ export class UI {
   }
 }
 
-function elementFromTemplates(template_name: string): Element {
+function elementFromTemplates(template_name: string): Node {
   const templates_element = <HTMLTemplateElement>document.createElement("template");
   templates_element.innerHTML = templates.trim();
   const template_element = <HTMLTemplateElement>templates_element.content.querySelector("#" + template_name)!;
