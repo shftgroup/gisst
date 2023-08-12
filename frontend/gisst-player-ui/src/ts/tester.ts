@@ -16,7 +16,7 @@ addEventListener("load", () =>
         load_checkpoint: (sn:number) => console.log("LOADCP",sn),
         play_replay: (sn:number) => console.log("PLAY",sn),
         download_file: (category:"save"|"state"|"replay", file_name:string) => console.log("Save file",category,file_name)
-      },true
+      },false
     );
     (<HTMLAnchorElement>document.getElementById("save_button")!).addEventListener("click",
       () => ui_state.newSave("yet another save.srm"));
