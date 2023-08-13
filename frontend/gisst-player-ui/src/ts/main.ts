@@ -1,4 +1,5 @@
 // Importing main scss file, vite will process and include bootstrap
+export {UIIDConst} from "./template_consts"
 import '../scss/styles.scss'
 
 import templates from "../html/templates.html?raw"
