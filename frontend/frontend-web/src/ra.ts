@@ -1,6 +1,6 @@
 import './style.css';
 import IMG_STATE_ENTRY from './media/init_state.png';
-import * as fetchgitfs from './fetchfs';
+import * as fetchfs from './fetchfs';
 import {UI} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
