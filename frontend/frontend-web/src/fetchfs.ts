@@ -1,4 +1,5 @@
 import {get, set, delMany} from 'idb-keyval';
+import * as zip from "@zip.js/zip.js";
 
 type FileContents = null|Index;
 
@@ -27,6 +28,22 @@ function listsEqual(as:unknown[], bs:unknown[]):boolean {
     if(as[i] != bs[i]) { return false; }
   }
   return true;
+}
+
+export async function fetchZip(zipfile:string, mount:string) {
+  const zipReader = new zip.ZipReader(new zip.HttpReader(zipfile), {useWebWorkers:false});
+  const entries = await zipReader.getEntries();
+  mkdirp(mount);
+  for(const file of entries) {
+    if (file.getData && !file.directory) {
+      const writer = new zip.Uint8ArrayWriter();
+      const data:Uint8Array = await file.getData(writer);
+      await FS.writeFile(mount+file.filename, data);
+    } else {
+      mkdirp(mount+file.filename);
+    }
+  }
+  await zipReader.close();
 }
 
 export async function registerFetchFS(index:string | Index, root:string, mount:string, cache:boolean) {
