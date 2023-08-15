@@ -44,8 +44,8 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       fetchfs.mkdirp("/home/web_user/content");
 
       const proms = [];
-      
-      proms.push(fetchfs.registerFetchFS(("/assets/frontend/bundle/.index-xhr"), "/assets/frontend/bundle", "/home/web_user/retroarch/bundle", true));
+
+      proms.push(fetchfs.fetchZip("/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
 
       for(const file of manifest) {
         const file_prom = fetchfs.fetchFile("/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
