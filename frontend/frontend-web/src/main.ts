@@ -1,4 +1,4 @@
-import './style.css'
+import 'gisst-player/style.css';
 import * as ra from './ra';
 import * as v86 from './v86';
 
