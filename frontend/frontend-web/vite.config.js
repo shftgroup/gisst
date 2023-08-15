@@ -20,6 +20,9 @@ export default {
     headers:{
       "Cross-Origin-Embedder-Policy":"require-corp",
       "Cross-Origin-Opener-Policy":"same-origin"
+    },
+    proxy: {
+      "/storage": "http://localhost:3000/"
     }
   }
 }

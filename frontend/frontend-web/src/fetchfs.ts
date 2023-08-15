@@ -95,21 +95,21 @@ export async function fetchFile(from:string, to:string, cache:boolean):Promise<v
     const key = "FSCACHE_"+from;
     const cached = await get(key);
     if (cached) {
-      if(to.endsWith("bfight.nes") || to.endsWith("retroarch.cfg")) {
-        console.log("make cached req",key,cached.byteLength,from,to);
-      }
       return FS.writeFile(to, new Uint8Array(cached));
     } else {
       const resp = await fetch(from);
+      if(!resp.ok) {
+        throw "Couldn't obtain file";
+      }
       const buf = await resp.arrayBuffer();
       set(key,buf);
-      if(to.endsWith("bfight.nes") || to.endsWith("retroarch.cfg")) {
-        console.log("make uncached req",key,from,to,buf.byteLength);
-      }
       return FS.writeFile(to, new Uint8Array(buf));
     }
   } else {
     const resp = await fetch(from);
+    if(!resp.ok) {
+      throw "Couldn't obtain file";
+    }
     const buf = await resp.arrayBuffer();
     return FS.writeFile(to, new Uint8Array(buf));
   }
