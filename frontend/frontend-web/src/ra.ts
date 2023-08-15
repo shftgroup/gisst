@@ -1,4 +1,3 @@
-import './style.css';
 import IMG_STATE_ENTRY from './media/init_state.png';
 import * as fetchfs from './fetchfs';
 import {UI} from 'gisst-player';
