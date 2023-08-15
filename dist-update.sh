@@ -33,6 +33,12 @@ cd ..
 
 cd frontend/frontend-web/public/assets/frontend/bundle
 rm -rf overlays shaders filters database assets/glui assets/xmb assets/rgui
+rm assets/ozone/png/icons/*\ -\ *
+rm -r autoconfig
+rm -r info
+rm assets/sounds/*.wav
+rm assets/pkg/chinese-*
+rm assets/pkg/korean-*
 ../../../../../node_modules/coffeescript/bin/coffee ../../../../../../retroarch-web/indexer . > .index-xhr
 cd -
 
