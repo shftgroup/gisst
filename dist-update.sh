@@ -33,7 +33,14 @@ cd ..
 
 cd frontend/frontend-web/public/assets/frontend/bundle
 rm -rf overlays shaders filters database assets/glui assets/xmb assets/rgui
-../../../../../node_modules/coffeescript/bin/coffee ../../../../../../retroarch-web/indexer . > .index-xhr
+rm assets/ozone/png/icons/*\ -\ *
+rm assets/sounds/*.wav
+rm assets/pkg/chinese-*
+rm assets/pkg/korean-*
+cd -
+
+cd frontend/frontend-web/public/assets/frontend
+zip -r -9 bundle.zip bundle
 cd -
 
 rm -rf frontend/frontend-tauri/src-tauri/ra-assets
