@@ -51,7 +51,7 @@ export class GISSTDBConnector {
             return response.json() as Promise<GetRecordsResponse>
         })
     }
-    
+
     async uploadRecord(record: DBRecord,
                        record_type: string,
                        errorCallback: (error:Error | never) => void,

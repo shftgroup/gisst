@@ -1,4 +1,6 @@
 // Importing main scss file, vite will process and include bootstrap
+import {DBRecord} from "./models";
+
 export {UIIDConst} from "./template_consts"
 import '../scss/styles.scss'
 import * as bootstrap from 'bootstrap'
@@ -11,7 +13,7 @@ interface UIController {
   play_replay: (replay_num:number) => void;
   load_checkpoint: (state_num:number) => void;
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
-  // upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: any) => void;
+  upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: DBRecord) => void;
 }
 
 export class UI {
