@@ -97,7 +97,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                 .layer(HandleErrorLayer::new(handle_error))
                 // This map_err is needed to get the types to work out after handleerror and before servedir.
                 .map_err(|e| panic!("{:?}", e))
-                .service(ServeDir::new("storage")),
+                .service(ServeDir::new("storage").precompressed_gzip()),
         )
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432));
