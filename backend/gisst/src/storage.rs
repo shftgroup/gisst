@@ -1,4 +1,7 @@
-use tokio::fs::{create_dir_all, remove_file, File};
+use tokio::{
+    fs::{create_dir_all, remove_file, File},
+    io::AsyncRead,
+};
 
 use std::fs::OpenOptions;
 use std::io::{BufWriter, Write};
@@ -126,12 +129,13 @@ impl StorageHandler {
             create_dir_all(path.as_path()).await?
         }
 
-        tokio::fs::rename(
-            Self::get_temp_file_path(temp_path, file_info),
-            Self::get_dest_file_path(root_path, file_info),
-        )
-        .await
-        .map_err(StorageError::IO)
+        let dest_path = Self::get_dest_file_path(root_path, file_info);
+        tokio::fs::rename(Self::get_temp_file_path(temp_path, file_info), &dest_path)
+            .await
+            .map_err(StorageError::IO)?;
+
+        let data = tokio::fs::File::open(&dest_path).await?;
+        Self::gzip_file(&dest_path, data).await
     }
 
     pub async fn add_bytes_to_file(
@@ -203,8 +207,10 @@ impl StorageHandler {
 
         path.push(&save_filename);
         info!("writing path {:?}", path);
-        let mut file = File::create(path.to_path_buf()).await?;
+        let mut file = File::create(&path).await?;
         file.write_all(file_data).await?;
+
+        Self::gzip_file(&path, file_data).await?;
 
         path.pop();
 
@@ -216,6 +222,24 @@ impl StorageHandler {
             dest_path: path.strip_prefix(root_path)?.to_string_lossy().to_string(),
             file_hash: hash_string.to_string(),
         })
+    }
+    async fn gzip_file<R: AsyncRead + Unpin>(path: &Path, data: R) -> Result<(), StorageError> {
+        let ext: Option<&str> = path.extension().and_then(|ext| ext.to_str());
+        let gz_path = if let Some(e) = ext {
+            let mut s = e.to_string();
+            s.push_str(".gz");
+            path.with_extension(s)
+        } else {
+            path.with_extension("gz")
+        };
+        let gz_file = File::create(gz_path).await?;
+        let mut gz_enc = async_compression::tokio::write::GzipEncoder::with_quality(
+            gz_file,
+            async_compression::Level::Best,
+        );
+        let mut buf = tokio::io::BufReader::with_capacity(1024 * 1024, data);
+        let _bytes_written = tokio::io::copy_buf(&mut buf, &mut gz_enc).await?;
+        Ok(())
     }
 }
 
