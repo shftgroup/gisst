@@ -1,3 +1,4 @@
+export type DBRecord = Environment | Work | Save | Replay | State | Instance;
 export interface Environment {
     environment_id: string,
     environment_name: string,
