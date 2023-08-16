@@ -1,6 +1,7 @@
 // Importing main scss file, vite will process and include bootstrap
 export {UIIDConst} from "./template_consts"
 import '../scss/styles.scss'
+import * as bootstrap from 'bootstrap'
 
 import templates from "../html/templates.html?raw"
 import {UITemplateConst, UIIDConst } from "./template_consts"
@@ -42,6 +43,7 @@ export class UI {
   
   // ... functions go here
   constructor(ui_root:HTMLDivElement, control:UIController, headless:boolean) {
+    let _unused = bootstrap.Alert; // needed to force TS compile to import bootstrap
     this.ui_root = ui_root;
     this.control = control;
     this.headless = headless;
