@@ -1,7 +1,9 @@
 // Importing main scss file, vite will process and include bootstrap
-import {DBRecord} from "./models";
-
 export {UIIDConst} from "./template_consts"
+export {GISSTDBConnector} from "./db"
+export * as GISSTModels from "./models"
+import {DBFileRecord, DBRecord} from "./models";
+
 import '../scss/styles.scss'
 import * as bootstrap from 'bootstrap'
 
@@ -13,16 +15,12 @@ interface UIController {
   play_replay: (replay_num:number) => void;
   load_checkpoint: (state_num:number) => void;
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
-  upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: DBRecord) => void;
+  upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: DBFileRecord) => void;
 }
 
 export class UI {
   // static declarations for UI element names
   // assuming a single emulator window right now, will modify for multiple windows
-  static readonly state_button_id = "state_button";
-  static readonly save_button_id = "save_button";
-  static readonly checkpoint_button_id = "checkpoint_button";
-  static readonly replay_button_id = "start_replay_button";
   static readonly gisst_saves_list_content_id = "gisst-saves";
   static readonly gisst_states_list_content_id = "gisst-states";
   static readonly gisst_replays_list_content_id = "gisst-replays";
@@ -42,10 +40,14 @@ export class UI {
   checkpoint_elt:HTMLOListElement;
 
   entries_by_name:Record<string,HTMLElement>;
+  metadata_by_name:Record<string,DBFileRecord>;
   
   // ... functions go here
   constructor(ui_root:HTMLDivElement, control:UIController, headless:boolean) {
-    let _unused = bootstrap.Alert; // needed to force TS compile to import bootstrap
+    const _unused = bootstrap.Alert; // needed to force TS compile to import bootstrap
+    if(_unused) {
+      // needed to avoid TS compile issue
+    }
     this.ui_root = ui_root;
     this.control = control;
     this.headless = headless;
@@ -78,6 +80,7 @@ export class UI {
           .appendChild(elementFromTemplates(UITemplateConst.EMULATOR_OBJECTS_TABS_EMBEDDED));
       this.ui_root.appendChild(ui_embedded_grid);
     }
+
     // Configure emulator manipulation toolbar
     this.saves_elt = <HTMLOListElement>document.createElement("ol");
     this.ui_root.appendChild(this.saves_elt);
@@ -124,6 +127,11 @@ export class UI {
     state_object_title.appendChild(a);
     const state_object_timestamp = <HTMLElement>new_state_list_object.querySelector("small");
     state_object_timestamp.textContent = `Created ${new Date().toLocaleDateString("en-US", this.ui_date_format)}`;
+
+    new_state_list_object.querySelector(".upload-state-button")!.addEventListener("click", () => {
+      const metadata = this.metadata_by_name["st__"+state_file];
+      this.control.upload_file("state", state_file, metadata);
+    });
 
     const gisst_state_tab = <HTMLDivElement>document.getElementById(UI.gisst_states_list_content_id);
     gisst_state_tab.appendChild(new_state_list_object);

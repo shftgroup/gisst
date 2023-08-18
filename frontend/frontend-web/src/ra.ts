@@ -1,9 +1,12 @@
 import IMG_STATE_ENTRY from './media/init_state.png';
 import * as fetchfs from './fetchfs';
+import {GISSTDBConnector} from 'gisst-player/dist/db';
 import {UI} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
+import {DBRecord, DBFileRecord} from "gisst-player/dist/models";
+import * as tus from "tus-js-client";
 
 const FS_CHECK_INTERVAL = 1000;
 
@@ -13,6 +16,7 @@ const saves_dir = "/home/web_user/retroarch/userdata/saves";
 const retro_args = ["-v"];
 
 let ui_state:UI;
+let db:GISSTDBConnector;
 
 export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
   const content = manifest.find((o) => o.object_role=="content")!;
@@ -106,6 +110,7 @@ function copyFile(from: string, to: string): void {
 
 // TODO add clear button to call ui_state.clear()
 function retroReady(): void {
+  db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
       {
@@ -125,6 +130,30 @@ function retroReady(): void {
           }
           const data = FS.readFile(path + "/" + file_name);
           saveAs(new Blob([data]), file_name);
+        },
+        "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata: DBFileRecord) => {
+          let path = "/home/web_user/retroarch/userdata";
+          if (category == "state") {
+            path += "/states";
+          } else if (category == "save") {
+            path += "/saves";
+          } else if (category == "replay") {
+            path += "/states";
+          } else {
+            console.error("Invalid save category", category, file_name);
+          }
+          const data = FS.readFile(path + "/" + file_name);
+
+          db.uploadFile(new File([data], file_name),
+              (error:Error) => { console.log("ran error callback", error.message)},
+              (_percentage: number) => {},
+              (upload: tus.Upload) => {
+                  const url_parts = upload.url!.split('/');
+                  const uuid_string = url_parts[url_parts.length - 1];
+                  metadata.file_id = uuid_string;
+                  db.uploadRecord(metadata as DBRecord, category);
+              });
+
         }
       },
     false

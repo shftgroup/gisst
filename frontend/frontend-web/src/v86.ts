@@ -1,8 +1,11 @@
-import {UI, UIIDConst} from 'gisst-player';
+import {GISSTDBConnector, UI, UIIDConst} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
+import {DBFileRecord, DBRecord} from "gisst-player/dist/models";
+import * as tus from 'tus-js-client';
 let ui_state:UI;
+let db:GISSTDBConnector;
 
 
 export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
@@ -47,6 +50,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       }
     },
   });
+  db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
@@ -61,6 +65,20 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       },
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
         v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
+      },
+      "upload_file":(category:"state" | "save" | "replay", file_name:string, metadata:DBFileRecord) => {
+        v86.download_file(category, file_name).then(([blob, name]) => {
+          db.uploadFile(new File([blob], name),
+              (_error:Error) => {},
+              (_percentage:number) => {},
+              (upload:tus.Upload) => {
+                const url_parts = upload.url!.split('/');
+                const uuid_string = url_parts[url_parts.length - 1];
+                metadata.file_id = uuid_string;
+                db.uploadRecord(metadata as DBRecord, category);
+              }
+              )
+        })
       }
     },
     false

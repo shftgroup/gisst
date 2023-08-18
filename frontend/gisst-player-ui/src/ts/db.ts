@@ -1,4 +1,3 @@
-import * as models from './models'
 import * as tus from 'tus-js-client'
 import * as SparkMD5 from 'spark-md5'
 import {DBRecord} from "./models";
@@ -9,17 +8,15 @@ type GetRecordsResponse = {
 export class GISSTDBConnector {
 
     repo_url: string;
-    repo_port: number;
 
 
-    constructor(db_url:string, port:number) {
-        this.repo_port = port;
+    constructor(db_url:string) {
         this.repo_url = db_url;
     }
 
     async getRecordById<DBRecord>(record_type: string, record_id: string): Promise<DBRecord> {
         return fetch(
-            `${this.repo_url}:${this.repo_port}/${record_type}/${record_id}`,
+            `${this.repo_url}/${record_type}/${record_id}`,
             {
                 method: 'GET',
                 cache: 'no-cache',
@@ -37,7 +34,7 @@ export class GISSTDBConnector {
 
     async getRecords<GetRecordsResponse>(record_type: string, limit: number): Promise<GetRecordsResponse> {
         return fetch(
-            `${this.repo_url}:${this.repo_port}/${record_type}s/` + new URLSearchParams({limit: limit.toString()}),
+            `${this.repo_url}/${record_type}s/` + new URLSearchParams({limit: limit.toString()}),
             {
                 method: 'GET',
                 headers: {
@@ -52,40 +49,24 @@ export class GISSTDBConnector {
         })
     }
 
-    async uploadRecord(record: DBRecord,
-                       record_type: string,
-                       errorCallback: (error:Error | never) => void,
-                       successCallback: (record: DBRecord) => void) {
-
-        try {
-            const response = await fetch(
-                `${this.repo_url}:${this.repo_port}/${record_type}s/create`,
-                {
-                    method: 'POST',
-                    cache: 'no-cache',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                    },
-                    body: JSON.stringify(record),
-                });
-
-            if (!response.ok){
-                errorCallback(new Error(`Error! status: ${response.status}`));
+    async uploadRecord<DBRecord>(record: DBRecord, record_type: string): Promise<DBRecord> {
+        return fetch(
+            `${this.repo_url}/${record_type}s/create`,
+            {
+                method: 'POST',
+                cache: 'no-cache',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify(record),
             }
-
-            const result = (await response.json()) as DBRecord;
-            console.log('record create result is: ', JSON.stringify(result, null, 4));
-            successCallback(result);
-
-        } catch (error) {
-            if (error instanceof Error) {
-                console.log('error message: ', error.message);
-                errorCallback(error);
-            } else {
-                console.log('unexpected error: ', error);
+        ).then(response => {
+            if(!response.ok) {
+                throw new Error(response.statusText)
             }
-        }
+            return response.json() as Promise<DBRecord>
+        })
     }
     async uploadFile(file:File,
                      errorCallback: (error:Error) => void,
@@ -93,7 +74,7 @@ export class GISSTDBConnector {
                      successCallback: (upload: tus.Upload) => void
     ) {
         const upload = new tus.Upload(file, {
-            endpoint: this.repo_url + ':' + this.repo_port + '/resources',
+            endpoint: `${this.repo_url}/resources`,
             retryDelays: [0, 3000, 5000, 10000, 20000],
             chunkSize: 10485760,
             metadata: {
@@ -110,7 +91,7 @@ export class GISSTDBConnector {
                 progressCallback(parseFloat(percentage));
             },
             onSuccess: function () {
-                console.log('Download %s from %s', upload.file.name, upload.url)
+                console.log('Upload %s to %s', file.name, upload.url)
                 successCallback(upload);
             },
         })
@@ -130,6 +111,7 @@ export class GISSTDBConnector {
 
 
 }
+
 
 // code from https://dev.to/qortex/compute-md5-checksum-for-a-file-in-typescript-59a4
 function computeChecksumMd5(file: File): Promise<string> {

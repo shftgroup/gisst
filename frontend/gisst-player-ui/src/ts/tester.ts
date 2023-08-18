@@ -7,7 +7,7 @@ addEventListener("load", () =>
   {
     let statenum:number = 0;
     let replaynum:number = 0;
-    let cpnum:number = 0;
+    //let cpnum:number = 0;
     const ui_state:ui.UI = new ui.UI(
       <HTMLDivElement>document.getElementById("ui")!,
       {
@@ -35,26 +35,26 @@ addEventListener("load", () =>
       statenum += 1;
     });
 
-    (<HTMLAnchorElement>document.getElementById("remove_last_save_button")!).addEventListener("click",
+    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_SAVE_BUTTON)!).addEventListener("click",
       () => ui_state.removeSave("yet another save.srm"));
-    (<HTMLAnchorElement>document.getElementById("remove_last_replay_button")!).addEventListener("click",
+    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_REPLAY_BUTTON)!).addEventListener("click",
       () => {
         replaynum -= 1;
         ui_state.removeReplay("yet another replay.replay"+replaynum.toString());
       });
-    (<HTMLAnchorElement>document.getElementById("remove_last_checkpoint_button")!).addEventListener("click",
-      () => {
-        cpnum -= 1;
-        ui_state.removeCheckpoint("check"+cpnum.toString());
-      });
-    (<HTMLAnchorElement>document.getElementById("remove_last_state_button")!).addEventListener("click", () => {
+    // (<HTMLAnchorElement>document.getElementById("remove_last_checkpoint_button")!).addEventListener("click",
+    //   () => {
+    //     cpnum -= 1;
+    //     ui_state.removeCheckpoint("check"+cpnum.toString());
+    //   });
+    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_STATE_BUTTON)!).addEventListener("click", () => {
       statenum -= 1;
       ui_state.removeState("a state.state"+statenum.toString());
     });
 
-    (<HTMLAnchorElement>document.getElementById("clear_ui_button")!).addEventListener("click",
+    (<HTMLAnchorElement>document.getElementById(UIIDConst.UI_CLEAR_BUTTON)!).addEventListener("click",
       () => ui_state.clear());
-    (<HTMLAnchorElement>document.getElementById("finish_replay_button")!).addEventListener("click",
+    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_FINISH_REPLAY_BUTTON)!).addEventListener("click",
       () => ui_state.clearCheckpoints());
 
   });
