@@ -1,4 +1,5 @@
 export type DBRecord = Environment | Work | Save | Replay | State | Instance;
+export type DBFileRecord = Save | State | Replay;
 export interface Environment {
     environment_id: string,
     environment_name: string,
