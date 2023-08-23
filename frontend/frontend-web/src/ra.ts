@@ -1,11 +1,9 @@
 import IMG_STATE_ENTRY from './media/init_state.png';
 import * as fetchfs from './fetchfs';
-import {GISSTDBConnector} from 'gisst-player/dist/db';
-import {UI} from 'gisst-player';
+import {UI, GISSTDBConnector, GISSTModels} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
-import {DBRecord, Metadata, State, Screenshot} from "gisst-player/dist/models";
 import * as tus from "tus-js-client";
 
 const FS_CHECK_INTERVAL = 1000;
@@ -131,7 +129,7 @@ function retroReady(): void {
           const data = FS.readFile(path + "/" + file_name);
           saveAs(new Blob([data]), file_name);
         },
-        "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:Metadata ) => {
+        "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
           return new Promise((resolve, reject) => {
             let path = "/home/web_user/retroarch/userdata";
             if (category == "state") {
@@ -153,11 +151,11 @@ function retroReady(): void {
                   const uuid_string = url_parts[url_parts.length - 1];
                   metadata.record.file_id = uuid_string;
                   db.uploadRecord({screenshot_id: "", screenshot_data: metadata.screenshot}, "screenshot")
-                      .then((screenshot:DBRecord) => {
-                        (metadata.record as State).screenshot_id = (screenshot as Screenshot).screenshot_id;
+                      .then((screenshot:GISSTModels.DBRecord) => {
+                        (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
                         db.uploadRecord(metadata.record, "state")
-                            .then((state:DBRecord) => {
-                              (metadata.record as State).state_id = (state as State).state_id;
+                            .then((state:GISSTModels.DBRecord) => {
+                              (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
                               resolve(metadata)
                             })
                             .catch(() => reject("State upload from RA failed."))

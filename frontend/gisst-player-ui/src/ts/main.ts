@@ -1,7 +1,4 @@
 // Importing main scss file, vite will process and include bootstrap
-export {UIIDConst} from "./template_consts"
-export {GISSTDBConnector} from "./db"
-export * as GISSTModels from "./models"
 import {FrontendConfig, Metadata, ReplayFileLink, StateFileLink} from "./models";
 
 import '../scss/styles.scss'
@@ -239,3 +236,7 @@ function elementFromTemplates(template_name: string): Node {
   const template_element = <HTMLTemplateElement>templates_element.content.querySelector("#" + template_name)!;
   return template_element.content.cloneNode(true);
 }
+
+export {UIIDConst} from "./template_consts"
+export {GISSTDBConnector} from "./db"
+export * as GISSTModels from "./models"
