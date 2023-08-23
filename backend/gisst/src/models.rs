@@ -27,6 +27,8 @@ pub enum NewRecordError {
     Replay,
     #[error("could not insert save record into database")]
     Save,
+    #[error("could not insert screenshot record into database")]
+    Screenshot,
     #[error("could not insert state record into database")]
     State,
     #[error("could not insert work record into database")]
@@ -203,6 +205,8 @@ pub struct Save {
     pub creator_id: Uuid,
     pub created_on: Option<OffsetDateTime>,
 }
+
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
