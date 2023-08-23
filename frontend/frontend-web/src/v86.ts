@@ -1,8 +1,7 @@
-import {GISSTDBConnector, UI, UIIDConst} from 'gisst-player';
+import {UI, UIIDConst, GISSTDBConnector, GISSTModels} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
-import {DBRecord, State, Screenshot, Replay, Save, Metadata, FrontendConfig} from "gisst-player/dist/models";
 import * as tus from 'tus-js-client';
 let ui_state:UI;
 let db:GISSTDBConnector;
@@ -66,48 +65,48 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
         v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
       },
-      "upload_file":(category:"state" | "save" | "replay", file_name:string, metadata:Metadata) => {
-        v86.download_file(category, file_name).then(([blob, name]) => {
+      "upload_file":(category:"state" | "save" | "replay", file_name:string, metadata:GISSTModels.Metadata) => {
             return new Promise((resolve, reject) => {
-                db.uploadFile(new File([blob], name),
-                    (error:Error) => { reject(error.message)},
-                    (_percentage:number) => {},
-                    (upload:tus.Upload) => {
-                        const url_parts = upload.url!.split('/');
-                        const uuid_string = url_parts[url_parts.length - 1];
-                        metadata.record.file_id = uuid_string;
-                        if(category == "state"){
-                            db.uploadRecord({screenshot_id:"", screenshot_data: metadata.screenshot}, "screenshot")
-                                .then((screenshot:DBRecord) => {
-                                    (metadata.record as State).screenshot_id = (screenshot as Screenshot).screenshot_id;
-                                    db.uploadRecord(metadata.record, "state")
-                                        .then((state:DBRecord) => {
-                                            (metadata.record as State).state_id = (state as State).state_id
-                                            resolve(metadata);
-                                        })
-                                        .catch(() => reject("State upload from v86 failed."))
-                                })
-                                .catch(() => reject("Screenshot upload from v86 failed."))
-                        }else {
-                            db.uploadRecord(metadata.record, category)
-                                .then((record:DBRecord) => {
-                                    if (category === "replay") {
-                                        (metadata.record as Replay).replay_id = (record as Replay).replay_id;
-                                    } else {
-                                        (metadata.record as Save).save_id = (record as Save).save_id;
-                                    }
-                                    resolve(metadata)
-                                })
+                v86.download_file(category, file_name).then(([blob, name]) => {
+                    db.uploadFile(new File([blob], name),
+                        (error:Error) => { reject(error.message)},
+                        (_percentage:number) => {},
+                        (upload:tus.Upload) => {
+                            const url_parts = upload.url!.split('/');
+                            const uuid_string = url_parts[url_parts.length - 1];
+                            metadata.record.file_id = uuid_string;
+                            if(category == "state"){
+                                db.uploadRecord({screenshot_id:"", screenshot_data: metadata.screenshot}, "screenshot")
+                                    .then((screenshot:GISSTModels.DBRecord) => {
+                                        (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
+                                        db.uploadRecord(metadata.record, "state")
+                                            .then((state:GISSTModels.DBRecord) => {
+                                                (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id
+                                                resolve(metadata);
+                                            })
+                                            .catch(() => reject("State upload from v86 failed."))
+                                    })
+                                    .catch(() => reject("Screenshot upload from v86 failed."))
+                            }else {
+                                db.uploadRecord(metadata.record, category)
+                                    .then((record:GISSTModels.DBRecord) => {
+                                        if (category === "replay") {
+                                            (metadata.record as GISSTModels.Replay).replay_id = (record as GISSTModels.Replay).replay_id;
+                                        } else {
+                                            (metadata.record as GISSTModels.Save).save_id = (record as GISSTModels.Save).save_id;
+                                        }
+                                        resolve(metadata)
+                                    })
+                            }
                         }
-                    }
-                )
-                    .catch(() => reject("File upload from v86 failed."))
+                    )
+                        .catch(() => reject("File upload from v86 failed."))
+                })
             })
-        })
       }
     },
     false,
-      JSON.parse(document.getElementById("config")!.textContent!) as FrontendConfig
+      JSON.parse(document.getElementById("config")!.textContent!) as GISSTModels.FrontendConfig
   );
 
   (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-v86.png";
