@@ -17,7 +17,10 @@ use gisst::{
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use gisst::models::FileRecordFlatten;
+use gisst::models::{FileRecordFlatten, NewRecordError};
+use bytes::Bytes;
+use base64;
+use sqlx::{PgConnection, PgPool};
 
 
 // Nested Router structs for easier reading and manipulation
@@ -29,6 +32,14 @@ use gisst::models::FileRecordFlatten;
 //             .put(edit_creator)
 //             .delete(delete_creator))
 // }
+
+pub fn screenshot_router() -> Router {
+    Router::new()
+        .route("/create", post(create_screenshot))
+        .route("/:id",
+        get(get_single_screenshot)
+        )
+}
 
 pub fn environment_router() -> Router {
     Router::new()
@@ -139,6 +150,55 @@ pub fn work_router() -> Router {
 //         Ok(Json(vec![]))
 //     }
 // }
+
+#[derive(Debug, Serialize)]
+struct Screenshot {
+    screenshot_id: Uuid,
+    screenshot_data: String,
+}
+
+impl Screenshot {
+    async fn insert(conn: &mut PgConnection, screenshot_b64:&str) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Screenshot,
+            r#"INSERT INTO screenshot (screenshot_id, screenshot_data) VALUES ($1, decode($2, 'base64'))
+            RETURNING screenshot_id, screenshot_data
+            "#,
+            Uuid::new_v4().to_string(),
+            screenshot_b64
+        )
+            .execute(conn)
+            .await
+            .map_err(|_| NewRecordError::Screenshot)
+    }
+    async fn get_by_id(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Screenshot,
+            r#" SELECT screenshot_id, encode(screenshot_data, 'base64') FROM screenshot
+            WHERE screenshot_id = $1
+            "#,
+            id
+        )
+            .fetch_optional(conn)
+            .await
+    }
+}
+
+async fn create_screenshot(
+    app_state: Extension<ServerState>,
+    Query(screenshot): Query<Screenshot>
+) -> Result<Json<Screenshot>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Screenshot::insert(&mut conn, screenshot.screenshot_data.as_str())))
+}
+
+async fn get_single_screenshot(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Screenshot>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Screenshot::get_by_id(&mut conn, id).await?.unwrap()))
+}
 
 // ENVIRONMENT method handlers
 #[derive(Deserialize)]

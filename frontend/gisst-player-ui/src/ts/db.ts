@@ -14,7 +14,7 @@ export class GISSTDBConnector {
         this.repo_url = db_url;
     }
 
-    async getRecordById<DBRecord>(record_type: string, record_id: string): Promise<DBRecord> {
+    async getRecordById(record_type: string, record_id: string): Promise<DBRecord> {
         return fetch(
             `${this.repo_url}/${record_type}/${record_id}`,
             {
@@ -32,7 +32,7 @@ export class GISSTDBConnector {
         })
     }
 
-    async getRecords<GetRecordsResponse>(record_type: string, limit: number): Promise<GetRecordsResponse> {
+    async getRecords(record_type: string, limit: number): Promise<GetRecordsResponse> {
         return fetch(
             `${this.repo_url}/${record_type}s/` + new URLSearchParams({limit: limit.toString()}),
             {
@@ -49,7 +49,7 @@ export class GISSTDBConnector {
         })
     }
 
-    async uploadRecord<DBRecord>(record: DBRecord, record_type: string): Promise<DBRecord> {
+    async uploadRecord(record: DBRecord, record_type: string): Promise<DBRecord> {
         return fetch(
             `${this.repo_url}/${record_type}s/create`,
             {
@@ -68,6 +68,7 @@ export class GISSTDBConnector {
             return response.json() as Promise<DBRecord>
         })
     }
+
     async uploadFile(file:File,
                      errorCallback: (error:Error) => void,
                      progressCallback: (percentage: number) => void,

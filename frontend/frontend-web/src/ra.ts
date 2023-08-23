@@ -5,7 +5,7 @@ import {UI} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
-import {DBRecord, DBFileRecord} from "gisst-player/dist/models";
+import {DBRecord, Metadata, State, Screenshot} from "gisst-player/dist/models";
 import * as tus from "tus-js-client";
 
 const FS_CHECK_INTERVAL = 1000;
@@ -131,32 +131,46 @@ function retroReady(): void {
           const data = FS.readFile(path + "/" + file_name);
           saveAs(new Blob([data]), file_name);
         },
-        "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata: DBFileRecord) => {
-          let path = "/home/web_user/retroarch/userdata";
-          if (category == "state") {
-            path += "/states";
-          } else if (category == "save") {
-            path += "/saves";
-          } else if (category == "replay") {
-            path += "/states";
-          } else {
-            console.error("Invalid save category", category, file_name);
-          }
-          const data = FS.readFile(path + "/" + file_name);
+        "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:Metadata ) => {
+          return new Promise((resolve, reject) => {
+            let path = "/home/web_user/retroarch/userdata";
+            if (category == "state") {
+              path += "/states";
+            } else if (category == "save") {
+              path += "/saves";
+            } else if (category == "replay") {
+              path += "/states";
+            } else {
+              console.error("Invalid save category", category, file_name);
+            }
+            const data = FS.readFile(path + "/" + file_name);
 
-          db.uploadFile(new File([data], file_name),
-              (error:Error) => { console.log("ran error callback", error.message)},
-              (_percentage: number) => {},
-              (upload: tus.Upload) => {
+            db.uploadFile(new File([data], file_name),
+                (error:Error) => { reject(console.log("ran error callback", error.message))},
+                (_percentage: number) => {},
+                (upload: tus.Upload) => {
                   const url_parts = upload.url!.split('/');
                   const uuid_string = url_parts[url_parts.length - 1];
-                  metadata.file_id = uuid_string;
-                  db.uploadRecord(metadata as DBRecord, category);
-              });
+                  metadata.record.file_id = uuid_string;
+                  db.uploadRecord({screenshot_id: "", screenshot_data: metadata.screenshot}, "screenshot")
+                      .then((screenshot:DBRecord) => {
+                        (metadata.record as State).screenshot_id = (screenshot as Screenshot).screenshot_id;
+                        db.uploadRecord(metadata.record, "state")
+                            .then((state:DBRecord) => {
+                              (metadata.record as State).state_id = (state as State).state_id;
+                              resolve(metadata)
+                            })
+                            .catch(() => reject("State upload from RA failed."))
+                  })
+                      .catch(() => reject("Screenshot upload from RA failed."))
+                })
+                .catch(() => reject("File upload from RA failed."));
 
+          })
         }
       },
-    false
+    false,
+      JSON.parse(document.getElementById("config")!.textContent!)
   );
 
   const prev = document.getElementById("webplayer-preview")!;

@@ -2,10 +2,11 @@
 export {UIIDConst} from "./template_consts"
 export {GISSTDBConnector} from "./db"
 export * as GISSTModels from "./models"
-import {DBFileRecord, DBRecord} from "./models";
+import {FrontendConfig, Metadata, ReplayFileLink, StateFileLink} from "./models";
 
 import '../scss/styles.scss'
 import * as bootstrap from 'bootstrap'
+// import * as uuid from 'uuid'
 
 import templates from "../html/templates.html?raw"
 import {UITemplateConst, UIIDConst } from "./template_consts"
@@ -15,7 +16,7 @@ interface UIController {
   play_replay: (replay_num:number) => void;
   load_checkpoint: (state_num:number) => void;
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
-  upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: DBFileRecord) => void;
+  upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: Metadata) => Promise<Metadata>;
 }
 
 export class UI {
@@ -40,10 +41,11 @@ export class UI {
   checkpoint_elt:HTMLOListElement;
 
   entries_by_name:Record<string,HTMLElement>;
-  metadata_by_name:Record<string,DBFileRecord>;
+  metadata_by_name:Record<string,Metadata>;
+  current_config:FrontendConfig;
   
   // ... functions go here
-  constructor(ui_root:HTMLDivElement, control:UIController, headless:boolean) {
+  constructor(ui_root:HTMLDivElement, control:UIController, headless:boolean, config:FrontendConfig) {
     const _unused = bootstrap.Alert; // needed to force TS compile to import bootstrap
     if(_unused) {
       // needed to avoid TS compile issue
@@ -51,6 +53,7 @@ export class UI {
     this.ui_root = ui_root;
     this.control = control;
     this.headless = headless;
+    this.current_config = config;
 
     // Make sure the ui root div has a 'container' bootstrap class
     if (!this.ui_root.classList.contains("container")){
@@ -89,6 +92,7 @@ export class UI {
     this.checkpoint_elt = <HTMLOListElement>document.createElement("ol");
     this.ui_root.appendChild(this.checkpoint_elt);
     this.entries_by_name = {};
+    this.metadata_by_name = {};
   }
 
   newSave(save_file:string) {
@@ -109,8 +113,7 @@ export class UI {
     // Add img data to state_list_object and create on click load
     // state from img
     const img = <HTMLImageElement>new_state_list_object.querySelector("img");
-    const img_data = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
-    img.src = img_data;
+    img.src = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
 
     const num_str = (state_file.match(/state([0-9]+)$/)?.[1]) ?? "0";
     const save_num = parseInt(num_str,10);
@@ -137,6 +140,25 @@ export class UI {
     gisst_state_tab.appendChild(new_state_list_object);
 
     this.entries_by_name["st__"+state_file] = new_state_list_object;
+    const state_metadata:Metadata = {
+      record: {
+        state_id: "",
+        instance_id: this.current_config.instance.instance_id,
+        is_checkpoint: false,
+        file_id: "",
+        state_description: state_file,
+        state_name: state_file,
+        state_derived_from: this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : "",
+        screenshot_id: "",
+        replay_id: this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : "",
+        creator_id: "",
+        created_on: new Date()
+      },
+      screenshot: state_thumbnail,
+      stored_on_server: false
+    }
+
+    this.metadata_by_name["st__"+state_file] = state_metadata;
   }
   newReplay(replay_file:string) {
     this.clearCheckpoints();
@@ -173,8 +195,7 @@ export class UI {
   }
   newCheckpoint(check_name:string, state_thumbnail:string) {
     const img = new Image();
-    const img_data = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
-    img.src = img_data;
+    img.src = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
     const num_str = (check_name.match(/(check|state)([0-9]+)$/)?.[2]) ?? "0";
     const save_num = parseInt(num_str,10);
     img.addEventListener("click", () => {
