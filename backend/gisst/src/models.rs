@@ -1163,7 +1163,7 @@ impl DBModel for Replay {
             Self,
             r#"SELECT replay_id,
             replay_name,
-            replay_description
+            replay_description,
             instance_id,
             creator_id,
             file_id,
@@ -1192,6 +1192,8 @@ impl DBModel for Replay {
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING
             replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             file_id,
@@ -1223,9 +1225,9 @@ impl DBModel for Replay {
             ($1, $2, $3, $4, $5, $6, $7)
             WHERE replay_id = $8
             RETURNING replay_id, replay_name, replay_description, instance_id, creator_id, replay_forked_from, file_id, created_on"#,
-            replay.instance_id,
             replay.replay_name,
             replay.replay_description,
+            replay.instance_id,
             replay.creator_id,
             replay.replay_forked_from,
             replay.file_id,
