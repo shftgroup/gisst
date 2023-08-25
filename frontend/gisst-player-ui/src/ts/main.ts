@@ -1,5 +1,14 @@
 // Importing main scss file, vite will process and include bootstrap
-import {FrontendConfig, Metadata, ReplayFileLink, StateFileLink} from "./models";
+import {
+  FrontendConfig,
+  generateStateFields,
+  State,
+  DBField,
+  Metadata,
+  ReplayFileLink,
+  StateFileLink,
+  canEdit
+} from "./models";
 
 import '../scss/styles.scss'
 import * as bootstrap from 'bootstrap'
@@ -20,7 +29,7 @@ export class UI {
   // static declarations for UI element names
   // assuming a single emulator window right now, will modify for multiple windows
   static readonly gisst_saves_list_content_id = "gisst-saves";
-  static readonly gisst_states_list_content_id = "gisst-states";
+  static readonly gisst_states_list_content_id = "gisst-states-list";
   static readonly gisst_replays_list_content_id = "gisst-replays";
   static readonly gisst_checkpoints_list_content_id = "gisst-checkpoints";
   ui_date_format:Intl.DateTimeFormatOptions = {
@@ -107,6 +116,8 @@ export class UI {
     // Create state list template object
     const new_state_list_object = <HTMLDivElement>elementFromTemplates("state_list_object");
 
+    new_state_list_object.querySelector(".state-list-object")!.setAttribute("id", state_file);
+
     // Add img data to state_list_object and create on click load
     // state from img
     const img = <HTMLImageElement>new_state_list_object.querySelector("img");
@@ -130,13 +141,19 @@ export class UI {
 
     new_state_list_object.querySelector(".upload-state-button")!.addEventListener("click", () => {
       const metadata = this.metadata_by_name["st__"+state_file];
-      this.control.upload_file("state", state_file, metadata);
+      if(!metadata.editing){
+        this.control.upload_file("state", state_file, metadata);
+      }
     });
+
+    new_state_list_object.querySelector(".edit-state-button")!.addEventListener("click", (e:Event) => {
+      this.toggleEditState(state_file);
+    })
 
     const gisst_state_tab = <HTMLDivElement>document.getElementById(UI.gisst_states_list_content_id);
     gisst_state_tab.appendChild(new_state_list_object);
 
-    this.entries_by_name["st__"+state_file] = new_state_list_object;
+    this.entries_by_name["st__"+state_file] = gisst_state_tab.querySelector("#"+state_file)!;
     const state_metadata:Metadata = {
       record: {
         state_id: "",
@@ -152,7 +169,8 @@ export class UI {
         created_on: new Date()
       },
       screenshot: state_thumbnail,
-      stored_on_server: false
+      stored_on_server: false,
+      editing: false
     }
 
     this.metadata_by_name["st__"+state_file] = state_metadata;
@@ -227,6 +245,50 @@ export class UI {
   }
   removeCheckpoint(cp_file:string) {
     this.removeLit("cp__"+cp_file);
+  }
+
+  toggleEditState(state_file:string) {
+    const state_fields = generateStateFields();
+    const state_list_object = <HTMLDivElement>this.entries_by_name["st__"+state_file];
+    const state_metadata = this.metadata_by_name["st__"+state_file];
+
+    if(state_metadata.stored_on_server){
+      return;
+    }
+    if(!state_metadata.editing) {
+      state_metadata.editing = true;
+
+      for (const field of state_fields) {
+        if(canEdit("state", field.field_name)){
+          const field_element:HTMLParagraphElement = document.createElement("p");
+          field_element.classList.add(state_file + "-edit-fields");
+          const ele_id = state_file + "_" + field.field_name;
+          if (field.value_type === "string"){
+            field_element.innerHTML = `<label for="${ele_id}">${field.field_name}</label><input type="text" class="${state_file}-field" id="${ele_id}" name="${ele_id}"/>`;
+            const input_element:HTMLInputElement = field_element.querySelector("#"+ele_id)!;
+            input_element.value = <string>(state_metadata.record as State)[field.field_name as keyof State];
+            input_element.addEventListener("change", (e:Event) => {
+              (state_metadata.record as State)[field.field_name] = (e.currentTarget! as HTMLInputElement).value;
+            });
+          } else if (field.value_type === "boolean") {
+            field_element.innerHTML = `<input type="checkbox" class="${state_file}-field"id="${ele_id}" name="${ele_id}"/><label for="${ele_id}">${field.field_name.toUpperCase()}</label>`;
+            const input_element:HTMLInputElement = field_element.querySelector("#"+ele_id)!;
+            input_element.checked = <boolean>(state_metadata.record as State)[field.field_name as keyof State];
+            input_element.addEventListener("change", (e:Event) => {
+              (state_metadata.record as State)[field.field_name] = (e.currentTarget! as HTMLInputElement).checked;
+            });
+          }
+          state_list_object.appendChild(field_element)
+        }
+      }
+    } else {
+      state_metadata.editing = false;
+      state_list_object.querySelector("h5")!.innerHTML = (state_metadata.record as State).state_name;
+      const edit_fields = state_list_object.querySelectorAll("." + state_file + "-edit-fields")!;
+      for(let i = 0; i < edit_fields.length; i++){
+        edit_fields[i].remove();
+      }
+    }
   }
 }
 

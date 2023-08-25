@@ -36,7 +36,7 @@ addEventListener("load", () =>
     //     cpnum +=1;
     //   });
     (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_SAVE_STATE_BUTTON)!).addEventListener("click", () => {
-      ui_state.newState("a state.state"+statenum.toString(), IMG_DATA);
+      ui_state.newState("state"+statenum.toString(), IMG_DATA);
       statenum += 1;
     });
 
