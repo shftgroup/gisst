@@ -188,6 +188,8 @@ pub struct Object {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Replay {
     pub replay_id: Uuid,
+    pub replay_name: String,
+    pub replay_description: String,
     pub instance_id: Uuid,
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
@@ -625,6 +627,8 @@ impl Instance {
         sqlx::query_as!(
             Replay,
             r#"SELECT replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             file_id,
@@ -1114,6 +1118,8 @@ impl DBModel for Replay {
     fn fields() -> Vec<(String, String)> {
         vec![
             ("replay_id".to_string(), "Uuid".to_string()),
+            ("replay_name".to_string(), "String".to_string()),
+            ("replay_description".to_string(), "String".to_string()),
             ("creator_id".to_string(), "Uuid".to_string()),
             ("file_id".to_string(), "Uuid".to_string()),
             ("replay_forked_from".to_string(), "Uuid".to_string()),
@@ -1124,6 +1130,8 @@ impl DBModel for Replay {
     fn values_to_strings(&self) -> Vec<Option<String>> {
         vec![
             Some(self.replay_id.to_string()),
+            Some(self.replay_name.to_string()),
+            Some(self.replay_description.to_string()),
             Some(self.creator_id.to_string()),
             Some(self.file_id.to_string()),
             unwrap_to_option_string(&self.replay_forked_from),
@@ -1135,6 +1143,8 @@ impl DBModel for Replay {
         sqlx::query_as!(
             Self,
             r#"SELECT replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             file_id,
@@ -1152,6 +1162,8 @@ impl DBModel for Replay {
         sqlx::query_as!(
             Self,
             r#"SELECT replay_id,
+            replay_name,
+            replay_description
             instance_id,
             creator_id,
             file_id,
@@ -1170,12 +1182,14 @@ impl DBModel for Replay {
             Replay,
             r#"INSERT INTO replay (
             replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             file_id,
             replay_forked_from,
             created_on
-            ) VALUES ($1, $2, $3, $4, $5, $6)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING
             replay_id,
             instance_id,
@@ -1185,6 +1199,8 @@ impl DBModel for Replay {
             created_on
             "#,
             model.replay_id,
+            model.replay_name,
+            model.replay_description,
             model.instance_id,
             model.creator_id,
             model.file_id,
@@ -1203,11 +1219,13 @@ impl DBModel for Replay {
         sqlx::query_as!(
             Replay,
             r#"UPDATE replay SET
-            (instance_id, creator_id, replay_forked_from, file_id, created_on) =
-            ($1, $2, $3, $4, $5)
-            WHERE replay_id = $6
-            RETURNING replay_id, instance_id, creator_id, replay_forked_from, file_id, created_on"#,
+            (replay_name, replay_description, instance_id, creator_id, replay_forked_from, file_id, created_on) =
+            ($1, $2, $3, $4, $5, $6, $7)
+            WHERE replay_id = $8
+            RETURNING replay_id, replay_name, replay_description, instance_id, creator_id, replay_forked_from, file_id, created_on"#,
             replay.instance_id,
+            replay.replay_name,
+            replay.replay_description,
             replay.creator_id,
             replay.replay_forked_from,
             replay.file_id,
@@ -1233,6 +1251,8 @@ impl DBHashable for Replay {
             Self,
             r#"SELECT
            replay.replay_id,
+           replay.replay_name,
+           replay.replay_description,
            replay.instance_id,
            replay.creator_id,
            replay.replay_forked_from,

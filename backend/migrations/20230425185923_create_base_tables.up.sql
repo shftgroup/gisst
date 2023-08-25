@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS image (
 
 CREATE TABLE IF NOT EXISTS replay (
     replay_id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    replay_name          text NOT NULL,
+    replay_description   text NOT NULL,
     instance_id         uuid NOT NULL,
     creator_id          uuid NOT NULL,
     replay_forked_from  uuid,

@@ -703,6 +703,8 @@ async fn create_replay(
         replay_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
         creator_id: creator_id.unwrap_or_else(|| uuid!("00000000-0000-0000-0000-000000000000")),
+        replay_name,
+        replay_description,
         replay_forked_from,
         file_id,
         created_on,

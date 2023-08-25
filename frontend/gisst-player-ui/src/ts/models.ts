@@ -1,10 +1,35 @@
 export type DBRecord = Environment | Work | Save | Replay | State | Instance | Screenshot;
 export type DBFileRecord = Save | State | Replay;
 
+export type DBField = {
+    field_name: string,
+    value_type: string,
+     editable: boolean
+}
+
+export function canEdit(record_type:string, record_field_name: string):boolean {
+     let fields:DBField[];
+     if (record_type === "state") {
+         fields = generateStateFields();
+     } else if (record_type === "replay") {
+         fields = generateReplayFields();
+     } else if (record_type === "save") {
+         return false;
+     }
+     for (const field of fields!){
+         if(field.field_name === record_field_name) {
+             return field.editable
+         }
+     }
+
+     return false;
+}
+
 export interface Metadata {
     record: DBFileRecord,
     screenshot: string,
-    stored_on_server: boolean
+    stored_on_server: boolean,
+    editing: boolean
 }
 
 export enum ObjectRole {
@@ -103,16 +128,46 @@ export interface State {
     replay_id: string,
     creator_id: string,
     state_derived_from: string,
-    created_on: Date
+    created_on: Date,
+    [key:string]: string | boolean | Date
+}
+export function generateStateFields():DBField[] {
+    return [
+        {field_name: "state_id" , value_type: "string", editable: false},
+        {field_name: "instance_id" , value_type:"string", editable: false},
+        {field_name: "file_id" , value_type:"string", editable: false},
+        {field_name: "is_checkpoint" , value_type:"boolean", editable: false},
+        {field_name: "state_name" , value_type:"string", editable: true},
+        {field_name: "state_description" , value_type:"string", editable: true},
+        {field_name: "screenshot_id" , value_type:"string", editable: false},
+        {field_name: "replay_id" , value_type:"string", editable: false},
+        {field_name: "creator_id" , value_type:"string", editable: false},
+        {field_name: "state_derived_from" , value_type:"string", editable: false},
+        {field_name: "created_on" , value_type:"Date", editable: false}
+    ]
 }
 
 export interface Replay {
     replay_id: string,
+    replay_name: string,
+    replay_description: string,
     instance_id: string,
     creator_id: string,
     replay_forked_from: string,
     file_id: string,
     created_on: Date
+}
+export function generateReplayFields():DBField[] {
+    return [
+        {field_name: "replay_id" , value_type: "string", editable: false},
+        {field_name: "replay_name" , value_type: "string", editable: true},
+        {field_name: "replay_description" , value_type: "string", editable: true},
+        {field_name: "instance_id" , value_type:"string", editable: false},
+        {field_name: "creator_id" , value_type:"string", editable: false},
+        {field_name: "replay_forked_from" , value_type:"string", editable: false},
+        {field_name: "file_id" , value_type:"string", editable: false},
+        {field_name: "created_on" , value_type:"Date", editable: false}
+    ]
 }
 export interface Instance {
     instance_id: string,

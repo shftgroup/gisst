@@ -155,6 +155,8 @@ impl ObjectLink {
 #[derive(Debug, Serialize, Deserialize)]
 struct ReplayLink {
     pub replay_id: Uuid,
+    pub replay_name: String,
+    pub replay_description: String,
     pub instance_id: Uuid,
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
@@ -169,6 +171,8 @@ impl ReplayLink {
         sqlx::query_as!(
             Self,
             r#"SELECT replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             replay_forked_from,

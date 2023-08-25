@@ -140,6 +140,7 @@ function retroReady(): void {
               path += "/states";
             } else {
               console.error("Invalid save category", category, file_name);
+              reject("Invalid save category:" + category + ":" + file_name)
             }
             const data = FS.readFile(path + "/" + file_name);
 
