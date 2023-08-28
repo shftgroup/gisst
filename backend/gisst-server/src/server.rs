@@ -38,6 +38,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use uuid::Uuid;
+use crate::routes::screenshot_router;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -76,6 +77,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/images", image_router())
         .nest("/replays", replay_router())
         .nest("/saves", save_router())
+        .nest("/screenshots", screenshot_router())
         .nest("/states", state_router())
         .nest("/objects", object_router())
         .nest("/works", work_router())

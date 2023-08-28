@@ -132,17 +132,24 @@ export class UI {
 
     // Add state descriptive information and download link
     const a = <HTMLAnchorElement>document.createElement("a");
-    a.textContent=state_file;
+    a.textContent = state_file;
     a.addEventListener("click", () => this.control.download_file("state",state_file));
     const state_object_title = <HTMLHeadElement>new_state_list_object.querySelector("h5");
     state_object_title.appendChild(a);
+    const state_object_description = <HTMLElement>new_state_list_object.querySelector(".card-text");
+    state_object_description.textContent = state_file;
     const state_object_timestamp = <HTMLElement>new_state_list_object.querySelector("small");
     state_object_timestamp.textContent = `Created ${new Date().toLocaleDateString("en-US", this.ui_date_format)}`;
 
     new_state_list_object.querySelector(".upload-state-button")!.addEventListener("click", () => {
       const metadata = this.metadata_by_name["st__"+state_file];
-      if(!metadata.editing){
-        this.control.upload_file("state", state_file, metadata);
+      if(!metadata.editing && !metadata.stored_on_server){
+        this.control.upload_file("state", state_file, metadata)
+            .then((md:Metadata) =>{
+              delete this.metadata_by_name["st__"+state_file];
+              this.metadata_by_name["st__"+state_file] = md;
+            });
+
       }
     });
 
@@ -247,6 +254,7 @@ export class UI {
     this.removeLit("cp__"+cp_file);
   }
 
+
   toggleEditState(state_file:string) {
     const state_fields = generateStateFields();
     const state_list_object = <HTMLDivElement>this.entries_by_name["st__"+state_file];
@@ -283,7 +291,8 @@ export class UI {
       }
     } else {
       state_metadata.editing = false;
-      state_list_object.querySelector("h5")!.innerHTML = (state_metadata.record as State).state_name;
+      state_list_object.querySelector("h5")!.textContent = (state_metadata.record as State).state_name;
+      state_list_object.querySelector(".card-text")!.textContent = (state_metadata.record as State).state_description;
       const edit_fields = state_list_object.querySelectorAll("." + state_file + "-edit-fields")!;
       for(let i = 0; i < edit_fields.length; i++){
         edit_fields[i].remove();

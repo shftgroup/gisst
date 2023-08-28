@@ -27,7 +27,7 @@ export default defineConfig({
       // the proper extensions will be added
       fileName: 'gisst-player',
     },
-    outDir:"dist",
+    outDir:"dist"
   },
   plugins: [
       dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],}),
