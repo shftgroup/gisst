@@ -15,7 +15,7 @@ const htmlImport = {
     if (/^.*\.html$/g.test(id)) {
       code = `export default \`${code}\``
     }
-    return { code }
+    return { code, map:null }
   }
 }
 export default defineConfig({
@@ -27,6 +27,7 @@ export default defineConfig({
       // the proper extensions will be added
       fileName: 'gisst-player',
     },
+    sourcemap:true,
     outDir:"dist"
   },
   plugins: [
