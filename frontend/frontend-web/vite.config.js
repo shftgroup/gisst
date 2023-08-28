@@ -1,4 +1,5 @@
 import checker from 'vite-plugin-checker';
+import sourcemaps from 'rollup-plugin-sourcemaps';
 
 export default {
   plugins: [
@@ -6,6 +7,7 @@ export default {
       // e.g. use TypeScript check
       typescript: true,
     }),
+      sourcemaps()
   ],
   build: {
     sourcemap: true,
