@@ -23,32 +23,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   }
 
 
-  const v86:EmbedV86 = new EmbedV86({
-    wasm_root:"/v86",
-    bios_root:"/v86/bios",
-    content_root:window.location.origin,
-    container: <HTMLDivElement>document.getElementById("canvas_div")!,
-    register_replay:(nom:string)=>ui_state.newReplay(nom),
-    stop_replay:()=>{
-      ui_state.clearCheckpoints();
-    },
-    states_changed:(added:StateInfo[], removed:StateInfo[]) => {
-      for(const si of removed) {
-        ui_state.removeState(si.name);
-      }
-      for(const si of added) {
-        ui_state.newState(si.name,si.thumbnail);
-      }
-    },
-    replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
-      for(const si of removed) {
-        ui_state.removeCheckpoint(si.name);
-      }
-      for(const si of added) {
-        ui_state.newCheckpoint(si.name,si.thumbnail);
-      }
-    },
-  });
+  let v86:EmbedV86;
   db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
@@ -109,6 +84,32 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       JSON.parse(document.getElementById("config")!.textContent!) as GISSTModels.FrontendConfig
   );
 
+  v86 = new EmbedV86({
+    wasm_root:"/v86",
+    bios_root:"/v86/bios",
+    content_root:window.location.origin,
+    container: <HTMLDivElement>document.getElementById("canvas_div")!,
+    register_replay:(nom:string)=>ui_state.newReplay(nom),
+    stop_replay:()=>{
+      ui_state.clearCheckpoints();
+    },
+    states_changed:(added:StateInfo[], removed:StateInfo[]) => {
+      for(const si of removed) {
+        ui_state.removeState(si.name);
+      }
+      for(const si of added) {
+        ui_state.newState(si.name,si.thumbnail);
+      }
+    },
+    replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
+      for(const si of removed) {
+        ui_state.removeCheckpoint(si.name);
+      }
+      for(const si of added) {
+        ui_state.newCheckpoint(si.name,si.thumbnail);
+      }
+    },
+  });
   (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-v86.png";
   // document.getElementById("v86_controls")!.classList.remove("hidden");
   document.getElementById(UIIDConst.EMU_SAVE_STATE_BUTTON)?.addEventListener("click",

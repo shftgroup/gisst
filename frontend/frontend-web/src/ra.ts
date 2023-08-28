@@ -40,6 +40,70 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   retro_args.push("/home/web_user/content/" + content_file);
   console.log(retro_args);
 
+  ui_state = new UI(
+    <HTMLDivElement>document.getElementById("ui")!,
+      {
+        "load_state": (num: number) => load_state_slot(num),
+        "load_checkpoint": (num: number) => load_state_slot(num),
+        "play_replay": (num: number) => play_replay_slot(num),
+        "download_file": (category: "state" | "save" | "replay", file_name: string) => {
+          let path = "/home/web_user/retroarch/userdata";
+          if (category == "state") {
+            path += "/states";
+          } else if (category == "save") {
+            path += "/saves";
+          } else if (category == "replay") {
+            path += "/states";
+          } else {
+            console.error("Invalid save category", category, file_name);
+          }
+          const data = FS.readFile(path + "/" + file_name);
+          saveAs(new Blob([data]), file_name);
+        },
+        "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
+          return new Promise((resolve, reject) => {
+            let path = "/home/web_user/retroarch/userdata";
+            if (category == "state") {
+              path += "/states";
+            } else if (category == "save") {
+              path += "/saves";
+            } else if (category == "replay") {
+              path += "/states";
+            } else {
+              console.error("Invalid save category", category, file_name);
+              reject("Invalid save category:" + category + ":" + file_name)
+            }
+            const data = FS.readFile(path + "/" + file_name);
+
+            db.uploadFile(new File([data], file_name),
+                (error:Error) => { reject(console.log("ran error callback", error.message))},
+                (_percentage: number) => {},
+                (upload: tus.Upload) => {
+                  const url_parts = upload.url!.split('/');
+                  const uuid_string = url_parts[url_parts.length - 1];
+                  metadata.record.file_id = uuid_string;
+                  db.uploadRecord({screenshot_id: "", screenshot_data: metadata.screenshot}, "screenshot")
+                      .then((screenshot:GISSTModels.DBRecord) => {
+                        (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
+                        db.uploadRecord(metadata.record, "state")
+                            .then((state:GISSTModels.DBRecord) => {
+                              (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
+                              resolve(metadata)
+                            })
+                            .catch(() => reject("State upload from RA failed."))
+                  })
+                      .catch(() => reject("Screenshot upload from RA failed."))
+                })
+                .catch(() => reject("File upload from RA failed."));
+
+          })
+        }
+      },
+    false,
+      JSON.parse(document.getElementById("config")!.textContent!)
+  );
+
+  
   loadRetroArch(core,
     function () {
       fetchfs.mkdirp("/home/web_user/content");
@@ -109,68 +173,6 @@ function copyFile(from: string, to: string): void {
 // TODO add clear button to call ui_state.clear()
 function retroReady(): void {
   db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
-  ui_state = new UI(
-    <HTMLDivElement>document.getElementById("ui")!,
-      {
-        "load_state": (num: number) => load_state_slot(num),
-        "load_checkpoint": (num: number) => load_state_slot(num),
-        "play_replay": (num: number) => play_replay_slot(num),
-        "download_file": (category: "state" | "save" | "replay", file_name: string) => {
-          let path = "/home/web_user/retroarch/userdata";
-          if (category == "state") {
-            path += "/states";
-          } else if (category == "save") {
-            path += "/saves";
-          } else if (category == "replay") {
-            path += "/states";
-          } else {
-            console.error("Invalid save category", category, file_name);
-          }
-          const data = FS.readFile(path + "/" + file_name);
-          saveAs(new Blob([data]), file_name);
-        },
-        "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
-          return new Promise((resolve, reject) => {
-            let path = "/home/web_user/retroarch/userdata";
-            if (category == "state") {
-              path += "/states";
-            } else if (category == "save") {
-              path += "/saves";
-            } else if (category == "replay") {
-              path += "/states";
-            } else {
-              console.error("Invalid save category", category, file_name);
-              reject("Invalid save category:" + category + ":" + file_name)
-            }
-            const data = FS.readFile(path + "/" + file_name);
-
-            db.uploadFile(new File([data], file_name),
-                (error:Error) => { reject(console.log("ran error callback", error.message))},
-                (_percentage: number) => {},
-                (upload: tus.Upload) => {
-                  const url_parts = upload.url!.split('/');
-                  const uuid_string = url_parts[url_parts.length - 1];
-                  metadata.record.file_id = uuid_string;
-                  db.uploadRecord({screenshot_id: "", screenshot_data: metadata.screenshot}, "screenshot")
-                      .then((screenshot:GISSTModels.DBRecord) => {
-                        (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
-                        db.uploadRecord(metadata.record, "state")
-                            .then((state:GISSTModels.DBRecord) => {
-                              (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
-                              resolve(metadata)
-                            })
-                            .catch(() => reject("State upload from RA failed."))
-                  })
-                      .catch(() => reject("Screenshot upload from RA failed."))
-                })
-                .catch(() => reject("File upload from RA failed."));
-
-          })
-        }
-      },
-    false,
-      JSON.parse(document.getElementById("config")!.textContent!)
-  );
 
   const prev = document.getElementById("webplayer-preview")!;
   prev.classList.add("loaded");
