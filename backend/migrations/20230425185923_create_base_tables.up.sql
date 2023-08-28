@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS replay (
 
 CREATE TABLE IF NOT EXISTS screenshot (
     screenshot_id   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    screenshot_data bytea
+    screenshot_data bytea NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS state (

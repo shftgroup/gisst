@@ -17,6 +17,7 @@ addEventListener("load", () =>
         download_file: (category:"save"|"state"|"replay", file_name:string) => console.log("Save file",category,file_name),
           upload_file: (category:"save"|"state"|"replay", file_name:string, metadata:Metadata) => {
             console.log("Upload file", category, file_name, metadata);
+            metadata.stored_on_server = true;
             return new Promise((resolve, reject) => {metadata ? resolve(metadata): reject("metadata is null")})
         }
       },
