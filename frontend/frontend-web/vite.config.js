@@ -8,6 +8,7 @@ export default {
     }),
   ],
   build: {
+    sourcemap: true,
     rollupOptions: {
       output: {
         entryFileNames: `assets/[name].js`,
