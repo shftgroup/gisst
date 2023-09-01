@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": " SELECT screenshot_id, screenshot_data FROM screenshot\n            WHERE screenshot_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "screenshot_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "screenshot_data",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8f698018140a627896532d66b491a44ca21f47be3ca920305a4f198a0956eeac"
+}

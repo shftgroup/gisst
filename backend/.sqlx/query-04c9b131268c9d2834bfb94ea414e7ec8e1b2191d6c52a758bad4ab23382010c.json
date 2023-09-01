@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n           replay.replay_id,\n           replay.replay_name,\n           replay.replay_description,\n           replay.instance_id,\n           replay.creator_id,\n           replay.replay_forked_from,\n           replay.file_id,\n           replay.created_on\n           FROM replay\n           JOIN file USING (file_id)\n           WHERE file.file_hash = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "replay_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "replay_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "replay_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "replay_forked_from",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "04c9b131268c9d2834bfb94ea414e7ec8e1b2191d6c52a758bad4ab23382010c"
+}

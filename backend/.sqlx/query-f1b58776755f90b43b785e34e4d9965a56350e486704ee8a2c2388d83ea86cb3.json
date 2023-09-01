@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO replay (\n            replay_id,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            ) VALUES ($1, $2, $3, $4, $5, $6)\n            RETURNING\n            replay_id,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            ",
+  "query": "SELECT replay_id,\n            replay_name,\n            replay_description,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            FROM replay WHERE replay_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -10,41 +10,48 @@
       },
       {
         "ordinal": 1,
+        "name": "replay_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "replay_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
         "name": "instance_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 2,
+        "ordinal": 4,
         "name": "creator_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 3,
+        "ordinal": 5,
         "name": "file_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 4,
+        "ordinal": 6,
         "name": "replay_forked_from",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 5,
+        "ordinal": 7,
         "name": "created_on",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Timestamptz"
+        "Uuid"
       ]
     },
     "nullable": [
+      false,
+      false,
       false,
       false,
       false,
@@ -53,5 +60,5 @@
       true
     ]
   },
-  "hash": "3ac9d413a8499d860b486149c4c984088f60f9402dcdd8f1b32e8ee34b93451b"
+  "hash": "f1b58776755f90b43b785e34e4d9965a56350e486704ee8a2c2388d83ea86cb3"
 }

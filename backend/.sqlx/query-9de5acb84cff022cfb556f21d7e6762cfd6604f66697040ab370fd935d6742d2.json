@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE replay SET\n            (instance_id, creator_id, replay_forked_from, file_id, created_on) =\n            ($1, $2, $3, $4, $5)\n            WHERE replay_id = $6\n            RETURNING replay_id, instance_id, creator_id, replay_forked_from, file_id, created_on",
+  "query": "UPDATE replay SET\n            (replay_name, replay_description, instance_id, creator_id, replay_forked_from, file_id, created_on) =\n            ($1, $2, $3, $4, $5, $6, $7)\n            WHERE replay_id = $8\n            RETURNING replay_id, replay_name, replay_description, instance_id, creator_id, replay_forked_from, file_id, created_on",
   "describe": {
     "columns": [
       {
@@ -10,32 +10,44 @@
       },
       {
         "ordinal": 1,
+        "name": "replay_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "replay_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
         "name": "instance_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 2,
+        "ordinal": 4,
         "name": "creator_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 3,
+        "ordinal": 5,
         "name": "replay_forked_from",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 4,
+        "ordinal": 6,
         "name": "file_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 5,
+        "ordinal": 7,
         "name": "created_on",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
         "Uuid",
         "Uuid",
         "Uuid",
@@ -48,10 +60,12 @@
       false,
       false,
       false,
+      false,
+      false,
       true,
       false,
       true
     ]
   },
-  "hash": "7a918d43d11aadf6ef5978aec250d219595b690cda7e97be3a9d550a0c251da5"
+  "hash": "9de5acb84cff022cfb556f21d7e6762cfd6604f66697040ab370fd935d6742d2"
 }
