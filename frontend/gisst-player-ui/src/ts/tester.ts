@@ -17,7 +17,6 @@ addEventListener("load", () =>
         download_file: (category:"save"|"state"|"replay", file_name:string) => console.log("Save file",category,file_name),
           upload_file: (category:"save"|"state"|"replay", file_name:string, metadata:Metadata) => {
             console.log("Upload file", category, file_name, metadata);
-            metadata.stored_on_server = true;
             return new Promise((resolve, reject) => {metadata ? resolve(metadata): reject("metadata is null")})
         }
       },
@@ -41,26 +40,28 @@ addEventListener("load", () =>
       statenum += 1;
     });
 
-    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_SAVE_BUTTON)!).addEventListener("click",
-      () => ui_state.removeSave("yet another save.srm"));
-    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_REPLAY_BUTTON)!).addEventListener("click",
-      () => {
-        replaynum -= 1;
-        ui_state.removeReplay("yet another replay.replay"+replaynum.toString());
-      });
+    // (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_SAVE_BUTTON)!).addEventListener("click",
+    //   () => ui_state.removeSave("yet another save.srm"));
+    // (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_REPLAY_BUTTON)!).addEventListener("click",
+    //   () => {
+    //     replaynum -= 1;
+    //     ui_state.removeReplay("yet another replay.replay"+replaynum.toString());
+    //   });
     // (<HTMLAnchorElement>document.getElementById("remove_last_checkpoint_button")!).addEventListener("click",
     //   () => {
     //     cpnum -= 1;
     //     ui_state.removeCheckpoint("check"+cpnum.toString());
     //   });
-    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_STATE_BUTTON)!).addEventListener("click", () => {
-      statenum -= 1;
-      ui_state.removeState("a state.state"+statenum.toString());
-    });
+    // (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_STATE_BUTTON)!).addEventListener("click", () => {
+    //   statenum -= 1;
+    //   ui_state.removeState("a state.state"+statenum.toString());
+    // });
 
     (<HTMLAnchorElement>document.getElementById(UIIDConst.UI_CLEAR_BUTTON)!).addEventListener("click",
       () => ui_state.clear());
     (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_FINISH_REPLAY_BUTTON)!).addEventListener("click",
       () => ui_state.clearCheckpoints());
+
+
 
   });

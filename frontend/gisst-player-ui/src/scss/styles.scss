@@ -14,7 +14,9 @@
 }
 
 .gisst-state-screenshot-img {
-
+  border-top-right-radius: 0 !important;
+  height: 128px;
+  width: 128px;
 }
 
 
@@ -31,8 +33,8 @@
 .webplayer-container {
   background-color: black;
   line-height: 0;
-  height: 480px;
-  width: 640px;
+   //height: 600px;
+   //width: 800px;
 }
 
 /**
@@ -53,6 +55,12 @@
   -webkit-animation: loaded 0.8s ease-in-out;
   -moz-animation: loaded 0.8s ease-in-out;
   animation: loaded 0.8s ease-in-out;
+}
+
+#webplayer-textmode {
+  white-space: pre;
+  font: 14px monospace;
+  line-height: 14px;
 }
 
 textarea {
