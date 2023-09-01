@@ -32,6 +32,7 @@ import {UI} from 'gisst-player';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {saveAs} from './util';
 import {SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo, Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
+import {GISSTModels} from 'gisst-player';
 
 let ui_state:UI;
 let active_core:string|null = null;
@@ -123,6 +124,7 @@ async function run(host:string, content:string, entryState:string, movie:string)
   let data_resp = await fetch(host+"/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
   console.log(data_resp);
   let config = await data_resp.json();
+  ui_state.setConfig(config);
   console.log(config);
   let core_kind = config.environment.environment_framework;
   if(v86) {
@@ -260,6 +262,11 @@ window.addEventListener("DOMContentLoaded", () => {
           api.download_file(category, file_name);
         }
       },
+      "upload_file": (_category: "state" | "save" | "replay", _file_name: string, _metadata:GISSTModels.Metadata ) => {
+        throw "not yet implemented";
+      }
     },
-  true);
+    true,
+    null
+  );
 });

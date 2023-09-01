@@ -137,6 +137,7 @@ function computeChecksumMd5(file: File): Promise<string> {
         // If using TS >= 3.6, you can use `FileReaderProgressEvent` type instead
         // of `any` for `e` variable, otherwise stick with `any`
         // See https://github.com/Microsoft/TypeScript/issues/25510
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         fileReader.onload = function(e: any): void {
             spark.append(e.target.result); // Accumulate chunk to md5 computation
             cursor += chunkSize; // Move past this chunk

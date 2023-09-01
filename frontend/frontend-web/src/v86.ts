@@ -23,6 +23,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   }
 
 
+  /* eslint prefer-const: ["error", { ignoreReadBeforeAssign: true }], no-use-before-define: "error" */
   let v86:EmbedV86;
   db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
   ui_state = new UI(
