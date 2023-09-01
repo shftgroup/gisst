@@ -20,7 +20,7 @@ use serde_with::{
     serde_as,
     base64::Base64,
 };
-use uuid::Uuid;
+use uuid::{uuid, Uuid};
 use gisst::models::{FileRecordFlatten, NewRecordError};
 use sqlx::{PgConnection};
 
@@ -190,10 +190,21 @@ impl Screenshot {
 
 async fn create_screenshot(
     app_state: Extension<ServerState>,
-    Query(screenshot): Query<Screenshot>
+    Json(screenshot): Json<Screenshot>
 ) -> Result<Json<Screenshot>, GISSTError> {
+    dbg!(&screenshot.screenshot_id);
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Screenshot::insert(&mut conn, screenshot).await?))
+    if screenshot.screenshot_id != uuid!("00000000-0000-0000-0000-000000000000") {
+        Ok(Json(Screenshot::insert(&mut conn, screenshot).await?))
+    }else {
+        Ok(Json(Screenshot::insert(
+            &mut conn,
+            Screenshot {
+                screenshot_id: Uuid::new_v4(),
+                screenshot_data: screenshot.screenshot_data
+            }
+        ).await?))
+    }
 }
 
 async fn get_single_screenshot(
@@ -642,12 +653,22 @@ async fn delete_state(
 
 async fn create_state(
     app_state: Extension<ServerState>,
-    Query(state): Query<State>,
+    Json(state): Json<State>,
 ) -> Result<Json<State>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
 
     if File::get_by_id(&mut conn, state.file_id).await?.is_some() {
-        Ok(Json(State::insert(&mut conn, state).await?))
+        if state.state_id != uuid!("00000000-0000-0000-0000-000000000000") {
+            Ok(Json(State::insert(&mut conn, state).await?))
+        } else {
+            Ok(Json(State::insert(
+                &mut conn,
+                State {
+                    state_id: Uuid::new_v4(),
+                    ..state
+                }
+            ).await?))
+        }
     } else {
         Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::State))
     }

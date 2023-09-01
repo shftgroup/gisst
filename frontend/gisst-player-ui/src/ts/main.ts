@@ -19,7 +19,10 @@ import {UITemplateConst, UIIDConst } from "./template_consts"
 
 interface UIController {
   load_state: (state_num:number) => void;
+  save_state: () => void;
   play_replay: (replay_num:number) => void;
+  start_replay:() => void;
+  stop_and_save_replay:() => void;
   load_checkpoint: (state_num:number) => void;
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
   upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: Metadata) => Promise<Metadata>;
@@ -88,6 +91,10 @@ export class UI {
       ui_embedded_grid.querySelector("#"+UIIDConst.EMU_CONTEXT_DIV)!
           .appendChild(elementFromTemplates(UITemplateConst.EMULATOR_OBJECTS_TABS_EMBEDDED));
       this.ui_root.appendChild(ui_embedded_grid);
+      
+      ui_embedded_grid.querySelector("#"+UIIDConst.EMU_SAVE_STATE_BUTTON)!.addEventListener("click", this.control.save_state);
+      ui_embedded_grid.querySelector("#"+UIIDConst.EMU_START_REPLAY_BUTTON)!.addEventListener("click", this.control.start_replay);
+      ui_embedded_grid.querySelector("#"+UIIDConst.EMU_FINISH_REPLAY_BUTTON)!.addEventListener("click", this.control.stop_and_save_replay);
     }
 
     // Configure emulator manipulation toolbar
@@ -162,16 +169,16 @@ export class UI {
     this.entries_by_name["st__"+state_file] = gisst_state_tab.querySelector("#"+state_file)!;
     const state_metadata:Metadata = {
       record: {
-        state_id: "",
+        state_id: "00000000-0000-0000-0000-000000000000",
         instance_id: this.current_config.instance.instance_id,
         is_checkpoint: false,
         file_id: "",
         state_description: state_file,
         state_name: state_file,
-        state_derived_from: this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : "",
+        state_derived_from: this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : "00000000-0000-0000-0000-000000000000",
         screenshot_id: "",
-        replay_id: this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : "",
-        creator_id: "",
+        replay_id: this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : "00000000-0000-0000-0000-000000000000",
+        creator_id: "00000000-0000-0000-0000-000000000000",
         created_on: new Date()
       },
       screenshot: state_thumbnail,

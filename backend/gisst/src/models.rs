@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use std::{fmt, str::FromStr};
 
 use sqlx::postgres::{PgConnection, PgQueryResult};
-use time::OffsetDateTime;
+use chrono::{DateTime, Utc};
 
 use crate::model_enums::Framework;
 use uuid::Uuid;
@@ -104,7 +104,7 @@ pub struct Creator {
     pub creator_id: Uuid,
     pub creator_username: String,
     pub creator_full_name: String,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -116,7 +116,7 @@ pub struct Environment {
     pub environment_core_version: String,
     pub environment_derived_from: Option<Uuid>,
     pub environment_config: Option<sqlx::types::JsonValue>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,7 +127,7 @@ pub struct File {
     pub file_source_path: String,
     pub file_dest_path: String,
     pub file_size: i64, //PostgeSQL does not have native uint support
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -136,7 +136,7 @@ pub struct Image {
     pub file_id: Uuid,
     pub image_description: Option<String>,
     pub image_config: Option<sqlx::types::JsonValue>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -145,7 +145,7 @@ pub struct Instance {
     pub work_id: Uuid,
     pub environment_id: Uuid,
     pub instance_config: Option<sqlx::types::JsonValue>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type)]
@@ -182,11 +182,12 @@ pub struct Object {
     pub object_id: Uuid,
     pub file_id: Uuid,
     pub object_description: Option<String>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Replay {
+    #[serde(default = "default_uuid")]
     pub replay_id: Uuid,
     pub replay_name: String,
     pub replay_description: String,
@@ -194,7 +195,7 @@ pub struct Replay {
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
     pub file_id: Uuid,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -205,13 +206,12 @@ pub struct Save {
     pub save_description: String,
     pub file_id: Uuid,
     pub creator_id: Uuid,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
-
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
+    #[serde(default = "default_uuid")]
     pub state_id: Uuid,
     pub instance_id: Uuid,
     pub is_checkpoint: bool,
@@ -223,7 +223,7 @@ pub struct State {
     pub creator_id: Option<Uuid>,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -232,7 +232,7 @@ pub struct Work {
     pub work_name: String,
     pub work_version: String,
     pub work_platform: String,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 #[async_trait]
 impl DBModel for Creator {
@@ -244,7 +244,7 @@ impl DBModel for Creator {
             ("creator_id".to_string(), "Uuid".to_string()),
             ("creator_username".to_string(), "String".to_string()),
             ("creator_full_name".to_string(), "String".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -487,7 +487,7 @@ impl DBModel for Instance {
             ("environment_id".to_string(), "Uuid".to_string()),
             ("work_id".to_string(), "Uuid".to_string()),
             ("instance_config".to_string(), "Json".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -675,7 +675,7 @@ impl DBModel for Image {
             ("file_id".to_string(), "String".to_string()),
             ("image_config".to_string(), "Json".to_string()),
             ("image_description".to_string(), "String".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -855,7 +855,7 @@ impl DBModel for Environment {
             ("environment_core_version".to_string(), "String".to_string()),
             ("environment_derive_from".to_string(), "Uuid".to_string()),
             ("environment_config".to_string(), "Json".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -995,7 +995,7 @@ impl DBModel for Object {
             ("object_id".to_string(), "Uuid".to_string()),
             ("file_id".to_string(), "String".to_string()),
             ("object_description".to_string(), "String".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -1123,7 +1123,7 @@ impl DBModel for Replay {
             ("creator_id".to_string(), "Uuid".to_string()),
             ("file_id".to_string(), "Uuid".to_string()),
             ("replay_forked_from".to_string(), "Uuid".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -1296,7 +1296,7 @@ impl DBModel for Save {
             ("save_description".to_string(), "String".to_string()),
             ("file_id".to_string(), "String".to_string()),
             ("creator_id".to_string(), "Uuid".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -1465,7 +1465,7 @@ impl DBModel for State {
             ("creator_id".to_string(), "Uuid".to_string()),
             ("state_replay_index".to_string(), "i32".to_string()),
             ("state_derived_from".to_string(), "Uuid".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -1689,7 +1689,7 @@ impl DBModel for Work {
             ("work_name".to_string(), "String".to_string()),
             ("work_version".to_string(), "String".to_string()),
             ("work_platform".to_string(), "String".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -1797,4 +1797,8 @@ impl Work {
 
 fn unwrap_to_option_string<T: ToString>(o: &Option<T>) -> Option<String> {
     o.as_ref().map(T::to_string)
+}
+
+pub fn default_uuid() -> Uuid {
+    Uuid::new_v4()
 }

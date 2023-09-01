@@ -44,8 +44,11 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
     <HTMLDivElement>document.getElementById("ui")!,
       {
         "load_state": (num: number) => load_state_slot(num),
+        "save_state": () => save_state(),
         "load_checkpoint": (num: number) => load_state_slot(num),
         "play_replay": (num: number) => play_replay_slot(num),
+        "start_replay": () => record_replay(),
+        "stop_and_save_replay": () => stop_replay(),
         "download_file": (category: "state" | "save" | "replay", file_name: string) => {
           let path = "/home/web_user/retroarch/userdata";
           if (category == "state") {
@@ -198,6 +201,19 @@ function nonnull(obj:unknown):asserts obj {
 function load_state_slot(n:number) {
   send_message("LOAD_STATE_SLOT "+n.toString());
 }
+
+function save_state() {
+  send_message("SAVE_STATE");
+}
+
+function record_replay() {
+  send_message("RECORD_REPLAY");
+}
+
+function stop_replay() {
+  send_message("HALT_REPLAY");
+}
+
 async function play_replay_slot(n:number) {
   clear_current_replay();
   send_message("PLAY_REPLAY_SLOT "+n.toString());
