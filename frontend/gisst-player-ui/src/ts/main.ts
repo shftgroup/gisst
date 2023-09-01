@@ -3,7 +3,6 @@ import {
   FrontendConfig,
   generateStateFields,
   State,
-  DBField,
   Metadata,
   ReplayFileLink,
   StateFileLink,
@@ -108,6 +107,10 @@ export class UI {
     this.metadata_by_name = {};
   }
 
+  setConfig(config:FrontendConfig) {
+    this.current_config = config;
+  }
+
   newSave(save_file:string) {
     console.log("found new save",save_file);
     const a = <HTMLAnchorElement>document.createElement("a");
@@ -159,7 +162,7 @@ export class UI {
       }
     });
 
-    new_state_list_object.querySelector(".edit-state-button")!.addEventListener("click", (e:Event) => {
+    new_state_list_object.querySelector(".edit-state-button")!.addEventListener("click", (_e:Event) => {
       this.toggleEditState(state_file);
     })
 
@@ -167,6 +170,7 @@ export class UI {
     gisst_state_tab.appendChild(new_state_list_object);
 
     this.entries_by_name["st__"+state_file] = gisst_state_tab.querySelector("#"+state_file)!;
+    nonnull(this.current_config);
     const state_metadata:Metadata = {
       record: {
         state_id: "00000000-0000-0000-0000-000000000000",
@@ -321,6 +325,12 @@ function elementFromTemplates(template_name: string): Node {
   templates_element.innerHTML = templates.trim();
   const template_element = <HTMLTemplateElement>templates_element.content.querySelector("#" + template_name)!;
   return template_element.content.cloneNode(true);
+}
+
+function nonnull(obj:number|object|null):asserts obj {
+  if(obj == null) {
+    throw "Must be non-null";
+  }
 }
 
 
