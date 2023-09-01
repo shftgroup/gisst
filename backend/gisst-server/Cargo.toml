@@ -16,7 +16,7 @@ env_logger = "0.10.0"
 futures = "0.3.28"
 log = "0.4.17"
 md5 = "0.7.0"
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "time", "json"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "time", "json", "chrono"] }
 minijinja = {version="0.34.0",features=["builtins", "macros", "json"]}
 secrecy = { version = "0.8.0", features = ["serde"] }
 serde = { version = "1.0.159", features = ["derive"] }
@@ -31,3 +31,4 @@ tracing-subscriber = "0.3.16"
 uuid = { version = "1.3.1", features = ["serde", "v4"] }
 gisst = { path = "../gisst" }
 serde_with = {version = "3.3.0", features = ["base64"]}
+chrono = "0.4.28"

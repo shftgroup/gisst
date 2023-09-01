@@ -28,10 +28,19 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
-      "load_state":(n:number) => {
+        "load_state":(n:number) => {
         if(v86.active_replay != null) { v86.stop_replay(); }
         v86.load_state_slot(n);
       },
+        "save_state":() => {
+            v86.save_state()
+        },
+        "start_replay":() => {
+            v86.record_replay()
+        },
+        "stop_and_save_replay":() => {
+            v86.stop_replay()
+        },
       "play_replay":(n:number) => v86.play_replay_slot(n),
       "load_checkpoint":(n:number) => {
         if(v86.active_replay == null) { throw "Can't load checkpoint if no replay"; }
@@ -51,9 +60,10 @@ export async function init(environment:Environment, start:ColdStart | StateStart
                             const uuid_string = url_parts[url_parts.length - 1];
                             metadata.record.file_id = uuid_string;
                             if(category == "state"){
-                                db.uploadRecord({screenshot_id:"", screenshot_data: metadata.screenshot}, "screenshot")
+                                db.uploadRecord({screenshot_id:"00000000-0000-0000-0000-000000000000", screenshot_data: metadata.screenshot.split(",")[1]}, "screenshot")
                                     .then((screenshot:GISSTModels.DBRecord) => {
                                         (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
+                                        console.log(metadata);
                                         db.uploadRecord(metadata.record, "state")
                                             .then((state:GISSTModels.DBRecord) => {
                                                 (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id
@@ -112,9 +122,6 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   });
   (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-v86.png";
   // document.getElementById("v86_controls")!.classList.remove("hidden");
-  document.getElementById(UIIDConst.EMU_SAVE_STATE_BUTTON)?.addEventListener("click",
-    () => v86.save_state()
-  );
   document.getElementById(UIIDConst.EMU_START_REPLAY_BUTTON)?.addEventListener("click",
     () => v86.record_replay()
   );
