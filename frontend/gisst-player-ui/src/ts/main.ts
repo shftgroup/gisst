@@ -146,8 +146,7 @@ export class UI {
       if(!metadata.editing && !metadata.stored_on_server){
         this.control.upload_file("state", state_file, metadata)
             .then((md:Metadata) =>{
-              delete this.metadata_by_name["st__"+state_file];
-              this.metadata_by_name["st__"+state_file] = md;
+              this.completeUpload("st__"+state_file, md);
             });
 
       }
@@ -299,6 +298,15 @@ export class UI {
       }
     }
   }
+  completeUpload(item_name:string, md:Metadata){
+    const item_object = this.entries_by_name[item_name];
+    md.stored_on_server = true;
+    delete this.metadata_by_name[item_name];
+    this.metadata_by_name[item_name] = md;
+    // Change the upload icon to filled
+    item_object.querySelector(".bi-cloud-upload")!.classList.add("hidden");
+    item_object.querySelector(".bi-cloud-arrow-up-fill")!.classList.remove("hidden");
+  }
 }
 
 function elementFromTemplates(template_name: string): Node {
@@ -307,6 +315,7 @@ function elementFromTemplates(template_name: string): Node {
   const template_element = <HTMLTemplateElement>templates_element.content.querySelector("#" + template_name)!;
   return template_element.content.cloneNode(true);
 }
+
 
 export {UIIDConst} from "./template_consts"
 export {GISSTDBConnector} from "./db"
