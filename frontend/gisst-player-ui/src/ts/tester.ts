@@ -13,6 +13,15 @@ addEventListener("load", () =>
       {
         load_state: (sn:number) => console.log("LOAD",sn),
         load_checkpoint: (sn:number) => console.log("LOADCP",sn),
+          save_state: () => {
+              ui_state.newState("state"+statenum.toString(), IMG_DATA);
+              statenum += 1;
+          },
+          start_replay: () => {
+              ui_state.newReplay("yet another replay.replay"+replaynum.toString());
+              replaynum +=1;
+          },
+          stop_and_save_replay: () => {},
         play_replay: (sn:number) => console.log("PLAY",sn),
         download_file: (category:"save"|"state"|"replay", file_name:string) => console.log("Save file",category,file_name),
           upload_file: (category:"save"|"state"|"replay", file_name:string, metadata:Metadata) => {
@@ -25,20 +34,11 @@ addEventListener("load", () =>
     );
     (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_SAVE_BUTTON)!).addEventListener("click",
       () => ui_state.newSave("yet another save.srm"));
-    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_START_REPLAY_BUTTON)!).addEventListener("click",
-      () => {
-        ui_state.newReplay("yet another replay.replay"+replaynum.toString());
-        replaynum +=1;
-      });
     // (<HTMLAnchorElement>document.getElementById("checkpoint_button")!).addEventListener("click",
     //   () => {
     //     ui_state.newCheckpoint("check"+cpnum.toString(),IMG_DATA);
     //     cpnum +=1;
     //   });
-    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_SAVE_STATE_BUTTON)!).addEventListener("click", () => {
-      ui_state.newState("state"+statenum.toString(), IMG_DATA);
-      statenum += 1;
-    });
 
     // (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_SAVE_BUTTON)!).addEventListener("click",
     //   () => ui_state.removeSave("yet another save.srm"));

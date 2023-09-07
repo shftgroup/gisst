@@ -20,6 +20,7 @@ use sqlx::pool::PoolOptions;
 use sqlx::PgPool;
 use std::path::{Path, PathBuf};
 use std::{fs, fs::read, io};
+use sqlx::types::chrono;
 use uuid::{uuid, Uuid};
 use walkdir::WalkDir;
 use crate::cliconfig::CLIConfig;
@@ -665,13 +666,13 @@ async fn create_replay(
         )));
     }
     let created_on = created_on.and_then(|s| {
-        time::OffsetDateTime::parse(
-            &s,
-            &time::format_description::well_known::iso8601::Iso8601::DEFAULT,
-        )
-        .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
-        .ok()
-    });
+        chrono::DateTime::parse_from_rfc3339(&s)
+            .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
+            .ok()
+    })
+        .and_then(|dt| Option::from({
+            chrono::DateTime::<chrono::Utc>::try_from(dt).ok()?
+        }));
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
     let hash = StorageHandler::get_md5_hash(data);
@@ -759,6 +760,14 @@ async fn create_state(
         file_size: 0,
         created_on: None,
     };
+    let created_on = created_on.and_then(|s| {
+        chrono::DateTime::parse_from_rfc3339(&s)
+            .map_err(|e| GISSTCliError::CreateState(e.to_string()))
+            .ok()
+    })
+        .and_then(|dt| Option::from({
+            chrono::DateTime::<chrono::Utc>::try_from(dt).ok()?
+        }));
     let state = State {
         state_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
@@ -767,14 +776,7 @@ async fn create_state(
         state_name: state_name.clone(),
         state_description: state_description.unwrap_or_else(|| state_name.clone()),
         screenshot_id,
-        created_on: created_on.and_then(|s| {
-            time::OffsetDateTime::parse(
-                &s,
-                &time::format_description::well_known::iso8601::Iso8601::DEFAULT,
-            )
-            .map_err(|e| GISSTCliError::CreateState(e.to_string()))
-            .ok()
-        }),
+        created_on,
         replay_id,
         creator_id,
         state_replay_index,

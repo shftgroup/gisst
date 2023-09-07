@@ -155,7 +155,8 @@ export interface Replay {
     creator_id: string,
     replay_forked_from: string,
     file_id: string,
-    created_on: Date
+    created_on: Date,
+    [key:string]: string | Date
 }
 export function generateReplayFields():DBField[] {
     return [

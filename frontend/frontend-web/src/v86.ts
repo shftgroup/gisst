@@ -1,4 +1,4 @@
-import {UI, UIIDConst, GISSTDBConnector, GISSTModels} from 'gisst-player';
+import {UI, GISSTDBConnector, GISSTModels} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
@@ -83,6 +83,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
                                         }
                                         resolve(metadata)
                                     })
+                                    .catch(() => reject(category + " upload from v86 failed"))
                             }
                         }
                     )
@@ -123,12 +124,6 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   });
   (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-v86.png";
   // document.getElementById("v86_controls")!.classList.remove("hidden");
-  document.getElementById(UIIDConst.EMU_START_REPLAY_BUTTON)?.addEventListener("click",
-    () => v86.record_replay()
-  );
-  document.getElementById(UIIDConst.EMU_FINISH_REPLAY_BUTTON)?.addEventListener("click",
-    () => v86.stop_replay()
-  );
   const prev = document.getElementById("webplayer-preview")!;
   prev.classList.add("loaded");
   prev.addEventListener(
