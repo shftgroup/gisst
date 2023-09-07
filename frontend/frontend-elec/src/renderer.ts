@@ -232,6 +232,14 @@ window.addEventListener("DOMContentLoaded", () => {
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
+      "save_state": () => {
+
+      },
+      "start_replay": () => {
+      },
+      "stop_and_save_replay": () => {
+
+      },
       "load_state":(n:number) => {
         if (active_core == "v86") {
           if(v86.active_replay != null) { v86.stop_replay(); }
