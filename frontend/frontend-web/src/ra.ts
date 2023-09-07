@@ -102,11 +102,10 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           })
         }
       },
-    false,
+      false,
       JSON.parse(document.getElementById("config")!.textContent!)
   );
 
-  
   loadRetroArch(core,
     function () {
       fetchfs.mkdirp("/home/web_user/content");
@@ -254,14 +253,14 @@ async function read_response(wait:boolean): Promise<string | null> {
   } else {
     outp = retroArchRecv();
   }
-  console.log("stdout: ",outp);
+  // console.log("stdout: ",outp);
   return outp;
 }
 
 async function send_message(msg:string) {
   let clearout = await read_response(false);
   while(clearout) { clearout = await read_response(false); }
-  console.log("send:",msg);
+  // console.log("send:",msg);
   retroArchSend(msg+"\n");
 }
 // Called by timer from time to time
@@ -291,7 +290,7 @@ async function update_checkpoints() {
 function find_checkpoints_inner() {
   nonnull(current_replay);
   // search state files for states saved of current replay
-  console.log(seen_states);
+  // console.log("seen:",seen_states);
   for(const state_file in seen_states) {
     if(state_file in seen_checkpoints) { continue; }
     console.log("Check ",state_file);
@@ -316,7 +315,7 @@ interface Replay {
 
 let current_replay:Replay | null = null;
 const seen_states:Record<string,Uint8Array> = {};
-const seen_saves:Record<string,null> = {};
+// const seen_saves:Record<string,null> = {};
 const seen_replays:Record<string,string> = {};
 let seen_checkpoints:Record<string,Uint8Array> = {};
 function checkChangedStatesAndSaves() {
@@ -324,6 +323,7 @@ function checkChangedStatesAndSaves() {
   for (const state of states) {
     if(state == "." || state == "..") { continue; }
     if(state.endsWith(".png") || state.includes(".state")) {
+      console.log("check state file",state);
       const png_file = state.endsWith(".png") ? state : state + ".png";
       const state_file = state.endsWith(".png") ? state.substring(0,state.length-4) : state;
       if(state_file in seen_states || state_file in seen_checkpoints) {
@@ -363,14 +363,14 @@ function checkChangedStatesAndSaves() {
       }
     }
   }
-  const saves = FS.readdir(saves_dir);
-  for (const save of saves) {
-    if(save == "." || save == "..") { continue; }
-    if(!(save in seen_saves)) {
-      seen_saves[save] = null;
-      ui_state.newSave(save);
-    }
-  }
+  // const saves = FS.readdir(saves_dir);
+  // for (const save of saves) {
+  //   if(save == "." || save == "..") { continue; }
+  //   if(!(save in seen_saves)) {
+  //     seen_saves[save] = null;
+  //     ui_state.newSave(save);
+  //   }
+  // }
   update_checkpoints();
 }
 function clear_current_replay() {

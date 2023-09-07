@@ -166,7 +166,7 @@ export class UI {
     const gisst_state_tab = <HTMLDivElement>document.getElementById(UI.gisst_states_list_content_id);
     gisst_state_tab.appendChild(new_state_list_object);
 
-    this.entries_by_name["st__"+state_file] = gisst_state_tab.querySelector("#"+state_file)!;
+    this.entries_by_name["st__"+state_file] = document.getElementById(state_file)!;
     nonnull(this.current_config);
     const state_metadata:Metadata = {
       record: {
@@ -232,20 +232,18 @@ export class UI {
     }
 
     this.replay_elt.appendChild(li);
-    this.entries_by_name["rp__"+replay_file] = document.querySelector("#"+replay_file)!;
+    this.entries_by_name["rp__"+replay_file] = document.getElementById(replay_file)!;
     this.metadata_by_name["rp__"+replay_file] = replay_metadata;
   }
   clearCheckpoints() {
     const toRemove = [];
     for(const lit in this.entries_by_name) {
       if(lit.startsWith("cp__")) {
-        this.entries_by_name[lit].remove();
         toRemove.push(lit);
       }
     }
     for(const lit of toRemove) {
-      delete this.entries_by_name[lit];
-      delete this.metadata_by_name[lit];
+      this.removeLit(lit);
     }
     this.checkpoint_elt.innerHTML = "";
   }
@@ -267,7 +265,8 @@ export class UI {
     checkpoint_list_object.querySelector(".upload-button")!.remove();
 
     this.checkpoint_elt.appendChild(checkpoint_list_object);
-    this.entries_by_name["cp__"+check_name] = document.querySelector("#"+check_name)!;
+    this.entries_by_name["cp__"+check_name] = document.getElementById(check_name)!;
+    console.log("added CP","cp__"+check_name,this.entries_by_name["cp__"+check_name]);
   }
   clear() {
     for(const lit in this.entries_by_name) {
