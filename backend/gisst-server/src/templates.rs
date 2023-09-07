@@ -39,7 +39,6 @@ impl TemplateHandler {
     }
 }
 
-
 #[allow(dead_code)]
 pub const UPLOAD_TEMPLATE: &str = r#"
 <!doctype html>

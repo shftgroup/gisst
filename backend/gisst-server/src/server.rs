@@ -30,6 +30,7 @@ use axum::{
     Extension, Router, Server,
 };
 
+use crate::routes::screenshot_router;
 use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::render;
 use serde::{Deserialize, Serialize};
@@ -38,7 +39,6 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use uuid::Uuid;
-use crate::routes::screenshot_router;
 
 #[derive(Clone)]
 pub struct ServerState {

@@ -233,12 +233,13 @@ window.addEventListener("DOMContentLoaded", () => {
     <HTMLDivElement>document.getElementById("ui")!,
     {
       "save_state": () => {
-
+        throw "not yet implemented";
       },
       "start_replay": () => {
+        throw "not yet implemented";
       },
       "stop_and_save_replay": () => {
-
+        throw "not yet implemented";
       },
       "load_state":(n:number) => {
         if (active_core == "v86") {

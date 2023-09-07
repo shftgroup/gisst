@@ -1,7 +1,4 @@
-use std::{
-    ffi::CString,
-    fs::read,
-};
+use std::{ffi::CString, fs::read};
 
 use anyhow::Result;
 use clap::Parser;
