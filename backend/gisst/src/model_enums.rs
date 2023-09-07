@@ -25,7 +25,7 @@ impl fmt::Display for Framework {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Framework::RetroArch => write!(f, "retroarch"),
-            Framework::V86 => write!(f, "v86")
+            Framework::V86 => write!(f, "v86"),
         }
     }
 }

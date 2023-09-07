@@ -3,8 +3,8 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 use async_trait::async_trait;
 use std::{fmt, str::FromStr};
 
-use sqlx::postgres::{PgConnection, PgQueryResult};
 use chrono::{DateTime, Utc};
+use sqlx::postgres::{PgConnection, PgQueryResult};
 
 use crate::model_enums::Framework;
 use uuid::Uuid;
@@ -89,7 +89,10 @@ pub trait DBModel: Sized {
 #[async_trait]
 pub trait DBHashable: Sized {
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>>;
-    async fn flatten_file(conn: &mut PgConnection, model:Self) -> Result<FileRecordFlatten<Self>, sqlx::Error>;
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error>;
     fn file_id(&self) -> &Uuid;
 }
 
@@ -351,7 +354,10 @@ impl DBHashable for File {
         .await
     }
 
-    async fn flatten_file(_conn: &mut PgConnection, record:Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        _conn: &mut PgConnection,
+        record: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         Ok(FileRecordFlatten {
             record: record.clone(),
             file_record: record,
@@ -616,8 +622,8 @@ impl Instance {
             FROM state WHERE instance_id = $1"#,
             instance_id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     pub async fn get_all_replays(
@@ -637,8 +643,8 @@ impl Instance {
             FROM replay WHERE instance_id = $1"#,
             instance_id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     pub async fn get_all_saves(
@@ -658,8 +664,8 @@ impl Instance {
             FROM save WHERE instance_id = $1"#,
             instance_id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 }
 
@@ -792,7 +798,10 @@ impl DBHashable for Image {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
@@ -972,7 +981,10 @@ impl DBHashable for Object {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error>{
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
@@ -1269,7 +1281,10 @@ impl DBHashable for Replay {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
@@ -1433,7 +1448,10 @@ impl DBHashable for Save {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
@@ -1664,7 +1682,10 @@ impl DBHashable for State {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
