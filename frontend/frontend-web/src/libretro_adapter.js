@@ -5,11 +5,11 @@ const message_queue = [];
 const message_out = [];
 let message_accum = "";
 
-export function retroArchSend(msg) {
+function retroArchSend(msg) {
   let bytes = encoder.encode(msg+"\n");
   message_queue.push([bytes,0]);
 }
-export function retroArchRecv() {
+function retroArchRecv() {
   let out = message_out.shift();
   if(out == null && message_accum != "") {
     out = message_accum;
@@ -67,7 +67,7 @@ var Module =
       },
   };
 
-export function startRetroArch(canvas, retro_args, initialized_cb) {
+function startRetroArch(canvas, retro_args, initialized_cb) {
   Module['canvas'] = canvas;
   Module['arguments'] = retro_args;
   Module['callMain'](Module['arguments']);

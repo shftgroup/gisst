@@ -11,6 +11,7 @@ export default defineConfig({
       // the proper extensions will be added
       fileName: 'embedv86',
     },
+    sourcemap:true,
     outDir:"dist",
   },
   plugins: [dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],})],

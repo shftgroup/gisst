@@ -1,6 +1,7 @@
 mod args;
 mod cliconfig;
 
+use crate::cliconfig::CLIConfig;
 use anyhow::Result;
 use args::{
     BaseSubcommand, CreateCreator, CreateEnvironment, CreateImage, CreateInstance, CreateObject,
@@ -17,12 +18,12 @@ use gisst::{
 };
 use log::{debug, error, info, warn};
 use sqlx::pool::PoolOptions;
+use sqlx::types::chrono;
 use sqlx::PgPool;
 use std::path::{Path, PathBuf};
 use std::{fs, fs::read, io};
 use uuid::{uuid, Uuid};
 use walkdir::WalkDir;
-use crate::cliconfig::CLIConfig;
 
 #[tokio::main]
 async fn main() -> Result<(), GISSTCliError> {
@@ -36,7 +37,7 @@ async fn main() -> Result<(), GISSTCliError> {
         "Found config file at path: {}",
         args.gisst_config_path.to_string()
     );
-    let cli_config:CLIConfig = CLIConfig::new(&args.gisst_config_path)?;
+    let cli_config: CLIConfig = CLIConfig::new(&args.gisst_config_path)?;
 
     info!(
         "Connecting to database: {}",
@@ -49,7 +50,6 @@ async fn main() -> Result<(), GISSTCliError> {
         "Storage root is set to: {}",
         cli_config.storage.root_folder_path.to_string()
     );
-
 
     match dbg!(args).record_type {
         RecordType::Object(object) => match object.command {
@@ -322,7 +322,8 @@ async fn delete_file_record<T: DBModel + DBHashable>(
         linked_file_record.file_id,
         &StorageHandler::get_dest_filename(
             &linked_file_record.file_hash,
-            &linked_file_record.file_filename)
+            &linked_file_record.file_filename,
+        ),
     )
     .await
     .map_err(GISSTCliError::Io)?;
@@ -650,6 +651,8 @@ async fn create_replay(
         file,
         creator_id,
         replay_forked_from,
+        replay_name,
+        replay_description,
         created_on,
     }: CreateReplay,
     db: PgPool,
@@ -662,14 +665,13 @@ async fn create_replay(
             file.to_string_lossy()
         )));
     }
-    let created_on = created_on.and_then(|s| {
-        time::OffsetDateTime::parse(
-            &s,
-            &time::format_description::well_known::iso8601::Iso8601::DEFAULT,
-        )
-        .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
-        .ok()
-    });
+    let created_on = created_on
+        .and_then(|s| {
+            chrono::DateTime::parse_from_rfc3339(&s)
+                .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
+                .ok()
+        })
+        .and_then(|dt| chrono::DateTime::<chrono::Utc>::try_from(dt).ok());
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
     let hash = StorageHandler::get_md5_hash(data);
@@ -703,6 +705,9 @@ async fn create_replay(
         replay_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
         creator_id: creator_id.unwrap_or_else(|| uuid!("00000000-0000-0000-0000-000000000000")),
+        replay_name: replay_name.unwrap_or_else(|| "a replay".to_string()),
+        replay_description: replay_description
+            .unwrap_or_else(|| "a replay description".to_string()),
         replay_forked_from,
         file_id,
         created_on,
@@ -755,6 +760,13 @@ async fn create_state(
         file_size: 0,
         created_on: None,
     };
+    let created_on = created_on
+        .and_then(|s| {
+            chrono::DateTime::parse_from_rfc3339(&s)
+                .map_err(|e| GISSTCliError::CreateState(e.to_string()))
+                .ok()
+        })
+        .and_then(|dt| chrono::DateTime::<chrono::Utc>::try_from(dt).ok());
     let state = State {
         state_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
@@ -763,14 +775,7 @@ async fn create_state(
         state_name: state_name.clone(),
         state_description: state_description.unwrap_or_else(|| state_name.clone()),
         screenshot_id,
-        created_on: created_on.and_then(|s| {
-            time::OffsetDateTime::parse(
-                &s,
-                &time::format_description::well_known::iso8601::Iso8601::DEFAULT,
-            )
-            .map_err(|e| GISSTCliError::CreateState(e.to_string()))
-            .ok()
-        }),
+        created_on,
         replay_id,
         creator_id,
         state_replay_index,

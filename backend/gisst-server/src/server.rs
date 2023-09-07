@@ -17,7 +17,7 @@ use crate::{
         work_router,
     },
     serverconfig::ServerConfig,
-    templates::{TemplateHandler, PLAYER_TEMPLATE},
+    templates::TemplateHandler,
     tus::{tus_creation, tus_head, tus_patch},
 };
 use anyhow::Result;
@@ -30,6 +30,7 @@ use axum::{
     Extension, Router, Server,
 };
 
+use crate::routes::screenshot_router;
 use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::render;
 use serde::{Deserialize, Serialize};
@@ -76,6 +77,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/images", image_router())
         .nest("/replays", replay_router())
         .nest("/saves", save_router())
+        .nest("/screenshots", screenshot_router())
         .nest("/states", state_router())
         .nest("/objects", object_router())
         .nest("/works", work_router())
@@ -155,10 +157,12 @@ impl ObjectLink {
 #[derive(Debug, Serialize, Deserialize)]
 struct ReplayLink {
     pub replay_id: Uuid,
+    pub replay_name: String,
+    pub replay_description: String,
     pub instance_id: Uuid,
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
-    pub created_on: Option<time::OffsetDateTime>,
+    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
     pub file_hash: String,
     pub file_filename: String,
     pub file_source_path: String,
@@ -169,6 +173,8 @@ impl ReplayLink {
         sqlx::query_as!(
             Self,
             r#"SELECT replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             replay_forked_from,
@@ -200,7 +206,7 @@ struct StateLink {
     pub creator_id: Option<Uuid>,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
-    pub created_on: Option<time::OffsetDateTime>,
+    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
     pub file_hash: String,
     pub file_filename: String,
     pub file_source_path: String,
@@ -297,7 +303,7 @@ async fn get_player(
         [("Access-Control-Allow-Origin", "*")],
         if accept.is_none() || accept.is_some_and(|hv| hv.contains("text/html")) {
             Html(render!(
-                PLAYER_TEMPLATE,
+                app_state.templates.get_template("player")?,
                 player_params => PlayerTemplateInfo {
                     environment,
                     instance,

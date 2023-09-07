@@ -3,8 +3,8 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 use async_trait::async_trait;
 use std::{fmt, str::FromStr};
 
+use chrono::{DateTime, Utc};
 use sqlx::postgres::{PgConnection, PgQueryResult};
-use time::OffsetDateTime;
 
 use crate::model_enums::Framework;
 use uuid::Uuid;
@@ -27,6 +27,8 @@ pub enum NewRecordError {
     Replay,
     #[error("could not insert save record into database")]
     Save,
+    #[error("could not insert screenshot record into database")]
+    Screenshot,
     #[error("could not insert state record into database")]
     State,
     #[error("could not insert work record into database")]
@@ -87,7 +89,10 @@ pub trait DBModel: Sized {
 #[async_trait]
 pub trait DBHashable: Sized {
     async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>>;
-    async fn flatten_file(conn: &mut PgConnection, model:Self) -> Result<FileRecordFlatten<Self>, sqlx::Error>;
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error>;
     fn file_id(&self) -> &Uuid;
 }
 
@@ -102,7 +107,7 @@ pub struct Creator {
     pub creator_id: Uuid,
     pub creator_username: String,
     pub creator_full_name: String,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -114,7 +119,7 @@ pub struct Environment {
     pub environment_core_version: String,
     pub environment_derived_from: Option<Uuid>,
     pub environment_config: Option<sqlx::types::JsonValue>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -125,7 +130,7 @@ pub struct File {
     pub file_source_path: String,
     pub file_dest_path: String,
     pub file_size: i64, //PostgeSQL does not have native uint support
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -134,7 +139,7 @@ pub struct Image {
     pub file_id: Uuid,
     pub image_description: Option<String>,
     pub image_config: Option<sqlx::types::JsonValue>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -143,7 +148,7 @@ pub struct Instance {
     pub work_id: Uuid,
     pub environment_id: Uuid,
     pub instance_config: Option<sqlx::types::JsonValue>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type)]
@@ -180,17 +185,20 @@ pub struct Object {
     pub object_id: Uuid,
     pub file_id: Uuid,
     pub object_description: Option<String>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Replay {
+    #[serde(default = "default_uuid")]
     pub replay_id: Uuid,
+    pub replay_name: String,
+    pub replay_description: String,
     pub instance_id: Uuid,
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
     pub file_id: Uuid,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,11 +209,12 @@ pub struct Save {
     pub save_description: String,
     pub file_id: Uuid,
     pub creator_id: Uuid,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
+    #[serde(default = "default_uuid")]
     pub state_id: Uuid,
     pub instance_id: Uuid,
     pub is_checkpoint: bool,
@@ -217,7 +226,7 @@ pub struct State {
     pub creator_id: Option<Uuid>,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -226,7 +235,7 @@ pub struct Work {
     pub work_name: String,
     pub work_version: String,
     pub work_platform: String,
-    pub created_on: Option<OffsetDateTime>,
+    pub created_on: Option<DateTime<Utc>>,
 }
 #[async_trait]
 impl DBModel for Creator {
@@ -238,7 +247,7 @@ impl DBModel for Creator {
             ("creator_id".to_string(), "Uuid".to_string()),
             ("creator_username".to_string(), "String".to_string()),
             ("creator_full_name".to_string(), "String".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -345,7 +354,10 @@ impl DBHashable for File {
         .await
     }
 
-    async fn flatten_file(_conn: &mut PgConnection, record:Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        _conn: &mut PgConnection,
+        record: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         Ok(FileRecordFlatten {
             record: record.clone(),
             file_record: record,
@@ -481,7 +493,7 @@ impl DBModel for Instance {
             ("environment_id".to_string(), "Uuid".to_string()),
             ("work_id".to_string(), "Uuid".to_string()),
             ("instance_config".to_string(), "Json".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -610,8 +622,8 @@ impl Instance {
             FROM state WHERE instance_id = $1"#,
             instance_id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     pub async fn get_all_replays(
@@ -621,6 +633,8 @@ impl Instance {
         sqlx::query_as!(
             Replay,
             r#"SELECT replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             file_id,
@@ -629,8 +643,8 @@ impl Instance {
             FROM replay WHERE instance_id = $1"#,
             instance_id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     pub async fn get_all_saves(
@@ -650,8 +664,8 @@ impl Instance {
             FROM save WHERE instance_id = $1"#,
             instance_id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 }
 
@@ -667,7 +681,7 @@ impl DBModel for Image {
             ("file_id".to_string(), "String".to_string()),
             ("image_config".to_string(), "Json".to_string()),
             ("image_description".to_string(), "String".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -784,7 +798,10 @@ impl DBHashable for Image {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
@@ -847,7 +864,7 @@ impl DBModel for Environment {
             ("environment_core_version".to_string(), "String".to_string()),
             ("environment_derive_from".to_string(), "Uuid".to_string()),
             ("environment_config".to_string(), "Json".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -964,7 +981,10 @@ impl DBHashable for Object {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error>{
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
@@ -987,7 +1007,7 @@ impl DBModel for Object {
             ("object_id".to_string(), "Uuid".to_string()),
             ("file_id".to_string(), "String".to_string()),
             ("object_description".to_string(), "String".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -1110,16 +1130,20 @@ impl DBModel for Replay {
     fn fields() -> Vec<(String, String)> {
         vec![
             ("replay_id".to_string(), "Uuid".to_string()),
+            ("replay_name".to_string(), "String".to_string()),
+            ("replay_description".to_string(), "String".to_string()),
             ("creator_id".to_string(), "Uuid".to_string()),
             ("file_id".to_string(), "Uuid".to_string()),
             ("replay_forked_from".to_string(), "Uuid".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
     fn values_to_strings(&self) -> Vec<Option<String>> {
         vec![
             Some(self.replay_id.to_string()),
+            Some(self.replay_name.to_string()),
+            Some(self.replay_description.to_string()),
             Some(self.creator_id.to_string()),
             Some(self.file_id.to_string()),
             unwrap_to_option_string(&self.replay_forked_from),
@@ -1131,6 +1155,8 @@ impl DBModel for Replay {
         sqlx::query_as!(
             Self,
             r#"SELECT replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             file_id,
@@ -1148,6 +1174,8 @@ impl DBModel for Replay {
         sqlx::query_as!(
             Self,
             r#"SELECT replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             file_id,
@@ -1166,14 +1194,18 @@ impl DBModel for Replay {
             Replay,
             r#"INSERT INTO replay (
             replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             file_id,
             replay_forked_from,
             created_on
-            ) VALUES ($1, $2, $3, $4, $5, $6)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING
             replay_id,
+            replay_name,
+            replay_description,
             instance_id,
             creator_id,
             file_id,
@@ -1181,6 +1213,8 @@ impl DBModel for Replay {
             created_on
             "#,
             model.replay_id,
+            model.replay_name,
+            model.replay_description,
             model.instance_id,
             model.creator_id,
             model.file_id,
@@ -1199,10 +1233,12 @@ impl DBModel for Replay {
         sqlx::query_as!(
             Replay,
             r#"UPDATE replay SET
-            (instance_id, creator_id, replay_forked_from, file_id, created_on) =
-            ($1, $2, $3, $4, $5)
-            WHERE replay_id = $6
-            RETURNING replay_id, instance_id, creator_id, replay_forked_from, file_id, created_on"#,
+            (replay_name, replay_description, instance_id, creator_id, replay_forked_from, file_id, created_on) =
+            ($1, $2, $3, $4, $5, $6, $7)
+            WHERE replay_id = $8
+            RETURNING replay_id, replay_name, replay_description, instance_id, creator_id, replay_forked_from, file_id, created_on"#,
+            replay.replay_name,
+            replay.replay_description,
             replay.instance_id,
             replay.creator_id,
             replay.replay_forked_from,
@@ -1229,6 +1265,8 @@ impl DBHashable for Replay {
             Self,
             r#"SELECT
            replay.replay_id,
+           replay.replay_name,
+           replay.replay_description,
            replay.instance_id,
            replay.creator_id,
            replay.replay_forked_from,
@@ -1243,7 +1281,10 @@ impl DBHashable for Replay {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
@@ -1270,7 +1311,7 @@ impl DBModel for Save {
             ("save_description".to_string(), "String".to_string()),
             ("file_id".to_string(), "String".to_string()),
             ("creator_id".to_string(), "Uuid".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -1407,7 +1448,10 @@ impl DBHashable for Save {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
@@ -1439,7 +1483,7 @@ impl DBModel for State {
             ("creator_id".to_string(), "Uuid".to_string()),
             ("state_replay_index".to_string(), "i32".to_string()),
             ("state_derived_from".to_string(), "Uuid".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -1638,7 +1682,10 @@ impl DBHashable for State {
         .await
     }
 
-    async fn flatten_file(conn: &mut PgConnection, model: Self) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
+    async fn flatten_file(
+        conn: &mut PgConnection,
+        model: Self,
+    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
         let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
         Ok(FileRecordFlatten {
             record: model,
@@ -1663,7 +1710,7 @@ impl DBModel for Work {
             ("work_name".to_string(), "String".to_string()),
             ("work_version".to_string(), "String".to_string()),
             ("work_platform".to_string(), "String".to_string()),
-            ("created_on".to_string(), "OffsetDateTime".to_string()),
+            ("created_on".to_string(), "DateTime<Utc>".to_string()),
         ]
     }
 
@@ -1771,4 +1818,8 @@ impl Work {
 
 fn unwrap_to_option_string<T: ToString>(o: &Option<T>) -> Option<String> {
     o.as_ref().map(T::to_string)
+}
+
+pub fn default_uuid() -> Uuid {
+    Uuid::new_v4()
 }

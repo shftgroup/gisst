@@ -1,7 +1,4 @@
-use std::{
-    str::FromStr,
-    collections::HashMap,
-};
+use std::{collections::HashMap, str::FromStr};
 
 use axum::headers::HeaderMap;
 
@@ -21,16 +18,14 @@ pub fn check_header(header_map: &HeaderMap, header_name: &str, expr: fn(&str) ->
 pub fn parse_header<T: FromStr>(header_map: &HeaderMap, header_name: &str) -> Option<T> {
     header_map
         .get(header_name)
-        .and_then(|value|
-            match value.to_str() {
-                Ok(header_str) => Some(header_str),
-                Err(_) => None,
-            })
-        .and_then(|val|
-            match val.parse::<T>() {
-                Ok(num) => Some(num),
-                Err(_) => None,
-            })
+        .and_then(|value| match value.to_str() {
+            Ok(header_str) => Some(header_str),
+            Err(_) => None,
+        })
+        .and_then(|val| match val.parse::<T>() {
+            Ok(num) => Some(num),
+            Err(_) => None,
+        })
 }
 
 // Adapted from https://github.com/s3rius/rustus/blob/master/src/protocol/creation/routes.rs

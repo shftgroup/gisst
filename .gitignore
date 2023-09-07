@@ -6,6 +6,7 @@ frontend/frontend-elec/resources/content/
 frontend/frontend-elec/resources/ra-assets/
 frontend/frontend-tauri/src-tauri/ra-assets/
 frontend/frontend-web/.index-xhr
+frontend/node_modules
 .DS_Store
 target
 .idea
@@ -16,3 +17,4 @@ backend/test_content/
 backend/examples/
 backend/rdb-sys/libretro-util
 backend/ingest/rdb
+backend/web-dist

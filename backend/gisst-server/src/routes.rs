@@ -1,24 +1,21 @@
-use crate::{
-    server::ServerState,
-    error::GISSTError,
-    utils::parse_header,
-};
+use crate::{error::GISSTError, server::ServerState, utils::parse_header};
 use axum::{
     extract::{Json, Path, Query},
+    headers::HeaderMap,
     http::StatusCode,
+    response::{Html, IntoResponse},
     routing::{get, post},
     Extension, Router,
-    headers::HeaderMap,
-    response::{Html, IntoResponse},
 };
+use gisst::models::{
+    DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
+};
+use gisst::models::{FileRecordFlatten, NewRecordError};
 use minijinja::render;
-use gisst::{
-    models::{DBModel, DBHashable, Environment, File, Image, Instance, Object, Replay, Save, State, Work},
-};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use gisst::models::FileRecordFlatten;
-
+use serde_with::{base64::Base64, serde_as};
+use sqlx::PgConnection;
+use uuid::{uuid, Uuid};
 
 // Nested Router structs for easier reading and manipulation
 // pub fn creator_router() -> Router {
@@ -29,6 +26,12 @@ use gisst::models::FileRecordFlatten;
 //             .put(edit_creator)
 //             .delete(delete_creator))
 // }
+
+pub fn screenshot_router() -> Router {
+    Router::new()
+        .route("/create", post(create_screenshot))
+        .route("/:id", get(get_single_screenshot))
+}
 
 pub fn environment_router() -> Router {
     Router::new()
@@ -94,9 +97,7 @@ pub fn save_router() -> Router {
         .route("/create", post(create_save))
         .route(
             "/:id",
-            get(get_single_save)
-                .put(edit_save)
-                .delete(delete_save),
+            get(get_single_save).put(edit_save).delete(delete_save),
         )
 }
 
@@ -106,9 +107,7 @@ pub fn state_router() -> Router {
         .route("/create", post(create_state))
         .route(
             "/:id",
-            get(get_single_state)
-                .put(edit_state)
-                .delete(delete_state),
+            get(get_single_state).put(edit_state).delete(delete_state),
         )
 }
 
@@ -140,6 +139,71 @@ pub fn work_router() -> Router {
 //     }
 // }
 
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize)]
+struct Screenshot {
+    screenshot_id: Uuid,
+    #[serde_as(as = "Base64")]
+    screenshot_data: Vec<u8>,
+}
+
+impl Screenshot {
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Screenshot,
+            r#"INSERT INTO screenshot (screenshot_id, screenshot_data) VALUES ($1, $2)
+            RETURNING screenshot_id, screenshot_data
+            "#,
+            model.screenshot_id,
+            model.screenshot_data
+        )
+        .fetch_one(conn)
+        .await
+        .map_err(|_| NewRecordError::Screenshot)
+    }
+    async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Screenshot,
+            r#" SELECT screenshot_id, screenshot_data FROM screenshot
+            WHERE screenshot_id = $1
+            "#,
+            id
+        )
+        .fetch_optional(conn)
+        .await
+    }
+}
+
+async fn create_screenshot(
+    app_state: Extension<ServerState>,
+    Json(screenshot): Json<Screenshot>,
+) -> Result<Json<Screenshot>, GISSTError> {
+    dbg!(&screenshot.screenshot_id);
+    let mut conn = app_state.pool.acquire().await?;
+    if screenshot.screenshot_id != uuid!("00000000-0000-0000-0000-000000000000") {
+        Ok(Json(Screenshot::insert(&mut conn, screenshot).await?))
+    } else {
+        Ok(Json(
+            Screenshot::insert(
+                &mut conn,
+                Screenshot {
+                    screenshot_id: Uuid::new_v4(),
+                    screenshot_data: screenshot.screenshot_data,
+                },
+            )
+            .await?,
+        ))
+    }
+}
+
+async fn get_single_screenshot(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Screenshot>, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    Ok(Json(Screenshot::get_by_id(&mut conn, id).await?.unwrap()))
+}
+
 // ENVIRONMENT method handlers
 #[derive(Deserialize)]
 struct GetQueryParams {
@@ -156,7 +220,6 @@ async fn get_environments(
     } else {
         Ok(Json(vec![]))
     }
-
 }
 
 async fn create_environment(
@@ -166,8 +229,6 @@ async fn create_environment(
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(Environment::insert(&mut conn, environment).await?))
 }
-
-
 
 async fn get_single_environment(
     app_state: Extension<ServerState>,
@@ -222,10 +283,11 @@ async fn create_image(
     if File::get_by_id(&mut conn, image.file_id).await?.is_some() {
         Ok(Json(Image::insert(&mut conn, image).await?))
     } else {
-        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::Image))
+        Err(GISSTError::RecordCreateError(
+            gisst::models::NewRecordError::Image,
+        ))
     }
 }
-
 
 async fn get_single_image(
     app_state: Extension<ServerState>,
@@ -264,22 +326,25 @@ async fn get_instances(
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     let instances: Vec<Instance> = Instance::get_all(&mut conn, params.limit).await?;
-    let accept:Option<String> = parse_header(&headers, "Accept");
+    let accept: Option<String> = parse_header(&headers, "Accept");
 
-    Ok((
-        if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
+    Ok(
+        (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             Html(render!(
                 app_state.templates.get_template("instance_listing")?,
                 instances => instances
             ))
-                .into_response()
-        } else if accept.as_ref().is_some_and(|hv| hv.contains("application/json")) {
+            .into_response()
+        } else if accept
+            .as_ref()
+            .is_some_and(|hv| hv.contains("application/json"))
+        {
             Json(instances).into_response()
         } else {
             Err(GISSTError::Generic)?
-        }
+        })
+        .into_response(),
     )
-        .into_response())
 }
 
 #[derive(Debug, Serialize)]
@@ -293,10 +358,10 @@ struct FullInstance {
 async fn get_all_for_instance(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
-    Path(id): Path<Uuid>
+    Path(id): Path<Uuid>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Some(instance) = Instance::get_by_id(&mut conn, id).await?{
+    if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
         let states = Instance::get_all_states(&mut conn, instance.instance_id).await?;
         let mut flattened_states: Vec<FileRecordFlatten<State>> = vec![];
 
@@ -325,21 +390,25 @@ async fn get_all_for_instance(
             saves: flattened_saves,
         };
 
-        let accept:Option<String> = parse_header(&headers, "Accept");
+        let accept: Option<String> = parse_header(&headers, "Accept");
 
-        Ok((
-            if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
+        Ok(
+            (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
                 Html(render!(
                     app_state.templates.get_template("instance_all_listing")?,
                     instance => dbg!(full_instance),
                 ))
-                    .into_response()
-            } else if accept.as_ref().is_some_and(|hv| hv.contains("application/json")) {
+                .into_response()
+            } else if accept
+                .as_ref()
+                .is_some_and(|hv| hv.contains("application/json"))
+            {
                 Json(full_instance).into_response()
             } else {
                 Err(GISSTError::Generic)?
-            }
-        ).into_response())
+            })
+            .into_response(),
+        )
     } else {
         Err(GISSTError::Generic)
     }
@@ -409,7 +478,9 @@ async fn create_object(
     if File::get_by_id(&mut conn, object.file_id).await?.is_some() {
         Ok(Json(Object::insert(&mut conn, object).await?))
     } else {
-        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::Object))
+        Err(GISSTError::RecordCreateError(
+            gisst::models::NewRecordError::Object,
+        ))
     }
 }
 
@@ -430,7 +501,6 @@ async fn delete_object(
     Ok(StatusCode::OK)
 }
 // Replay method handlers
-
 
 async fn get_replays(
     app_state: Extension<ServerState>,
@@ -469,21 +539,34 @@ async fn delete_replay(
     Ok(StatusCode::OK)
 }
 
-
 async fn create_replay(
     app_state: Extension<ServerState>,
-    Query(replay): Query<Replay>,
+    Json(replay): Json<Replay>,
 ) -> Result<Json<Replay>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
 
     if File::get_by_id(&mut conn, replay.file_id).await?.is_some() {
-        Ok(Json(Replay::insert(&mut conn, replay).await?))
+        if replay.replay_id != uuid!("00000000-0000-0000-0000-000000000000") {
+            Ok(Json(Replay::insert(&mut conn, replay).await?))
+        } else {
+            Ok(Json(
+                Replay::insert(
+                    &mut conn,
+                    Replay {
+                        replay_id: Uuid::new_v4(),
+                        ..replay
+                    },
+                )
+                .await?,
+            ))
+        }
     } else {
-        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::Replay))
+        Err(GISSTError::RecordCreateError(
+            gisst::models::NewRecordError::Replay,
+        ))
     }
 }
 // Save method handlers
-
 
 async fn get_saves(
     app_state: Extension<ServerState>,
@@ -522,7 +605,6 @@ async fn delete_save(
     Ok(StatusCode::OK)
 }
 
-
 async fn create_save(
     app_state: Extension<ServerState>,
     Query(save): Query<Save>,
@@ -532,11 +614,12 @@ async fn create_save(
     if File::get_by_id(&mut conn, save.file_id).await?.is_some() {
         Ok(Json(Save::insert(&mut conn, save).await?))
     } else {
-        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::Save))
+        Err(GISSTError::RecordCreateError(
+            gisst::models::NewRecordError::Save,
+        ))
     }
 }
 // State method handlers
-
 
 async fn get_states(
     app_state: Extension<ServerState>,
@@ -575,17 +658,31 @@ async fn delete_state(
     Ok(StatusCode::OK)
 }
 
-
 async fn create_state(
     app_state: Extension<ServerState>,
-    Query(state): Query<State>,
+    Json(state): Json<State>,
 ) -> Result<Json<State>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
 
     if File::get_by_id(&mut conn, state.file_id).await?.is_some() {
-        Ok(Json(State::insert(&mut conn, state).await?))
+        if state.state_id != uuid!("00000000-0000-0000-0000-000000000000") {
+            Ok(Json(State::insert(&mut conn, state).await?))
+        } else {
+            Ok(Json(
+                State::insert(
+                    &mut conn,
+                    State {
+                        state_id: Uuid::new_v4(),
+                        ..state
+                    },
+                )
+                .await?,
+            ))
+        }
     } else {
-        Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::State))
+        Err(GISSTError::RecordCreateError(
+            gisst::models::NewRecordError::State,
+        ))
     }
 }
 

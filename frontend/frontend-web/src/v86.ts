@@ -1,8 +1,10 @@
-import {UI} from 'gisst-player';
+import {UI, GISSTDBConnector, GISSTModels} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
+import * as tus from 'tus-js-client';
 let ui_state:UI;
+let db:GISSTDBConnector;
 
 
 export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
@@ -21,7 +23,80 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   }
 
 
-  const v86:EmbedV86 = new EmbedV86({
+  /* eslint prefer-const: ["error", { ignoreReadBeforeAssign: true }], no-use-before-define: "error" */
+  let v86:EmbedV86;
+  db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
+  ui_state = new UI(
+    <HTMLDivElement>document.getElementById("ui")!,
+    {
+        "load_state":(n:number) => {
+        if(v86.active_replay != null) { v86.stop_replay(); }
+        v86.load_state_slot(n);
+      },
+        "save_state":() => {
+            v86.save_state()
+        },
+        "start_replay":() => {
+            v86.record_replay()
+        },
+        "stop_and_save_replay":() => {
+            v86.stop_replay()
+        },
+      "play_replay":(n:number) => v86.play_replay_slot(n),
+      "load_checkpoint":(n:number) => {
+        if(v86.active_replay == null) { throw "Can't load checkpoint if no replay"; }
+        v86.load_state_slot(n);
+      },
+      "download_file":(category:"state" | "save" | "replay", file_name:string) => {
+        v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
+      },
+      "upload_file":(category:"state" | "save" | "replay", file_name:string, metadata:GISSTModels.Metadata) => {
+            return new Promise((resolve, reject) => {
+                v86.download_file(category, file_name).then(([blob, name]) => {
+                    db.uploadFile(new File([blob], name),
+                        (error:Error) => { reject(error.message)},
+                        (_percentage:number) => {},
+                        (upload:tus.Upload) => {
+                            const url_parts = upload.url!.split('/');
+                            const uuid_string = url_parts[url_parts.length - 1];
+                            metadata.record.file_id = uuid_string;
+                            if(category == "state"){
+                                db.uploadRecord({screenshot_id:"00000000-0000-0000-0000-000000000000", screenshot_data: metadata.screenshot.split(",")[1]}, "screenshot")
+                                    .then((screenshot:GISSTModels.DBRecord) => {
+                                        (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
+                                        console.log(metadata);
+                                        db.uploadRecord(metadata.record, "state")
+                                            .then((state:GISSTModels.DBRecord) => {
+                                                (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id
+                                                resolve(metadata);
+                                            })
+                                            .catch(() => reject("State upload from v86 failed."))
+                                    })
+                                    .catch(() => reject("Screenshot upload from v86 failed."))
+                            }else {
+                                db.uploadRecord(metadata.record, category)
+                                    .then((record:GISSTModels.DBRecord) => {
+                                        if (category === "replay") {
+                                            (metadata.record as GISSTModels.Replay).replay_id = (record as GISSTModels.Replay).replay_id;
+                                        } else {
+                                            (metadata.record as GISSTModels.Save).save_id = (record as GISSTModels.Save).save_id;
+                                        }
+                                        resolve(metadata)
+                                    })
+                                    .catch(() => reject(category + " upload from v86 failed"))
+                            }
+                        }
+                    )
+                        .catch(() => reject("File upload from v86 failed."))
+                })
+            })
+      }
+    },
+    false,
+      JSON.parse(document.getElementById("config")!.textContent!) as GISSTModels.FrontendConfig
+  );
+
+  v86 = new EmbedV86({
     wasm_root:"/v86",
     bios_root:"/v86/bios",
     content_root:window.location.origin,
@@ -47,35 +122,8 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       }
     },
   });
-  ui_state = new UI(
-    <HTMLDivElement>document.getElementById("ui")!,
-    {
-      "load_state":(n:number) => {
-        if(v86.active_replay != null) { v86.stop_replay(); }
-        v86.load_state_slot(n);
-      },
-      "play_replay":(n:number) => v86.play_replay_slot(n),
-      "load_checkpoint":(n:number) => {
-        if(v86.active_replay == null) { throw "Can't load checkpoint if no replay"; }
-        v86.load_state_slot(n);
-      },
-      "download_file":(category:"state" | "save" | "replay", file_name:string) => {
-        v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
-      }
-    },
-    false
-  );
-
-  document.getElementById("v86_controls")!.classList.remove("hidden");
-  document.getElementById("v86_save")?.addEventListener("click",
-    () => v86.save_state()
-  );
-  document.getElementById("v86_record")?.addEventListener("click",
-    () => v86.record_replay()
-  );
-  document.getElementById("v86_stop")?.addEventListener("click",
-    () => v86.stop_replay()
-  );
+  (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-v86.png";
+  // document.getElementById("v86_controls")!.classList.remove("hidden");
   const prev = document.getElementById("webplayer-preview")!;
   prev.classList.add("loaded");
   prev.addEventListener(

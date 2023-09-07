@@ -1,4 +1,5 @@
 import checker from 'vite-plugin-checker';
+import sourcemaps from 'rollup-plugin-sourcemaps';
 
 export default {
   plugins: [
@@ -6,8 +7,10 @@ export default {
       // e.g. use TypeScript check
       typescript: true,
     }),
+      sourcemaps()
   ],
   build: {
+    sourcemap: true,
     rollupOptions: {
       output: {
         entryFileNames: `assets/[name].js`,
@@ -20,6 +23,9 @@ export default {
     headers:{
       "Cross-Origin-Embedder-Policy":"require-corp",
       "Cross-Origin-Opener-Policy":"same-origin"
+    },
+    proxy: {
+      "/storage": "http://localhost:3000/"
     }
   }
 }
