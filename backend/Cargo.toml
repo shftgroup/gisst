@@ -1,5 +1,6 @@
 [workspace]
 members = ["gisst", "gisst-server", "gisst-cli", "ingest", "rdb-sys"]
+resolver = "2"
 
 [profile.dev.package.md5]
 opt-level = 3

@@ -4,6 +4,9 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint'],
   root: true,
+  rules: {
+    "@typescript-eslint/no-unused-vars": ["error", {argsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_", varsIgnorePattern: "^_"}]
+  },
   parserOptions: {
     tsconfigRootDir: __dirname,
     project: true,

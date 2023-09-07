@@ -12,6 +12,7 @@ export default defineConfig({
       fileName: 'ra-util',
     },
     outDir:"dist",
+    sourcemap:true
   },
   plugins: [dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],})],
   rollupOptions: {

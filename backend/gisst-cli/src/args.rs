@@ -340,6 +340,12 @@ pub struct CreateReplay {
     #[arg(long)]
     pub file: String,
 
+    #[arg(long = "name")]
+    pub replay_name: Option<String>,
+
+    #[arg(long = "description")]
+    pub replay_description: Option<String>,
+
     #[arg(long = "creator-id")]
     pub creator_id: Option<Uuid>,
 

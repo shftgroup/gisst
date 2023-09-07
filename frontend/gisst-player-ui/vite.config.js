@@ -2,6 +2,22 @@ import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
+const htmlImport = {
+  name: "htmlImport",
+  /**
+   * Checks to ensure that a html file is being imported.
+   * If it is then it alters the code being passed as being a string being exported by default.
+   * @param {string} code The file as a string.
+   * @param {string} id The absolute path.
+   * @returns {{code: string}}
+   */
+  transform(code, id) {
+    if (/^.*\.html$/g.test(id)) {
+      code = `export default \`${code}\``
+    }
+    return { code, map:null }
+  }
+}
 export default defineConfig({
   build: {
     lib: {
@@ -11,9 +27,13 @@ export default defineConfig({
       // the proper extensions will be added
       fileName: 'gisst-player',
     },
-    outDir:"dist",
+    sourcemap:true,
+    outDir:"dist"
   },
-  plugins: [dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],})],
+  plugins: [
+      dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],}),
+      htmlImport
+  ],
   resolve: {
     alias: {
       '~bootstrap': resolve(__dirname, '../node_modules/bootstrap'),

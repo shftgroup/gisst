@@ -1,8 +1,8 @@
-use std::path::PathBuf;
-use std::str::FromStr;
+use crate::args::GISSTCliError;
 use config::{Config, Environment, File};
 use serde::Deserialize;
-use crate::args::GISSTCliError;
+use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Debug, Default, Deserialize)]
 pub struct CLIConfig {
@@ -26,7 +26,7 @@ pub struct StorageConfig {
 }
 
 impl CLIConfig {
-    pub fn new(config_path:&str) -> Result<Self, GISSTCliError> {
+    pub fn new(config_path: &str) -> Result<Self, GISSTCliError> {
         let env = std::env::var("GISST_ENV").unwrap_or_else(|_| "development".into());
         let binding = std::fs::canonicalize(config_path)?;
         let canonical_path = binding.as_path().to_str().unwrap();
@@ -44,7 +44,9 @@ impl CLIConfig {
 
         let builder = Config::builder()
             .add_source(File::with_name(default_path.to_str().unwrap()))
-            .add_source(File::with_name(&format!("{}.toml", env_path.to_str().unwrap())).required(false))
+            .add_source(
+                File::with_name(&format!("{}.toml", env_path.to_str().unwrap())).required(false),
+            )
             .add_source(File::with_name(local_path.to_str().unwrap()).required(false))
             .add_source(Environment::with_prefix("GISST").separator("__"));
         Ok(builder.build()?.try_deserialize()?)
@@ -59,7 +61,7 @@ impl Default for DatabaseConfig {
     }
 }
 
-impl Default for StorageConfig{
+impl Default for StorageConfig {
     fn default() -> Self {
         Self {
             root_folder_path: default_root_folder_path(),
@@ -72,7 +74,9 @@ fn default_root_folder_path() -> String {
     "./storage".to_string()
 }
 
-fn default_folder_depth() -> u8 { 4 }
+fn default_folder_depth() -> u8 {
+    4
+}
 
 fn default_database_url() -> String {
     "postgresql://postgres:postgres@localhost/gisstdb".to_string()

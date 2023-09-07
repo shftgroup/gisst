@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT replay_id,\n            replay_name,\n            replay_description,\n            instance_id,\n            creator_id,\n            replay_forked_from,\n            replay.created_on,\n            file.file_hash as file_hash,\n            file.file_filename as file_filename,\n            file.file_source_path as file_source_path,\n            file.file_dest_path as file_dest_path\n            FROM replay\n            JOIN file USING(file_id)\n            WHERE replay_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "replay_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "replay_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "replay_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "replay_forked_from",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "file_hash",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "file_filename",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "file_source_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "file_dest_path",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "190a8b6021ed416f3a085e5494c5efb30dcb32bf495aae7b299ffca5d4ff2bd8"
+}

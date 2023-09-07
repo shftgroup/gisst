@@ -20,6 +20,7 @@ export default defineConfig({
     })
   ],
   build: {
+    sourcemap:true,
     rollupOptions: {
       output: {
         entryFileNames: `[name].js`,
