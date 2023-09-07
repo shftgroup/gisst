@@ -547,12 +547,19 @@ async fn delete_replay(
 
 async fn create_replay(
     app_state: Extension<ServerState>,
-    Query(replay): Query<Replay>,
+    Json(replay): Json<Replay>,
 ) -> Result<Json<Replay>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
 
     if File::get_by_id(&mut conn, replay.file_id).await?.is_some() {
-        Ok(Json(Replay::insert(&mut conn, replay).await?))
+        if replay.replay_id != uuid!("00000000-0000-0000-0000-000000000000") {
+            Ok(Json(Replay::insert(&mut conn, replay).await?))
+        } else {
+            Ok(Json(Replay::insert(&mut conn, Replay {
+                replay_id: Uuid::new_v4(),
+                ..replay
+            }).await?))
+        }
     } else {
         Err(GISSTError::RecordCreateError(gisst::models::NewRecordError::Replay))
     }
