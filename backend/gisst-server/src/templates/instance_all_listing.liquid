@@ -2,61 +2,86 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>test view</title>
+    <title>Instance of {{ instance.work.work_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 </head>
 <body>
-<h1>Instance Information</h1>
-Id: {{ instance.info.instance_id }}
-Environment Id: {{ instance.info.environment_id}}
-Work Id: {{ instance.info.work_id}}
-Created On: {{ instance.info.created_on }}
-<a href="/play/{{ instance.info.instance_id }}">Cold Boot</a>
-<h1>States</h1>
-<table>
-    <tr>
-        <th>Boot</th>
-        <th>State Id</th>
-        <th>Is Checkpoint?</th>
-        <th>Name</th>
-        <th>Description</th>
-        <th>Replay Id</th>
-        <th>Creator Id</th>
-        <th>Replay Time Index</th>
-        <th>Derived From State</th>
-        <th>Created On</th>
-    </tr>
-    {% for state in instance.states %}
-        <tr>
-            <td><a href="/play/{{ instance.info.instance_id }}?state={{ state.record.state_id }}">Boot into State</a></td>
-            <td>{{ state.record.state_id }}</td>
-            <td>{{ state.record.is_checkpoint }}</td>
-            <td>{{ state.record.name}}</td>
-            <td>{{ state.record.description}}</td>
-            <td>{{ state.record.replay_id }}</td>
-            <td>{{ state.record.state_replay_index }}</td>
-            <td>{{ state.record.state_derived_from }}</td>
-            <td>{{ state.record.created_on }}</td>
-        </tr>
-    {% endfor %}
-</table>
-<h1>Replays</h1>
-<table>
-    <tr>
-        <th>Boot</th>
-        <th>Replay Id</th>
-        <th>Creator Id</th>
-        <th>Forked From</th>
-        <th>Created On</th>
-    </tr>
-    {% for replay in instance.replays %}
-        <tr>
-            <td><a href="/play/{{ instance.info.instance_id }}?replay={{ replay.record.replay_id }}">Boot into Replay</a></td>
-            <td>{{ replay.record.replay_id }}</td>
-            <td>{{ replay.record.creator_id }}</td>
-            <td>{{ replay.record.replay_forked_from }}</td>
-            <td>{{ replay.record.created_on }}</td>
-        </tr>
-    {% endfor %}
-</table>
+<header class="p-3 bg-dark text-white">
+    <div class="container">
+        <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+            <a class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none" href="/instances">
+                <span class="fs-4">GISST</span>
+            </a>
+        </div>
+    </div>
+</header>
+<div class="container">
+    <div class="row">
+        <h1>{{ instance.work.work_name }} Instance Information</h1>
+        <div class="row">
+            <p class="col-4">
+                Version: {{ instance.work.work_version }}
+            </p>
+            <p class="col-4">
+                Platform: {{ instance.work.work_platform }}
+            </p>
+            <a class="btn btn-primary col-3" href="/play/{{ instance.info.instance_id }}" target="_blank">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
+                    <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
+                </svg>
+                Fresh Boot
+            </a>
+        </div>
+    </div>
+    <div class="row">
+        <h1>States</h1>
+        <table class="table">
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Description</th>
+                <th scope="col">Boot</th>
+            </tr>
+            {% for state in instance.states %}
+                <tr>
+                    <td>{{ state.record.state_name}}</td>
+                    <td>{{ state.record.state_description}}</td>
+                    <td>
+                        <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}" target="_blank">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
+                                <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
+                            </svg>
+                            Boot into State
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div class="row">
+        <h1>Replays</h1>
+        <table class="table">
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Description</th>
+                <th scope="col">Boot</th>
+            </tr>
+            {% for replay in instance.replays %}
+                <tr>
+                    <td>{{ replay.record.replay_name}}</td>
+                    <td>{{ replay.record.replay_description}}</td>
+                    <td>
+                        <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}" target="_blank">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
+                                <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
+                            </svg>
+                            Boot into Replay
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
 </body>
 </html>

@@ -319,6 +319,12 @@ async fn delete_image(
 }
 // INSTANCE method handlers
 
+#[derive(Serialize)]
+struct GetAllInstanceResult {
+    instance: Instance,
+    work: Work
+}
+
 async fn get_instances(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -327,12 +333,25 @@ async fn get_instances(
     let mut conn = app_state.pool.acquire().await?;
     let instances: Vec<Instance> = Instance::get_all(&mut conn, params.limit).await?;
     let accept: Option<String> = parse_header(&headers, "Accept");
+    let mut instance_results: Vec<GetAllInstanceResult> = Vec::new();
+    for inst in &instances {
+        instance_results.push( GetAllInstanceResult{
+            instance: Instance {
+                instance_id: inst.instance_id,
+                work_id: inst.work_id,
+                environment_id: inst.environment_id,
+                instance_config: inst.instance_config.clone(),
+                created_on: inst.created_on,
+            },
+            work: Work::get_by_id(&mut conn, inst.work_id).await?.unwrap()
+        })
+    }
 
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             Html(render!(
                 app_state.templates.get_template("instance_listing")?,
-                instances => instances
+                instances => instance_results
             ))
             .into_response()
         } else if accept
@@ -350,6 +369,7 @@ async fn get_instances(
 #[derive(Debug, Serialize)]
 struct FullInstance {
     info: Instance,
+    work: Work,
     states: Vec<FileRecordFlatten<State>>,
     replays: Vec<FileRecordFlatten<Replay>>,
     saves: Vec<FileRecordFlatten<Save>>,
@@ -384,6 +404,7 @@ async fn get_all_for_instance(
         }
 
         let full_instance = FullInstance {
+            work: Work::get_by_id(&mut conn, instance.work_id.clone()).await?.unwrap(),
             info: instance,
             states: flattened_states,
             replays: flattened_replays,
