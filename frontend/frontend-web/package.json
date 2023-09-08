@@ -7,7 +7,7 @@
     "dev": "vite",
     "check": "tsc && npx eslint src",
     "build": "tsc && vite build",
-    "dist": "vite build && rsync -avzh --delete dist/* ../../backend/web-dist/",
+    "dist": "vite build && rsync -acvzh --delete dist/* ../../backend/web-dist/",
     "preview": "vite preview"
   },
   "devDependencies": {
