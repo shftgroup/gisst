@@ -120,8 +120,8 @@ export class Replay {
     }
   }
   async make_checkpoint(emulator:V86Starter) {
-    //console.log("make cp",this.replay_time(emulator.get_instruction_counter()),this.index);
-    this.checkpoints.push(new Checkpoint(this.replay_time(emulator.get_instruction_counter()), "check"+this.checkpoints.length.toString(), this.index, await emulator.save_state(), emulator.screen_make_screenshot().src));
+    // console.log("make cp",this.replay_time(emulator.get_instruction_counter()),this.index,this.checkpoints.length);
+    this.checkpoints.push(new Checkpoint(this.replay_time(emulator.get_instruction_counter()), "replay"+this.id+"-check"+this.checkpoints.length.toString(), this.index, await emulator.save_state(), emulator.screen_make_screenshot().src));
     this.checkpoint_index += 1;
   }
   async tick(emulator:V86Starter) {
