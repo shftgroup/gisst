@@ -54,6 +54,7 @@ function init_v86(host:string, environment:Environment, start:ColdStart | StateS
     wasm_root:"renderer-resources/v86",
     bios_root:"renderer-resources/v86/bios",
     content_root:host,
+    record_from_start:true,
     container: <HTMLDivElement>document.getElementById("v86-container")!,
     register_replay:(nom:string)=>ui_state.newReplay(nom),
     stop_replay:()=>{

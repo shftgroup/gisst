@@ -8,6 +8,7 @@ export interface EmbedV86Config {
   bios_root:string;
   content_root:string;
   container:HTMLDivElement;
+  record_from_start:boolean;
   register_replay:(nom:string)=>void;
   stop_replay:()=>void;
   states_changed:(added:StateInfo[], removed:StateInfo[]) => void;
@@ -64,10 +65,12 @@ export class EmbedV86 {
   async save_state() {
     nonnull(this.emulator);
     if(this.active_replay != null) {
+      // console.log("save replay checkpoint");
       const replay = this.replays[this.active_replay];
-      replay.make_checkpoint(this.emulator);
+      await replay.make_checkpoint(this.emulator);
       this.config.replay_checkpoints_changed([replay.checkpoints[replay.checkpoints.length-1]], []);
     } else {
+      // console.log("save state");
       const screenshot = this.emulator.screen_make_screenshot();
       this.states.push(new State("state"+this.states.length.toString(), await this.emulator.save_state(), screenshot.src));
       this.config.states_changed([this.states[this.states.length-1]], []);
@@ -82,6 +85,7 @@ export class EmbedV86 {
     this.config.register_replay("replay"+this.replays.length.toString());
     this.active_replay = this.replays.length;
     this.replays.push(await Replay.start_recording(this.emulator));
+    // console.log("add initial checkpoints");
     this.config.replay_checkpoints_changed(this.replays[this.replays.length-1].checkpoints,[]);
   }
   async stop_replay() {
@@ -145,8 +149,10 @@ export class EmbedV86 {
     if(this.active_replay != null) {
       const replay = this.replays[this.active_replay];
       const old_cp_count = replay.checkpoints.length;
+      // console.log("old count",old_cp_count);
       replay.tick(this.emulator);
       if(old_cp_count < replay.checkpoints.length) {
+        // console.log("new cp!",replay.checkpoints.length);
         this.config.replay_checkpoints_changed(replay.checkpoints.slice(old_cp_count),[]);
       }
     }
@@ -199,14 +205,16 @@ export class EmbedV86 {
     this.emulator.emulator_bus.register("mouse-absolute", (pos:[number,number,number,number]) => this.replay_log(Evt.MouseAbsolute,pos));
     this.emulator.emulator_bus.register("mouse-wheel", (delta:[number,number]) => this.replay_log(Evt.MouseWheel, delta));
     this.emulator.bus.register("emulator-ticked", () => this.replay_tick());
-    // first time it runs, play_replay_slot 0 if movie is used
-    if(movie) {
-      const start_initial_replay = () => {
-        this.emulator!.remove_listener("emulator-started", start_initial_replay);
+    // first time it runs, play_replay_slot 0 if movie is used or else start recording
+    const start_initial_replay = () => {
+      this.emulator!.remove_listener("emulator-started", start_initial_replay);
+      if(movie) {
         this.play_replay_slot(0);
-      };
-      this.emulator.add_listener("emulator-started", start_initial_replay);
-    }
+      } else if(this.config.record_from_start) {
+        this.record_replay();
+      }
+    };
+    this.emulator.add_listener("emulator-started", start_initial_replay);
   }
 }
 function nonnull(obj:number|object|null):asserts obj {
