@@ -93,6 +93,7 @@ export class EmbedV86 {
     if(this.active_replay != null) {
       await this.replays[this.active_replay].stop(this.emulator);
       this.config.stop_replay();
+      this.active_replay = null;
     }
   }
   async load_state_slot(n:number) {
