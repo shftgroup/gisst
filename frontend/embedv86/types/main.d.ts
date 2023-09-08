@@ -8,6 +8,7 @@ export interface EmbedV86Config {
     bios_root: string;
     content_root: string;
     container: HTMLDivElement;
+    record_from_start: boolean;
     register_replay: (nom: string) => void;
     stop_replay: () => void;
     states_changed: (added: StateInfo[], removed: StateInfo[]) => void;
