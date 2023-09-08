@@ -99,6 +99,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   v86 = new EmbedV86({
     wasm_root:"/v86",
     bios_root:"/v86/bios",
+    record_from_start:true,
     content_root:window.location.origin,
     container: <HTMLDivElement>document.getElementById("canvas_div")!,
     register_replay:(nom:string)=>ui_state.newReplay(nom),
