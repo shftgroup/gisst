@@ -45,6 +45,7 @@ export interface PlayerStartTemplateInfo {
 
 export interface FrontendConfig {
     environment: Environment,
+    work: Work,
     instance: Instance,
     manifest: ObjectFileLink[],
     save: Save,
