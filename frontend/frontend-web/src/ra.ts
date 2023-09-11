@@ -13,6 +13,7 @@ const saves_dir = "/home/web_user/retroarch/userdata/saves";
 
 const retro_args = ["-v"];
 
+let RA:LibretroModule;
 let ui_state:UI;
 let db:GISSTDBConnector;
 
@@ -107,69 +108,70 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   );
 
   loadRetroArch(core,
-    function () {
-      fetchfs.mkdirp("/home/web_user/content");
+    function (module:LibretroModule) {
+      RA = module;
+      fetchfs.mkdirp(RA,"/home/web_user/content");
 
       const proms = [];
 
-      proms.push(fetchfs.fetchZip("/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
+      proms.push(fetchfs.fetchZip(RA,"/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
 
       for(const file of manifest) {
-        const file_prom = fetchfs.fetchFile("/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
+        const file_prom = fetchfs.fetchFile(RA,"/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
         proms.push(file_prom);
       }
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
         const data = (start as StateStart).data;
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
-        proms.push(fetchfs.fetchFile("/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state",false));
+        proms.push(fetchfs.fetchFile(RA,"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state",false));
       }
       if (movie) {
         // Cast: This one is definitely a replaystart because the type is state
         const data = (start as ReplayStart).data;
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
-        proms.push(fetchfs.fetchFile("/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1",false));
+        proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1",false));
       }
-      proms.push(fetchfs.registerFetchFS({"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/", false));
-      fetchfs.mkdirp(saves_dir);
-      fetchfs.mkdirp(state_dir);
+      proms.push(fetchfs.registerFetchFS(RA, {"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/", false));
+      fetchfs.mkdirp(RA, saves_dir);
+      fetchfs.mkdirp(RA, state_dir);
       Promise.all(proms).then(function () {
-        copyFile("/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
+        copyFile(RA, "/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
         // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
         if (entryState) {
-          copyFile("/home/web_user/content/entry_state",
+          copyFile(RA, "/home/web_user/content/entry_state",
             state_dir + "/" + content_base + ".state1.entry");
-          copyFile("/home/web_user/content/entry_state",
+          copyFile(RA, "/home/web_user/content/entry_state",
             state_dir + "/" + content_base + ".state1");
-          if(file_exists("/home/web_user/content/entry_state.png")) {
-            copyFile("/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
+          if(file_exists(RA, "/home/web_user/content/entry_state.png")) {
+            copyFile(RA, "/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
           } else {
-            fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
+            fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => RA.FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
           }
         }
         if (movie) {
           console.log("Put movie in",state_dir + "/" + content_base + ".replay1");
-          copyFile("/home/web_user/content/replay.replay1",
+          copyFile(RA, "/home/web_user/content/replay.replay1",
             state_dir + "/" + content_base + ".replay1");
-          // if(file_exists("/home/web_user/content/entry_state.png")) {
-          //   copyFile("/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
+          // if(file_exists(RA, "/home/web_user/content/entry_state.png")) {
+          //   copyFile(RA, "/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
           // } else {
-          //   fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
+          //   fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => RA.FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
           // }
         } else {
-          const f = FS.open(state_dir+"/"+content_base+".replay1", 'w');
+          const f = RA.FS.open(state_dir+"/"+content_base+".replay1", 'w');
           const te = new TextEncoder();
-          FS.write(f, te.encode("\0"), 0, 1);
-          FS.close(f);
+          RA.FS.write(f, te.encode("\0"), 0, 1);
+          RA.FS.close(f);
         }
         retroReady();
       });
     });
 }
 
-function copyFile(from: string, to: string): void {
-  const buf = FS.readFile(from);
-  FS.writeFile(to, buf);
+function copyFile(module:LibretroModule, from: string, to: string): void {
+  const buf = module.FS.readFile(from);
+  module.FS.writeFile(to, buf);
 }
 
 // TODO add clear button to call ui_state.clear()
@@ -183,8 +185,7 @@ function retroReady(): void {
     function () {
       const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
       prev.classList.add("hidden");
-      startRetroArch(canv, retro_args, function () {
-        const canv = document.getElementById("canvas")!;
+      RA.startRetroArch(canv, retro_args, function () {
         setInterval(checkChangedStatesAndSaves, FS_CHECK_INTERVAL);
         canv.classList.remove("hidden");
       });

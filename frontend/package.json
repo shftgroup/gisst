@@ -5,6 +5,7 @@
     "embedv86",
     "gisst-player-ui",
     "frontend-web",
-    "frontend-elec"
+    "frontend-elec",
+    "frontend-embed"
   ]
 }
