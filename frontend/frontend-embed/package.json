@@ -1,0 +1,28 @@
+{
+  "name": "frontend-embed",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "check": "tsc && npx eslint src",
+    "build": "tsc && vite build",
+    "dist": "vite build && rsync -acvzh --delete dist/* ../../backend/embed-dist/",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.2.1",
+    "@typescript-eslint/parser": "^6.2.1",
+    "coffeescript": "^2.7.0",
+    "eslint": "^8.46.0",
+    "rollup-plugin-sourcemaps": "0.6.3",
+    "typescript": "^4.9.5",
+    "vite": "^4.1.0",
+    "vite-plugin-checker": "^0.5.5"
+  },
+  "dependencies": {
+    "@zip.js/zip.js": "^2.7.24",
+    "embedv86": "file:../embedv86",
+    "idb-keyval": "^6.2.0"
+  }
+}

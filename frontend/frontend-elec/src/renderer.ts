@@ -154,7 +154,7 @@ async function run_url(evt:IpcRendererEvent, url:string) {
   console.log("RUN URL", url);
   let split = url.split("/");
   console.log(split);
-  let host = "http://"+split[2];
+  let host = "https://"+split[2];
   if(split[3] == "play") {
     split.splice(3,1);
   }
