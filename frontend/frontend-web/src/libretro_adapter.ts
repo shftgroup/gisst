@@ -1,12 +1,31 @@
 /* eslint-env browser */
 
-const cores = {};
+export interface LibretroModule extends EmscriptenModule, LibretroModuleDef {
+  canvas:HTMLCanvasElement;
+  callMain(args:string[]): void;
+  resumeMainLoop(): void;
+}
+interface LibretroModuleDef {
+  startRetroArch(canvas:HTMLCanvasElement, args:string[], initialized_cb:() => void):void;
+  retroArchSend(msg:string):void;
+  retroArchRecv():string|undefined;
+  message_queue:[Uint8Array,number][];
+  message_out:string[];
+  message_accum:string;
+  encoder:TextEncoder;
+  noInitialRun: boolean;
+  preRun: Array<{ (mod:object|undefined): void }>;
+  postRun: Array<{ (mod:object|undefined): void }>;
+  printErr(str:string):void;
+}
 
-function loadRetroArch(core, loaded_cb) {
+const cores:Record<string,(mod:LibretroModuleDef) => Promise<LibretroModule>> = {};
+
+export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:LibretroModule) => void) {
     /**
      * Attempt to disable some default browser keys.
      */
-    var keys = {
+    const keys:Record<number, string> = {
         9: "tab",
         13: "enter",
         16: "shift",
@@ -33,17 +52,18 @@ function loadRetroArch(core, loaded_cb) {
         122: "F11",
         123: "F12"
     };
-    window.addEventListener('keydown', function (e) {
+    window.addEventListener('keydown', function (e:KeyboardEvent) {
         if (keys[e.which]) {
             e.preventDefault();
         }
     });
-    let module = {
-        startRetroArch: function(canvas, retro_args, initialized_cb) {
-            this['canvas'] = canvas;
-            this['arguments'] = retro_args;
-            this['callMain'](this['arguments']);
-            this['resumeMainLoop']();
+    const module:LibretroModuleDef = {
+        startRetroArch: function(canvas:HTMLCanvasElement, retro_args:string[], initialized_cb:() => void) {
+            const me = <LibretroModule>this;
+            me.canvas = canvas;
+            me.arguments = retro_args;
+            me.callMain(me.arguments);
+            me.resumeMainLoop();
             initialized_cb();
             canvas.focus();
         },
@@ -53,12 +73,12 @@ function loadRetroArch(core, loaded_cb) {
         message_out:[],
         message_accum:"",
           
-        retroArchSend: function(msg) {
-            let bytes = this.encoder.encode(msg+"\n");
+        retroArchSend: function(msg:string) {
+            const bytes = this.encoder.encode(msg+"\n");
             this.message_queue.push([bytes,0]);
         },
         retroArchRecv: function() {
-            let out = this.message_out.shift();
+            let out:string | undefined = this.message_out.shift();
             if(out == null && this.message_accum != "") {
                 out = this.message_accum;
                 this.message_accum = "";
@@ -67,11 +87,13 @@ function loadRetroArch(core, loaded_cb) {
         },
         noInitialRun: true,
         preRun: [
-            function(module) {
+            function(init_mod:object|undefined) {
+                if(init_mod === undefined) { throw "Must use modularized emscripten"; }
+                const module = <LibretroModule>(init_mod!);
                 function stdin() {
                     // Return ASCII code of character, or null if no input
                     while(module.message_queue.length > 0){
-                        let [msg,index] = module.message_queue[0];
+                        const [msg,index] = module.message_queue[0];
                         if(index >= msg.length) {
                             module.message_queue.shift();
                         } else {
@@ -82,7 +104,7 @@ function loadRetroArch(core, loaded_cb) {
                     }
                     return null;
                 }
-                function stdout(c) {
+                function stdout(c:number) {
                     if(c == null) {
                         // flush
                         if(module.message_accum != "") {
@@ -90,7 +112,7 @@ function loadRetroArch(core, loaded_cb) {
                             module.message_accum = "";
                         }
                     } else {
-                        let s = String.fromCharCode(c);
+                        const s = String.fromCharCode(c);
                         if(s == "\n") {
                             if(module.message_accum != "") {
                                 module.message_out.push(module.message_accum);
@@ -101,29 +123,26 @@ function loadRetroArch(core, loaded_cb) {
                         }
                     }
                 }
-                module.FS.init(stdin,stdout);
+                module.FS.init(stdin,stdout,null);
             },
         ],
         postRun: [],
-        printErr: function(text) {
+        printErr: function(text:string) {
             console.log(text);
-        },
+        }
     };
-    let core_factory;
-    function instantiate() {
+  function instantiate(core_factory:(mod:LibretroModuleDef) => Promise<LibretroModule>) {
         core_factory(module).then(loaded_cb).catch(err => {
-            console.err("Couldn't instantiate module", err);
+            console.error("Couldn't instantiate module", err);
             throw err;
         });
     }
     if (core in cores) {
-        core_factory = cores[core];
-        instantiate(core_factory);
+        instantiate(cores[core]);
     } else {
-        import(/* @vite-ignore */ '/cores/'+core+'_libretro.js').then(fac => {
-            core_factory = fac.default;
-            cores[core] = core_factory;
-            instantiate(core_factory);
-        });
+        import(/* @vite-ignore */ gisst_root+'/cores/'+core+'_libretro.js').then(fac => {
+            cores[core] = fac.default;
+            instantiate(cores[core]);
+        }).catch(err => { console.error("Couldn't instantiate module", err); throw err; });
     }
 }
