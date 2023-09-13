@@ -2,8 +2,38 @@ import {nested_replace} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
 
+let v86_loading = false;
+let v86_loaded = false;
+
+function load_v86(gisst_root:string) : Promise<void> {
+  return new Promise((resolve) => {
+    v86_loading = true;
+    const v86 = document.createElement("script");
+    v86.onload = () => {
+      v86_loading = false;
+      v86_loaded = true;
+      resolve();
+    };
+    v86.onerror = (err) => {
+      console.error("Couldn't load v86", err);
+      throw err;
+    };
+    v86.crossOrigin = "anonymous";
+    v86.src = gisst_root+"/v86/libv86.js";
+    document.head.appendChild(v86);
+  });
+}
 
 export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement) {
+  if(!v86_loaded) {
+    console.log("Loading v86");
+    await load_v86(gisst_root);
+  }
+  while(v86_loading) {
+    console.log("Another v86 instance is loading, please wait...");
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  console.log("v86 loaded");
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
   nested_replace(environment.environment_config, "$CONTENT", content_path);
@@ -32,15 +62,16 @@ export async function init(gisst_root:string, environment:Environment, start:Col
     replay_checkpoints_changed:(_added:StateInfo[], _removed:StateInfo[]) => {
     },
   });
-  container.classList.add("gisst-embed-loaded");
-  container.addEventListener(
+  const preview = container.getElementsByTagName("img")[0];
+  preview.classList.add("gisst-embed-loaded");
+  preview.addEventListener(
     "click",
     async function () {
       const canv = <HTMLCanvasElement>container.getElementsByTagName("canvas")[0]!;
-      container.classList.add("gisst-embed-hidden");
+      preview.classList.add("gisst-embed-hidden");
+      canv.classList.remove("gisst-embed-hidden");
       container.getElementsByTagName("div")[0]!.classList.remove("gisst-embed-hidden");
       v86.run(environment.environment_config, entry_state, movie);
-      canv.classList.remove("gisst-embed-hidden");
       return false;
     });
 }

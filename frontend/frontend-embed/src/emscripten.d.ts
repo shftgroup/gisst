@@ -47,8 +47,8 @@ interface EmscriptenModule {
     arguments: string[];
     environment: Emscripten.EnvironmentType;
     preInit: Array<{ (): void }>;
-    preRun: Array<{ (): void }>;
-    postRun: Array<{ (): void }>;
+    preRun: Array<{ (mod:object|undefined): void }>;
+    postRun: Array<{ (mod:object|undefined): void }>;
     onAbort: { (what: any): void };
     onRuntimeInitialized: { (): void };
     preinitializedWebGLContext: WebGLRenderingContext;

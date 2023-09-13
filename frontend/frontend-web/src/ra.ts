@@ -61,7 +61,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           } else {
             console.error("Invalid save category", category, file_name);
           }
-          const data = FS.readFile(path + "/" + file_name);
+          const data = RA.FS.readFile(path + "/" + file_name);
           saveAs(new Blob([data]), file_name);
         },
         "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
@@ -77,7 +77,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
               console.error("Invalid save category", category, file_name);
               reject("Invalid save category:" + category + ":" + file_name)
             }
-            const data = FS.readFile(path + "/" + file_name);
+            const data = RA.FS.readFile(path + "/" + file_name);
 
             db.uploadFile(new File([data], file_name),
                 (error:Error) => { reject(console.log("ran error callback", error.message))},
@@ -240,7 +240,7 @@ async function read_response(wait:boolean): Promise<string | null> {
     /* eslint-disable prefer-const */
     let interval:ReturnType<typeof setInterval>;
     const read_cb = () => {
-      const resp = retroArchRecv();
+      const resp = RA.retroArchRecv();
       if(resp != null) {
         clearInterval(interval!);
         resolve(resp);
@@ -252,7 +252,7 @@ async function read_response(wait:boolean): Promise<string | null> {
   if(wait) {
     outp = await waiting();
   } else {
-    outp = retroArchRecv();
+    outp = RA.retroArchRecv();
   }
   // console.log("stdout: ",outp);
   return outp;
@@ -262,7 +262,7 @@ async function send_message(msg:string) {
   let clearout = await read_response(false);
   while(clearout) { clearout = await read_response(false); }
   // console.log("send:",msg);
-  retroArchSend(msg+"\n");
+  RA.retroArchSend(msg+"\n");
 }
 // Called by timer from time to time
 async function update_checkpoints() {
@@ -295,7 +295,7 @@ function find_checkpoints_inner() {
   for(const state_file in seen_states) {
     if(state_file in seen_checkpoints) { continue; }
     console.log("Check ",state_file);
-    const replay = ra_util.replay_of_state(new Uint8Array(FS.readFile(state_dir+"/"+state_file)));
+    const replay = ra_util.replay_of_state(new Uint8Array(RA.FS.readFile(state_dir+"/"+state_file)));
     console.log("Replay info",replay,"vs",current_replay);
     if(replay && replay.id == current_replay.id) {
       seen_checkpoints[state_file] = seen_states[state_file];
@@ -320,7 +320,7 @@ const seen_states:Record<string,Uint8Array> = {};
 const seen_replays:Record<string,string> = {};
 let seen_checkpoints:Record<string,Uint8Array> = {};
 function checkChangedStatesAndSaves() {
-  const states = FS.readdir(state_dir);
+  const states = RA.FS.readdir(state_dir);
   for (const state of states) {
     if(state == "." || state == "..") { continue; }
     if(state.endsWith(".png") || state.includes(".state")) {
@@ -331,11 +331,11 @@ function checkChangedStatesAndSaves() {
         continue;
       }
       // If not yet seen and both files exist
-      if(!(file_exists(state_dir+"/"+png_file) && file_exists(state_dir+"/"+state_file))) {
+      if(!(file_exists(RA,state_dir+"/"+png_file) && file_exists(RA,state_dir+"/"+state_file))) {
         continue;
       }
       console.log("check state file",state);
-      const replay = ra_util.replay_of_state((FS.readFile(state_dir+"/"+state_file)));
+      const replay = ra_util.replay_of_state((RA.FS.readFile(state_dir+"/"+state_file)));
       let known_replay = false;
       if(replay) {
         for(const seen in seen_replays) {
@@ -344,7 +344,7 @@ function checkChangedStatesAndSaves() {
           }
         }
       }
-      const img_data = FS.readFile(state_dir+"/"+png_file);
+      const img_data = RA.FS.readFile(state_dir+"/"+png_file);
       const img_data_b64 = base64EncArr(img_data);
       // If this state belongs to the current replay...
       if(replay && current_replay && replay.id == current_replay.id) {
@@ -358,13 +358,13 @@ function checkChangedStatesAndSaves() {
       }
     } else if(state.includes(".replay")) {
       if(!(state in seen_replays)) {
-        const replay = ra_util.replay_info(new Uint8Array(FS.readFile(state_dir+"/"+state)));
+        const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(state_dir+"/"+state)));
         seen_replays[state] = replay.id;
         ui_state.newReplay(state);
       }
     }
   }
-  // const saves = FS.readdir(saves_dir);
+  // const saves = RA.FS.readdir(saves_dir);
   // for (const save of saves) {
   //   if(save == "." || save == "..") { continue; }
   //   if(!(save in seen_saves)) {
@@ -380,6 +380,6 @@ function clear_current_replay() {
   ui_state.clearCheckpoints();
 }
 
-function file_exists(path:string) : boolean {
-  return FS.analyzePath(path).exists
+function file_exists(RA:LibretroModule, path:string) : boolean {
+  return RA.FS.analyzePath(path).exists
 }
