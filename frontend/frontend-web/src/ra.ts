@@ -5,7 +5,7 @@ import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
 import * as tus from "tus-js-client";
-
+import {LibretroModule, loadRetroArch} from './libretro_adapter';
 const FS_CHECK_INTERVAL = 1000;
 
 const state_dir = "/home/web_user/retroarch/userdata/states";
@@ -107,7 +107,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       JSON.parse(document.getElementById("config")!.textContent!)
   );
 
-  loadRetroArch(core,
+  loadRetroArch("", core,
     function (module:LibretroModule) {
       RA = module;
       fetchfs.mkdirp(RA,"/home/web_user/content");
@@ -235,20 +235,20 @@ enum BSVFlags {
   EOF_EXIT           = (1 << 5)
 }
 
-async function read_response(wait:boolean): Promise<string | null> {
-  const waiting:() => Promise<string|null> = () => new Promise((resolve) => {
+async function read_response(wait:boolean): Promise<string | undefined> {
+  const waiting:() => Promise<string|undefined> = () => new Promise((resolve) => {
     /* eslint-disable prefer-const */
     let interval:ReturnType<typeof setInterval>;
     const read_cb = () => {
       const resp = RA.retroArchRecv();
-      if(resp != null) {
+      if(resp != undefined) {
         clearInterval(interval!);
         resolve(resp);
       }
     }
     interval = setInterval(read_cb, 100);
   });
-  let outp:string|null=null;
+  let outp:string|undefined=undefined;
   if(wait) {
     outp = await waiting();
   } else {
