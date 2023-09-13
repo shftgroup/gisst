@@ -1,95 +1,129 @@
-import * as fetchfs from './fetchfs';
-import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
+/* eslint-env browser */
 
+const cores = {};
 
-export function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement) {
-  const state_dir = "/home/web_user/retroarch/userdata/states";
-  const saves_dir = "/home/web_user/retroarch/userdata/saves";
-  const retro_args = ["-v"];
-  const content = manifest.find((o) => o.object_role=="content")!;
-  const content_file = content.file_filename!;
-  const dash_point = content_file.indexOf("-");
-  const content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
-  const entryState = start.type == "state";
-  const movie = start.type == "replay";
-  if (entryState) {
-    retro_args.push("-e");
-    retro_args.push("1");
-  }
-  if (movie) {
-    retro_args.push("-P");
-    retro_args.push(state_dir+"/"+content_base+".replay1");
-  }
-  retro_args.push("--appendconfig");
-  retro_args.push("/home/web_user/content/retroarch.cfg");
-  retro_args.push("/home/web_user/content/" + content_file);
-  console.log(retro_args);
-
-  return loadRetroArch(core,
-    function (module:LibretroModule) {
-      fetchfs.mkdirp(module,"/home/web_user/content");
-
-      const proms = [];
-
-      proms.push(fetchfs.fetchZip(module,gisst_root+"/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
-
-      for(const file of manifest) {
-        const file_prom = fetchfs.fetchFile(module,gisst_root+"/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
-        proms.push(file_prom);
-      }
-      if (entryState) {
-        // Cast: This one is definitely a statestart because the type is state
-        const data = (start as StateStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
-        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state",false));
-      }
-      if (movie) {
-        // Cast: This one is definitely a replaystart because the type is state
-        const data = (start as ReplayStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
-        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1",false));
-      }
-      proms.push(fetchfs.registerFetchFS(module,{"retroarch_web_base.cfg":null}, gisst_root+"/assets", "/home/web_user/retroarch/", false));
-      fetchfs.mkdirp(module,saves_dir);
-      fetchfs.mkdirp(module,state_dir);
-      Promise.all(proms).then(function () {
-        copyFile(module,"/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
-        // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
-        if (entryState) {
-          copyFile(module,"/home/web_user/content/entry_state",
-            state_dir + "/" + content_base + ".state1.entry");
-          copyFile(module,"/home/web_user/content/entry_state",
-            state_dir + "/" + content_base + ".state1");
+function loadRetroArch(core, loaded_cb) {
+    /**
+     * Attempt to disable some default browser keys.
+     */
+    var keys = {
+        9: "tab",
+        13: "enter",
+        16: "shift",
+        18: "alt",
+        27: "esc",
+        33: "rePag",
+        34: "avPag",
+        35: "end",
+        36: "home",
+        37: "left",
+        38: "up",
+        39: "right",
+        40: "down",
+        112: "F1",
+        113: "F2",
+        114: "F3",
+        115: "F4",
+        116: "F5",
+        117: "F6",
+        118: "F7",
+        119: "F8",
+        120: "F9",
+        121: "F10",
+        122: "F11",
+        123: "F12"
+    };
+    window.addEventListener('keydown', function (e) {
+        if (keys[e.which]) {
+            e.preventDefault();
         }
-        if (movie) {
-          console.log("Put movie in",state_dir + "/" + content_base + ".replay1");
-          copyFile(module,"/home/web_user/content/replay.replay1", state_dir + "/" + content_base + ".replay1");
-        } else {
-          const f = module.FS.open(state_dir+"/"+content_base+".replay1", 'w');
-          const te = new TextEncoder();
-          module.FS.write(f, te.encode("\0"), 0, 1);
-          module.FS.close(f);
-        }
-        retroReady(module, retro_args, container);
-      });
     });
-}
+    let module = {
+        startRetroArch: function(canvas, retro_args, initialized_cb) {
+            this['canvas'] = canvas;
+            this['arguments'] = retro_args;
+            this['callMain'](this['arguments']);
+            this['resumeMainLoop']();
+            initialized_cb();
+            canvas.focus();
+        },
 
-function copyFile(module:LibretroModule, from: string, to: string): void {
-  const buf = module.FS.readFile(from);
-  module.FS.writeFile(to, buf);
-}
-
-function retroReady(module:LibretroModule, retro_args:string[], preview:HTMLDivElement): void {
-  preview.classList.add("gisst-embed-loaded");
-  preview.addEventListener(
-    "click",
-    function () {
-      const canv = <HTMLCanvasElement>preview.getElementsByTagName("canvas")[0]!;
-      preview.classList.add("gisst-embed-hidden");
-      module.startRetroArch(canv, retro_args, function () {
-        canv.classList.remove("gisst-embed-hidden");
-      });
-      return false;
-    });
+        encoder: new TextEncoder(),
+        message_queue:[],
+        message_out:[],
+        message_accum:"",
+          
+        retroArchSend: function(msg) {
+            let bytes = this.encoder.encode(msg+"\n");
+            this.message_queue.push([bytes,0]);
+        },
+        retroArchRecv: function() {
+            let out = this.message_out.shift();
+            if(out == null && this.message_accum != "") {
+                out = this.message_accum;
+                this.message_accum = "";
+            }
+            return out;
+        },
+        noInitialRun: true,
+        preRun: [
+            function(module) {
+                function stdin() {
+                    // Return ASCII code of character, or null if no input
+                    while(module.message_queue.length > 0){
+                        let [msg,index] = module.message_queue[0];
+                        if(index >= msg.length) {
+                            module.message_queue.shift();
+                        } else {
+                            module.message_queue[0][1] = index+1;
+                            // assumption: msg is a uint8array
+                            return msg[index];
+                        }
+                    }
+                    return null;
+                }
+                function stdout(c) {
+                    if(c == null) {
+                        // flush
+                        if(module.message_accum != "") {
+                            module.message_out.push(module.message_accum);
+                            module.message_accum = "";
+                        }
+                    } else {
+                        let s = String.fromCharCode(c);
+                        if(s == "\n") {
+                            if(module.message_accum != "") {
+                                module.message_out.push(module.message_accum);
+                                module.message_accum = "";
+                            }
+                        } else {
+                            module.message_accum = module.message_accum+s;
+                        }
+                    }
+                }
+                module.FS.init(stdin,stdout);
+            },
+        ],
+        postRun: [],
+        printErr: function(text) {
+            console.log(text);
+        },
+    };
+    let core_factory;
+    function instantiate() {
+        core_factory(module).then(loaded_cb).catch(err => {
+            console.err("Couldn't instantiate module", err);
+            throw err;
+        });
+    }
+    if (core in cores) {
+        core_factory = cores[core];
+        instantiate(core_factory);
+    } else {
+        import(/* @vite-ignore */ '/cores/'+core+'_libretro.js').then(fac => {
+            core_factory = fac.default;
+            cores[core] = core_factory;
+            instantiate(core_factory);
+        });
+    }
 }

@@ -1,6 +1,6 @@
 import * as fetchfs from './fetchfs';
 import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
-
+import {loadRetroArch,LibretroModule} from './libretro_adapter';
 
 export function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement) {
   const state_dir = "/home/web_user/retroarch/userdata/states";
@@ -25,7 +25,7 @@ export function init(gisst_root:string, core:string, start:ColdStart | StateStar
   retro_args.push("/home/web_user/content/" + content_file);
   console.log(retro_args);
 
-  return loadRetroArch(core,
+  return loadRetroArch(gisst_root, core,
     function (module:LibretroModule) {
       fetchfs.mkdirp(module,"/home/web_user/content");
 
@@ -80,12 +80,13 @@ function copyFile(module:LibretroModule, from: string, to: string): void {
   module.FS.writeFile(to, buf);
 }
 
-function retroReady(module:LibretroModule, retro_args:string[], preview:HTMLDivElement): void {
+function retroReady(module:LibretroModule, retro_args:string[], container:HTMLDivElement): void {
+  const preview = container.getElementsByTagName("img")[0];
   preview.classList.add("gisst-embed-loaded");
   preview.addEventListener(
     "click",
     function () {
-      const canv = <HTMLCanvasElement>preview.getElementsByTagName("canvas")[0]!;
+      const canv = <HTMLCanvasElement>container.getElementsByTagName("canvas")[0]!;
       preview.classList.add("gisst-embed-hidden");
       module.startRetroArch(canv, retro_args, function () {
         canv.classList.remove("gisst-embed-hidden");

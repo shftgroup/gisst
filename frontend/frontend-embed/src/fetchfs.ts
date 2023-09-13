@@ -1,5 +1,6 @@
 import {get, set, delMany} from 'idb-keyval';
 import * as zip from "@zip.js/zip.js";
+import {LibretroModule} from './libretro_adapter';
 
 type FileContents = null|Index;
 

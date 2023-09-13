@@ -1,0 +1,84 @@
+.gisst-embed-webplayer-container {
+  background-color: black;
+  line-height: 0;
+}
+
+.gisst-embed-hidden {
+    display:none;
+}
+
+.gisst-embed-webplayer-preview {
+    margin: 0 auto;
+    cursor: wait;
+    opacity: 0.2;
+    transition: all 0.8s;
+    -webkit-animation: gisst-loading 0.8s ease-in-out infinite alternate;
+    -moz-animation: gisst-loading 0.8s ease-in-out infinite alternate;
+    animation: gisst-loading 0.8s ease-in-out infinite alternate;
+}
+
+.gisst-embed-webplayer-preview.gisst-embed-loaded {
+  cursor: pointer;
+  opacity: 1;
+  -webkit-animation: gisst-loaded 0.8s ease-in-out;
+  -moz-animation: gisst-loaded 0.8s ease-in-out;
+  animation: gisst-loaded 0.8s ease-in-out;
+}
+
+@keyframes gisst-loaded {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@-moz-keyframes gisst-loaded {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@-webkit-keyframes gisst-loaded {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes gisst-loading{
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 0.35;
+  }
+}
+@-moz-keyframes gisst-loading{
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 0.35;
+  }
+}
+@-webkit-keyframes gisst-loading {
+  from {
+    opacity: 0.2;
+  }
+  to {
+    opacity: 0.35;
+  }
+}
+canvas.gisst-embed-webplayer {
+  border: none;
+  outline: none;
+}
+.gisst-embed-webplayer-textmode {
+  white-space: pre;
+  font: 14px monospace;
+  line-height: 14px;
+}
