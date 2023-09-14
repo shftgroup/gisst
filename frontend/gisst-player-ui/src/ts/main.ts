@@ -78,6 +78,11 @@ export class UI {
       const ui_headless_grid = <HTMLDivElement>elementFromTemplates(UITemplateConst.GRID_CONTAINER_HEADLESS);
       this.ui_root.appendChild(ui_headless_grid);
     } else {
+      const gisst_header = <HTMLElement>elementFromTemplates(UITemplateConst.GISST_PAGE_DARK_HEADER);
+      const current_work = <HTMLSpanElement>document.createElement("span");
+      current_work.innerHTML = "Playing with " + this.current_config.work.work_name;
+      document.body.prepend(gisst_header);
+
       const ui_embedded_grid = <HTMLDivElement>elementFromTemplates(UITemplateConst.GRID_CONTAINER_EMBEDDED);
 
       // Attach emulator div to ui root

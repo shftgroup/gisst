@@ -1,5 +1,5 @@
 use crate::error::GISSTError;
-use gisst::models::{DBModel, Environment, Instance, Save};
+use gisst::models::{DBModel, Environment, Instance, Save, Work};
 use std::collections::HashMap;
 use tower::ServiceBuilder;
 
@@ -103,6 +103,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         )
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432));
+
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
@@ -246,6 +247,7 @@ impl StateLink {
 #[derive(Deserialize, Serialize, Debug)]
 struct PlayerTemplateInfo {
     instance: Instance,
+    work: Work,
     environment: Environment,
     save: Option<Save>,
     start: PlayerStartTemplateInfo,
@@ -279,6 +281,9 @@ async fn get_player(
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
         .ok_or(GISSTError::Generic)?;
+    let work = Work::get_by_id(&mut conn, instance.work_id)
+        .await?
+        .ok_or(GISSTError::Generic)?;
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => PlayerStartTemplateInfo::State(
             StateLink::get_by_id(&mut conn, id)
@@ -307,6 +312,7 @@ async fn get_player(
                 player_params => PlayerTemplateInfo {
                     environment,
                     instance,
+                    work,
                     save: None,
                     start,
                     manifest
@@ -318,6 +324,7 @@ async fn get_player(
             axum::Json(PlayerTemplateInfo {
                 environment,
                 instance,
+                work,
                 save: None,
                 start,
                 manifest,
