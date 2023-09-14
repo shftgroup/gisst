@@ -88,7 +88,9 @@ export async function init(gisst_root:string, environment:Environment, start:Col
 
 function activate(v86:EmbedV86) {
   for(const emu of emulators) {
-    emu.emulator.keyboard_set_status(emu === v86);
+    if(emu.emulator) {
+      emu.emulator.keyboard_set_status(emu === v86);
+    }
   }
 }
 
