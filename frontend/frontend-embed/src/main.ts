@@ -6,6 +6,7 @@ import imgUrl from './canvas.png';
 export async function embed(gisst:string, container:HTMLDivElement) {
   container.classList.add("gisst-embed-webplayer-container");
   const canvas = document.createElement("canvas");
+  canvas.tabIndex = 1; // make canvas focusable
   canvas.classList.add("gisst-embed-webplayer");
   canvas.classList.add("gisst-embed-hidden");
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());

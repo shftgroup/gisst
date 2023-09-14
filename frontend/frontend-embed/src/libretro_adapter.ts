@@ -60,6 +60,8 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
     const module:LibretroModuleDef = {
         startRetroArch: function(canvas:HTMLCanvasElement, retro_args:string[], initialized_cb:() => void) {
             const me = <LibretroModule>this;
+            if(!canvas.tabIndex) { canvas.tabIndex = 1; }
+            canvas.addEventListener("click", () => canvas.focus());
             me.canvas = canvas;
             me.arguments = retro_args;
             me.callMain(me.arguments);
