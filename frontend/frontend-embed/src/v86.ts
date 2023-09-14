@@ -1,9 +1,10 @@
-import {nested_replace} from './util';
+import {nested_replace,StringIndexable} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
 
 let v86_loading = false;
 let v86_loaded = false;
+const emulators:EmbedV86[] = [];
 
 function load_v86(gisst_root:string) : Promise<void> {
   return new Promise((resolve) => {
@@ -24,7 +25,7 @@ function load_v86(gisst_root:string) : Promise<void> {
   });
 }
 
-export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement) {
+export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement):Promise<EmbedV86> {
   if(!v86_loaded) {
     console.log("Loading v86");
     await load_v86(gisst_root);
@@ -36,7 +37,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   console.log("v86 loaded");
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
-  nested_replace(environment.environment_config, "$CONTENT", content_path);
+  nested_replace(environment.environment_config as StringIndexable, "$CONTENT", content_path);
   let entry_state:string|null = null;
   if (start.type == "state") {
     const data = (start as StateStart).data;
@@ -62,6 +63,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
     replay_checkpoints_changed:(_added:StateInfo[], _removed:StateInfo[]) => {
     },
   });
+  emulators.push(v86);
   const preview = container.getElementsByTagName("img")[0];
   preview.classList.add("gisst-embed-loaded");
   preview.addEventListener(
@@ -71,7 +73,26 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       preview.classList.add("gisst-embed-hidden");
       canv.classList.remove("gisst-embed-hidden");
       container.getElementsByTagName("div")[0]!.classList.remove("gisst-embed-hidden");
-      v86.run(environment.environment_config, entry_state, movie);
+      await v86.run(environment.environment_config, entry_state, movie);
+      activate(v86);
       return false;
     });
+  container.addEventListener(
+    "click",
+    function () {
+      activate(v86);
+    }
+  );
+  return v86;
+}
+
+function activate(v86:EmbedV86) {
+  for(const emu of emulators) {
+    emu.emulator.keyboard_set_status(emu === v86);
+  }
+}
+
+export async function destroy(v86:EmbedV86) {
+  emulators.splice(emulators.indexOf(v86),1);
+  v86.clear();
 }

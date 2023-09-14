@@ -38,12 +38,16 @@ let ui_state:UI;
 let active_core:string|null = null;
 let v86:EmbedV86;
 
-function nested_replace(obj:any, target:string, replacement:string) {
-  for(let key in obj) {
-    if(obj[key] == target) {
+interface StringIndexable {
+  [s:string] : StringIndexable | string;
+}
+
+function nested_replace(obj:StringIndexable, target:string, replacement:string) {
+  for(const key in obj) {
+    if(typeof(obj[key]) == "object") {
+      nested_replace(obj[key] as StringIndexable, target, replacement);
+    } else if(obj[key] == target) {
       obj[key] = replacement;
-    } else if(typeof(obj[key]) == "object") {
-      nested_replace(obj[key], target, replacement);
     }
   }
 }
@@ -61,34 +65,34 @@ function init_v86(host:string, environment:Environment, start:ColdStart | StateS
       ui_state.clearCheckpoints();
     },
     states_changed:(added:StateInfo[], removed:StateInfo[]) => {
-      for(let si of removed) {
+      for(const si of removed) {
         ui_state.removeState(si.name);
       }
-      for(let si of added) {
+      for(const si of added) {
         ui_state.newState(si.name,si.thumbnail);
       }
     },
     replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
-      for(let si of removed) {
+      for(const si of removed) {
         ui_state.removeCheckpoint(si.name);
       }
-      for(let si of added) {
+      for(const si of added) {
         ui_state.newCheckpoint(si.name,si.thumbnail);
       }
     },
   });
 
-  let content = manifest.find((o) => o.object_role=="content")!;
-  let content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
-  nested_replace(environment.environment_config, "$CONTENT", content_path);
+  const content = manifest.find((o) => o.object_role=="content")!;
+  const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
+  nested_replace(environment.environment_config as StringIndexable, "$CONTENT", content_path);
   let entry_state:string|null = null;
   if (start.type == "state") {
-    let data = (start as StateStart).data;
+    const data = (start as StateStart).data;
     entry_state = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
   }
   let movie:string|null = null;
   if (start.type == "replay") {
-    let data = (start as ReplayStart).data;
+    const data = (start as ReplayStart).data;
     movie = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
   }
   v86.run(environment.environment_config, entry_state, movie);
@@ -114,7 +118,7 @@ function checkpoints_updated(evt:IpcRendererEvent, info:ReplayCheckpointInfo) {
   if(info.delete_old) {
     ui_state.clearCheckpoints();
   }
-  for(let check of info.added) {
+  for(const check of info.added) {
     ui_state.newCheckpoint(check.file, check.thumbnail);
   }
 }
@@ -122,12 +126,12 @@ api.on_replay_checkpoints_changed(checkpoints_updated);
 
 async function run(host:string, content:string, entryState:string, movie:string) {
   ui_state.clear();
-  let data_resp = await fetch(host+"/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
+  const data_resp = await fetch(host+"/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
   console.log(data_resp);
-  let config = await data_resp.json();
+  const config = await data_resp.json();
   ui_state.setConfig(config);
   console.log(config);
-  let core_kind = config.environment.environment_framework;
+  const core_kind = config.environment.environment_framework;
   if(v86) {
     v86.clear();
   }
@@ -152,26 +156,24 @@ async function run_url(evt:IpcRendererEvent, url:string) {
   (<HTMLInputElement>document.getElementById("boot-replay"))!.value = "";
   // gisst://host/UUID?state=XXXX or //host/UUID?replay=XXXX or //UUID
   console.log("RUN URL", url);
-  let split = url.split("/");
+  const split = url.split("/");
   console.log(split);
-  let host = "https://"+split[2];
+  const host = "https://"+split[2];
   if(split[3] == "play") {
     split.splice(3,1);
   }
   (<HTMLInputElement>document.getElementById("boot-host"))!.value = host;
-  let which = split[3];
-  let qmark = which.indexOf("?");
-  let content = which.slice(0, qmark > 0 ? qmark : which.length);
+  const which = split[3];
+  const qmark = which.indexOf("?");
+  const content = which.slice(0, qmark > 0 ? qmark : which.length);
   (<HTMLInputElement>document.getElementById("boot-instance"))!.value = content;
-  let state = null;
-  let replay = null;
   if(qmark > 0) {
-    let eq = which.indexOf("=", qmark);
+    const eq = which.indexOf("=", qmark);
     if(eq < 0) {
       throw "Invalid URL query parameter/value";
     }
-    let state_or_replay = which.slice(qmark+1, eq);
-    let state_or_replay_id = which.slice(eq+1);
+    const state_or_replay = which.slice(qmark+1, eq);
+    const state_or_replay_id = which.slice(eq+1);
     if(state_or_replay == "state") {
       (<HTMLInputElement>document.getElementById("boot-state"))!.value = state_or_replay_id;
       return run(host, content, state_or_replay_id, null);
@@ -189,20 +191,20 @@ async function run_url(evt:IpcRendererEvent, url:string) {
 api.on_handle_url(run_url);
 
 function bootCold() {
-  let host = <HTMLInputElement>document.getElementById("boot-host")!;
-  let instance = <HTMLInputElement>document.getElementById("boot-instance")!;
+  const host = <HTMLInputElement>document.getElementById("boot-host")!;
+  const instance = <HTMLInputElement>document.getElementById("boot-instance")!;
   run(host.value, instance.value, null, null);
 }
 function bootState() {
-  let host = <HTMLInputElement>document.getElementById("boot-host")!;
-  let instance = <HTMLInputElement>document.getElementById("boot-instance")!;
-  let state = <HTMLInputElement>document.getElementById("boot-state")!;
+  const host = <HTMLInputElement>document.getElementById("boot-host")!;
+  const instance = <HTMLInputElement>document.getElementById("boot-instance")!;
+  const state = <HTMLInputElement>document.getElementById("boot-state")!;
   run(host.value, instance.value, state.value, null);
 }
 function bootReplay() {
-  let host = <HTMLInputElement>document.getElementById("boot-host")!;
-  let instance = <HTMLInputElement>document.getElementById("boot-instance")!;
-  let replay = <HTMLInputElement>document.getElementById("boot-replay")!;
+  const host = <HTMLInputElement>document.getElementById("boot-host")!;
+  const instance = <HTMLInputElement>document.getElementById("boot-instance")!;
+  const replay = <HTMLInputElement>document.getElementById("boot-replay")!;
   run(host.value, instance.value, null, replay.value);
 }
 

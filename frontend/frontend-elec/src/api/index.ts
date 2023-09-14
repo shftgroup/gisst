@@ -1,5 +1,5 @@
 import { ipcRenderer, IpcRendererEvent } from 'electron';
-import {StartStateData, StateStart, StartReplayData, ReplayStart, ColdStart, ObjectLink, SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo} from '../types';
+import {StateStart, ReplayStart, ColdStart, ObjectLink, SavefileInfo, StatefileInfo, ReplayfileInfo, ReplayCheckpointInfo} from '../types';
 
 export async function run_retroarch(host:string, core:string, start:ColdStart|StateStart|ReplayStart, manifest:ObjectLink[]) {
   ipcRenderer.send('gisst:run_retroarch',host,core,start,manifest);
