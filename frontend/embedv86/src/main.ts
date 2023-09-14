@@ -158,7 +158,7 @@ export class EmbedV86 {
       }
     }
   }
-  async run(content:ConfigSettings|string, entryState:string|null, movie:string|null) {
+  async run(content:ConfigSettings|string, entryState:string|null, movie:string|null):Promise<void> {
     this.clear();
     const content_folder = this.config.content_root;
     const config:V86StarterConfig = {
@@ -206,16 +206,19 @@ export class EmbedV86 {
     this.emulator.emulator_bus.register("mouse-absolute", (pos:[number,number,number,number]) => this.replay_log(Evt.MouseAbsolute,pos));
     this.emulator.emulator_bus.register("mouse-wheel", (delta:[number,number]) => this.replay_log(Evt.MouseWheel, delta));
     this.emulator.bus.register("emulator-ticked", () => this.replay_tick());
-    // first time it runs, play_replay_slot 0 if movie is used or else start recording
-    const start_initial_replay = () => {
-      this.emulator!.remove_listener("emulator-started", start_initial_replay);
-      if(movie) {
-        this.play_replay_slot(0);
-      } else if(this.config.record_from_start) {
-        this.record_replay();
-      }
-    };
-    this.emulator.add_listener("emulator-started", start_initial_replay);
+    return new Promise(resolve => {
+      // first time it runs, play_replay_slot 0 if movie is used or else start recording
+      const start_initial_replay = () => {
+        this.emulator!.remove_listener("emulator-started", start_initial_replay);
+        if(movie) {
+          this.play_replay_slot(0);
+        } else if(this.config.record_from_start) {
+          this.record_replay();
+        }
+        resolve();
+      };
+      this.emulator!.add_listener("emulator-started", start_initial_replay);
+    });
   }
 }
 function nonnull(obj:number|object|null):asserts obj {
