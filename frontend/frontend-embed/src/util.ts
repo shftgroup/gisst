@@ -58,13 +58,16 @@ export function base64EncArr(aBytes:Uint8Array) {
   );
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-export function nested_replace(obj:any, target:string, replacement:string) {
+export interface StringIndexable {
+  [s:string] : StringIndexable | string;
+}
+
+export function nested_replace(obj:StringIndexable, target:string, replacement:string) {
   for(const key in obj) {
-    if(obj[key] == target) {
+    if(typeof(obj[key]) == "object") {
+      nested_replace(obj[key] as StringIndexable, target, replacement);
+    } else if(obj[key] == target) {
       obj[key] = replacement;
-    } else if(typeof(obj[key]) == "object") {
-      nested_replace(obj[key], target, replacement);
     }
   }
 }
