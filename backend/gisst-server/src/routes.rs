@@ -404,7 +404,7 @@ async fn get_all_for_instance(
         }
 
         let full_instance = FullInstance {
-            work: Work::get_by_id(&mut conn, instance.work_id.clone()).await?.unwrap(),
+            work: Work::get_by_id(&mut conn, instance.work_id).await?.unwrap(),
             info: instance,
             states: flattened_states,
             replays: flattened_replays,
