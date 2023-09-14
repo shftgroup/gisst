@@ -5,6 +5,7 @@ export class UITemplateConst {
     public static readonly EMULATOR_SINGLE_DIV:string = "emulator-single-div";
     public static readonly EMULATOR_CONTROL_BAR:string = "emulator_control_bar_e";
     public static readonly EMULATOR_OBJECTS_TABS_EMBEDDED:string = "emulator_object_tabs_e";
+    static readonly GISST_PAGE_DARK_HEADER:string = "gisst_dark_header";
 }
 
 export class UIIDConst {

@@ -3,24 +3,73 @@
 <head>
     <meta charset="utf-8" />
     <title>GISST Instances</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 </head>
 <body>
-<h1>Instances</h1>
-<table>
-    <tr>
-        <th>Instance ID</th>
-        <th>Environment ID</th>
-        <th>Work ID</th>
-        <th>Created On</th>
-    </tr>
-    {% for instance in instances %}
-        <tr>
-            <td><a href="/instances/{{ instance.instance_id }}/all">{{ instance.instance_id }}</a></td>
-            <td>{{ instance.environment_id}}</td>
-            <td>{{ instance.work_id }}</td>
-            <td>{{ instance.created_on }}</td>
-        </tr>
-    {% endfor %}
-</table>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+<header class="p-2 bg-dark text-white">
+    <div class="container">
+        <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+            <a class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none" href="/instances">
+                <span class="fs-4">GISST</span>
+            </a>
+        </div>
+    </div>
+</header>
+<div class="container">
+   <div class="row">
+       <h1>Instances</h1>
+       <input id="instanceSearch" type="search" onkeyup="searchInstances()" class="form-control" placeholder="Search..." aria-label="Search">
+   </div>
+    <div class="row">
+        <table id="instanceTable" class="table">
+            <tr>
+                <th scope="col">Work</th>
+                <th scope="col">Version</th>
+                <th scope="col">Platform</th>
+                <th scope="col">Instance Link</th>
+                <th scope="col">Direct Boot</th>
+            </tr>
+            {% for instance_entry in instances %}
+                <tr>
+                    <td>{{ instance_entry.work.work_name}}</td>
+                    <td>{{ instance_entry.work.work_version}}</td>
+                    <td>{{ instance_entry.work.work_platform}}</td>
+                    <td><a href="/instances/{{ instance_entry.instance.instance_id }}/all">Link</a></td>
+                    <td>
+                        <a class="btn btn-primary" href="/play/{{ instance_entry.instance.instance_id }}" target="_blank">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
+                                <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
+                            </svg>
+                            Boot
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+<script>
+    function searchInstances() {
+        let search = document.getElementById("instanceSearch").value.toUpperCase();
+        let tableRecord = document.getElementById("instanceTable");
+        let tr = tableRecord.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            let displayStyle = "none";
+            let td = tr[i].getElementsByTagName("td");
+            for (let j = 0; j < td.length - 1; ++j) {
+                if (td[j]) {
+                    let textvalue = td[j].textContent || td[j].innerText;
+                    if (textvalue.toUpperCase().indexOf(search) > -1) {
+                        displayStyle = "";
+                        break;
+                    }
+                }
+            }
+            tr[i].style.display = displayStyle;
+        }
+    }
+</script>
 </body>
 </html>
