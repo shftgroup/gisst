@@ -5,7 +5,7 @@ import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
 import * as tus from "tus-js-client";
-
+import {LibretroModule, loadRetroArch} from './libretro_adapter';
 const FS_CHECK_INTERVAL = 1000;
 
 const state_dir = "/home/web_user/retroarch/userdata/states";
@@ -13,6 +13,7 @@ const saves_dir = "/home/web_user/retroarch/userdata/saves";
 
 const retro_args = ["-v"];
 
+let RA:LibretroModule;
 let ui_state:UI;
 let db:GISSTDBConnector;
 
@@ -60,7 +61,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           } else {
             console.error("Invalid save category", category, file_name);
           }
-          const data = FS.readFile(path + "/" + file_name);
+          const data = RA.FS.readFile(path + "/" + file_name);
           saveAs(new Blob([data]), file_name);
         },
         "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
@@ -76,7 +77,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
               console.error("Invalid save category", category, file_name);
               reject("Invalid save category:" + category + ":" + file_name)
             }
-            const data = FS.readFile(path + "/" + file_name);
+            const data = RA.FS.readFile(path + "/" + file_name);
 
             db.uploadFile(new File([data], file_name),
                 (error:Error) => { reject(console.log("ran error callback", error.message))},
@@ -106,70 +107,71 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       JSON.parse(document.getElementById("config")!.textContent!)
   );
 
-  loadRetroArch(core,
-    function () {
-      fetchfs.mkdirp("/home/web_user/content");
+  loadRetroArch("", core,
+    function (module:LibretroModule) {
+      RA = module;
+      fetchfs.mkdirp(RA,"/home/web_user/content");
 
       const proms = [];
 
-      proms.push(fetchfs.fetchZip("/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
+      proms.push(fetchfs.fetchZip(RA,"/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
 
       for(const file of manifest) {
-        const file_prom = fetchfs.fetchFile("/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
+        const file_prom = fetchfs.fetchFile(RA,"/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
         proms.push(file_prom);
       }
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
         const data = (start as StateStart).data;
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
-        proms.push(fetchfs.fetchFile("/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state",false));
+        proms.push(fetchfs.fetchFile(RA,"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state",false));
       }
       if (movie) {
         // Cast: This one is definitely a replaystart because the type is state
         const data = (start as ReplayStart).data;
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
-        proms.push(fetchfs.fetchFile("/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1",false));
+        proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1",false));
       }
-      proms.push(fetchfs.registerFetchFS({"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/", false));
-      fetchfs.mkdirp(saves_dir);
-      fetchfs.mkdirp(state_dir);
+      proms.push(fetchfs.registerFetchFS(RA, {"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/", false));
+      fetchfs.mkdirp(RA, saves_dir);
+      fetchfs.mkdirp(RA, state_dir);
       Promise.all(proms).then(function () {
-        copyFile("/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
+        copyFile(RA, "/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
         // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
         if (entryState) {
-          copyFile("/home/web_user/content/entry_state",
+          copyFile(RA, "/home/web_user/content/entry_state",
             state_dir + "/" + content_base + ".state1.entry");
-          copyFile("/home/web_user/content/entry_state",
+          copyFile(RA, "/home/web_user/content/entry_state",
             state_dir + "/" + content_base + ".state1");
-          if(file_exists("/home/web_user/content/entry_state.png")) {
-            copyFile("/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
+          if(file_exists(RA, "/home/web_user/content/entry_state.png")) {
+            copyFile(RA, "/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
           } else {
-            fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
+            fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => RA.FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
           }
         }
         if (movie) {
           console.log("Put movie in",state_dir + "/" + content_base + ".replay1");
-          copyFile("/home/web_user/content/replay.replay1",
+          copyFile(RA, "/home/web_user/content/replay.replay1",
             state_dir + "/" + content_base + ".replay1");
-          // if(file_exists("/home/web_user/content/entry_state.png")) {
-          //   copyFile("/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
+          // if(file_exists(RA, "/home/web_user/content/entry_state.png")) {
+          //   copyFile(RA, "/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
           // } else {
-          //   fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
+          //   fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => RA.FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
           // }
         } else {
-          const f = FS.open(state_dir+"/"+content_base+".replay1", 'w');
+          const f = RA.FS.open(state_dir+"/"+content_base+".replay1", 'w');
           const te = new TextEncoder();
-          FS.write(f, te.encode("\0"), 0, 1);
-          FS.close(f);
+          RA.FS.write(f, te.encode("\0"), 0, 1);
+          RA.FS.close(f);
         }
         retroReady();
       });
     });
 }
 
-function copyFile(from: string, to: string): void {
-  const buf = FS.readFile(from);
-  FS.writeFile(to, buf);
+function copyFile(module:LibretroModule, from: string, to: string): void {
+  const buf = module.FS.readFile(from);
+  module.FS.writeFile(to, buf);
 }
 
 // TODO add clear button to call ui_state.clear()
@@ -183,8 +185,7 @@ function retroReady(): void {
     function () {
       const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
       prev.classList.add("hidden");
-      startRetroArch(canv, retro_args, function () {
-        const canv = document.getElementById("canvas")!;
+      RA.startRetroArch(canv, retro_args, function () {
         setInterval(checkChangedStatesAndSaves, FS_CHECK_INTERVAL);
         canv.classList.remove("hidden");
       });
@@ -234,24 +235,24 @@ enum BSVFlags {
   EOF_EXIT           = (1 << 5)
 }
 
-async function read_response(wait:boolean): Promise<string | null> {
-  const waiting:() => Promise<string|null> = () => new Promise((resolve) => {
+async function read_response(wait:boolean): Promise<string | undefined> {
+  const waiting:() => Promise<string|undefined> = () => new Promise((resolve) => {
     /* eslint-disable prefer-const */
     let interval:ReturnType<typeof setInterval>;
     const read_cb = () => {
-      const resp = retroArchRecv();
-      if(resp != null) {
+      const resp = RA.retroArchRecv();
+      if(resp != undefined) {
         clearInterval(interval!);
         resolve(resp);
       }
     }
     interval = setInterval(read_cb, 100);
   });
-  let outp:string|null=null;
+  let outp:string|undefined=undefined;
   if(wait) {
     outp = await waiting();
   } else {
-    outp = retroArchRecv();
+    outp = RA.retroArchRecv();
   }
   // console.log("stdout: ",outp);
   return outp;
@@ -261,7 +262,7 @@ async function send_message(msg:string) {
   let clearout = await read_response(false);
   while(clearout) { clearout = await read_response(false); }
   // console.log("send:",msg);
-  retroArchSend(msg+"\n");
+  RA.retroArchSend(msg+"\n");
 }
 // Called by timer from time to time
 async function update_checkpoints() {
@@ -294,7 +295,7 @@ function find_checkpoints_inner() {
   for(const state_file in seen_states) {
     if(state_file in seen_checkpoints) { continue; }
     console.log("Check ",state_file);
-    const replay = ra_util.replay_of_state(new Uint8Array(FS.readFile(state_dir+"/"+state_file)));
+    const replay = ra_util.replay_of_state(new Uint8Array(RA.FS.readFile(state_dir+"/"+state_file)));
     console.log("Replay info",replay,"vs",current_replay);
     if(replay && replay.id == current_replay.id) {
       seen_checkpoints[state_file] = seen_states[state_file];
@@ -319,7 +320,7 @@ const seen_states:Record<string,Uint8Array> = {};
 const seen_replays:Record<string,string> = {};
 let seen_checkpoints:Record<string,Uint8Array> = {};
 function checkChangedStatesAndSaves() {
-  const states = FS.readdir(state_dir);
+  const states = RA.FS.readdir(state_dir);
   for (const state of states) {
     if(state == "." || state == "..") { continue; }
     if(state.endsWith(".png") || state.includes(".state")) {
@@ -330,11 +331,11 @@ function checkChangedStatesAndSaves() {
         continue;
       }
       // If not yet seen and both files exist
-      if(!(file_exists(state_dir+"/"+png_file) && file_exists(state_dir+"/"+state_file))) {
+      if(!(file_exists(RA,state_dir+"/"+png_file) && file_exists(RA,state_dir+"/"+state_file))) {
         continue;
       }
       console.log("check state file",state);
-      const replay = ra_util.replay_of_state((FS.readFile(state_dir+"/"+state_file)));
+      const replay = ra_util.replay_of_state((RA.FS.readFile(state_dir+"/"+state_file)));
       let known_replay = false;
       if(replay) {
         for(const seen in seen_replays) {
@@ -343,7 +344,7 @@ function checkChangedStatesAndSaves() {
           }
         }
       }
-      const img_data = FS.readFile(state_dir+"/"+png_file);
+      const img_data = RA.FS.readFile(state_dir+"/"+png_file);
       const img_data_b64 = base64EncArr(img_data);
       // If this state belongs to the current replay...
       if(replay && current_replay && replay.id == current_replay.id) {
@@ -357,13 +358,13 @@ function checkChangedStatesAndSaves() {
       }
     } else if(state.includes(".replay")) {
       if(!(state in seen_replays)) {
-        const replay = ra_util.replay_info(new Uint8Array(FS.readFile(state_dir+"/"+state)));
+        const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(state_dir+"/"+state)));
         seen_replays[state] = replay.id;
         ui_state.newReplay(state);
       }
     }
   }
-  // const saves = FS.readdir(saves_dir);
+  // const saves = RA.FS.readdir(saves_dir);
   // for (const save of saves) {
   //   if(save == "." || save == "..") { continue; }
   //   if(!(save in seen_saves)) {
@@ -379,6 +380,6 @@ function clear_current_replay() {
   ui_state.clearCheckpoints();
 }
 
-function file_exists(path:string) : boolean {
-  return FS.analyzePath(path).exists
+function file_exists(RA:LibretroModule, path:string) : boolean {
+  return RA.FS.analyzePath(path).exists
 }

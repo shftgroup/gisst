@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as proc from 'child_process';
 import * as url from 'url';
 import * as ra_util from 'ra-util';
-import {StartStateData, StateStart, StartReplayData, ReplayStart, ColdStart, ObjectLink} from './types';
+import {StateStart, ReplayStart, ColdStart, ObjectLink} from './types';
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
@@ -27,7 +27,6 @@ const config_dir = app.getPath("userData");
 const content_dir = path.join(cache_dir, "content");
 const saves_dir = path.join(cache_dir, "saves");
 const states_dir = path.join(cache_dir, "states")
-let main_contents:number = 0;
 const createWindow = async (): Promise<void> => {
   //app.setAsDefaultProtocolClient(protocol[, path, args]);
 
@@ -103,14 +102,13 @@ if(process.platform==="darwin") {
   if (!gotTheLock) {
     app.quit()
   } else {
-    app.on('second-instance', (event, commandLine, workingDirectory) => {
+    app.on('second-instance', (event, commandLine, _workingDirectory) => {
       // Someone tried to run a second instance, we should focus our window.
       if (mainWindow) {
         if (mainWindow.isMinimized()) mainWindow.restore()
         mainWindow.focus()
       }
-      let url = commandLine.pop();
-      run_url(url);
+      run_url(commandLine.pop());
     })
 
     // Create mainWindow, load the rest of the app, etc...
@@ -163,12 +161,12 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
   seenSaves = [];
   seenReplays = {};
   seenCheckpoints = [];
-  let content = manifest.find((o) => o.object_role=="content")!;
-  let content_file = content.file_filename!;
-  let dash_point = content_file.indexOf("-");
-  let content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
-  let entryState = start.type == "state";
-  let replay = start.type == "replay";
+  const content = manifest.find((o) => o.object_role=="content")!;
+  const content_file = content.file_filename!;
+  const dash_point = content_file.indexOf("-");
+  const content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
+  const entryState = start.type == "state";
+  const replay = start.type == "replay";
   console.assert(!(entryState && replay), "It is invalid to have both an entry state and play back a replay");
   clear_current_replay(evt);
   const retro_args = ["-v", "-c", path.join(cache_dir, "retroarch.cfg"), "--appendconfig", path.join(content_dir, "retroarch.cfg"), "-L", core];
@@ -204,7 +202,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
   
   let proms = [];
   // copy all files from manifest
-  for(let file of manifest) {
+  for(const file of manifest) {
     proms.push(get_storage_file(host, file.file_dest_path, file.file_hash, file.file_filename, path.join(content_dir, file.file_source_path)));
   }
   await Promise.all(proms);
@@ -241,7 +239,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
         const replay = ra_util.replay_of_state((fs.readFileSync(path.join(states_dir,file_name))));
         let known_replay = false;
         if(replay) {
-          for(let seen in seenReplays) {
+          for(const seen in seenReplays) {
             if(seenReplays[seen] == replay.id) {
               known_replay = true;
             }
@@ -284,7 +282,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
 
   if (entryState) {
     // Cast: This one is definitely a statestart because the type is state
-    let data = (start as StateStart).data;
+    const data = (start as StateStart).data;
     await get_storage_file(host, data.file_dest_path, data.file_hash, data.file_filename, path.join(content_dir, "entry_state"));
     fs.copyFileSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1.entry"));
     fs.copyFileSync(path.join(content_dir, "entry_state"), path.join(cache_dir, "states", content_base+".state1"));
@@ -295,11 +293,11 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
     }
   }
   if (replay) {
-    let data = (start as ReplayStart).data;
+    const data = (start as ReplayStart).data;
     await get_storage_file(host, data.file_dest_path, data.file_hash, data.file_filename, path.join(content_dir, "replay.replay"));
     fs.copyFileSync(path.join(content_dir, "replay.replay"), path.join(cache_dir, "states", content_base+".replay1"));
   } else {
-    let f = fs.openSync(path.join(cache_dir, "states", content_base+".replay1"), 'w');
+    const f = fs.openSync(path.join(cache_dir, "states", content_base+".replay1"), 'w');
     fs.writeSync(f, Buffer.from("\0"), 0, 1);
     fs.closeSync(f);
   }
@@ -326,7 +324,7 @@ async function handle_run_retroarch(evt:IpcMainEvent, host:string, core:string,s
   ra.on('close', (exit_code) => console.log("exit",exit_code));
   ra.on('error', (error) => console.error("failed to start RA",error));
   ra.stdout.resume();
-  let prom = send_message("SAVE_STATE");
+  const prom = send_message("SAVE_STATE");
   await prom;
 }
 
@@ -363,7 +361,7 @@ interface Replay {
 async function handle_play_replay(evt:IpcMainEvent, num:number) {
   clear_current_replay(evt);
   send_message("PLAY_REPLAY_SLOT "+num);
-  let resp = await read_response(true);
+  const resp = await read_response(true);
   nonnull(resp);
   const num_str = (resp.match(/PLAY_REPLAY_SLOT ([0-9]+)$/)?.[1]) ?? "0";
   if(num_str == "0") {
@@ -396,9 +394,9 @@ async function send_message(msg:string) {
 async function handle_update_checkpoints(evt:IpcMainEvent) {
   console.log("Update cps/replay status");
   await send_message("GET_CONFIG_PARAM active_replay");
-  let resp = await read_response(true);
+  const resp = await read_response(true);
   nonnull(resp);
-  let matches = resp.match(/GET_CONFIG_PARAM active_replay ([0-9]+) ([0-9]+)$/);
+  const matches = resp.match(/GET_CONFIG_PARAM active_replay ([0-9]+) ([0-9]+)$/);
   const id = (matches?.[1]) ?? "0";
   const flags = parseInt((matches?.[2]) ?? "0",10);
   if(id == "0" || flags == 0) {
@@ -408,8 +406,8 @@ async function handle_update_checkpoints(evt:IpcMainEvent) {
     if(current_replay && current_replay.id != id) {
       clear_current_replay(evt);
     }
-    let finished = (flags & BSVFlags.END) != 0;
-    let mode = (flags & BSVFlags.PLAYBACK) != 0 ? ReplayMode.Playback : (flags & BSVFlags.RECORDING ? ReplayMode.Record : ReplayMode.Inactive);
+    const finished = (flags & BSVFlags.END) != 0;
+    const mode = (flags & BSVFlags.PLAYBACK) != 0 ? ReplayMode.Playback : (flags & BSVFlags.RECORDING ? ReplayMode.Record : ReplayMode.Inactive);
     console.log("current replay",id,mode,finished);
     current_replay = {id:id,mode:mode,finished:finished};
   }
@@ -425,11 +423,11 @@ function clear_current_replay(evt:IpcMainEvent) {
     "delete_old":true
   });
 }
-declare function toString(encoding:string):string;
+
 function find_checkpoints_inner(evt:IpcMainEvent) {
   // search state files for states saved of current replay
   console.log(seenStates);
-  for(let state_file in seenStates) {
+  for(const state_file in seenStates) {
     if(seenCheckpoints.includes(state_file)) { continue; }
     console.log("Check ",state_file);
     const buf = fs.readFileSync(path.join(states_dir,state_file)).buffer;
@@ -465,14 +463,14 @@ function handle_download_file(evt:IpcMainEvent, category:"save"|"state"|"replay"
   }
   catch(e) {console.error(e); throw e;}
 }
-function nonnull(obj:any):asserts obj {
+function nonnull(obj:string|object|null):asserts obj {
   if(obj == null) {
     throw "Must be non-null";
   }
 }
 async function get_storage_file(host:string, storage_base:string, hash:string, filename:string, local_dest:string) {
-  let resp = await net.fetch(host+"/storage/"+storage_base+"/"+hash+"-"+filename,{"mode":"no-cors"});
-  let bytes = await resp.arrayBuffer();
+  const resp = await net.fetch(host+"/storage/"+storage_base+"/"+hash+"-"+filename,{"mode":"no-cors"});
+  const bytes = await resp.arrayBuffer();
   console.log(host,storage_base,hash,filename,resp,local_dest,bytes.byteLength);
   await fs.writeFileSync(local_dest, new Uint8Array(bytes));
 }
