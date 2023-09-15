@@ -117,22 +117,22 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       proms.push(fetchfs.fetchZip(RA,"/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
 
       for(const file of manifest) {
-        const file_prom = fetchfs.fetchFile(RA,"/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path,true);
+        const file_prom = fetchfs.fetchFile(RA,"/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path);
         proms.push(file_prom);
       }
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
         const data = (start as StateStart).data;
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
-        proms.push(fetchfs.fetchFile(RA,"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state",false));
+        proms.push(fetchfs.fetchFile(RA,"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state"));
       }
       if (movie) {
         // Cast: This one is definitely a replaystart because the type is state
         const data = (start as ReplayStart).data;
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
-        proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1",false));
+        proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1"));
       }
-      proms.push(fetchfs.registerFetchFS(RA, {"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/", false));
+      proms.push(fetchfs.registerFetchFS(RA, {"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/"));
       fetchfs.mkdirp(RA, saves_dir);
       fetchfs.mkdirp(RA, state_dir);
       Promise.all(proms).then(function () {
