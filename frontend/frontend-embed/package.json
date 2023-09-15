@@ -31,7 +31,6 @@
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.7.24",
-    "embedv86": "file:../embedv86",
-    "idb-keyval": "^6.2.0"
+    "embedv86": "file:../embedv86"
   }
 }

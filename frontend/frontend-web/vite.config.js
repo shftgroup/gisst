@@ -22,10 +22,14 @@ export default {
   server: {
     headers:{
       "Cross-Origin-Embedder-Policy":"require-corp",
-      "Cross-Origin-Opener-Policy":"same-origin"
+      "Cross-Origin-Resource-Policy":"cross-origin",
+      "Cross-Origin-Opener-Policy":"cross-origin"
     },
     proxy: {
-      "/storage": "http://localhost:3000/"
+      "/storage": "http://localhost:3000/",
+      "/v86": "http://localhost:3000/",
+      "/assets": "http://localhost:3000/",
+      "/cores": "http://localhost:3000/"
     }
   }
 }

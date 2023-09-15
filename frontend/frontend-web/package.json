@@ -24,7 +24,6 @@
     "@zip.js/zip.js": "^2.7.24",
     "embedv86": "file:../embedv86",
     "gisst-player": "file:../gisst-player-ui",
-    "idb-keyval": "^6.2.0",
     "ra-util": "file:../ra-util"
   }
 }
