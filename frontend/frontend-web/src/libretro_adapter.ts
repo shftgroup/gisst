@@ -74,7 +74,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
         message_queue:[],
         message_out:[],
         message_accum:"",
-          
+
         retroArchSend: function(msg:string) {
             const bytes = this.encoder.encode(msg+"\n");
             this.message_queue.push([bytes,0]);
@@ -133,7 +133,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
             console.log(text);
         }
     };
-  function instantiate(core_factory:(mod:LibretroModuleDef) => Promise<LibretroModule>) {
+    function instantiate(core_factory:(mod:LibretroModuleDef) => Promise<LibretroModule>) {
         core_factory(module).then(loaded_cb).catch(err => {
             console.error("Couldn't instantiate module", err);
             throw err;
