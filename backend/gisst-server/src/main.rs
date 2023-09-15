@@ -1,6 +1,7 @@
 mod db;
 mod error;
 mod routes;
+mod selective_serve_dir;
 mod server;
 mod serverconfig;
 mod templates;

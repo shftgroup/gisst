@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
-use tower_http::{cors::CorsLayer, services::ServeDir};
+use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -52,6 +52,7 @@ pub struct ServerState {
 }
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
+    use crate::selective_serve_dir;
     StorageHandler::init_storage(
         &config.storage.root_folder_path,
         &config.storage.temp_folder_path,
@@ -82,25 +83,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/objects", object_router())
         .nest("/works", work_router())
         .nest_service(
-            "/",
-            ServiceBuilder::new()
-                .layer(
-                    CorsLayer::new()
-                        .allow_origin(tower_http::cors::AllowOrigin::any())
-                        .expose_headers([
-                            axum::http::header::ACCEPT_RANGES,
-                            axum::http::header::CONTENT_LENGTH,
-                            axum::http::header::RANGE,
-                            axum::http::header::CONTENT_RANGE,
-                        ])
-                        .allow_methods([axum::http::Method::GET]),
-                )
-                .layer(HandleErrorLayer::new(handle_error))
-                // This map_err is needed to get the types to work out after handleerror and before servedir.
-                .map_err(|e| panic!("{:?}", e))
-                .service(ServeDir::new("web-dist").precompressed_gzip()),
-        )
-        .nest_service(
             "/storage",
             ServiceBuilder::new()
                 .layer(
@@ -117,7 +99,27 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                 .layer(HandleErrorLayer::new(handle_error))
                 // This map_err is needed to get the types to work out after handleerror and before servedir.
                 .map_err(|e| panic!("{:?}", e))
-                .service(ServeDir::new("storage").precompressed_gzip()),
+                /* if the x-accept-encoding header is present, dispatch to tthe custom servedir that does not serve precompressed stuff */
+                .service(selective_serve_dir::SelectiveServeDir::new("storage")),
+        )
+        .nest_service(
+            "/",
+            ServiceBuilder::new()
+                .layer(
+                    CorsLayer::new()
+                        .allow_origin(tower_http::cors::AllowOrigin::any())
+                        .expose_headers([
+                            axum::http::header::ACCEPT_RANGES,
+                            axum::http::header::CONTENT_LENGTH,
+                            axum::http::header::RANGE,
+                            axum::http::header::CONTENT_RANGE,
+                        ])
+                        .allow_methods([axum::http::Method::GET]),
+                )
+                .layer(HandleErrorLayer::new(handle_error))
+                // This map_err is needed to get the types to work out after handleerror and before servedir.
+                .map_err(|e| panic!("{:?}", e))
+                .service(selective_serve_dir::SelectiveServeDir::new("web-dist")),
         )
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432));
