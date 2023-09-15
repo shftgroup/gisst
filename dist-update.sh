@@ -21,8 +21,8 @@ rm -rf retroarch-web
 curl -o /tmp/retro.7z https://buildbot.libretro.com/nightly/emscripten/RetroArch.7z
 7z x /tmp/retro.7z -o.
 mv retroarch retroarch-web
-mkdir -p frontend/frontend-web/public/cores
-cp retroarch-web/*.{js,wasm} frontend/frontend-web/public/cores/
+# mkdir -p frontend/frontend-web/public/cores
+# cp retroarch-web/*.{js,wasm} frontend/frontend-web/public/cores/
 mkdir -p frontend/frontend-web/public/assets
 rm -rf frontend/frontend-web/public/assets/frontend
 cp -r retroarch-web/assets/frontend frontend/frontend-web/public/assets/
@@ -42,9 +42,6 @@ cd -
 cd frontend/frontend-web/public/assets/frontend
 zip -r -9 bundle.zip bundle
 cd -
-
-rm -rf frontend/frontend-tauri/src-tauri/ra-assets
-cp -r frontend/frontend-web/public/assets/frontend/bundle frontend/frontend-tauri/src-tauri/ra-assets
 
 rm -rf frontend/frontend-elec/resources/ra-assets/
 mkdir -p frontend/frontend-elec/resources
