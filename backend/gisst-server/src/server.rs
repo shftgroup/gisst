@@ -81,7 +81,25 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/states", state_router())
         .nest("/objects", object_router())
         .nest("/works", work_router())
-        .nest_service("/", ServeDir::new("./web-dist"))
+        .nest_service(
+            "/",
+            ServiceBuilder::new()
+                .layer(
+                    CorsLayer::new()
+                        .allow_origin(tower_http::cors::AllowOrigin::any())
+                        .expose_headers([
+                            axum::http::header::ACCEPT_RANGES,
+                            axum::http::header::CONTENT_LENGTH,
+                            axum::http::header::RANGE,
+                            axum::http::header::CONTENT_RANGE,
+                        ])
+                        .allow_methods([axum::http::Method::GET]),
+                )
+                .layer(HandleErrorLayer::new(handle_error))
+                // This map_err is needed to get the types to work out after handleerror and before servedir.
+                .map_err(|e| panic!("{:?}", e))
+                .service(ServeDir::new("web-dist").precompressed_gzip()),
+        )
         .nest_service(
             "/storage",
             ServiceBuilder::new()
@@ -103,7 +121,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         )
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432));
-
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),

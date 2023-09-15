@@ -239,6 +239,7 @@ impl StorageHandler {
         );
         let mut buf = tokio::io::BufReader::with_capacity(1024 * 1024, data);
         let _bytes_written = tokio::io::copy_buf(&mut buf, &mut gz_enc).await?;
+
         Ok(())
     }
 }
