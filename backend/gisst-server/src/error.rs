@@ -27,8 +27,20 @@ pub enum GISSTError {
     PathPrefixError(#[from] std::path::StripPrefixError),
     #[error("tokio task error")]
     JoinError(#[from] tokio::task::JoinError),
+    #[error("reqwest error")]
+    ReqwestError(#[from] reqwest::Error),
+    #[error("auth error")]
+    AuthError(#[from] AuthError),
     #[error("generic error")]
     Generic,
+}
+
+#[derive(Debug, Error)]
+pub enum AuthError {
+    #[error("user creation error")]
+    UserCreateError,
+    #[error("user update error")]
+    UserUpdateError,
 }
 
 impl IntoResponse for GISSTError {
