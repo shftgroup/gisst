@@ -4,9 +4,10 @@ use axum::{
     headers::HeaderMap,
     http::StatusCode,
     response::{Html, IntoResponse},
-    routing::{get, post},
+    routing::{get, post, put},
     Extension, Router,
 };
+use axum_login::{RequireAuthorizationLayer};
 use gisst::models::{
     DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
 };
@@ -104,11 +105,11 @@ pub fn save_router() -> Router {
 pub fn state_router() -> Router {
     Router::new()
         .route("/", get(get_states))
+        .route("/:id", get(get_single_state).put(edit_state).delete(delete_state), )
         .route("/create", post(create_state))
-        .route(
-            "/:id",
-            get(get_single_state).put(edit_state).delete(delete_state),
-        )
+        .route_layer(RequireAuthorizationLayer::<i32, crate::auth::User>::login())
+        .route("/:id", put(edit_state).delete(delete_state), )
+        .route_layer(RequireAuthorizationLayer::<i32, crate::auth::User>::login())
 }
 
 pub fn work_router() -> Router {

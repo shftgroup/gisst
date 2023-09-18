@@ -25,10 +25,12 @@ use axum::{
     error_handling::HandleErrorLayer,
     extract::{DefaultBodyLimit, Path, Query},
     http::HeaderMap,
-    response::{Html, IntoResponse},
+    response::{Html, IntoResponse, },
     routing::method_routing::{get, patch, post},
     Extension, Router, Server,
 };
+
+use axum_login::{AuthLayer, RequireAuthorizationLayer, PostgresStore};
 
 use crate::routes::screenshot_router;
 use gisst::storage::{PendingUpload, StorageHandler};
@@ -37,8 +39,14 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
-use tower_http::cors::CorsLayer;
+use axum_login::axum_sessions::async_session::MemoryStore;
+use axum_login::axum_sessions::{SameSite, SessionLayer};
+use secrecy::ExposeSecret;
+use sqlx::postgres::PgPoolOptions;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 use uuid::Uuid;
+use oauth2::basic::BasicClient;
+use rand::Rng;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -49,6 +57,7 @@ pub struct ServerState {
     pub default_chunk_size: usize,
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: TemplateHandler,
+    pub oauth_client: BasicClient
 }
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
@@ -65,12 +74,31 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         default_chunk_size: config.storage.chunk_size,
         pending_uploads: Default::default(),
         templates: TemplateHandler::new("gisst-server/src/templates")?,
+        oauth_client: crate::auth::build_oauth_client(),
     };
+
+    let secret = rand::thread_rng().gen::<[u8; 64]>();
+    let user_pool = PgPoolOptions::new().connect(config.database.database_url.expose_secret())
+        .await
+        .unwrap();
+
+    let user_store = PostgresStore::<crate::auth::User>::new(user_pool.clone());
+    let auth_layer = AuthLayer::new(user_store, &secret);
+    let session_store = MemoryStore::new();
+    let session_layer = SessionLayer::new(session_store, &secret)
+        .with_secure(true)
+        .with_same_site_policy(SameSite::Lax);
 
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
+        .route_layer(RequireAuthorizationLayer::<i32, crate::auth::User>::login())
+        .route("login", get(crate::auth::login_handler))
+        .route("/auth/google/callback", get(crate::auth::oauth_callback_handler))
+        .route("logout", get(crate::auth::logout_handler))
         .route("/resources/:id", patch(tus_patch).head(tus_head))
+        .route_layer(RequireAuthorizationLayer::<i32, crate::auth::User>::login())
         .route("/resources", post(tus_creation))
+        .route_layer(RequireAuthorizationLayer::<i32, crate::auth::User>::login())
         .route("/debug/tus_test", get(get_upload_form))
         // .nest("/creators", creator_router())
         .nest("/environments", environment_router())
@@ -122,7 +150,9 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                 .service(selective_serve_dir::SelectiveServeDir::new("web-dist")),
         )
         .layer(Extension(app_state))
-        .layer(DefaultBodyLimit::max(33554432));
+        .layer(DefaultBodyLimit::max(33554432))
+        .layer(auth_layer)
+        .layer(session_layer);
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
