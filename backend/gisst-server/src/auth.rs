@@ -3,6 +3,8 @@
 
 
 use std::env;
+use std::marker::PhantomData;
+use async_trait::async_trait;
 use axum::{
     extract::Query,
     response::{IntoResponse, Redirect},
@@ -11,27 +13,13 @@ use axum::{
 
 use uuid::Uuid;
 
-use axum_login::{
-    AuthUser,
-    secrecy::SecretVec,
-    PostgresStore
-};
+use axum_login::{AuthUser, secrecy::SecretVec, UserStore};
 use axum_login::axum_sessions::extractors::{ReadableSession, WritableSession};
-use sqlx::{PgConnection};
+use sqlx::{PgConnection, PgPool, Postgres, Type, Encode, FromRow};
 
-use oauth2::{
-    CsrfToken,
-    basic::BasicClient,
-    AuthorizationCode,
-    reqwest::async_http_client,
-    Scope,
-    AuthUrl,
-    TokenUrl,
-    ClientId,
-    ClientSecret,
-    RedirectUrl,
-};
+use oauth2::{CsrfToken, basic::{BasicClient}, AuthorizationCode, reqwest::async_http_client, Scope, AuthUrl, TokenUrl, ClientId, ClientSecret, RedirectUrl, TokenResponse};
 use serde::{Deserialize};
+use sqlx::postgres::PgRow;
 use crate::error::{AuthError, GISSTError};
 use crate::server::ServerState;
 
@@ -92,7 +80,7 @@ impl User {
             .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, GISSTError> {
+    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO users (creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)
@@ -122,7 +110,7 @@ impl User {
             .map_err(|| AuthError::UserCreateError)
     }
 
-    async fn update(conn: &mut PgConnection, model: &User) -> Result<Self, GISSTError> {
+    async fn update(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
         sqlx::query_as!(
             Self,
             r#"
@@ -164,7 +152,7 @@ impl User {
 
 }
 
-pub type AuthContext = axum_login::extractors::AuthContext<i32, User, PostgresStore<User>>;
+pub type AuthContext = axum_login::extractors::AuthContext<i32, User, PostgresStore<PgPool, User>>;
 
 #[derive(Debug, Deserialize)]
 pub struct AuthRequest {
@@ -282,4 +270,47 @@ pub fn build_oauth_client() -> BasicClient {
         Some(token_url),
     )
         .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap())
+}
+
+pub enum Role {
+    User
+}
+
+#[derive(Debug, Clone)]
+pub struct PostgresStore<PgPool, User, Role = ()>
+{
+    pool: PgPool,
+    _user_type: PhantomData<User>,
+    _role_type: PhantomData<Role>,
+}
+
+impl PostgresStore<PgPool, User, Role> {
+    pub fn new(pool:PgPool) -> Self {
+        Self {
+            pool,
+            _user_type: Default::default(),
+            _role_type: Default::default(),
+        }
+    }
+}
+
+#[async_trait]
+impl<UserId, User, Role> UserStore<UserId, Role> for PostgresStore<PgPool, User, Role>
+where
+    UserId: Sync + Type<Postgres> + for<'q> Encode<'q, Postgres>,
+    Role: PartialOrd + PartialEq + Clone + Send + Sync + 'static,
+    User: AuthUser<UserId, Role> + Unpin + for<'r> FromRow<'r, PgRow>
+{
+    type User = User;
+
+    type Error = sqlx::error::Error;
+
+    async fn load_user(&self, user_id: &UserId) -> Result<Option<Self::User>, Self::Error> {
+        let mut connection = self.pool.acquire().await?;
+
+        let user: Option<User> = sqlx::query_as!(Self::User, "SELECT * FROM users WHERE id = $1", &user_id)
+            .fetch_optional(&mut connection)
+            .await?;
+        Ok(user)
+    }
 }

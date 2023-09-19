@@ -30,7 +30,7 @@ use axum::{
     Extension, Router, Server,
 };
 
-use axum_login::{AuthLayer, RequireAuthorizationLayer, PostgresStore};
+use axum_login::{AuthLayer, RequireAuthorizationLayer};
 
 use crate::routes::screenshot_router;
 use gisst::storage::{PendingUpload, StorageHandler};
@@ -82,7 +82,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .await
         .unwrap();
 
-    let user_store = PostgresStore::<crate::auth::User>::new(user_pool.clone());
+    let user_store = crate::auth::PostgresStore::<PgPool, crate::auth::User>::new(user_pool.clone());
     let auth_layer = AuthLayer::new(user_store, &secret);
     let session_store = MemoryStore::new();
     let session_layer = SessionLayer::new(session_store, &secret)
