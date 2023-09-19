@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            id,\n            creator_id,\n            password_hash,\n            name,\n            given_name,\n            family_name,\n            preferred_username,\n            email,\n            picture\n            FROM users WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "password_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "given_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "family_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "preferred_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "picture",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "67ea1dad2828f97f4f4baafc33c88d54641a9431c90a1e68a81dc7ae8058190e"
+}
