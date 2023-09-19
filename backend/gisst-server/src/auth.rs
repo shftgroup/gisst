@@ -1,27 +1,27 @@
 // Most of this is based on https://github.com/maxcountryman/axum-login/blob/main/examples/oauth/src/main.rs
 // We want to use Google Auth and hopefully OrcID OpenID
 
-
-use std::env;
-use std::marker::PhantomData;
 use async_trait::async_trait;
 use axum::{
     extract::Query,
     response::{IntoResponse, Redirect},
-    Extension
+    Extension,
 };
+use std::env;
 
 use uuid::Uuid;
 
-use axum_login::{AuthUser, secrecy::SecretVec, UserStore};
 use axum_login::axum_sessions::extractors::{ReadableSession, WritableSession};
-use sqlx::{PgConnection, PgPool, Postgres, Type, Encode, FromRow};
+use axum_login::{secrecy::SecretVec, AuthUser, UserStore};
+use sqlx::{PgConnection, PgPool};
 
-use oauth2::{CsrfToken, basic::{BasicClient}, AuthorizationCode, reqwest::async_http_client, Scope, AuthUrl, TokenUrl, ClientId, ClientSecret, RedirectUrl, TokenResponse};
-use serde::{Deserialize};
-use sqlx::postgres::PgRow;
 use crate::error::{AuthError, GISSTError};
 use crate::server::ServerState;
+use oauth2::{
+    basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
+    ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl,
+};
+use serde::Deserialize;
 
 // User attributes based on OpenID specification for "userinfo"
 #[derive(Debug, Default, Clone, sqlx::FromRow)]
@@ -29,28 +29,29 @@ pub struct User {
     id: i32,
     creator_id: Option<Uuid>,
     password_hash: String,
-    name: Option<String>, // OpenID
-    given_name: Option<String>, //OpenID
-    family_name: Option<String>, //OpenID
+    name: Option<String>,               // OpenID
+    given_name: Option<String>,         //OpenID
+    family_name: Option<String>,        //OpenID
     preferred_username: Option<String>, //OpenID
-    email: Option<String>, //OpenID
-    picture: Option<String> //OpenID (this is a url string)
+    email: Option<String>,              //OpenID
+    picture: Option<String>,            //OpenID (this is a url string)
 }
 
 // Based on OpenID standard claims https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
+#[allow(dead_code)]
 #[derive(Deserialize, sqlx::FromRow, Clone)]
 pub struct OpenIDUserInfo {
     sub: String,
-    name: Option<String>, // OpenID
-    given_name: Option<String>, //OpenID
-    family_name: Option<String>, //OpenID
+    name: Option<String>,               // OpenID
+    given_name: Option<String>,         //OpenID
+    family_name: Option<String>,        //OpenID
     preferred_username: Option<String>, //OpenID
-    email: Option<String>, //OpenID
-    picture: Option<String> //OpenID (this is a url string)
+    email: Option<String>,              //OpenID
+    picture: Option<String>,            //OpenID (this is a url string)
 }
 
-impl AuthUser<i32> for User {
-    fn get_id(&self) -> i32{
+impl AuthUser<i32, Role> for User {
+    fn get_id(&self) -> i32 {
         self.id
     }
 
@@ -60,7 +61,7 @@ impl AuthUser<i32> for User {
 }
 
 impl User {
-    async fn get_by_id(conn: &mut PgConnection, id:i32) -> sqlx::Result<Option<Self>> {
+    async fn get_by_id(conn: &mut PgConnection, id: i32) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT
@@ -76,8 +77,8 @@ impl User {
             FROM users WHERE id = $1"#,
             id
         )
-            .fetch_optional(conn)
-            .await
+        .fetch_optional(conn)
+        .await
     }
 
     async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
@@ -107,7 +108,7 @@ impl User {
         )
             .fetch_one(conn)
             .await
-            .map_err(|| AuthError::UserCreateError)
+            .map_err(|_| AuthError::UserCreateError)
     }
 
     async fn update(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
@@ -145,19 +146,18 @@ impl User {
             model.picture,
             model.id
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|| AuthError::UserUpdateError)
+        .fetch_one(conn)
+        .await
+        .map_err(|_| AuthError::UserUpdateError)
     }
-
 }
 
-pub type AuthContext = axum_login::extractors::AuthContext<i32, User, PostgresStore<PgPool, User>>;
+pub type AuthContext = axum_login::extractors::AuthContext<i32, User, PostgresStore, Role>;
 
 #[derive(Debug, Deserialize)]
 pub struct AuthRequest {
     code: String,
-    state: CsrfToken
+    state: CsrfToken,
 }
 
 pub async fn oauth_callback_handler(
@@ -179,23 +179,27 @@ pub async fn oauth_callback_handler(
         println!("csrf state is invalid, cannot login",);
 
         // Return to some error
-        return Redirect::to("/instances");
+        return Ok(Redirect::to("/instances"));
     }
 
     println!("Getting oauth token");
     // Get an auth token
-    let token = state.oauth_client
+    let token = state
+        .oauth_client
         .exchange_code(AuthorizationCode::new(query.code))
         .request_async(async_http_client)
         .await
         .unwrap();
 
     // Get OpenID provider userinfo from token
-    let profile = match reqwest::Client::new().get("https://openidconnect.googleapis.com/v1/userinfo")
+    let profile = match reqwest::Client::new()
+        .get("https://openidconnect.googleapis.com/v1/userinfo")
         .bearer_auth(token.access_token().secret().to_owned())
-        .send().await {
+        .send()
+        .await
+    {
         Ok(res) => res,
-        Err(e) => return Err(GISSTError::ReqwestError(e))
+        Err(e) => return Err(GISSTError::ReqwestError(e)),
     };
 
     let profile: OpenIDUserInfo = profile.json::<OpenIDUserInfo>().await.unwrap();
@@ -203,32 +207,43 @@ pub async fn oauth_callback_handler(
 
     let mut conn = state.pool.acquire().await?;
     if let Some(user) = sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", profile.email)
-        .fetch_one(&conn)
-        .await? {
-
+        .fetch_optional(&mut *conn)
+        .await?
+    {
         println!("Found user: {user:?} updating.");
-        let user = User::update(&mut conn, &User{password_hash: token.access_token().secret().to_owned(), ..user}).await?;
+        let user = User::update(
+            &mut conn,
+            &User {
+                password_hash: token.access_token().secret().to_owned(),
+                ..user
+            },
+        )
+        .await?;
         println!("Got user {user:?}. Logging in.");
         auth.login(&user).await.unwrap();
         println!("Logged in the user: {user:?}");
-        Redirect::to("/instances")
+        Ok(Redirect::to("/instances"))
     } else {
         println!("New user login, creating user record.");
-        let user = User::insert(&mut conn, &User {
-            id: 0, // will be ignored on insert since insert id is serial auto-increment
-            creator_id: None,
-            password_hash: token.access_token().secret().to_owned(), 
-            name: profile.name,
-            given_name: profile.given_name,
-            family_name: profile.family_name,
-            preferred_username: profile.preferred_username,
-            email: profile.email,
-            picture: profile.picture,
-        }).await?;
+        let user = User::insert(
+            &mut conn,
+            &User {
+                id: 0, // will be ignored on insert since insert id is serial auto-increment
+                creator_id: None,
+                password_hash: token.access_token().secret().to_owned(),
+                name: profile.name,
+                given_name: profile.given_name,
+                family_name: profile.family_name,
+                preferred_username: profile.preferred_username,
+                email: profile.email,
+                picture: profile.picture,
+            },
+        )
+        .await?;
         println!("User record created: {user:?}. Logging in.");
         auth.login(&user).await.unwrap();
         println!("Logged in the user: {user:?}");
-        Redirect::to("/instances")
+        Ok(Redirect::to("/instances"))
     }
 }
 
@@ -236,7 +251,8 @@ pub async fn login_handler(
     Extension(state): Extension<ServerState>,
     mut session: WritableSession,
 ) -> impl IntoResponse {
-    let (auth_url, csrf_state) = state.oauth_client
+    let (auth_url, csrf_state) = state
+        .oauth_client
         .authorize_url(CsrfToken::new_random)
         .add_scope(Scope::new(
             "https://www.googleapis.com/auth/userinfo.profile".to_string(),
@@ -248,14 +264,15 @@ pub async fn login_handler(
     Redirect::to(auth_url.as_ref())
 }
 
-pub async fn logout_handler(mut auth:AuthContext){
+pub async fn logout_handler(mut auth: AuthContext) {
     dbg!("Logging out user: {}", &auth.current_user);
     auth.logout().await;
 }
 
 pub fn build_oauth_client() -> BasicClient {
     let client_id = env::var("GOOGLE_OAUTH_CLIENT_ID").expect("Missing GOOGLE_OAUTH_CLIENT_ID");
-    let client_secret = env::var("GOOGLE_OAUTH_CLIENT_SECRET").expect("Missing GOOGLE_OAUTH_CLIENT_SECRET");
+    let client_secret =
+        env::var("GOOGLE_OAUTH_CLIENT_SECRET").expect("Missing GOOGLE_OAUTH_CLIENT_SECRET");
     let redirect_url = "http://localhost:3000/auth/google/callback".to_string();
 
     let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
@@ -269,48 +286,39 @@ pub fn build_oauth_client() -> BasicClient {
         auth_url,
         Some(token_url),
     )
-        .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap())
+    .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap())
 }
 
+#[allow(dead_code)]
+#[derive(PartialOrd, PartialEq, Clone)]
 pub enum Role {
-    User
+    User,
 }
 
 #[derive(Debug, Clone)]
-pub struct PostgresStore<PgPool, User, Role = ()>
-{
+pub struct PostgresStore {
     pool: PgPool,
-    _user_type: PhantomData<User>,
-    _role_type: PhantomData<Role>,
 }
 
-impl PostgresStore<PgPool, User, Role> {
-    pub fn new(pool:PgPool) -> Self {
-        Self {
-            pool,
-            _user_type: Default::default(),
-            _role_type: Default::default(),
-        }
+impl PostgresStore {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
     }
 }
 
 #[async_trait]
-impl<UserId, User, Role> UserStore<UserId, Role> for PostgresStore<PgPool, User, Role>
-where
-    UserId: Sync + Type<Postgres> + for<'q> Encode<'q, Postgres>,
-    Role: PartialOrd + PartialEq + Clone + Send + Sync + 'static,
-    User: AuthUser<UserId, Role> + Unpin + for<'r> FromRow<'r, PgRow>
-{
+impl UserStore<i32, Role> for PostgresStore {
     type User = User;
 
     type Error = sqlx::error::Error;
 
-    async fn load_user(&self, user_id: &UserId) -> Result<Option<Self::User>, Self::Error> {
+    async fn load_user(&self, user_id: &i32) -> Result<Option<Self::User>, Self::Error> {
         let mut connection = self.pool.acquire().await?;
 
-        let user: Option<User> = sqlx::query_as!(Self::User, "SELECT * FROM users WHERE id = $1", &user_id)
-            .fetch_optional(&mut connection)
-            .await?;
+        let user: Option<User> =
+            sqlx::query_as!(Self::User, "SELECT * FROM users WHERE id = $1", &user_id)
+                .fetch_optional(&mut *connection)
+                .await?;
         Ok(user)
     }
 }

@@ -61,7 +61,10 @@ impl IntoResponse for GISSTError {
             GISSTError::TemplateError => (StatusCode::INTERNAL_SERVER_ERROR, "template error"),
             GISSTError::JoinError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "tokio task error"),
             GISSTError::FileNotFoundError => (StatusCode::NOT_FOUND, "file not found"),
-            GISSTError::ReqwestError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "oauth reqwest error"),
+            GISSTError::ReqwestError(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "oauth reqwest error")
+            }
+            GISSTError::AuthError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "auth error"),
             GISSTError::Generic => (StatusCode::INTERNAL_SERVER_ERROR, "generic error"),
         };
 

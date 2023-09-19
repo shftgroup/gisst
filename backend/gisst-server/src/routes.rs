@@ -1,4 +1,4 @@
-use crate::{error::GISSTError, server::ServerState, utils::parse_header};
+use crate::{auth, error::GISSTError, server::ServerState, utils::parse_header};
 use axum::{
     extract::{Json, Path, Query},
     headers::HeaderMap,
@@ -7,7 +7,7 @@ use axum::{
     routing::{get, post, put},
     Extension, Router,
 };
-use axum_login::{RequireAuthorizationLayer};
+use axum_login::RequireAuthorizationLayer;
 use gisst::models::{
     DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
 };
@@ -105,11 +105,14 @@ pub fn save_router() -> Router {
 pub fn state_router() -> Router {
     Router::new()
         .route("/", get(get_states))
-        .route("/:id", get(get_single_state).put(edit_state).delete(delete_state), )
+        .route(
+            "/:id",
+            get(get_single_state).put(edit_state).delete(delete_state),
+        )
         .route("/create", post(create_state))
-        .route_layer(RequireAuthorizationLayer::<i32, crate::auth::User>::login())
-        .route("/:id", put(edit_state).delete(delete_state), )
-        .route_layer(RequireAuthorizationLayer::<i32, crate::auth::User>::login())
+        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route("/:id", put(edit_state).delete(delete_state))
+        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
 }
 
 pub fn work_router() -> Router {
@@ -323,7 +326,7 @@ async fn delete_image(
 #[derive(Serialize)]
 struct GetAllInstanceResult {
     instance: Instance,
-    work: Work
+    work: Work,
 }
 
 async fn get_instances(
@@ -336,7 +339,7 @@ async fn get_instances(
     let accept: Option<String> = parse_header(&headers, "Accept");
     let mut instance_results: Vec<GetAllInstanceResult> = Vec::new();
     for inst in &instances {
-        instance_results.push( GetAllInstanceResult{
+        instance_results.push(GetAllInstanceResult {
             instance: Instance {
                 instance_id: inst.instance_id,
                 work_id: inst.work_id,
@@ -344,7 +347,7 @@ async fn get_instances(
                 instance_config: inst.instance_config.clone(),
                 created_on: inst.created_on,
             },
-            work: Work::get_by_id(&mut conn, inst.work_id).await?.unwrap()
+            work: Work::get_by_id(&mut conn, inst.work_id).await?.unwrap(),
         })
     }
 
