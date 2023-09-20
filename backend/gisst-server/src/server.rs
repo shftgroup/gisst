@@ -74,7 +74,10 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         default_chunk_size: config.storage.chunk_size,
         pending_uploads: Default::default(),
         templates: TemplateHandler::new("gisst-server/src/templates")?,
-        oauth_client: auth::build_oauth_client(),
+        oauth_client: auth::build_oauth_client(
+            config.auth.google_client_id.expose_secret(),
+            config.auth.google_client_secret.expose_secret()
+        ),
     };
 
     let secret = rand::thread_rng().gen::<[u8; 64]>();
@@ -88,19 +91,17 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         AuthLayer::new(user_store, &secret);
     let session_store = MemoryStore::new();
     let session_layer = SessionLayer::new(session_store, &secret)
-        .with_secure(true)
+        .with_secure(false)
         .with_same_site_policy(SameSite::Lax);
 
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
-        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
-        .route("login", get(auth::login_handler))
-        .route("/auth/google/callback", get(auth::oauth_callback_handler))
-        .route("logout", get(auth::logout_handler))
         .route("/resources/:id", patch(tus_patch).head(tus_head))
-        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
         .route("/resources", post(tus_creation))
         .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route("/login", get(auth::login_handler))
+        .route("/auth/google/callback", get(auth::oauth_callback_handler))
+        .route("/logout", get(auth::logout_handler))
         .route("/debug/tus_test", get(get_upload_form))
         // .nest("/creators", creator_router())
         .nest("/environments", environment_router())

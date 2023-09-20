@@ -7,7 +7,6 @@ use axum::{
     response::{IntoResponse, Redirect},
     Extension,
 };
-use std::env;
 
 use uuid::Uuid;
 
@@ -61,6 +60,7 @@ impl AuthUser<i32, Role> for User {
 }
 
 impl User {
+    #[allow(dead_code)]
     async fn get_by_id(conn: &mut PgConnection, id: i32) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -269,10 +269,7 @@ pub async fn logout_handler(mut auth: AuthContext) {
     auth.logout().await;
 }
 
-pub fn build_oauth_client() -> BasicClient {
-    let client_id = env::var("GOOGLE_OAUTH_CLIENT_ID").expect("Missing GOOGLE_OAUTH_CLIENT_ID");
-    let client_secret =
-        env::var("GOOGLE_OAUTH_CLIENT_SECRET").expect("Missing GOOGLE_OAUTH_CLIENT_SECRET");
+pub fn build_oauth_client(client_id:&String, client_secret:&String) -> BasicClient {
     let redirect_url = "http://localhost:3000/auth/google/callback".to_string();
 
     let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
@@ -281,8 +278,8 @@ pub fn build_oauth_client() -> BasicClient {
         .expect("Invalid token endpoint URL");
 
     BasicClient::new(
-        ClientId::new(client_id),
-        Some(ClientSecret::new(client_secret)),
+        ClientId::new(client_id.to_string()),
+        Some(ClientSecret::new(client_secret.to_string())),
         auth_url,
         Some(token_url),
     )
