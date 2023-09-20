@@ -105,10 +105,7 @@ pub fn save_router() -> Router {
 pub fn state_router() -> Router {
     Router::new()
         .route("/", get(get_states))
-        .route(
-            "/:id",
-            get(get_single_state).put(edit_state).delete(delete_state),
-        )
+        .route("/:id", get(get_single_state))
         .route("/create", post(create_state))
         .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
         .route("/:id", put(edit_state).delete(delete_state))
