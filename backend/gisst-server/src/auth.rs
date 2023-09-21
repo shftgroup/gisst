@@ -257,6 +257,9 @@ pub async fn login_handler(
         .add_scope(Scope::new(
             "https://www.googleapis.com/auth/userinfo.profile".to_string(),
         ))
+        .add_scope(Scope(
+            "https://www.googleapis.com/auth/userinfo.email".to_string(),
+        ))
         .url();
 
     session.insert("csrf_state", csrf_state).unwrap();
