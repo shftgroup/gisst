@@ -1,4 +1,4 @@
 -- Add down migration script here
-ALTER TABLE user DROP CONSTRAINT user_creator_id_derived_from_fkey;
-DROP TABLE user;
+ALTER TABLE users DROP CONSTRAINT users_creator_id_fkey;
+DROP TABLE users;
 DROP TYPE IF EXISTS auth_provider;
