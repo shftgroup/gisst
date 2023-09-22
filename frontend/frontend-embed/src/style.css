@@ -82,3 +82,13 @@ canvas.gisst-embed-webplayer {
   font: 14px monospace;
   line-height: 14px;
 }
+
+.gisst-embed-webplayer-button {
+  background-color: #CCCCCC33;
+  width: 16px;
+  height: 16px;
+}
+
+.gisst-embed-webplayer-button:hover {
+  background-color: #CCCCCCDD;
+}
