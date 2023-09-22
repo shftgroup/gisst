@@ -13,21 +13,26 @@ export async function embed(gisst:string, container:HTMLDivElement) {
   const canvas_txt = document.createElement("div");
   canvas_txt.classList.add("gisst-embed-webplayer-textmode");
   canvas_txt.classList.add("gisst-embed-hidden");
-  canvas_txt.style.whiteSpace = "pre";
-  canvas_txt.style.font = "14px monospace;";
-  canvas_txt.style.lineHeight = "14px";
   const preview_img = document.createElement("img");
   preview_img.classList.add("gisst-embed-webplayer-preview");
   preview_img.src = imgUrl;
   preview_img.width = 960;
   preview_img.height = 720;
   preview_img.alt = "Loading Icon";
+  const mute_a = document.createElement("a");
+  mute_a.classList.add("gisst-embed-webplayer-mute");
+  mute_a.classList.add("gisst-embed-webplayer-button");
+  mute_a.text = "🔇";
+  const halt_a = document.createElement("a");
+  halt_a.classList.add("gisst-embed-webplayer-halt");
+  halt_a.classList.add("gisst-embed-webplayer-button");
+  halt_a.text = "❌";
 
   container.appendChild(canvas);
   container.appendChild(canvas_txt);
   container.appendChild(preview_img);
-
-  // TODO: add some CSS element to the page with styles for the above
+  container.appendChild(mute_a);
+  container.appendChild(halt_a);
 
   // capture groups: root, UUID, query params
   const gisst_proto = gisst.slice(0,gisst.indexOf(":"));
