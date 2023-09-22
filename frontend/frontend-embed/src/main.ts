@@ -1,8 +1,8 @@
 import './style.css';
 import * as ra from './ra';
 import * as v86 from './v86';
+import {EmuControls} from './types';
 import imgUrl from './canvas.png';
-
 export async function embed(gisst:string, container:HTMLDivElement) {
   container.classList.add("gisst-embed-webplayer-container");
   const canvas = document.createElement("canvas");
@@ -31,8 +31,6 @@ export async function embed(gisst:string, container:HTMLDivElement) {
   container.appendChild(canvas);
   container.appendChild(canvas_txt);
   container.appendChild(preview_img);
-  container.appendChild(mute_a);
-  container.appendChild(halt_a);
 
   // capture groups: root, UUID, query params
   const gisst_proto = gisst.slice(0,gisst.indexOf(":"));
@@ -47,9 +45,30 @@ export async function embed(gisst:string, container:HTMLDivElement) {
   const config = await data_resp.json();
   console.log(config);
   const kind = config.environment.environment_framework;
+  let emu:EmuControls;
   if(kind == "v86") {
-    v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.start, config.manifest, container);
+    emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.start, config.manifest, container);
   } else {
-    ra.init(gisst_http_proto+"://"+gisst_root, config.environment.environment_core_name, config.start, config.manifest, container);
+    emu = await ra.init(gisst_http_proto+"://"+gisst_root, config.environment.environment_core_name, config.start, config.manifest, container);
   }
+  container.appendChild(mute_a);
+  container.appendChild(halt_a);
+  mute_a.addEventListener(
+    "click",
+    function () {
+      emu.toggle_mute();
+    }
+  );
+  halt_a.addEventListener(
+    "click",
+    async function () {
+      await emu.halt();
+      canvas.remove();
+      canvas_txt.remove();
+      preview_img.remove();
+      mute_a.remove();
+      halt_a.remove();
+    }
+  );
+
 }

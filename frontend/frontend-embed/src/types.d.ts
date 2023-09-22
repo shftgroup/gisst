@@ -48,3 +48,9 @@ export interface ReplayStart {
   type:string,
   data:StartReplayData
 }
+
+
+export interface EmuControls {
+  toggle_mute();
+  async halt();
+}
