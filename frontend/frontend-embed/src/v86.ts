@@ -87,7 +87,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   );
   let is_muted = false;
   return {
-    halt: () => {
+    halt: async () => {
       container.removeEventListener("click", click_to_activate);
       v86.clear();
     },
