@@ -26,10 +26,15 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   /* eslint prefer-const: ["error", { ignoreReadBeforeAssign: true }], no-use-before-define: "error" */
   let v86:EmbedV86;
   db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
+  let is_muted = false;
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
-        "load_state":(n:number) => {
+      "toggle_mute": () => {
+        is_muted = !is_muted;
+        v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined);
+      },
+      "load_state":(n:number) => {
         if(v86.active_replay != null) { v86.stop_replay(); }
         v86.load_state_slot(n);
       },
