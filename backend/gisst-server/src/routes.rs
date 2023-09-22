@@ -17,6 +17,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use sqlx::PgConnection;
 use uuid::{uuid, Uuid};
+use crate::auth::AuthContext;
+use crate::server::LoggedInUserInfo;
 
 // Nested Router structs for easier reading and manipulation
 // pub fn creator_router() -> Router {
@@ -330,6 +332,7 @@ async fn get_instances(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Query(params): Query<GetQueryParams>,
+    auth: AuthContext
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     let instances: Vec<Instance> = Instance::get_all(&mut conn, params.limit).await?;
@@ -380,6 +383,7 @@ async fn get_all_for_instance(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
+    auth: auth::AuthContext
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
@@ -414,11 +418,18 @@ async fn get_all_for_instance(
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
+        let user: Option<LoggedInUserInfo> = if let Some(user) = &auth.current_user {
+            Some(LoggedInUserInfo::generate_from_user(user))
+        } else {
+            None
+        };
+
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
                 Html(render!(
                     app_state.templates.get_template("instance_all_listing")?,
-                    instance => dbg!(full_instance),
+                    instance => full_instance,
+                    user => user
                 ))
                 .into_response()
             } else if accept

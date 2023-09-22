@@ -26,13 +26,14 @@ use serde::Deserialize;
 #[derive(Debug, Default, Clone, sqlx::FromRow)]
 pub struct User {
     id: i32,
+    sub: Option<String>,                //OpenID (currently google specific)
     creator_id: Option<Uuid>,
     password_hash: String,
-    name: Option<String>,               // OpenID
-    given_name: Option<String>,         //OpenID
-    family_name: Option<String>,        //OpenID
-    preferred_username: Option<String>, //OpenID
-    email: Option<String>,              //OpenID
+    pub name: Option<String>,               //OpenID
+    pub given_name: Option<String>,         //OpenID
+    pub family_name: Option<String>,        //OpenID
+    pub preferred_username: Option<String>, //OpenID
+    pub email: Option<String>,              //OpenID
     picture: Option<String>,            //OpenID (this is a url string)
 }
 
@@ -40,8 +41,8 @@ pub struct User {
 #[allow(dead_code)]
 #[derive(Deserialize, sqlx::FromRow, Clone)]
 pub struct OpenIDUserInfo {
-    sub: String,
-    name: Option<String>,               // OpenID
+    sub: Option<String>,                        //OpenID
+    name: Option<String>,               //OpenID
     given_name: Option<String>,         //OpenID
     family_name: Option<String>,        //OpenID
     preferred_username: Option<String>, //OpenID
@@ -66,6 +67,7 @@ impl User {
             Self,
             r#"SELECT
             id,
+            sub,
             creator_id,
             password_hash,
             name,
@@ -84,10 +86,11 @@ impl User {
     async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO users (creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+            r#"INSERT INTO users (sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING
             id,
+            sub,
             creator_id,
             password_hash,
             name,
@@ -97,6 +100,7 @@ impl User {
             email,
             picture
             "#,
+            model.sub,
             model.creator_id,
             model.password_hash,
             model.name,
@@ -116,17 +120,19 @@ impl User {
             Self,
             r#"
             UPDATE users SET
-            creator_id = $1,
-            password_hash = $2,
-            name = $3,
-            given_name = $4,
-            family_name = $5,
-            preferred_username = $6,
-            email = $7,
-            picture = $8
-            WHERE id = $9
+            sub = $1,
+            creator_id = $2,
+            password_hash = $3,
+            name = $4,
+            given_name = $5,
+            family_name = $6,
+            preferred_username = $7,
+            email = $8,
+            picture = $9
+            WHERE id = $10
             RETURNING
             id,
+            sub,
             creator_id,
             password_hash,
             name,
@@ -136,6 +142,7 @@ impl User {
             email,
             picture
             "#,
+            model.sub,
             model.creator_id,
             model.password_hash,
             model.name,
@@ -229,6 +236,7 @@ pub async fn oauth_callback_handler(
             &mut conn,
             &User {
                 id: 0, // will be ignored on insert since insert id is serial auto-increment
+                sub: profile.sub,
                 creator_id: None,
                 password_hash: token.access_token().secret().to_owned(),
                 name: profile.name,
@@ -255,10 +263,7 @@ pub async fn login_handler(
         .oauth_client
         .authorize_url(CsrfToken::new_random)
         .add_scope(Scope::new(
-            "https://www.googleapis.com/auth/userinfo.profile".to_string(),
-        ))
-        .add_scope(Scope(
-            "https://www.googleapis.com/auth/userinfo.email".to_string(),
+            "openid profile email".to_string(),
         ))
         .url();
 
