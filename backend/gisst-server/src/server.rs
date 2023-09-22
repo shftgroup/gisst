@@ -32,6 +32,7 @@ use axum::{
 
 use axum_login::{AuthLayer, RequireAuthorizationLayer};
 
+use crate::auth::{AuthContext, User};
 use crate::routes::screenshot_router;
 use axum_login::axum_sessions::async_session::MemoryStore;
 use axum_login::axum_sessions::{SameSite, SessionLayer};
@@ -47,7 +48,6 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use uuid::Uuid;
-use crate::auth::{AuthContext, User};
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -77,7 +77,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         templates: TemplateHandler::new("gisst-server/src/templates")?,
         oauth_client: auth::build_oauth_client(
             config.auth.google_client_id.expose_secret(),
-            config.auth.google_client_secret.expose_secret()
+            config.auth.google_client_secret.expose_secret(),
         ),
     };
 
@@ -100,6 +100,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/resources/:id", patch(tus_patch).head(tus_head))
         .route("/resources", post(tus_creation))
         .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route("/data/:instance_id", get(get_data))
         .route("/login", get(auth::login_handler))
         .route("/auth/google/callback", get(auth::oauth_callback_handler))
         .route("/logout", get(auth::logout_handler))
@@ -303,12 +304,12 @@ pub struct LoggedInUserInfo {
     name: Option<String>,
     given_name: Option<String>,
     family_name: Option<String>,
-    username: Option<String>
+    username: Option<String>,
 }
 
 impl LoggedInUserInfo {
     pub fn generate_from_user(user: &User) -> LoggedInUserInfo {
-        LoggedInUserInfo{
+        LoggedInUserInfo {
             email: user.email.clone(),
             name: user.name.clone(),
             given_name: user.given_name.clone(),
@@ -330,6 +331,16 @@ struct PlayerTemplateInfo {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+struct EmbedDataInfo {
+    instance: Instance,
+    work: Work,
+    environment: Environment,
+    save: Option<Save>,
+    start: PlayerStartTemplateInfo,
+    manifest: Vec<ObjectLink>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(tag = "type", content = "data", rename_all = "lowercase")]
 enum PlayerStartTemplateInfo {
     Cold,
@@ -343,12 +354,59 @@ struct PlayerParams {
     replay: Option<Uuid>,
 }
 
+async fn get_data(
+    app_state: Extension<ServerState>,
+    headers: HeaderMap,
+    Path(id): Path<Uuid>,
+    Query(params): Query<PlayerParams>,
+) -> Result<axum::response::Response, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    let instance = Instance::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(GISSTError::Generic)?;
+    let environment = Environment::get_by_id(&mut conn, instance.environment_id)
+        .await?
+        .ok_or(GISSTError::Generic)?;
+    let work = Work::get_by_id(&mut conn, instance.work_id)
+        .await?
+        .ok_or(GISSTError::Generic)?;
+    let start = match dbg!((params.state, params.replay)) {
+        (Some(id), None) => PlayerStartTemplateInfo::State(
+            StateLink::get_by_id(&mut conn, id)
+                .await?
+                .ok_or(GISSTError::Generic)?,
+        ),
+        (None, Some(id)) => PlayerStartTemplateInfo::Replay(
+            ReplayLink::get_by_id(&mut conn, id)
+                .await?
+                .ok_or(GISSTError::Generic)?,
+        ),
+        (None, None) => PlayerStartTemplateInfo::Cold,
+        (_, _) => return Err(GISSTError::Generic),
+    };
+    let manifest =
+        dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
+    println!("send json response");
+    Ok((
+        [("Access-Control-Allow-Origin", "*")],
+        axum::Json(EmbedDataInfo {
+            environment,
+            instance,
+            work,
+            save: None,
+            start,
+            manifest,
+        }),
+    )
+        .into_response())
+}
+
 async fn get_player(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
-    auth:AuthContext
+    auth: AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
@@ -377,42 +435,20 @@ async fn get_player(
     };
     let manifest =
         dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
-    let accept = dbg!(headers
-        .get("Accept")
-        .map(|hv| hv.to_str())
-        .and_then(|hv| hv.ok()));
     Ok((
         [("Access-Control-Allow-Origin", "*")],
-        if accept.is_none() || accept.is_some_and(|hv| hv.contains("text/html")) {
-            Html(render!(
-                app_state.templates.get_template("player")?,
-                player_params => PlayerTemplateInfo {
-                    environment,
-                    instance,
-                    work,
-                    save: None,
-                    user,
-                    start,
-                    manifest
-                }
-            ))
-            .into_response()
-        } else if accept.is_some_and(|hv| hv.contains("application/json")) {
-            println!("send json response");
-            axum::Json(PlayerTemplateInfo {
+        Html(render!(
+            app_state.templates.get_template("player")?,
+            player_params => PlayerTemplateInfo {
                 environment,
                 instance,
                 work,
                 save: None,
-                start,
                 user,
-                manifest,
-            })
-            .into_response()
-        } else {
-            println!("send error response");
-            Err(GISSTError::Generic)?
-        },
+                start,
+                manifest
+            }
+        )),
     )
         .into_response())
 }

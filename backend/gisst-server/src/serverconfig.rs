@@ -35,14 +35,20 @@ impl ServerConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct AuthConfig {
     pub google_client_id: Secret<String>,
-    pub google_client_secret: Secret<String>
+    pub google_client_secret: Secret<String>,
 }
 
 impl Default for AuthConfig {
     fn default() -> Self {
         Self {
-            google_client_id: "PROVIDE GOOGLE CLIENT ID in local.toml".to_string().parse().unwrap(),
-            google_client_secret: "PROVIDE GOOGLE CLIENT SECRET in local.toml".to_string().parse().unwrap(),
+            google_client_id: "PROVIDE GOOGLE CLIENT ID in local.toml"
+                .to_string()
+                .parse()
+                .unwrap(),
+            google_client_secret: "PROVIDE GOOGLE CLIENT SECRET in local.toml"
+                .to_string()
+                .parse()
+                .unwrap(),
         }
     }
 }
