@@ -126,7 +126,7 @@ api.on_replay_checkpoints_changed(checkpoints_updated);
 
 async function run(host:string, content:string, entryState:string, movie:string) {
   ui_state.clear();
-  const data_resp = await fetch(host+"/play/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
+  const data_resp = await fetch(host+"/data/"+content+(entryState ? "?state="+entryState : "")+(movie ? "?replay="+movie : ""), {headers:[["Accept","application/json"]]});
   console.log(data_resp);
   const config = await data_resp.json();
   ui_state.setConfig(config);

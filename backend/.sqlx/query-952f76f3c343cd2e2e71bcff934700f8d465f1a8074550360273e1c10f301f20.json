@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO users (creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)\n            VALUES($1, $2, $3, $4, $5, $6, $7, $8)\n            RETURNING\n            id,\n            creator_id,\n            password_hash,\n            name,\n            given_name,\n            family_name,\n            preferred_username,\n            email,\n            picture\n            ",
+  "query": "\n            UPDATE users SET\n            sub = $1,\n            creator_id = $2,\n            password_hash = $3,\n            name = $4,\n            given_name = $5,\n            family_name = $6,\n            preferred_username = $7,\n            email = $8,\n            picture = $9\n            WHERE id = $10\n            RETURNING\n            id,\n            sub,\n            creator_id,\n            password_hash,\n            name,\n            given_name,\n            family_name,\n            preferred_username,\n            email,\n            picture\n            ",
   "describe": {
     "columns": [
       {
@@ -10,47 +10,53 @@
       },
       {
         "ordinal": 1,
+        "name": "sub",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
         "name": "creator_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "password_hash",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "given_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "family_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "preferred_username",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "email",
         "type_info": "Text"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "picture",
         "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
         "Uuid",
         "Text",
         "Text",
@@ -58,11 +64,13 @@
         "Text",
         "Text",
         "Text",
-        "Text"
+        "Text",
+        "Int4"
       ]
     },
     "nullable": [
       false,
+      true,
       true,
       false,
       true,
@@ -73,5 +81,5 @@
       true
     ]
   },
-  "hash": "257ee150d44cc5b6d09abd920f8a9ac6a8e2047d9bbab6527ef9758354817df7"
+  "hash": "952f76f3c343cd2e2e71bcff934700f8d465f1a8074550360273e1c10f301f20"
 }
