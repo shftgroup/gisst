@@ -80,7 +80,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
     });
   function click_to_activate() {
       activate(v86);
-  };
+  }
   container.addEventListener(
     "click",
     click_to_activate
