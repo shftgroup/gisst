@@ -52,5 +52,5 @@ export interface ReplayStart {
 
 export interface EmuControls {
   toggle_mute();
-  halt();
+  halt():Promise<void>;
 }
