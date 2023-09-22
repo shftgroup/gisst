@@ -11,6 +11,7 @@ addEventListener("load", () =>
     const ui_state:ui.UI = new ui.UI(
       <HTMLDivElement>document.getElementById("ui")!,
       {
+        toggle_mute: () => console.log("MUTE/UNMUTE"),
         load_state: (sn:number) => console.log("LOAD",sn),
         load_checkpoint: (sn:number) => console.log("LOADCP",sn),
           save_state: () => {
@@ -29,8 +30,8 @@ addEventListener("load", () =>
             return new Promise((resolve, reject) => {metadata ? resolve(metadata): reject("metadata is null")})
         }
       },
-        false,
-        JSON.parse(document.getElementById("config")!.textContent!) as FrontendConfig
+      false,
+      JSON.parse(document.getElementById("config")!.textContent!) as FrontendConfig
     );
     (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_SAVE_BUTTON)!).addEventListener("click",
       () => ui_state.newSave("yet another save.srm"));
