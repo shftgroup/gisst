@@ -337,6 +337,7 @@ async fn get_instances(
     let mut conn = app_state.pool.acquire().await?;
     let instances: Vec<Instance> = Instance::get_all(&mut conn, params.limit).await?;
     let accept: Option<String> = parse_header(&headers, "Accept");
+    let user = auth.current_user.as_ref().map(LoggedInUserInfo::generate_from_user);
     let mut instance_results: Vec<GetAllInstanceResult> = Vec::new();
     for inst in &instances {
         instance_results.push(GetAllInstanceResult {
@@ -355,7 +356,8 @@ async fn get_instances(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             Html(render!(
                 app_state.templates.get_template("instance_listing")?,
-                instances => instance_results
+                instances => instance_results,
+                user => user,
             ))
             .into_response()
         } else if accept
@@ -418,11 +420,7 @@ async fn get_all_for_instance(
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
-        let user: Option<LoggedInUserInfo> = if let Some(user) = &auth.current_user {
-            Some(LoggedInUserInfo::generate_from_user(user))
-        } else {
-            None
-        };
+        let user = auth.current_user.as_ref().map(LoggedInUserInfo::generate_from_user);
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {

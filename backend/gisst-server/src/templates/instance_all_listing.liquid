@@ -16,7 +16,7 @@
             </a>
             <div class="col-md-3 text-end">
                 {% if user %}
-                    <span class="fs-4">Logged in as: {{ user.email }}</span>
+                    Logged in as: {{ user.email }}
                 {% else %}
                     <a class="btn btn-outline-primary me-2" href="/login" >Login</a>
                 {% endif %}
