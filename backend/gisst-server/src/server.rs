@@ -47,6 +47,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use uuid::Uuid;
+use crate::auth::{AuthContext, User};
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -102,7 +103,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/login", get(auth::login_handler))
         .route("/auth/google/callback", get(auth::oauth_callback_handler))
         .route("/logout", get(auth::logout_handler))
-        .route("/debug/tus_test", get(get_upload_form))
+        //.route("/debug/tus_test", get(get_upload_form))
         // .nest("/creators", creator_router())
         .nest("/environments", environment_router())
         .nest("/instances", instance_router())
@@ -297,10 +298,32 @@ impl StateLink {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+pub struct LoggedInUserInfo {
+    email: Option<String>,
+    name: Option<String>,
+    given_name: Option<String>,
+    family_name: Option<String>,
+    username: Option<String>
+}
+
+impl LoggedInUserInfo {
+    pub fn generate_from_user(user: &User) -> LoggedInUserInfo {
+        LoggedInUserInfo{
+            email: user.email.clone(),
+            name: user.name.clone(),
+            given_name: user.given_name.clone(),
+            family_name: user.family_name.clone(),
+            username: user.preferred_username.clone(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 struct PlayerTemplateInfo {
     instance: Instance,
     work: Work,
     environment: Environment,
+    user: LoggedInUserInfo,
     save: Option<Save>,
     start: PlayerStartTemplateInfo,
     manifest: Vec<ObjectLink>,
@@ -325,6 +348,7 @@ async fn get_player(
     headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
+    auth:AuthContext
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
@@ -336,6 +360,7 @@ async fn get_player(
     let work = Work::get_by_id(&mut conn, instance.work_id)
         .await?
         .ok_or(GISSTError::Generic)?;
+    let user = LoggedInUserInfo::generate_from_user(&auth.current_user.unwrap());
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => PlayerStartTemplateInfo::State(
             StateLink::get_by_id(&mut conn, id)
@@ -366,6 +391,7 @@ async fn get_player(
                     instance,
                     work,
                     save: None,
+                    user,
                     start,
                     manifest
                 }
@@ -379,6 +405,7 @@ async fn get_player(
                 work,
                 save: None,
                 start,
+                user,
                 manifest,
             })
             .into_response()
@@ -399,6 +426,7 @@ async fn get_player(
 // #[derive(Serialize)]
 // struct ModelField { name: String, field_type: String }
 //
+#[allow(dead_code)]
 async fn get_upload_form(app_state: Extension<ServerState>) -> Result<Html<String>, GISSTError> {
     Ok(Html(render!(app_state
         .templates
