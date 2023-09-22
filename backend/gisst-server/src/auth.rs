@@ -277,7 +277,7 @@ pub async fn logout_handler(mut auth: AuthContext) {
     auth.logout().await;
 }
 
-pub fn build_oauth_client(client_id:&String, client_secret:&String) -> BasicClient {
+pub fn build_oauth_client(client_id: &String, client_secret: &String) -> BasicClient {
     let redirect_url = "http://localhost:3000/auth/google/callback".to_string();
 
     let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
