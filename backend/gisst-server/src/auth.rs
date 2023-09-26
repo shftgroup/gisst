@@ -7,11 +7,13 @@ use axum::{
     response::{IntoResponse, Redirect},
     Extension,
 };
+use gisst::models::{Creator, DBModel};
 
 use uuid::Uuid;
 
 use axum_login::axum_sessions::extractors::{ReadableSession, WritableSession};
 use axum_login::{secrecy::SecretVec, AuthUser, UserStore};
+use chrono::Utc;
 use sqlx::{PgConnection, PgPool};
 
 use crate::error::{AuthError, GISSTError};
@@ -27,7 +29,7 @@ use serde::Deserialize;
 pub struct User {
     id: i32,
     sub: Option<String>,                //OpenID (currently google specific)
-    creator_id: Option<Uuid>,
+    pub creator_id: Option<Uuid>,
     password_hash: String,
     pub name: Option<String>,               //OpenID
     pub given_name: Option<String>,         //OpenID
@@ -39,7 +41,7 @@ pub struct User {
 
 // Based on OpenID standard claims https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
 #[allow(dead_code)]
-#[derive(Deserialize, sqlx::FromRow, Clone)]
+#[derive(Debug, Deserialize, sqlx::FromRow, Clone)]
 pub struct OpenIDUserInfo {
     sub: Option<String>,                        //OpenID
     name: Option<String>,               //OpenID
@@ -248,6 +250,21 @@ pub async fn oauth_callback_handler(
             },
         )
         .await?;
+
+        println!("User record created: {user:?}. Creating creator.");
+        let creator = Creator::insert(&mut conn, Creator {
+                            creator_id: Uuid::new_v4(),
+                            creator_username: user.email.clone().unwrap(),
+                            creator_full_name: user.given_name.clone().unwrap(),
+                            created_on: Some(Utc::now()),
+                        }).await?;
+
+        println!("Creator record created: {creator:?}. Linking user.");
+        let user = User::update(&mut conn, &User {
+            creator_id: Some(creator.creator_id),
+            ..user
+        }).await?;
+
         println!("User record created: {user:?}. Logging in.");
         auth.login(&user).await.unwrap();
         println!("Logged in the user: {user:?}");
@@ -272,9 +289,11 @@ pub async fn login_handler(
     Redirect::to(auth_url.as_ref())
 }
 
-pub async fn logout_handler(mut auth: AuthContext) {
+pub async fn logout_handler(mut auth: AuthContext)
+    -> impl IntoResponse {
     dbg!("Logging out user: {}", &auth.current_user);
     auth.logout().await;
+    Redirect::to("/instances")
 }
 
 pub fn build_oauth_client(client_id: &String, client_secret: &String) -> BasicClient {
