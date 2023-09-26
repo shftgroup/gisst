@@ -44,6 +44,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
       {
+        "toggle_mute": () => send_message("MUTE"),
         "load_state": (num: number) => load_state_slot(num),
         "save_state": () => save_state(),
         "load_checkpoint": (num: number) => load_state_slot(num),

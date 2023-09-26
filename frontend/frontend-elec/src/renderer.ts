@@ -235,6 +235,9 @@ window.addEventListener("DOMContentLoaded", () => {
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
+      "toggle_mute": () => {
+        throw "not yet implemented";
+      },
       "save_state": () => {
         throw "not yet implemented";
       },
