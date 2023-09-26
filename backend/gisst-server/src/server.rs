@@ -46,7 +46,7 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool};
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
-use tower_http::{cors::CorsLayer, services::ServeDir};
+use tower_http::{cors::CorsLayer};
 use uuid::Uuid;
 
 #[derive(Clone)]
