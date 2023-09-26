@@ -8,7 +8,6 @@ window.onload = function() {
   if(kind == "v86") {
     v86.init(config.environment, config.start, config.manifest);
   } else {
-    //(<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-ra.png";
     ra.init(config.environment.environment_core_name, config.start, config.manifest);
   }
 };

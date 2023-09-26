@@ -19,6 +19,7 @@ import templates from "../html/templates.html?raw"
 import {UITemplateConst, UIIDConst } from "./template_consts"
 
 interface UIController {
+  toggle_mute: () => void;
   load_state: (state_num:number) => void;
   save_state: () => void;
   play_replay: (replay_num:number) => void;
@@ -98,6 +99,7 @@ export class UI {
           .appendChild(elementFromTemplates(UITemplateConst.EMULATOR_OBJECTS_TABS_EMBEDDED));
       this.ui_root.appendChild(ui_embedded_grid);
       
+      this.ui_root.querySelector("#"+UIIDConst.EMU_TOGGLE_MUTE_BUTTON)!.addEventListener("click", this.control.toggle_mute);
       this.ui_root.querySelector("#"+UIIDConst.EMU_SAVE_STATE_BUTTON)!.addEventListener("click", this.control.save_state);
       this.ui_root.querySelector("#"+UIIDConst.EMU_START_REPLAY_BUTTON)!.addEventListener("click", this.control.start_replay);
       this.ui_root.querySelector("#"+UIIDConst.EMU_FINISH_REPLAY_BUTTON)!.addEventListener("click", this.control.stop_and_save_replay);
