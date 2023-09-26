@@ -35,12 +35,12 @@ export async function embed(gisst:string, container:HTMLDivElement) {
   // capture groups: root, UUID, query params
   const gisst_proto = gisst.slice(0,gisst.indexOf(":"));
   const gisst_http_proto = gisst_proto == "gisst" ? "https" : gisst_proto;
-  gisst = gisst.replace("/play/", "/").replace("http:", "gisst:").replace("https:", "gisst:");
+  gisst = gisst.replace("/play/", "/").replace("/data/", "/").replace("http:", "gisst:").replace("https:", "gisst:");
   const matches = gisst.match(/gisst:\/\/(.*)\/([0-9a-fA-F-]{32,})(\?.+)?$/);
   if(!matches) { throw "malformed gisst url"; }
   const gisst_root = matches[1];
   const gisst_query = matches[2] + (matches[3] || "");
-  const data_resp = await fetch(gisst_http_proto+"://"+gisst_root+"/play/"+gisst_query, {headers:[["Accept","application/json"]]});
+  const data_resp = await fetch(gisst_http_proto+"://"+gisst_root+"/data/"+gisst_query, {headers:[["Accept","application/json"]]});
   console.log(data_resp);
   const config = await data_resp.json();
   console.log(config);

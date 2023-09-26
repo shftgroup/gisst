@@ -7,6 +7,7 @@ mod serverconfig;
 mod templates;
 mod tus;
 mod utils;
+mod auth;
 
 use anyhow::Result;
 use tracing::debug;

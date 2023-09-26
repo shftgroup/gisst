@@ -1,0 +1,84 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO users (sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)\n            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)\n            RETURNING\n            id,\n            sub,\n            creator_id,\n            password_hash,\n            name,\n            given_name,\n            family_name,\n            preferred_username,\n            email,\n            picture\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "sub",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "password_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "given_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "family_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "preferred_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "picture",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "ba918a423fab8216b62c3cde591a97db406ace739ced40fe4c21a0804bbdc9f0"
+}

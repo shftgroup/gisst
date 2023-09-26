@@ -15,6 +15,9 @@ pub struct ServerConfig {
 
     #[serde(default)]
     pub storage: StorageConfig,
+
+    #[serde(default)]
+    pub auth: AuthConfig,
 }
 
 impl ServerConfig {
@@ -26,6 +29,27 @@ impl ServerConfig {
             .add_source(File::with_name("config/local.toml").required(false))
             .add_source(Environment::with_prefix("GISST").separator("__"));
         builder.build()?.try_deserialize()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthConfig {
+    pub google_client_id: Secret<String>,
+    pub google_client_secret: Secret<String>,
+}
+
+impl Default for AuthConfig {
+    fn default() -> Self {
+        Self {
+            google_client_id: "PROVIDE GOOGLE CLIENT ID in local.toml"
+                .to_string()
+                .parse()
+                .unwrap(),
+            google_client_secret: "PROVIDE GOOGLE CLIENT SECRET in local.toml"
+                .to_string()
+                .parse()
+                .unwrap(),
+        }
     }
 }
 
