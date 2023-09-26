@@ -1,6 +1,7 @@
 import {nested_replace,StringIndexable} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
-import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
+import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls} from './types';
+
 
 let v86_loading = false;
 let v86_loaded = false;
@@ -25,7 +26,7 @@ function load_v86(gisst_root:string) : Promise<void> {
   });
 }
 
-export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement):Promise<EmbedV86> {
+export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement):Promise<EmuControls> {
   if(!v86_loaded) {
     console.log("Loading v86");
     await load_v86(gisst_root);
@@ -77,13 +78,24 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       activate(v86);
       return false;
     });
+  function click_to_activate() {
+      activate(v86);
+  }
   container.addEventListener(
     "click",
-    function () {
-      activate(v86);
-    }
+    click_to_activate
   );
-  return v86;
+  let is_muted = false;
+  return {
+    halt: async () => {
+      container.removeEventListener("click", click_to_activate);
+      v86.clear();
+    },
+    toggle_mute: () => {
+      is_muted = !is_muted;
+      v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined)
+    }
+  };
 }
 
 function activate(v86:EmbedV86) {
