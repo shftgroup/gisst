@@ -43,7 +43,7 @@ use rand::Rng;
 use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
+use sqlx::{PgPool};
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
 use tower_http::{cors::CorsLayer, services::ServeDir};
@@ -99,7 +99,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/play/:instance_id", get(get_player))
         .route("/resources/:id", patch(tus_patch).head(tus_head))
         .route("/resources", post(tus_creation))
-        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login_or_redirect(Arc::new("/login".into()), None))
         .route("/data/:instance_id", get(get_data))
         .route("/login", get(auth::login_handler))
         .route("/auth/google/callback", get(auth::oauth_callback_handler))
@@ -305,6 +305,7 @@ pub struct LoggedInUserInfo {
     given_name: Option<String>,
     family_name: Option<String>,
     username: Option<String>,
+    creator_id: Uuid
 }
 
 impl LoggedInUserInfo {
@@ -315,6 +316,7 @@ impl LoggedInUserInfo {
             given_name: user.given_name.clone(),
             family_name: user.family_name.clone(),
             username: user.preferred_username.clone(),
+            creator_id: user.creator_id.unwrap().clone()
         }
     }
 }
@@ -356,7 +358,7 @@ struct PlayerParams {
 
 async fn get_data(
     app_state: Extension<ServerState>,
-    headers: HeaderMap,
+    _headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
 ) -> Result<axum::response::Response, GISSTError> {
@@ -403,7 +405,7 @@ async fn get_data(
 
 async fn get_player(
     app_state: Extension<ServerState>,
-    headers: HeaderMap,
+    _headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
     auth: AuthContext,
