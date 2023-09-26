@@ -1,8 +1,8 @@
 import * as fetchfs from './fetchfs';
-import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
+import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls} from './types';
 import {loadRetroArch,LibretroModule} from './libretro_adapter';
 
-export function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement) {
+export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement):Promise<EmuControls> {
   const state_dir = "/home/web_user/retroarch/userdata/states";
   const saves_dir = "/home/web_user/retroarch/userdata/saves";
   const retro_args = ["-v"];
@@ -24,10 +24,10 @@ export function init(gisst_root:string, core:string, start:ColdStart | StateStar
   retro_args.push("/home/web_user/content/retroarch.cfg");
   retro_args.push("/home/web_user/content/" + content_file);
   console.log(retro_args);
-
-  return loadRetroArch(gisst_root, core,
-    function (module:LibretroModule) {
-      fetchfs.mkdirp(module,"/home/web_user/content");
+  return new Promise((res) => {
+    loadRetroArch(gisst_root, core,
+      function (module:LibretroModule) {
+        fetchfs.mkdirp(module,"/home/web_user/content");
 
       const proms = [];
 
@@ -71,8 +71,23 @@ export function init(gisst_root:string, core:string, start:ColdStart | StateStar
           module.FS.close(f);
         }
         retroReady(module, retro_args, container);
+        res({
+          toggle_mute:() => {
+            send_message(module, "MUTE");
+          },
+          halt:async () => {
+            await send_message(module, "QUIT");
+            await sleep(50);
+            await send_message(module, "QUIT");
+          }
+        })
       });
     });
+  });
+}
+
+function sleep(ms:number) : Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function copyFile(module:LibretroModule, from: string, to: string): void {
@@ -93,4 +108,34 @@ function retroReady(module:LibretroModule, retro_args:string[], container:HTMLDi
       });
       return false;
     });
+}
+
+async function read_response(module:LibretroModule, wait:boolean): Promise<string | undefined> {
+  const waiting:() => Promise<string|undefined> = () => new Promise((resolve) => {
+    /* eslint-disable prefer-const */
+    let interval:ReturnType<typeof setInterval>;
+    const read_cb = () => {
+      const resp = module.retroArchRecv();
+      if(resp != undefined) {
+        clearInterval(interval!);
+        resolve(resp);
+      }
+    }
+    interval = setInterval(read_cb, 100);
+  });
+  let outp:string|undefined=undefined;
+  if(wait) {
+    outp = await waiting();
+  } else {
+    outp = module.retroArchRecv();
+  }
+  // console.log("stdout: ",outp);
+  return outp;
+}
+
+async function send_message(module:LibretroModule, msg:string) {
+  let clearout = await read_response(module, false);
+  while(clearout) { clearout = await read_response(module, false); }
+  // console.log("send:",msg);
+  module.retroArchSend(msg+"\n");
 }
