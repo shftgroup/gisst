@@ -27,8 +27,20 @@ pub enum GISSTError {
     PathPrefixError(#[from] std::path::StripPrefixError),
     #[error("tokio task error")]
     JoinError(#[from] tokio::task::JoinError),
+    #[error("reqwest error")]
+    ReqwestError(#[from] reqwest::Error),
+    #[error("auth error")]
+    AuthError(#[from] AuthError),
     #[error("generic error")]
     Generic,
+}
+
+#[derive(Debug, Error)]
+pub enum AuthError {
+    #[error("user creation error")]
+    UserCreateError,
+    #[error("user update error")]
+    UserUpdateError,
 }
 
 impl IntoResponse for GISSTError {
@@ -39,16 +51,20 @@ impl IntoResponse for GISSTError {
             GISSTError::StorageError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
             GISSTError::RecordCreateError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "record creation error")
-            }
+            },
             GISSTError::RecordUpdateError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "record update error")
-            }
+            },
             GISSTError::PathPrefixError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "file creation error")
-            }
+            },
             GISSTError::TemplateError => (StatusCode::INTERNAL_SERVER_ERROR, "template error"),
             GISSTError::JoinError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "tokio task error"),
             GISSTError::FileNotFoundError => (StatusCode::NOT_FOUND, "file not found"),
+            GISSTError::ReqwestError(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "oauth reqwest error")
+            },
+            GISSTError::AuthError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "auth error"),
             GISSTError::Generic => (StatusCode::INTERNAL_SERVER_ERROR, "generic error"),
         };
 

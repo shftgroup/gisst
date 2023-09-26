@@ -1,12 +1,13 @@
-use crate::{error::GISSTError, server::ServerState, utils::parse_header};
+use crate::{auth, error::GISSTError, server::ServerState, utils::parse_header};
 use axum::{
     extract::{Json, Path, Query},
     headers::HeaderMap,
     http::StatusCode,
     response::{Html, IntoResponse},
-    routing::{get, post},
+    routing::{get, post, put},
     Extension, Router,
 };
+use axum_login::RequireAuthorizationLayer;
 use gisst::models::{
     DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
 };
@@ -16,6 +17,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use sqlx::PgConnection;
 use uuid::{uuid, Uuid};
+use crate::auth::AuthContext;
+use crate::server::LoggedInUserInfo;
 
 // Nested Router structs for easier reading and manipulation
 // pub fn creator_router() -> Router {
@@ -104,11 +107,11 @@ pub fn save_router() -> Router {
 pub fn state_router() -> Router {
     Router::new()
         .route("/", get(get_states))
+        .route("/:id", get(get_single_state))
         .route("/create", post(create_state))
-        .route(
-            "/:id",
-            get(get_single_state).put(edit_state).delete(delete_state),
-        )
+        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route("/:id", put(edit_state).delete(delete_state))
+        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
 }
 
 pub fn work_router() -> Router {
@@ -322,20 +325,22 @@ async fn delete_image(
 #[derive(Serialize)]
 struct GetAllInstanceResult {
     instance: Instance,
-    work: Work
+    work: Work,
 }
 
 async fn get_instances(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Query(params): Query<GetQueryParams>,
+    auth: AuthContext
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     let instances: Vec<Instance> = Instance::get_all(&mut conn, params.limit).await?;
     let accept: Option<String> = parse_header(&headers, "Accept");
+    let user = auth.current_user.as_ref().map(LoggedInUserInfo::generate_from_user);
     let mut instance_results: Vec<GetAllInstanceResult> = Vec::new();
     for inst in &instances {
-        instance_results.push( GetAllInstanceResult{
+        instance_results.push(GetAllInstanceResult {
             instance: Instance {
                 instance_id: inst.instance_id,
                 work_id: inst.work_id,
@@ -343,7 +348,7 @@ async fn get_instances(
                 instance_config: inst.instance_config.clone(),
                 created_on: inst.created_on,
             },
-            work: Work::get_by_id(&mut conn, inst.work_id).await?.unwrap()
+            work: Work::get_by_id(&mut conn, inst.work_id).await?.unwrap(),
         })
     }
 
@@ -351,7 +356,8 @@ async fn get_instances(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             Html(render!(
                 app_state.templates.get_template("instance_listing")?,
-                instances => instance_results
+                instances => instance_results,
+                user => user,
             ))
             .into_response()
         } else if accept
@@ -379,6 +385,7 @@ async fn get_all_for_instance(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
+    auth: auth::AuthContext
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
@@ -413,11 +420,14 @@ async fn get_all_for_instance(
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
+        let user = auth.current_user.as_ref().map(LoggedInUserInfo::generate_from_user);
+
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
                 Html(render!(
                     app_state.templates.get_template("instance_all_listing")?,
-                    instance => dbg!(full_instance),
+                    instance => full_instance,
+                    user => user
                 ))
                 .into_response()
             } else if accept

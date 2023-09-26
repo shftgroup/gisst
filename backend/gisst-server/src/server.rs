@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use tower::ServiceBuilder;
 
 use crate::{
-    db,
+    auth, db,
     routes::{
         // creator_router,
         environment_router,
@@ -30,14 +30,23 @@ use axum::{
     Extension, Router, Server,
 };
 
+use axum_login::{AuthLayer, RequireAuthorizationLayer};
+
+use crate::auth::{AuthContext, User};
 use crate::routes::screenshot_router;
+use axum_login::axum_sessions::async_session::MemoryStore;
+use axum_login::axum_sessions::{SameSite, SessionLayer};
 use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::render;
+use oauth2::basic::BasicClient;
+use rand::Rng;
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
+use sqlx::{PgPool};
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer};
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -49,6 +58,7 @@ pub struct ServerState {
     pub default_chunk_size: usize,
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: TemplateHandler,
+    pub oauth_client: BasicClient,
 }
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
@@ -65,13 +75,36 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         default_chunk_size: config.storage.chunk_size,
         pending_uploads: Default::default(),
         templates: TemplateHandler::new("gisst-server/src/templates")?,
+        oauth_client: auth::build_oauth_client(
+            config.auth.google_client_id.expose_secret(),
+            config.auth.google_client_secret.expose_secret(),
+        ),
     };
+
+    let secret = rand::thread_rng().gen::<[u8; 64]>();
+    let user_pool = PgPoolOptions::new()
+        .connect(config.database.database_url.expose_secret())
+        .await
+        .unwrap();
+
+    let user_store = auth::PostgresStore::new(user_pool.clone());
+    let auth_layer: AuthLayer<auth::PostgresStore, i32, auth::User, auth::Role> =
+        AuthLayer::new(user_store, &secret);
+    let session_store = MemoryStore::new();
+    let session_layer = SessionLayer::new(session_store, &secret)
+        .with_secure(false)
+        .with_same_site_policy(SameSite::Lax);
 
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
         .route("/resources/:id", patch(tus_patch).head(tus_head))
         .route("/resources", post(tus_creation))
-        .route("/debug/tus_test", get(get_upload_form))
+        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login_or_redirect(Arc::new("/login".into()), None))
+        .route("/data/:instance_id", get(get_data))
+        .route("/login", get(auth::login_handler))
+        .route("/auth/google/callback", get(auth::oauth_callback_handler))
+        .route("/logout", get(auth::logout_handler))
+        //.route("/debug/tus_test", get(get_upload_form))
         // .nest("/creators", creator_router())
         .nest("/environments", environment_router())
         .nest("/instances", instance_router())
@@ -122,7 +155,9 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                 .service(selective_serve_dir::SelectiveServeDir::new("web-dist")),
         )
         .layer(Extension(app_state))
-        .layer(DefaultBodyLimit::max(33554432));
+        .layer(DefaultBodyLimit::max(33554432))
+        .layer(auth_layer)
+        .layer(session_layer);
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
@@ -264,7 +299,41 @@ impl StateLink {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+pub struct LoggedInUserInfo {
+    email: Option<String>,
+    name: Option<String>,
+    given_name: Option<String>,
+    family_name: Option<String>,
+    username: Option<String>,
+    creator_id: Uuid
+}
+
+impl LoggedInUserInfo {
+    pub fn generate_from_user(user: &User) -> LoggedInUserInfo {
+        LoggedInUserInfo {
+            email: user.email.clone(),
+            name: user.name.clone(),
+            given_name: user.given_name.clone(),
+            family_name: user.family_name.clone(),
+            username: user.preferred_username.clone(),
+            creator_id: user.creator_id.unwrap(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 struct PlayerTemplateInfo {
+    instance: Instance,
+    work: Work,
+    environment: Environment,
+    user: LoggedInUserInfo,
+    save: Option<Save>,
+    start: PlayerStartTemplateInfo,
+    manifest: Vec<ObjectLink>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+struct EmbedDataInfo {
     instance: Instance,
     work: Work,
     environment: Environment,
@@ -287,9 +356,9 @@ struct PlayerParams {
     replay: Option<Uuid>,
 }
 
-async fn get_player(
+async fn get_data(
     app_state: Extension<ServerState>,
-    headers: HeaderMap,
+    _headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
 ) -> Result<axum::response::Response, GISSTError> {
@@ -319,40 +388,69 @@ async fn get_player(
     };
     let manifest =
         dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
-    let accept = dbg!(headers
-        .get("Accept")
-        .map(|hv| hv.to_str())
-        .and_then(|hv| hv.ok()));
+    println!("send json response");
     Ok((
         [("Access-Control-Allow-Origin", "*")],
-        if accept.is_none() || accept.is_some_and(|hv| hv.contains("text/html")) {
-            Html(render!(
-                app_state.templates.get_template("player")?,
-                player_params => PlayerTemplateInfo {
-                    environment,
-                    instance,
-                    work,
-                    save: None,
-                    start,
-                    manifest
-                }
-            ))
-            .into_response()
-        } else if accept.is_some_and(|hv| hv.contains("application/json")) {
-            println!("send json response");
-            axum::Json(PlayerTemplateInfo {
+        axum::Json(EmbedDataInfo {
+            environment,
+            instance,
+            work,
+            save: None,
+            start,
+            manifest,
+        }),
+    )
+        .into_response())
+}
+
+async fn get_player(
+    app_state: Extension<ServerState>,
+    _headers: HeaderMap,
+    Path(id): Path<Uuid>,
+    Query(params): Query<PlayerParams>,
+    auth: AuthContext,
+) -> Result<axum::response::Response, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    let instance = Instance::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(GISSTError::Generic)?;
+    let environment = Environment::get_by_id(&mut conn, instance.environment_id)
+        .await?
+        .ok_or(GISSTError::Generic)?;
+    let work = Work::get_by_id(&mut conn, instance.work_id)
+        .await?
+        .ok_or(GISSTError::Generic)?;
+    let user = LoggedInUserInfo::generate_from_user(&auth.current_user.unwrap());
+    let start = match dbg!((params.state, params.replay)) {
+        (Some(id), None) => PlayerStartTemplateInfo::State(
+            StateLink::get_by_id(&mut conn, id)
+                .await?
+                .ok_or(GISSTError::Generic)?,
+        ),
+        (None, Some(id)) => PlayerStartTemplateInfo::Replay(
+            ReplayLink::get_by_id(&mut conn, id)
+                .await?
+                .ok_or(GISSTError::Generic)?,
+        ),
+        (None, None) => PlayerStartTemplateInfo::Cold,
+        (_, _) => return Err(GISSTError::Generic),
+    };
+    let manifest =
+        dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
+    Ok((
+        [("Access-Control-Allow-Origin", "*")],
+        Html(render!(
+            app_state.templates.get_template("player")?,
+            player_params => PlayerTemplateInfo {
                 environment,
                 instance,
                 work,
                 save: None,
+                user,
                 start,
-                manifest,
-            })
-            .into_response()
-        } else {
-            println!("send error response");
-            Err(GISSTError::Generic)?
-        },
+                manifest
+            }
+        )),
     )
         .into_response())
 }
@@ -366,6 +464,7 @@ async fn get_player(
 // #[derive(Serialize)]
 // struct ModelField { name: String, field_type: String }
 //
+#[allow(dead_code)]
 async fn get_upload_form(app_state: Extension<ServerState>) -> Result<Html<String>, GISSTError> {
     Ok(Html(render!(app_state
         .templates
