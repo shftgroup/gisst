@@ -8,6 +8,7 @@ use sqlx::postgres::{PgConnection, PgQueryResult};
 
 use crate::model_enums::Framework;
 use uuid::Uuid;
+use serde_with::{base64::Base64, serde_as};
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
@@ -149,6 +150,14 @@ pub struct Instance {
     pub environment_id: Uuid,
     pub instance_config: Option<sqlx::types::JsonValue>,
     pub created_on: Option<DateTime<Utc>>,
+}
+
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Screenshot {
+    pub screenshot_id: Uuid,
+    #[serde_as(as = "Base64")]
+    pub screenshot_data: Vec<u8>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type)]
@@ -1812,6 +1821,33 @@ impl Work {
             platform
         )
             .fetch_all(conn)
+            .await
+    }
+}
+
+impl Screenshot {
+    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+        sqlx::query_as!(
+            Screenshot,
+            r#"INSERT INTO screenshot (screenshot_id, screenshot_data) VALUES ($1, $2)
+            RETURNING screenshot_id, screenshot_data
+            "#,
+            model.screenshot_id,
+            model.screenshot_data
+        )
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::Screenshot)
+    }
+    pub async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Screenshot,
+            r#" SELECT screenshot_id, screenshot_data FROM screenshot
+            WHERE screenshot_id = $1
+            "#,
+            id
+        )
+            .fetch_optional(conn)
             .await
     }
 }
