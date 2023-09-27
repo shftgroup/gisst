@@ -20,3 +20,4 @@ bytes                   = { version = "1.4.0", features = ["serde"] }
 config                  = { version = "0.13.3", features = ["toml"], default-features = false }
 async-compression       = { version = "0.4", features = ["tokio", "gzip", "zstdmt"] }
 chrono = {version = "0.4.28", features = ["serde"]}
+serde_with = { version = "3.3.0", features = ["base64"] }

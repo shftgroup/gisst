@@ -87,7 +87,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
                   const url_parts = upload.url!.split('/');
                   const uuid_string = url_parts[url_parts.length - 1];
                   metadata.record.file_id = uuid_string;
-                  db.uploadRecord({screenshot_id: "", screenshot_data: metadata.screenshot}, "screenshot")
+                  db.uploadRecord({screenshot_data: metadata.screenshot}, "screenshot")
                       .then((screenshot:GISSTModels.DBRecord) => {
                         (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
                         db.uploadRecord(metadata.record, "state")
