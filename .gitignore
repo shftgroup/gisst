@@ -20,3 +20,5 @@ backend/rdb-sys/libretro-util
 backend/ingest/rdb
 backend/web-dist
 backend/embed-dist
+backend/logs
+backend/__MACOSX
