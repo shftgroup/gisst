@@ -46,7 +46,17 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
-use tower_http::cors::CorsLayer;
+use tower_http::{
+    cors::CorsLayer,
+    trace::{self, TraceLayer},
+};
+use tracing::Level;
+use tracing_appender::rolling;
+use tracing_subscriber::{
+    fmt,
+    layer::SubscriberExt,
+    Registry
+};
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -95,6 +105,24 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     let session_layer = SessionLayer::new(session_store, &secret)
         .with_secure(false)
         .with_same_site_policy(SameSite::Lax);
+
+    let info_file = rolling::daily("./logs", "info.log");
+
+    let file_layer = fmt::layer()
+        .with_writer(info_file)
+        .with_ansi(false)
+        .pretty();
+
+    let terminal_layer = fmt::layer()
+        .with_target(false)
+        .pretty();
+
+    let subscriber = Registry::default()
+        .with(file_layer)
+        .with(terminal_layer);
+
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("Failed to set default subscriber");
 
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
@@ -159,12 +187,18 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432))
         .layer(auth_layer)
-        .layer(session_layer);
-
+        .layer(session_layer)
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(trace::DefaultMakeSpan::new().level(Level::DEBUG))
+                .on_response(trace::DefaultOnResponse::new().level(Level::DEBUG))
+        );
+            
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
         config.http.listen_port,
     );
+    tracing::info!("listening on {}", addr);
 
     Server::bind(&addr)
         .serve(app.into_make_service())
