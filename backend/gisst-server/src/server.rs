@@ -121,6 +121,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                 .layer(
                     CorsLayer::new()
                         .allow_origin(tower_http::cors::AllowOrigin::any())
+                        .allow_headers(tower_http::cors::AllowHeaders::any())
                         .expose_headers([
                             axum::http::header::ACCEPT_RANGES,
                             axum::http::header::CONTENT_LENGTH,
