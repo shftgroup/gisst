@@ -25,6 +25,7 @@ export interface StartStateData {
   is_checkpoint:boolean,
   state_description:string,
   state_id:string,
+  screenshot_id:string,
   file_dest_path:string,
   file_filename:string,
   file_source_path:string,
