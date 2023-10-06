@@ -1033,6 +1033,7 @@ dependencies = [
  "md5",
  "serde",
  "serde_json",
+ "serde_with",
  "sqlx",
  "thiserror",
  "time",

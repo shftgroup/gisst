@@ -1,4 +1,4 @@
-export type DBRecord = Environment | Work | Save | Replay | State | Instance | Screenshot;
+export type DBRecord = Environment | Work | Save | Replay | State | Instance | ScreenshotCreateData | Screenshot;
 export type DBFileRecord = Save | State | Replay;
 
 export type DBField = {
@@ -178,9 +178,12 @@ export interface Instance {
     instance_config: JSON,
     created_on: Date
 }
-
 export interface Screenshot {
     screenshot_id: string,
+    screenshot_data: string
+}
+
+export interface ScreenshotCreateData {
     screenshot_data: string
 }
 

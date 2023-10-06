@@ -11,11 +11,10 @@ use axum_login::RequireAuthorizationLayer;
 use gisst::models::{
     DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
 };
-use gisst::models::{FileRecordFlatten, NewRecordError};
+use gisst::models::{FileRecordFlatten, };
 use minijinja::render;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
-use sqlx::PgConnection;
 use uuid::{uuid, Uuid};
 use crate::auth::AuthContext;
 use crate::server::LoggedInUserInfo;
@@ -141,70 +140,36 @@ pub fn work_router() -> Router {
 //         Ok(Json(vec![]))
 //     }
 // }
-
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
-struct Screenshot {
-    screenshot_id: Uuid,
+#[derive(Debug, Deserialize)]
+struct ScreenshotCreateInfo{
     #[serde_as(as = "Base64")]
     screenshot_data: Vec<u8>,
 }
 
-impl Screenshot {
-    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
-        sqlx::query_as!(
-            Screenshot,
-            r#"INSERT INTO screenshot (screenshot_id, screenshot_data) VALUES ($1, $2)
-            RETURNING screenshot_id, screenshot_data
-            "#,
-            model.screenshot_id,
-            model.screenshot_data
-        )
-        .fetch_one(conn)
-        .await
-        .map_err(|_| NewRecordError::Screenshot)
-    }
-    async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
-        sqlx::query_as!(
-            Screenshot,
-            r#" SELECT screenshot_id, screenshot_data FROM screenshot
-            WHERE screenshot_id = $1
-            "#,
-            id
-        )
-        .fetch_optional(conn)
-        .await
-    }
-}
-
 async fn create_screenshot(
     app_state: Extension<ServerState>,
-    Json(screenshot): Json<Screenshot>,
-) -> Result<Json<Screenshot>, GISSTError> {
-    dbg!(&screenshot.screenshot_id);
+    Json(screenshot): Json<ScreenshotCreateInfo>,
+) -> Result<Json<gisst::models::Screenshot>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if screenshot.screenshot_id != uuid!("00000000-0000-0000-0000-000000000000") {
-        Ok(Json(Screenshot::insert(&mut conn, screenshot).await?))
-    } else {
         Ok(Json(
-            Screenshot::insert(
+            gisst::models::Screenshot::insert(
                 &mut conn,
-                Screenshot {
+                gisst::models::Screenshot {
                     screenshot_id: Uuid::new_v4(),
                     screenshot_data: screenshot.screenshot_data,
                 },
             )
             .await?,
         ))
-    }
 }
 
 async fn get_single_screenshot(
     app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Screenshot>, GISSTError> {
+) -> Result<Json<gisst::models::Screenshot>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Screenshot::get_by_id(&mut conn, id).await?.unwrap()))
+    Ok(Json(gisst::models::Screenshot::get_by_id(&mut conn, id).await?.unwrap()))
 }
 
 // ENVIRONMENT method handlers

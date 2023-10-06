@@ -66,7 +66,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
                             const uuid_string = url_parts[url_parts.length - 1];
                             metadata.record.file_id = uuid_string;
                             if(category == "state"){
-                                db.uploadRecord({screenshot_id:"00000000-0000-0000-0000-000000000000", screenshot_data: metadata.screenshot.split(",")[1]}, "screenshot")
+                                db.uploadRecord({screenshot_data: metadata.screenshot.split(",")[1]}, "screenshot")
                                     .then((screenshot:GISSTModels.DBRecord) => {
                                         (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
                                         console.log(metadata);

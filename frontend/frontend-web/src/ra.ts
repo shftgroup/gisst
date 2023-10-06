@@ -68,11 +68,11 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
         "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
           return new Promise((resolve, reject) => {
             let path = "/home/web_user/retroarch/userdata";
-            if (category == "state") {
+            if (category === "state") {
               path += "/states";
-            } else if (category == "save") {
+            } else if (category === "save") {
               path += "/saves";
-            } else if (category == "replay") {
+            } else if (category === "replay") {
               path += "/states";
             } else {
               console.error("Invalid save category", category, file_name);
@@ -87,17 +87,26 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
                   const url_parts = upload.url!.split('/');
                   const uuid_string = url_parts[url_parts.length - 1];
                   metadata.record.file_id = uuid_string;
-                  db.uploadRecord({screenshot_id: "", screenshot_data: metadata.screenshot}, "screenshot")
-                      .then((screenshot:GISSTModels.DBRecord) => {
-                        (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
-                        db.uploadRecord(metadata.record, "state")
-                            .then((state:GISSTModels.DBRecord) => {
-                              (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
-                              resolve(metadata)
-                            })
-                            .catch(() => reject("State upload from RA failed."))
-                  })
-                      .catch(() => reject("Screenshot upload from RA failed."))
+                  if (category === "state"){
+                    db.uploadRecord({screenshot_data: metadata.screenshot}, "screenshot")
+                        .then((screenshot:GISSTModels.DBRecord) => {
+                          (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
+                          db.uploadRecord(metadata.record, category)
+                              .then((state:GISSTModels.DBRecord) => {
+                                (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
+                                resolve(metadata)
+                              })
+                              .catch(() => reject(`${category} upload from RA failed.`))
+                        })
+                        .catch(() => reject("Screenshot upload from RA failed."))
+                  } else if (category === "replay") {
+                    db.uploadRecord(metadata.record, category)
+                        .then((replay:GISSTModels.DBRecord) => {
+                          (metadata.record as GISSTModels.Replay).replay_id = (replay as GISSTModels.Replay).replay_id;
+                          resolve(metadata)
+                        })
+                        .catch(() => reject(`${category} upload from RA failed.`))
+                  }
                 })
                 .catch(() => reject("File upload from RA failed."));
 
