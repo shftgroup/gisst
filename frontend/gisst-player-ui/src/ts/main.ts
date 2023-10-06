@@ -132,7 +132,8 @@ export class UI {
     console.log("found new state", state_file);
     // Create state list template object
     const new_state_list_object = <HTMLDivElement>elementFromTemplates("card_list_object");
-    new_state_list_object.querySelector(".card-list-object")!.setAttribute("id", state_file);
+    new_state_list_object.querySelector(".card-list-object")!
+        .setAttribute("id", valid_for_css(state_file));
 
     // Add img data to state_list_object and create on click load
     // state from img
@@ -173,7 +174,7 @@ export class UI {
     const gisst_state_tab = <HTMLDivElement>document.getElementById(UI.gisst_states_list_content_id);
     gisst_state_tab.appendChild(new_state_list_object);
 
-    this.entries_by_name["st__"+state_file] = document.getElementById(state_file)!;
+    this.entries_by_name["st__"+state_file] = document.getElementById(valid_for_css(state_file))!;
     nonnull(this.current_config);
     const state_metadata:Metadata = {
       record: {
@@ -202,7 +203,7 @@ export class UI {
     const replay_num = parseInt(num_str,10);
 
     const li = <HTMLUListElement>elementFromTemplates("replay_list_item");
-    li.querySelector(".replay-list-item")!.setAttribute("id", replay_file);
+    li.querySelector(".replay-list-item")!.setAttribute("id", valid_for_css(replay_file));
     li.querySelector("a")!.textContent = replay_file;
 
     li.querySelector(".replay-list-item-play-button")!.addEventListener("click", () => {
@@ -239,7 +240,7 @@ export class UI {
     }
 
     this.replay_elt.appendChild(li);
-    this.entries_by_name["rp__"+replay_file] = document.getElementById(replay_file)!;
+    this.entries_by_name["rp__"+replay_file] = document.getElementById(valid_for_css(replay_file))!;
     this.metadata_by_name["rp__"+replay_file] = replay_metadata;
   }
   clearCheckpoints() {
@@ -256,7 +257,7 @@ export class UI {
   }
   newCheckpoint(check_name:string, state_thumbnail:string) {
     const checkpoint_list_object = <HTMLDivElement>elementFromTemplates("card_list_object");
-    checkpoint_list_object.querySelector(".card-list-object")!.setAttribute("id", check_name);
+    checkpoint_list_object.querySelector(".card-list-object")!.setAttribute("id", valid_for_css(check_name));
 
     const img = <HTMLImageElement>checkpoint_list_object.querySelector("img")!;
     img.src = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
@@ -272,7 +273,7 @@ export class UI {
     checkpoint_list_object.querySelector(".upload-button")!.remove();
 
     this.checkpoint_elt.appendChild(checkpoint_list_object);
-    this.entries_by_name["cp__"+check_name] = document.getElementById(check_name)!;
+    this.entries_by_name["cp__"+check_name] = document.getElementById(valid_for_css(check_name))!;
     console.log("added CP","cp__"+check_name,this.entries_by_name["cp__"+check_name]);
   }
   clear() {
@@ -318,10 +319,10 @@ export class UI {
       for (const field of replay_fields) {
         if(canEdit("replay", field.field_name)){
           const field_element:HTMLParagraphElement = document.createElement("p");
-          field_element.classList.add(replay_file + "-edit-fields");
-          const ele_id = replay_file + "_" + field.field_name;
+          field_element.classList.add(valid_for_css(replay_file) + "-edit-fields");
+          const ele_id = valid_for_css(replay_file) + "_" + field.field_name;
           if (field.value_type === "string"){
-            field_element.innerHTML = `<label for="${ele_id}">${field.field_name}</label><input type="text" class="${replay_file}-field" id="${ele_id}" name="${ele_id}"/>`;
+            field_element.innerHTML = `<label for="${ele_id}">${field.field_name}</label><input type="text" class="${valid_for_css(replay_file)}-field" id="${ele_id}" name="${ele_id}"/>`;
             const input_element:HTMLInputElement = field_element.querySelector("#"+ele_id)!;
             input_element.value = <string>(replay_metadata.record as Replay)[field.field_name as keyof Replay];
             input_element.addEventListener("change", (e:Event) => {
@@ -334,7 +335,7 @@ export class UI {
     } else {
       replay_metadata.editing = false;
       replay_list_object.querySelector("a")!.textContent = (replay_metadata.record as Replay).replay_name;
-      const edit_fields = replay_list_object.querySelectorAll("." + replay_file + "-edit-fields")!;
+      const edit_fields = replay_list_object.querySelectorAll("." + valid_for_css(replay_file) + "-edit-fields")!;
       for(let i = 0; i < edit_fields.length; i++){
         edit_fields[i].remove();
       }
@@ -355,17 +356,17 @@ export class UI {
       for (const field of state_fields) {
         if(canEdit("state", field.field_name)){
           const field_element:HTMLParagraphElement = document.createElement("p");
-          field_element.classList.add(state_file + "-edit-fields");
-          const ele_id = state_file + "_" + field.field_name;
+          field_element.classList.add(valid_for_css(state_file) + "-edit-fields");
+          const ele_id = valid_for_css(state_file) + "_" + field.field_name;
           if (field.value_type === "string"){
-            field_element.innerHTML = `<label for="${ele_id}">${field.field_name}</label><input type="text" class="${state_file}-field" id="${ele_id}" name="${ele_id}"/>`;
+            field_element.innerHTML = `<label for="${ele_id}">${field.field_name}</label><input type="text" class="${valid_for_css(state_file)}-field" id="${ele_id}" name="${ele_id}"/>`;
             const input_element:HTMLInputElement = field_element.querySelector("#"+ele_id)!;
             input_element.value = <string>(state_metadata.record as State)[field.field_name as keyof State];
             input_element.addEventListener("change", (e:Event) => {
               (state_metadata.record as State)[field.field_name] = (e.currentTarget! as HTMLInputElement).value;
             });
           } else if (field.value_type === "boolean") {
-            field_element.innerHTML = `<input type="checkbox" class="${state_file}-field" id="${ele_id}" name="${ele_id}"/><label for="${ele_id}">${field.field_name.toUpperCase()}</label>`;
+            field_element.innerHTML = `<input type="checkbox" class="${valid_for_css(state_file)}-field" id="${ele_id}" name="${ele_id}"/><label for="${ele_id}">${field.field_name.toUpperCase()}</label>`;
             const input_element:HTMLInputElement = field_element.querySelector("#"+ele_id)!;
             input_element.checked = <boolean>(state_metadata.record as State)[field.field_name as keyof State];
             input_element.addEventListener("change", (e:Event) => {
@@ -379,7 +380,7 @@ export class UI {
       state_metadata.editing = false;
       state_list_object.querySelector("h5")!.textContent = (state_metadata.record as State).state_name;
       state_list_object.querySelector(".card-text")!.textContent = (state_metadata.record as State).state_description;
-      const edit_fields = state_list_object.querySelectorAll("." + state_file + "-edit-fields")!;
+      const edit_fields = state_list_object.querySelectorAll("." + valid_for_css(state_file) + "-edit-fields")!;
       for(let i = 0; i < edit_fields.length; i++){
         edit_fields[i].remove();
       }
@@ -401,6 +402,10 @@ function elementFromTemplates(template_name: string): Node {
   templates_element.innerHTML = templates.trim();
   const template_element = <HTMLTemplateElement>templates_element.content.querySelector("#" + template_name)!;
   return template_element.content.cloneNode(true);
+}
+
+function valid_for_css(s:string): string {
+  return s.replace(/[^_a-zA-Z0-9-]/g, "_")
 }
 
 function nonnull(obj:number|object|null):asserts obj {
