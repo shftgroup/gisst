@@ -1,3 +1,5 @@
+import {GISSTModels} from 'gisst-player';
+
 export interface Environment {
   created_on:string,
   environment_config:object,
@@ -21,31 +23,12 @@ export interface ColdStart {
   type:string
 }
 
-export interface StartStateData {
-  is_checkpoint:boolean,
-  state_description:string,
-  state_id:string,
-  screenshot_id:string,
-  file_dest_path:string,
-  file_filename:string,
-  file_source_path:string,
-  file_hash:string,
-}
-
 export interface StateStart {
   type:string,
-  data:StartStateData
-}
-
-export interface StartReplayData {
-  replay_id:string,
-  file_dest_path:string,
-  file_filename:string,
-  file_source_path:string,
-  file_hash:string,
+  data:GISSTModels.StateFileLink
 }
 
 export interface ReplayStart {
   type:string,
-  data:StartReplayData
+  data:GISSTModels.ReplayFileLink
 }

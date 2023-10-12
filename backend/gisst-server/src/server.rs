@@ -43,10 +43,10 @@ use rand::Rng;
 use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool};
+use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
-use tower_http::{cors::CorsLayer};
+use tower_http::cors::CorsLayer;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -219,6 +219,7 @@ struct ReplayLink {
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
     pub created_on: Option<chrono::DateTime<chrono::Utc>>,
+    pub file_id: String,
     pub file_hash: String,
     pub file_filename: String,
     pub file_source_path: String,
@@ -235,6 +236,7 @@ impl ReplayLink {
             creator_id,
             replay_forked_from,
             replay.created_on,
+            file_id,
             file.file_hash as file_hash,
             file.file_filename as file_filename,
             file.file_source_path as file_source_path,
@@ -263,6 +265,7 @@ struct StateLink {
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
     pub created_on: Option<chrono::DateTime<chrono::Utc>>,
+    pub file_id: String,
     pub file_hash: String,
     pub file_filename: String,
     pub file_source_path: String,
@@ -284,6 +287,7 @@ impl StateLink {
             state_replay_index,
             state_derived_from,
             state.created_on,
+            file_id,
             file.file_hash as file_hash,
             file.file_filename as file_filename,
             file.file_source_path as file_source_path,
@@ -306,7 +310,7 @@ pub struct LoggedInUserInfo {
     given_name: Option<String>,
     family_name: Option<String>,
     username: Option<String>,
-    creator_id: Uuid
+    creator_id: Uuid,
 }
 
 impl LoggedInUserInfo {

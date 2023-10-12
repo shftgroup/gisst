@@ -1,4 +1,3 @@
-import IMG_STATE_ENTRY from './media/init_state.png';
 import * as fetchfs from './fetchfs';
 import {UI, GISSTDBConnector, GISSTModels} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
@@ -129,11 +128,19 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       for(const file of manifest) {
         const file_prom = fetchfs.fetchFile(RA,"/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path);
         proms.push(file_prom);
-      }
+        }
+      let entryScreenshot:Promise<GISSTModels.DBRecord> | null = null;
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
         const data = (start as StateStart).data;
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
+        if(!data.screenshot_id) {
+          console.error("No screenshot for entry state");
+          entryScreenshot = Promise.resolve({screenshot_id:"", screenshot_data:""});
+        } else {
+          entryScreenshot = db.getRecordById("screenshot", data.screenshot_id);
+          proms.push(entryScreenshot);
+        }
         proms.push(fetchfs.fetchFile(RA,"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state"));
       }
       if (movie) {
@@ -156,18 +163,22 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           if(file_exists(RA, "/home/web_user/content/entry_state.png")) {
             copyFile(RA, "/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
           } else {
-            fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => RA.FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
+            const data = (start as StateStart).data;
+            // entryScreenshot is already settled from the all() above
+            entryScreenshot!.then((screenshot) => {
+              seen_states[content_base+".state1"] = (screenshot as GISSTModels.Screenshot).screenshot_data;
+              ui_state.newState(content_base+".state1", (screenshot as GISSTModels.Screenshot).screenshot_data, data);
+            });
           }
         }
         if (movie) {
           console.log("Put movie in",state_dir + "/" + content_base + ".replay1");
-          copyFile(RA, "/home/web_user/content/replay.replay1",
-            state_dir + "/" + content_base + ".replay1");
-          // if(file_exists(RA, "/home/web_user/content/entry_state.png")) {
-          //   copyFile(RA, "/home/web_user/content/entry_state.png", state_dir+"/"+content_base+".state1.png");
-          // } else {
-          //   fetch(IMG_STATE_ENTRY).then((resp) => resp.arrayBuffer()).then((buf) => RA.FS.writeFile(state_dir+"/"+content_base+".state1.png", new Uint8Array(buf)));
-          // }
+          copyFile(RA, "/home/web_user/content/replay.replay1", state_dir + "/" + content_base + ".replay1");
+          const data = (start as ReplayStart).data;
+          // TODO it's ugly to read this in again right after downloading it but whatever
+          const replayUUID = ra_util.replay_info(new Uint8Array(RA.FS.readFile("/home/web_user/content/replay.replay1"))).id;
+          seen_replays[content_base+".replay1"] = replayUUID;
+          ui_state.newReplay(content_base+".replay1", data);
         } else {
           const f = RA.FS.open(state_dir+"/"+content_base+".replay1", 'w');
           const te = new TextEncoder();
@@ -309,7 +320,7 @@ function find_checkpoints_inner() {
     console.log("Replay info",replay,"vs",current_replay);
     if(replay && replay.id == current_replay.id) {
       seen_checkpoints[state_file] = seen_states[state_file];
-      ui_state.newCheckpoint(state_file, base64EncArr(seen_states[state_file]));
+      ui_state.newCheckpoint(state_file, seen_states[state_file]);
     }
   }
 }
@@ -325,10 +336,10 @@ interface Replay {
 }
 
 let current_replay:Replay | null = null;
-const seen_states:Record<string,Uint8Array> = {};
+const seen_states:Record<string,string> = {};
 // const seen_saves:Record<string,null> = {};
 const seen_replays:Record<string,string> = {};
-let seen_checkpoints:Record<string,Uint8Array> = {};
+let seen_checkpoints:Record<string,string> = {};
 function checkChangedStatesAndSaves() {
   const states = RA.FS.readdir(state_dir);
   for (const state of states) {
@@ -358,12 +369,11 @@ function checkChangedStatesAndSaves() {
       const img_data_b64 = base64EncArr(img_data);
       // If this state belongs to the current replay...
       if(replay && current_replay && replay.id == current_replay.id) {
-        seen_checkpoints[state_file] = img_data;
+        seen_checkpoints[state_file] = img_data_b64;
         ui_state.newCheckpoint(state_file, img_data_b64);
         // otherwise ignore it if it's a checkpoint from a non-current replay we have locally
       } else if(!replay || !known_replay) {
-        seen_states[state_file] = img_data;
-        // TODO something's off here, states of non current replays are getting added here
+        seen_states[state_file] = img_data_b64;
         ui_state.newState(state_file, img_data_b64);
       }
     } else if(state.includes(".replay")) {

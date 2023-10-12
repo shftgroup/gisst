@@ -44,7 +44,7 @@ interface V86StarterConfig {
   memory_size?:int,
   vga_memory_size?:int,
   screen_container:HTMLDivElement,
-  initial_state?:{url:string},
+  initial_state?:V86Image,
   autostart:boolean,
   fda?:V86Image,
   fdb?:V86Image,

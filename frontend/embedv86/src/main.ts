@@ -171,7 +171,13 @@ export class EmbedV86 {
     }
     // TODO: avoid use of /, get explicit paths or a path joining function as arguments or config props
     if(entryState) {
-      config["initial_state"] = {url:content_folder+"/"+entryState}
+      const state_resp = await fetch(content_folder+"/"+entryState);
+      if(!state_resp.ok) { alert("Failed to load replay movie"); return; }
+      const state_data = await state_resp.arrayBuffer();
+      config["initial_state"] = {buffer:state_data};
+      const screenshot = "";
+      this.states.push(new State("state"+this.states.length.toString(), state_data, screenshot));
+      this.config.states_changed([this.states[this.states.length-1]], []);
     }
     if(movie) {
       // do nothing for now
