@@ -11,12 +11,12 @@
       {
         "ordinal": 1,
         "name": "creator_username",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 2,
         "name": "creator_full_name",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 3,
@@ -27,8 +27,8 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Varchar",
-        "Varchar",
+        "Text",
+        "Text",
         "Timestamptz"
       ]
     },
