@@ -13,6 +13,18 @@
 
 }
 
+.emulator-recording {
+    border: solid 4px red;
+}
+.emulator-recording::after {
+    text-color: red;
+    content: "RECORDING";
+}
+.emulator-playback {
+    border: solid 4px green;
+    
+}
+
 .replay-list-item {
 
 }
