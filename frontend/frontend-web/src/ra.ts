@@ -17,6 +17,8 @@ let ui_state:UI;
 let db:GISSTDBConnector;
 
 export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
+  db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
+
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_file = content.file_filename!;
   const dash_point = content_file.indexOf("-");
@@ -39,6 +41,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   retro_args.push("/home/web_user/content/retroarch.cfg");
   retro_args.push("/home/web_user/content/" + content_file);
   console.log(retro_args);
+
 
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
@@ -80,7 +83,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
             const data = RA.FS.readFile(path + "/" + file_name);
 
             db.uploadFile(new File([data], file_name),
-                (error:Error) => { reject(console.log("ran error callback", error.message))},
+                (error:Error) => { reject(console.error("ran error callback", error.message))},
                 (_percentage: number) => {},
                 (upload: tus.Upload) => {
                   const url_parts = upload.url!.split('/');
@@ -95,16 +98,16 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
                                 (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
                                 resolve(metadata)
                               })
-                              .catch(() => reject(`${category} upload from RA failed.`))
+                            .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
                         })
-                        .catch(() => reject("Screenshot upload from RA failed."))
+                      .catch((e) => {console.error(e); reject("Screenshot upload from RA failed.");})
                   } else if (category === "replay") {
                     db.uploadRecord(metadata.record, category)
                         .then((replay:GISSTModels.DBRecord) => {
                           (metadata.record as GISSTModels.Replay).replay_id = (replay as GISSTModels.Replay).replay_id;
                           resolve(metadata)
                         })
-                        .catch(() => reject(`${category} upload from RA failed.`))
+                      .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
                   }
                 })
                 .catch(() => reject("File upload from RA failed."));
@@ -197,8 +200,6 @@ function copyFile(module:LibretroModule, from: string, to: string): void {
 
 // TODO add clear button to call ui_state.clear()
 function retroReady(): void {
-  db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
-
   const prev = document.getElementById("webplayer-preview")!;
   prev.classList.add("loaded");
   prev.addEventListener(

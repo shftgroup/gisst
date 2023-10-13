@@ -16,7 +16,7 @@ export class GISSTDBConnector {
 
     async getRecordById(record_type: string, record_id: string): Promise<DBRecord> {
         return fetch(
-            `${this.repo_url}/${record_type}/${record_id}`,
+            `${this.repo_url}/${record_type}s/${record_id}`,
             {
                 method: 'GET',
                 cache: 'no-cache',
