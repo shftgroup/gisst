@@ -321,7 +321,7 @@ impl LoggedInUserInfo {
             given_name: user.given_name.clone(),
             family_name: user.family_name.clone(),
             username: user.preferred_username.clone(),
-            creator_id: user.creator_id.unwrap(),
+            creator_id: user.creator_id,
         }
     }
 }

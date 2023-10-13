@@ -183,14 +183,14 @@ async fn create_object(
             file_source_path: path.to_path_buf().to_string_lossy().to_string(),
             file_dest_path: Default::default(),
             file_size: 0,
-            created_on: None,
+            created_on: chrono::Utc::now(),
         };
 
         let mut object = Object {
             object_id: Uuid::new_v4(),
             file_id: file_record.file_id,
             object_description: Some(path.to_path_buf().to_string_lossy().to_string()),
-            created_on: None,
+            created_on: chrono::Utc::now(),
         };
 
         // DEBUG ONLY!! Need to find a more elegant solution
@@ -559,14 +559,14 @@ async fn create_image(
             file_source_path: path.to_path_buf().to_string_lossy().to_string(),
             file_dest_path: Default::default(),
             file_size: 0,
-            created_on: None,
+            created_on: chrono::Utc::now(),
         };
         let mut image = Image {
             image_id: Uuid::new_v4(),
             file_id: file_record.file_id,
             image_description: Some(path.to_path_buf().to_string_lossy().to_string()),
             image_config: None,
-            created_on: None,
+            created_on: chrono::Utc::now(),
         };
 
         // DEBUG ONLY!! Need to find a more elegant solution
@@ -671,7 +671,8 @@ async fn create_replay(
                 .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
                 .ok()
         })
-        .and_then(|dt| chrono::DateTime::<chrono::Utc>::try_from(dt).ok());
+        .and_then(|dt| chrono::DateTime::<chrono::Utc>::try_from(dt).ok())
+        .unwrap_or(chrono::Utc::now());
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
     let hash = StorageHandler::get_md5_hash(data);
@@ -746,6 +747,14 @@ async fn create_state(
 
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
+    let created_on = created_on
+        .and_then(|s| {
+            chrono::DateTime::parse_from_rfc3339(&s)
+                .map_err(|e| GISSTCliError::CreateState(e.to_string()))
+                .ok()
+        })
+        .and_then(|dt| chrono::DateTime::<chrono::Utc>::try_from(dt).ok())
+        .unwrap_or(chrono::Utc::now());
     let mut file_record = gisst::models::File {
         file_id: Uuid::new_v4(),
         file_hash: StorageHandler::get_md5_hash(data),
@@ -758,15 +767,8 @@ async fn create_state(
         file_source_path: file.to_path_buf().to_string_lossy().to_string(),
         file_dest_path: Default::default(),
         file_size: 0,
-        created_on: None,
+        created_on,
     };
-    let created_on = created_on
-        .and_then(|s| {
-            chrono::DateTime::parse_from_rfc3339(&s)
-                .map_err(|e| GISSTCliError::CreateState(e.to_string()))
-                .ok()
-        })
-        .and_then(|dt| chrono::DateTime::<chrono::Utc>::try_from(dt).ok());
     let state = State {
         state_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,

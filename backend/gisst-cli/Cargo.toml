@@ -25,3 +25,4 @@ anyhow = "1.0.70"
 gisst = { path = "../gisst" }
 time = { version = "0.3.21", features = ["serde", "parsing"] }
 secrecy = "0.8.0"
+chrono = { version = "0.4.28", features = ["clock"]}
