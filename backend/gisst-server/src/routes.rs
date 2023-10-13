@@ -1,3 +1,5 @@
+use crate::auth::AuthContext;
+use crate::server::LoggedInUserInfo;
 use crate::{auth, error::GISSTError, server::ServerState, utils::parse_header};
 use axum::{
     extract::{Json, Path, Query},
@@ -8,16 +10,14 @@ use axum::{
     Extension, Router,
 };
 use axum_login::RequireAuthorizationLayer;
+use gisst::models::FileRecordFlatten;
 use gisst::models::{
     DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
 };
-use gisst::models::{FileRecordFlatten, };
 use minijinja::render;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
-use uuid::{uuid, Uuid};
-use crate::auth::AuthContext;
-use crate::server::LoggedInUserInfo;
+use uuid::Uuid;
 
 // Nested Router structs for easier reading and manipulation
 // pub fn creator_router() -> Router {
@@ -142,7 +142,7 @@ pub fn work_router() -> Router {
 // }
 #[serde_as]
 #[derive(Debug, Deserialize)]
-struct ScreenshotCreateInfo{
+struct ScreenshotCreateInfo {
     #[serde_as(as = "Base64")]
     screenshot_data: Vec<u8>,
 }
@@ -152,16 +152,16 @@ async fn create_screenshot(
     Json(screenshot): Json<ScreenshotCreateInfo>,
 ) -> Result<Json<gisst::models::Screenshot>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-        Ok(Json(
-            gisst::models::Screenshot::insert(
-                &mut conn,
-                gisst::models::Screenshot {
-                    screenshot_id: Uuid::new_v4(),
-                    screenshot_data: screenshot.screenshot_data,
-                },
-            )
-            .await?,
-        ))
+    Ok(Json(
+        gisst::models::Screenshot::insert(
+            &mut conn,
+            gisst::models::Screenshot {
+                screenshot_id: Uuid::new_v4(),
+                screenshot_data: screenshot.screenshot_data,
+            },
+        )
+        .await?,
+    ))
 }
 
 async fn get_single_screenshot(
@@ -169,7 +169,11 @@ async fn get_single_screenshot(
     Path(id): Path<Uuid>,
 ) -> Result<Json<gisst::models::Screenshot>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(gisst::models::Screenshot::get_by_id(&mut conn, id).await?.unwrap()))
+    Ok(Json(
+        gisst::models::Screenshot::get_by_id(&mut conn, id)
+            .await?
+            .unwrap(),
+    ))
 }
 
 // ENVIRONMENT method handlers
@@ -297,12 +301,15 @@ async fn get_instances(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Query(params): Query<GetQueryParams>,
-    auth: AuthContext
+    auth: AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     let instances: Vec<Instance> = Instance::get_all(&mut conn, params.limit).await?;
     let accept: Option<String> = parse_header(&headers, "Accept");
-    let user = auth.current_user.as_ref().map(LoggedInUserInfo::generate_from_user);
+    let user = auth
+        .current_user
+        .as_ref()
+        .map(LoggedInUserInfo::generate_from_user);
     let mut instance_results: Vec<GetAllInstanceResult> = Vec::new();
     for inst in &instances {
         instance_results.push(GetAllInstanceResult {
@@ -350,7 +357,7 @@ async fn get_all_for_instance(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
-    auth: auth::AuthContext
+    auth: auth::AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
@@ -385,7 +392,10 @@ async fn get_all_for_instance(
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
-        let user = auth.current_user.as_ref().map(LoggedInUserInfo::generate_from_user);
+        let user = auth
+            .current_user
+            .as_ref()
+            .map(LoggedInUserInfo::generate_from_user);
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
@@ -534,28 +544,40 @@ async fn delete_replay(
     Replay::delete_by_id(&mut conn, id).await?;
     Ok(StatusCode::OK)
 }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateReplay {
+    pub replay_name: String,
+    pub replay_description: String,
+    pub instance_id: Uuid,
+    pub creator_id: Uuid,
+    pub replay_forked_from: Option<Uuid>,
+    pub file_id: Uuid,
+    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
+}
 
 async fn create_replay(
     app_state: Extension<ServerState>,
-    Json(replay): Json<Replay>,
+    Json(replay): Json<CreateReplay>,
 ) -> Result<Json<Replay>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
 
     if File::get_by_id(&mut conn, replay.file_id).await?.is_some() {
-        if replay.replay_id != uuid!("00000000-0000-0000-0000-000000000000") {
-            Ok(Json(Replay::insert(&mut conn, replay).await?))
-        } else {
-            Ok(Json(
-                Replay::insert(
-                    &mut conn,
-                    Replay {
-                        replay_id: Uuid::new_v4(),
-                        ..replay
-                    },
-                )
-                .await?,
-            ))
-        }
+        Ok(Json(
+            Replay::insert(
+                &mut conn,
+                Replay {
+                    replay_id: Uuid::new_v4(),
+                    replay_name: replay.replay_name,
+                    replay_description: replay.replay_description,
+                    instance_id: replay.instance_id,
+                    creator_id: replay.creator_id,
+                    replay_forked_from: replay.replay_forked_from,
+                    file_id: replay.file_id,
+                    created_on: replay.created_on,
+                },
+            )
+            .await?,
+        ))
     } else {
         Err(GISSTError::RecordCreateError(
             gisst::models::NewRecordError::Replay,
@@ -654,27 +676,49 @@ async fn delete_state(
     Ok(StatusCode::OK)
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateState {
+    pub instance_id: Uuid,
+    pub is_checkpoint: bool,
+    pub file_id: Uuid,
+    pub state_name: String,
+    pub state_description: String,
+    pub screenshot_id: Option<Uuid>,
+    pub replay_id: Option<Uuid>,
+    // TODO remove, use logged in user's ID instead
+    pub creator_id: Option<Uuid>,
+    pub state_replay_index: Option<i32>,
+    pub state_derived_from: Option<Uuid>,
+    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
+}
+
 async fn create_state(
     app_state: Extension<ServerState>,
-    Json(state): Json<State>,
+    Json(state): Json<CreateState>,
 ) -> Result<Json<State>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
 
     if File::get_by_id(&mut conn, state.file_id).await?.is_some() {
-        if state.state_id != uuid!("00000000-0000-0000-0000-000000000000") {
-            Ok(Json(State::insert(&mut conn, state).await?))
-        } else {
-            Ok(Json(
-                State::insert(
-                    &mut conn,
-                    State {
-                        state_id: Uuid::new_v4(),
-                        ..state
-                    },
-                )
-                .await?,
-            ))
-        }
+        Ok(Json(
+            State::insert(
+                &mut conn,
+                State {
+                    state_id: Uuid::new_v4(),
+                    instance_id: state.instance_id,
+                    is_checkpoint: state.is_checkpoint,
+                    file_id: state.file_id,
+                    state_name: state.state_name,
+                    state_description: state.state_description,
+                    screenshot_id: state.screenshot_id,
+                    replay_id: state.replay_id,
+                    creator_id: state.creator_id,
+                    state_replay_index: state.state_replay_index,
+                    state_derived_from: state.state_derived_from,
+                    created_on: state.created_on,
+                },
+            )
+            .await?,
+        ))
     } else {
         Err(GISSTError::RecordCreateError(
             gisst::models::NewRecordError::State,

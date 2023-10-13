@@ -7,8 +7,8 @@ use chrono::{DateTime, Utc};
 use sqlx::postgres::{PgConnection, PgQueryResult};
 
 use crate::model_enums::Framework;
-use uuid::Uuid;
 use serde_with::{base64::Base64, serde_as};
+use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
@@ -1232,10 +1232,7 @@ impl DBModel for Replay {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| {
-            dbg!(e);
-            NewRecordError::Replay
-        })
+        .map_err(|_| NewRecordError::Replay)
     }
 
     async fn update(conn: &mut PgConnection, replay: Replay) -> Result<Self, UpdateRecordError> {
@@ -1835,9 +1832,9 @@ impl Screenshot {
             model.screenshot_id,
             model.screenshot_data
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|_| NewRecordError::Screenshot)
+        .fetch_one(conn)
+        .await
+        .map_err(|_| NewRecordError::Screenshot)
     }
     pub async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
@@ -1847,8 +1844,8 @@ impl Screenshot {
             "#,
             id
         )
-            .fetch_optional(conn)
-            .await
+        .fetch_optional(conn)
+        .await
     }
 }
 

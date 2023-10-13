@@ -130,11 +130,11 @@ export interface State {
     state_name: string,
     state_description: string,
     screenshot_id: string,
-    replay_id: string,
+    replay_id: string|null,
     creator_id: string,
-    state_derived_from: string,
+    state_derived_from: string|null,
     created_on: Date,
-    [key:string]: string | boolean | Date
+    [key:string]: string | boolean | Date | null
 }
 export function generateStateFields():DBField[] {
     return [
@@ -158,10 +158,10 @@ export interface Replay {
     replay_description: string,
     instance_id: string,
     creator_id: string,
-    replay_forked_from: string,
+    replay_forked_from: string|null,
     file_id: string,
     created_on: Date,
-    [key:string]: string | Date
+    [key:string]: string | Date | null
 }
 export function generateReplayFields():DBField[] {
     return [
