@@ -18,6 +18,13 @@ import * as bootstrap from 'bootstrap'
 import templates from "../html/templates.html?raw"
 import {UITemplateConst, UIIDConst } from "./template_consts"
 
+export enum ReplayMode {
+  Inactive=0,
+  Record,
+  Playback,
+  Finished,
+}
+
 interface UIController {
   toggle_mute: () => void;
   load_state: (state_num:number) => void;
@@ -112,6 +119,26 @@ export class UI {
     this.checkpoint_elt = <HTMLDivElement>document.getElementById("gisst-checkpoints-list");
     this.entries_by_name = {};
     this.metadata_by_name = {};
+  }
+
+  setReplayMode(mode:ReplayMode) {
+    switch mode {
+      case ReplayMode.Inactive:
+      this.emulator_div.classList.remove("emulator-recording");
+      this.emulator_div.classList.remove("emulator-playback");
+      break;
+      case ReplayMode.Record:
+      this.emulator_div.classList.add("emulator-recording");
+      this.emulator_div.classList.remove("emulator-playback");
+      break;
+      case ReplayMode.Playback:
+      this.emulator_div.classList.remove("emulator-recording");
+      this.emulator_div.classList.add("emulator-playback");
+      break;
+      case ReplayMode.Finished:
+      // do nothing
+      break;
+    }
   }
 
   setConfig(config:FrontendConfig) {
