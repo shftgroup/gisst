@@ -146,3 +146,68 @@ impl Default for HttpConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use secrecy::ExposeSecret;
+
+    use super::*;
+
+    #[test]
+    fn test_server_config_defaults(){
+        //Master test, technically redundant
+
+        test_auth_config_defaults();
+        test_database_config_defaults();
+        test_http_config_defaults();
+        test_storage_config_defaults();
+
+    }
+
+
+    #[test]
+    fn test_database_config_defaults(){
+
+        let default_db = DatabaseConfig::default();
+
+        assert_eq!(default_db.max_connections,128);
+        assert_eq!(default_db.min_connections,8);
+        assert_eq!(default_db.connect_timeout_seconds,30);
+        assert_eq!(default_db.idle_timeout_seconds,900);
+        assert_eq!(default_db.max_lifetime_seconds,3600);
+        assert_eq!(default_db.database_url.expose_secret(), "postgresql://postgres:postgres@localhost/gisstdb");
+
+    }
+    #[test]
+    fn test_http_config_defaults(){
+
+        let http_default = HttpConfig::default();
+
+        assert_eq!(http_default.listen_address,Ipv4Addr::new(0,0,0,0));
+        assert_eq!(http_default.listen_port,3000);
+    }
+    #[test]
+    fn test_storage_config_defaults(){
+
+        let storage_defaults = StorageConfig::default();
+
+        assert_eq!(storage_defaults.root_folder_path,"./storage");
+        assert_eq!(storage_defaults.temp_folder_path,"./tmp");
+        assert_eq!(storage_defaults.folder_depth,4);
+        assert_eq!(storage_defaults.chunk_size,10485760);
+
+    }
+
+    #[test]
+    fn test_auth_config_defaults(){
+
+        let auth_default = AuthConfig::default();
+
+        assert_eq!(auth_default.google_client_id.expose_secret(),"PROVIDE GOOGLE CLIENT ID in local.toml");
+        assert_eq!(auth_default.google_client_secret.expose_secret(),"PROVIDE GOOGLE CLIENT SECRET in local.toml");
+
+
+    }
+
+}
