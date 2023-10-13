@@ -78,7 +78,7 @@ export class UI {
       this.ui_root.classList.add("container-fluid");
     }
 
-    this.emulator_div = <HTMLDivElement>elementFromTemplates(UITemplateConst.EMULATOR_SINGLE_DIV);
+    const emulator_div = <HTMLDivElement>elementFromTemplates(UITemplateConst.EMULATOR_SINGLE_DIV);
 
     // Configure initial UI state
     // May turn this into a separate set of functions?
@@ -95,7 +95,7 @@ export class UI {
 
       // Attach emulator div to ui root
       ui_embedded_grid.querySelector("#"+UIIDConst.EMU_EMBEDDED_COL)!
-          .appendChild(this.emulator_div);
+        .appendChild(emulator_div);
 
       // Create emulator control bar
       ui_embedded_grid.querySelector("#"+UIIDConst.EMU_CONTROL_BAR_COL)!
@@ -111,6 +111,8 @@ export class UI {
       this.ui_root.querySelector("#"+UIIDConst.EMU_START_REPLAY_BUTTON)!.addEventListener("click", this.control.start_replay);
       this.ui_root.querySelector("#"+UIIDConst.EMU_FINISH_REPLAY_BUTTON)!.addEventListener("click", this.control.stop_and_save_replay);
     }
+    // TODO do the right thing if this is headless
+    this.emulator_div = <HTMLDivElement>document.getElementById("emulator_single_div")!;
 
     // Configure emulator manipulation toolbar
     this.saves_elt = <HTMLOListElement>document.createElement("ol");
@@ -122,6 +124,7 @@ export class UI {
   }
 
   setReplayMode(mode:ReplayMode) {
+    // TODO do something different if this.headless
     switch (mode) {
       case ReplayMode.Inactive:
       this.emulator_div.classList.remove("emulator-recording");

@@ -123,7 +123,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       } else {
         ui_state.newReplay(nom);
       }
-      ui_state.setReplayMode(UIReplayMode.Record);
+      //ui_state.setReplayMode(UIReplayMode.Record);
     },
     stop_replay:()=>{
       ui_state.clearCheckpoints();
@@ -166,10 +166,10 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       return false;
     });
   setInterval(() => {
-    if(!v86.active_replay) {
+    if(v86.active_replay === null) {
       ui_state.setReplayMode(UIReplayMode.Inactive);
     } else {
       ui_state.setReplayMode(v86.replays[v86.active_replay].mode as UIReplayMode);
     }
-  }, 500);
+  }, 250);
 }

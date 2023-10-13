@@ -17,7 +17,7 @@
     border: solid 4px red;
 }
 .emulator-recording::after {
-    text-color: red;
+    color: red;
     content: "RECORDING";
 }
 .emulator-playback {
