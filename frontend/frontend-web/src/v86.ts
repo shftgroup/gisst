@@ -1,4 +1,4 @@
-import {UI, GISSTDBConnector, GISSTModels} from 'gisst-player';
+import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
@@ -123,7 +123,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       } else {
         ui_state.newReplay(nom);
       }
-      ui_state.set_replay_status(UI.ReplayRecording);
+      ui_state.setReplayMode(UIReplayMode.Record);
     },
     stop_replay:()=>{
       ui_state.clearCheckpoints();
@@ -165,11 +165,11 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       canv.classList.remove("hidden");
       return false;
     });
-  setInterval(500, () => {
+  setInterval(() => {
     if(!v86.active_replay) {
-      ui.setReplayMode(UI.ReplayMode.Inactive);
+      ui_state.setReplayMode(UIReplayMode.Inactive);
     } else {
-      ui.setReplayMode(v86.replays[active_replay].mode as UI.ReplayMode);
+      ui_state.setReplayMode(v86.replays[v86.active_replay].mode as UIReplayMode);
     }
-  });
+  }, 500);
 }
