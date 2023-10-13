@@ -549,14 +549,13 @@ pub struct CreateReplay {
     pub replay_name: String,
     pub replay_description: String,
     pub instance_id: Uuid,
-    pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
     pub file_id: Uuid,
-    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 async fn create_replay(
     app_state: Extension<ServerState>,
+    auth: AuthContext,
     Json(replay): Json<CreateReplay>,
 ) -> Result<Json<Replay>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -570,10 +569,10 @@ async fn create_replay(
                     replay_name: replay.replay_name,
                     replay_description: replay.replay_description,
                     instance_id: replay.instance_id,
-                    creator_id: replay.creator_id,
+                    creator_id: auth.current_user.ok_or(GISSTError::Generic)?.creator_id,
                     replay_forked_from: replay.replay_forked_from,
                     file_id: replay.file_id,
-                    created_on: replay.created_on,
+                    created_on: chrono::Utc::now(),
                 },
             )
             .await?,
@@ -683,17 +682,16 @@ pub struct CreateState {
     pub file_id: Uuid,
     pub state_name: String,
     pub state_description: String,
-    pub screenshot_id: Option<Uuid>,
+    pub screenshot_id: Uuid,
     pub replay_id: Option<Uuid>,
-    // TODO remove, use logged in user's ID instead
-    pub creator_id: Option<Uuid>,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
-    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+#[axum::debug_handler]
 async fn create_state(
     app_state: Extension<ServerState>,
+    auth: AuthContext,
     Json(state): Json<CreateState>,
 ) -> Result<Json<State>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -711,10 +709,10 @@ async fn create_state(
                     state_description: state.state_description,
                     screenshot_id: state.screenshot_id,
                     replay_id: state.replay_id,
-                    creator_id: state.creator_id,
+                    creator_id: auth.current_user.ok_or(GISSTError::Generic)?.creator_id,
                     state_replay_index: state.state_replay_index,
                     state_derived_from: state.state_derived_from,
-                    created_on: state.created_on,
+                    created_on: chrono::Utc::now(),
                 },
             )
             .await?,

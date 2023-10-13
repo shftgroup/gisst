@@ -108,7 +108,7 @@ pub struct Creator {
     pub creator_id: Uuid,
     pub creator_username: String,
     pub creator_full_name: String,
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -120,7 +120,7 @@ pub struct Environment {
     pub environment_core_version: String,
     pub environment_derived_from: Option<Uuid>,
     pub environment_config: Option<sqlx::types::JsonValue>,
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -131,7 +131,7 @@ pub struct File {
     pub file_source_path: String,
     pub file_dest_path: String,
     pub file_size: i64, //PostgeSQL does not have native uint support
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -140,7 +140,7 @@ pub struct Image {
     pub file_id: Uuid,
     pub image_description: Option<String>,
     pub image_config: Option<sqlx::types::JsonValue>,
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -149,7 +149,7 @@ pub struct Instance {
     pub work_id: Uuid,
     pub environment_id: Uuid,
     pub instance_config: Option<sqlx::types::JsonValue>,
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 
 #[serde_as]
@@ -194,7 +194,7 @@ pub struct Object {
     pub object_id: Uuid,
     pub file_id: Uuid,
     pub object_description: Option<String>,
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -207,7 +207,7 @@ pub struct Replay {
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
     pub file_id: Uuid,
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -218,7 +218,7 @@ pub struct Save {
     pub save_description: String,
     pub file_id: Uuid,
     pub creator_id: Uuid,
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -230,12 +230,12 @@ pub struct State {
     pub file_id: Uuid,
     pub state_name: String,
     pub state_description: String,
-    pub screenshot_id: Option<Uuid>,
+    pub screenshot_id: Uuid,
     pub replay_id: Option<Uuid>,
-    pub creator_id: Option<Uuid>,
+    pub creator_id: Uuid,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -244,7 +244,7 @@ pub struct Work {
     pub work_name: String,
     pub work_version: String,
     pub work_platform: String,
-    pub created_on: Option<DateTime<Utc>>,
+    pub created_on: DateTime<Utc>,
 }
 #[async_trait]
 impl DBModel for Creator {
@@ -265,7 +265,7 @@ impl DBModel for Creator {
             Some(self.creator_id.to_string()),
             Some(self.creator_full_name.to_string()),
             Some(self.creator_username.to_string()),
-            unwrap_to_option_string(&self.created_on),
+            Some(self.created_on.to_string()),
         ]
     }
 
@@ -512,7 +512,7 @@ impl DBModel for Instance {
             Some(self.environment_id.to_string()),
             Some(self.work_id.to_string()),
             unwrap_to_option_string(&self.instance_config),
-            unwrap_to_option_string(&self.created_on),
+            Some(self.created_on.to_string()),
         ]
     }
 
@@ -700,7 +700,7 @@ impl DBModel for Image {
             Some(self.file_id.to_string()),
             unwrap_to_option_string(&self.image_config),
             unwrap_to_option_string(&self.image_description),
-            unwrap_to_option_string(&self.created_on),
+            Some(self.created_on.to_string()),
         ]
     }
 
@@ -886,7 +886,7 @@ impl DBModel for Environment {
             Some(self.environment_core_version.to_string()),
             unwrap_to_option_string(&self.environment_derived_from),
             unwrap_to_option_string(&self.environment_config),
-            unwrap_to_option_string(&self.created_on),
+            Some(self.created_on.to_string()),
         ]
     }
 
@@ -1025,7 +1025,7 @@ impl DBModel for Object {
             Some(self.object_id.to_string()),
             Some(self.file_id.to_string()),
             unwrap_to_option_string(&self.object_description),
-            unwrap_to_option_string(&self.created_on),
+            Some(self.created_on.to_string()),
         ]
     }
 
@@ -1156,7 +1156,7 @@ impl DBModel for Replay {
             Some(self.creator_id.to_string()),
             Some(self.file_id.to_string()),
             unwrap_to_option_string(&self.replay_forked_from),
-            unwrap_to_option_string(&self.created_on),
+            Some(self.created_on.to_string()),
         ]
     }
 
@@ -1329,7 +1329,7 @@ impl DBModel for Save {
             Some(self.save_description.to_string()),
             Some(self.file_id.to_string()),
             Some(self.creator_id.to_string()),
-            unwrap_to_option_string(&self.created_on),
+            Some(self.created_on.to_string()),
         ]
     }
 
@@ -1501,12 +1501,12 @@ impl DBModel for State {
             Some(self.file_id.to_string()),
             Some(self.state_name.to_string()),
             Some(self.state_description.to_string()),
-            unwrap_to_option_string(&self.screenshot_id),
-            unwrap_to_option_string(&self.creator_id),
+            Some(self.screenshot_id.to_string()),
+            Some(self.creator_id.to_string()),
             unwrap_to_option_string(&self.replay_id),
             unwrap_to_option_string(&self.state_replay_index),
             unwrap_to_option_string(&self.state_derived_from),
-            unwrap_to_option_string(&self.created_on),
+            Some(self.created_on.to_string()),
         ]
     }
 
@@ -1726,7 +1726,7 @@ impl DBModel for Work {
             Some(self.work_name.to_string()),
             Some(self.work_version.to_string()),
             Some(self.work_platform.to_string()),
-            unwrap_to_option_string(&self.created_on),
+            Some(self.created_on.to_string()),
         ]
     }
 

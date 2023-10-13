@@ -306,11 +306,11 @@ pub struct CreateState {
     #[arg(long = "description")]
     pub state_description: Option<String>,
     #[arg(long = "screenshot-id")]
-    pub screenshot_id: Option<Uuid>,
+    pub screenshot_id: Uuid,
     #[arg(long = "replay-id")]
     pub replay_id: Option<Uuid>,
     #[arg(long = "creator-id")]
-    pub creator_id: Option<Uuid>,
+    pub creator_id: Uuid,
     #[arg(long = "replay-index")]
     pub state_replay_index: Option<i32>,
     #[arg(long = "derived-from")]
