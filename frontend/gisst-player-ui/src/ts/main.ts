@@ -122,7 +122,7 @@ export class UI {
   }
 
   setReplayMode(mode:ReplayMode) {
-    switch mode {
+    switch (mode) {
       case ReplayMode.Inactive:
       this.emulator_div.classList.remove("emulator-recording");
       this.emulator_div.classList.remove("emulator-playback");

@@ -118,7 +118,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       false,
       JSON.parse(document.getElementById("config")!.textContent!)
   );
-  ui_state.setReplayMode(movie ? UIReplayMode.Playback : boot_into_record);
+  ui_state.setReplayMode(movie ? UIReplayMode.Playback : (boot_into_record ? UIReplayMode.Record : UIReplayMode.Inactive));
 
   loadRetroArch("", core,
     function (module:LibretroModule) {
@@ -310,15 +310,15 @@ async function update_checkpoints() {
     if(finished) {
       ui_state.setReplayMode(UIReplayMode.Finished);
     } else {
-      switch mode {
+      switch (mode) {
         case ReplayMode.Inactive:
         ui_state.setReplayMode(UIReplayMode.Inactive);
         break;
         case ReplayMode.Playback:
         ui_state.setReplayMode(UIReplayMode.Playback);
         break;
-        case ReplayMode.Recording:
-        ui_state.setReplayMode(UIReplayMode.Recording);
+        case ReplayMode.Record:
+        ui_state.setReplayMode(UIReplayMode.Record);
         break;
       }
     }
