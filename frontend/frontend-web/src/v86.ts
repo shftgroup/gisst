@@ -1,4 +1,4 @@
-import {UI, GISSTDBConnector, GISSTModels} from 'gisst-player';
+import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
@@ -9,6 +9,7 @@ let db:GISSTDBConnector;
 
 export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
   db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
+  const boot_into_record = false;
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
   nested_replace(environment.environment_config, "$CONTENT", content_path);
@@ -112,7 +113,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   v86 = new EmbedV86({
     wasm_root:"/v86",
     bios_root:"/v86/bios",
-    record_from_start:true,
+    record_from_start:boot_into_record,
     content_root:window.location.origin,
     container: <HTMLDivElement>document.getElementById("canvas_div")!,
     register_replay:(nom:string)=> {
@@ -122,6 +123,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       } else {
         ui_state.newReplay(nom);
       }
+      //ui_state.setReplayMode(UIReplayMode.Record);
     },
     stop_replay:()=>{
       ui_state.clearCheckpoints();
@@ -163,4 +165,11 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       canv.classList.remove("hidden");
       return false;
     });
+  setInterval(() => {
+    if(v86.active_replay === null) {
+      ui_state.setReplayMode(UIReplayMode.Inactive);
+    } else {
+      ui_state.setReplayMode(v86.replays[v86.active_replay].mode as UIReplayMode);
+    }
+  }, 250);
 }
