@@ -234,7 +234,8 @@ export class UI {
 
     const li = <HTMLUListElement>elementFromTemplates("replay_list_item");
     li.querySelector(".replay-list-item")!.setAttribute("id", valid_for_css(replay_file));
-    li.querySelector("a")!.textContent = replay_file;
+    li.querySelector(".replay-list-item-replay-name")!.textContent = replay_file;
+    li.querySelector(".replay-list-item-replay-desc")!.textContent = replay_file;
 
     li.querySelector(".replay-list-item-play-button")!.addEventListener("click", () => {
       console.log("Play", replay_file, replay_num);
@@ -251,7 +252,11 @@ export class UI {
           .then((md:Metadata) => {
             this.completeUpload("rp__"+replay_file, md);
           })
-    })
+    });
+
+    li.querySelector(".replay-list-item-edit-button")!.addEventListener("click", () => {
+      this.toggleEditReplay(replay_file);
+    });
 
     const replay_metadata:Metadata = {
       record: {
@@ -337,8 +342,8 @@ export class UI {
 
   toggleEditReplay(replay_file:string) {
     const replay_fields = generateReplayFields();
-    const replay_list_object = <HTMLDivElement>this.entries_by_name["st__"+replay_file];
-    const replay_metadata = this.metadata_by_name["st__"+replay_file];
+    const replay_list_object = <HTMLDivElement>this.entries_by_name["rp__"+replay_file];
+    const replay_metadata = this.metadata_by_name["rp__"+replay_file];
 
     if(replay_metadata.stored_on_server){
       return;
