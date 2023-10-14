@@ -1,5 +1,5 @@
 import * as fetchfs from './fetchfs';
-import {UI, GISSTDBConnector, GISSTModels} from 'gisst-player';
+import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
@@ -25,6 +25,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   const content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
+  const boot_into_record = true;
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
@@ -32,7 +33,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   if (movie) {
     retro_args.push("-P");
     retro_args.push(state_dir+"/"+content_base+".replay1");
-  } else {
+  } else if(boot_into_record) {
     retro_args.push("-R");
     retro_args.push(state_dir+"/"+content_base+".replay1");
   }
@@ -41,7 +42,6 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   retro_args.push("/home/web_user/content/retroarch.cfg");
   retro_args.push("/home/web_user/content/" + content_file);
   console.log(retro_args);
-
 
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
@@ -118,6 +118,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       false,
       JSON.parse(document.getElementById("config")!.textContent!)
   );
+  ui_state.setReplayMode(movie ? UIReplayMode.Playback : (boot_into_record ? UIReplayMode.Record : UIReplayMode.Inactive));
 
   loadRetroArch("", core,
     function (module:LibretroModule) {
@@ -246,6 +247,7 @@ async function play_replay_slot(n:number) {
     return;
   }
   current_replay = {mode:ReplayMode.Playback,id:num_str,finished:false};
+  ui_state.setReplayMode(ReplayMode.Playback);
   find_checkpoints_inner();
 }
 enum BSVFlags {
@@ -305,6 +307,21 @@ async function update_checkpoints() {
     const mode = (flags & BSVFlags.PLAYBACK) != 0 ? ReplayMode.Playback : (flags & BSVFlags.RECORDING ? ReplayMode.Record : ReplayMode.Inactive);
     console.log("current replay",id,mode,finished);
     current_replay = {id:id,mode:mode,finished:finished};
+    if(finished) {
+      ui_state.setReplayMode(UIReplayMode.Finished);
+    } else {
+      switch (mode) {
+        case ReplayMode.Inactive:
+        ui_state.setReplayMode(UIReplayMode.Inactive);
+        break;
+        case ReplayMode.Playback:
+        ui_state.setReplayMode(UIReplayMode.Playback);
+        break;
+        case ReplayMode.Record:
+        ui_state.setReplayMode(UIReplayMode.Record);
+        break;
+      }
+    }
   }
   if(current_replay) {
     find_checkpoints_inner();
@@ -399,6 +416,7 @@ function clear_current_replay() {
   current_replay = null;
   seen_checkpoints = {};
   ui_state.clearCheckpoints();
+  ui_state.setReplayMode(UIReplayMode.Inactive);
 }
 
 function file_exists(RA:LibretroModule, path:string) : boolean {
