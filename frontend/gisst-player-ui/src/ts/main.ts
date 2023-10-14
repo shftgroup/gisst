@@ -128,8 +128,8 @@ export class UI {
     this.saves_elt.appendChild(li);
     this.entries_by_name["sv__"+save_file] = li;
   }
-  newState(state_file:string, state_thumbnail:string) {
-    console.log("found new state", state_file);
+  newState(state_file:string, state_thumbnail:string, metadata?:StateFileLink) {
+    console.log("found new state", state_file, metadata);
     // Create state list template object
     const new_state_list_object = <HTMLDivElement>elementFromTemplates("card_list_object");
     new_state_list_object.querySelector(".card-list-object")!
@@ -178,26 +178,26 @@ export class UI {
     nonnull(this.current_config);
     const state_metadata:Metadata = {
       record: {
-        state_id: "00000000-0000-0000-0000-000000000000",
+        state_id: metadata?.state_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
         instance_id: this.current_config.instance.instance_id,
-        is_checkpoint: false,
-        file_id: "",
-        state_description: state_file,
-        state_name: state_file,
-        state_derived_from: this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : "00000000-0000-0000-0000-000000000000",
-        screenshot_id: "",
-        replay_id: "00000000-0000-0000-0000-000000000000",
-        creator_id: "00000000-0000-0000-0000-000000000000",
-        created_on: new Date()
+        is_checkpoint: metadata?.is_checkpoint || false,
+        file_id: metadata?.file_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        state_description: metadata?.state_description || state_file,
+        state_name: metadata?.state_name || state_file,
+        state_derived_from: metadata?.state_derived_from || (this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : null),
+        screenshot_id: metadata?.screenshot_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        replay_id: metadata?.replay_id || null,
+        creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
+        created_on: metadata?.created_on || new Date()
       },
       screenshot: state_thumbnail,
-      stored_on_server: false,
+      stored_on_server: metadata !== undefined,
       editing: false
     }
 
     this.metadata_by_name["st__"+state_file] = state_metadata;
   }
-  newReplay(replay_file:string) {
+  newReplay(replay_file:string, metadata?:ReplayFileLink) {
     this.clearCheckpoints();
     const num_str = (replay_file.match(/replay([0-9]+)$/)?.[1]) ?? "0";
     const replay_num = parseInt(num_str,10);
@@ -225,16 +225,16 @@ export class UI {
 
     const replay_metadata:Metadata = {
       record: {
-        replay_id: "00000000-0000-0000-0000-000000000000",
-        replay_name: replay_file,
-        replay_description: replay_file,
+        replay_id: metadata?.replay_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        replay_name: metadata?.replay_name || replay_file,
+        replay_description: metadata?.replay_description || replay_file,
         instance_id: this.current_config.instance.instance_id,
-        creator_id: "00000000-0000-0000-0000-000000000000",
-        replay_forked_from: this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : "00000000-0000-0000-0000-000000000000",
-        file_id: "",
-        created_on: new Date()
+        creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
+        replay_forked_from: metadata?.replay_forked_from || (this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : null),
+        file_id: metadata?.file_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        created_on: metadata?.created_on || new Date()
       },
-      stored_on_server: false,
+      stored_on_server: metadata !== undefined,
       editing: false,
       screenshot: ""
     }

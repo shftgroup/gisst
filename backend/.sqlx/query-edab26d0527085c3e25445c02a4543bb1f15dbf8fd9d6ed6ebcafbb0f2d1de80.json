@@ -11,12 +11,12 @@
       {
         "ordinal": 1,
         "name": "creator_username",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 2,
         "name": "creator_full_name",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 3,
@@ -26,8 +26,8 @@
     ],
     "parameters": {
       "Left": [
-        "Varchar",
-        "Varchar",
+        "Text",
+        "Text",
         "Timestamptz",
         "Uuid"
       ]
@@ -36,7 +36,7 @@
       false,
       false,
       false,
-      true
+      false
     ]
   },
   "hash": "edab26d0527085c3e25445c02a4543bb1f15dbf8fd9d6ed6ebcafbb0f2d1de80"

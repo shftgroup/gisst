@@ -184,7 +184,7 @@ pub async fn tus_patch(
                 file_source_path: file_info.source_path.clone(),
                 file_dest_path: file_info.dest_path.clone(),
                 file_size: pu_length as i64,
-                created_on: None,
+                created_on: chrono::Utc::now(),
             },
         )
         .await?;

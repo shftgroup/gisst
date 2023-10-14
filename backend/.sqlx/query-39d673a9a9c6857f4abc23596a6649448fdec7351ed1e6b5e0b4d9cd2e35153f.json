@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT\n            state_id,\n            instance_id,\n            is_checkpoint,\n            state_name,\n            state_description,\n            screenshot_id,\n            replay_id,\n            creator_id,\n            state_replay_index,\n            state_derived_from,\n            state.created_on,\n            file.file_hash as file_hash,\n            file.file_filename as file_filename,\n            file.file_source_path as file_source_path,\n            file.file_dest_path as file_dest_path\n            FROM state\n            JOIN file USING(file_id)\n            WHERE state_id = $1\n            ",
+  "query": "SELECT\n            state_id,\n            instance_id,\n            is_checkpoint,\n            state_name,\n            state_description,\n            screenshot_id,\n            replay_id,\n            creator_id,\n            state_replay_index,\n            state_derived_from,\n            state.created_on,\n            file_id,\n            file.file_hash as file_hash,\n            file.file_filename as file_filename,\n            file.file_source_path as file_source_path,\n            file.file_dest_path as file_dest_path\n            FROM state\n            JOIN file USING(file_id)\n            WHERE state_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -60,21 +60,26 @@
       },
       {
         "ordinal": 11,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
         "name": "file_hash",
         "type_info": "Bpchar"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "file_filename",
         "type_info": "Text"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "file_source_path",
         "type_info": "Text"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "file_dest_path",
         "type_info": "Text"
       }
@@ -90,17 +95,18 @@
       false,
       false,
       false,
+      false,
+      true,
+      false,
       true,
       true,
-      true,
-      true,
-      true,
-      true,
+      false,
+      false,
       false,
       false,
       false,
       false
     ]
   },
-  "hash": "fda66aa034a9d866f3ed6847cf8649e873491205dca20fc222ba93f9db29aa17"
+  "hash": "39d673a9a9c6857f4abc23596a6649448fdec7351ed1e6b5e0b4d9cd2e35153f"
 }

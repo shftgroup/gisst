@@ -28,22 +28,22 @@ use serde::Deserialize;
 #[derive(Debug, Default, Clone, sqlx::FromRow)]
 pub struct User {
     id: i32,
-    sub: Option<String>,                //OpenID (currently google specific)
-    pub creator_id: Option<Uuid>,
+    sub: Option<String>, //OpenID (currently google specific)
+    pub creator_id: Uuid,
     password_hash: String,
     pub name: Option<String>,               //OpenID
     pub given_name: Option<String>,         //OpenID
     pub family_name: Option<String>,        //OpenID
     pub preferred_username: Option<String>, //OpenID
     pub email: Option<String>,              //OpenID
-    picture: Option<String>,            //OpenID (this is a url string)
+    picture: Option<String>,                //OpenID (this is a url string)
 }
 
 // Based on OpenID standard claims https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, sqlx::FromRow, Clone)]
 pub struct OpenIDUserInfo {
-    sub: Option<String>,                        //OpenID
+    sub: Option<String>,                //OpenID
     name: Option<String>,               //OpenID
     given_name: Option<String>,         //OpenID
     family_name: Option<String>,        //OpenID
@@ -233,13 +233,24 @@ pub async fn oauth_callback_handler(
         println!("Logged in the user: {user:?}");
         Ok(Redirect::to("/instances"))
     } else {
-        println!("New user login, creating user record.");
+        println!("New user login, creating creator and user records.");
+        let creator = Creator::insert(
+            &mut conn,
+            Creator {
+                creator_id: Uuid::new_v4(),
+                creator_username: profile.email.clone().unwrap(),
+                creator_full_name: profile.given_name.clone().unwrap(),
+                created_on: Utc::now(),
+            },
+        )
+        .await?;
+        println!("Creator record created: {creator:?}.");
         let user = User::insert(
             &mut conn,
             &User {
                 id: 0, // will be ignored on insert since insert id is serial auto-increment
                 sub: profile.sub,
-                creator_id: None,
+                creator_id: creator.creator_id,
                 password_hash: token.access_token().secret().to_owned(),
                 name: profile.name,
                 given_name: profile.given_name,
@@ -251,21 +262,8 @@ pub async fn oauth_callback_handler(
         )
         .await?;
 
-        println!("User record created: {user:?}. Creating creator.");
-        let creator = Creator::insert(&mut conn, Creator {
-                            creator_id: Uuid::new_v4(),
-                            creator_username: user.email.clone().unwrap(),
-                            creator_full_name: user.given_name.clone().unwrap(),
-                            created_on: Some(Utc::now()),
-                        }).await?;
-
-        println!("Creator record created: {creator:?}. Linking user.");
-        let user = User::update(&mut conn, &User {
-            creator_id: Some(creator.creator_id),
-            ..user
-        }).await?;
-
-        println!("User record created: {user:?}. Logging in.");
+        println!("User record created: {user:?}.");
+        println!("Logging in.;");
         auth.login(&user).await.unwrap();
         println!("Logged in the user: {user:?}");
         Ok(Redirect::to("/instances"))
@@ -279,9 +277,7 @@ pub async fn login_handler(
     let (auth_url, csrf_state) = state
         .oauth_client
         .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new(
-            "openid profile email".to_string(),
-        ))
+        .add_scope(Scope::new("openid profile email".to_string()))
         .url();
 
     session.insert("csrf_state", csrf_state).unwrap();
@@ -289,8 +285,7 @@ pub async fn login_handler(
     Redirect::to(auth_url.as_ref())
 }
 
-pub async fn logout_handler(mut auth: AuthContext)
-    -> impl IntoResponse {
+pub async fn logout_handler(mut auth: AuthContext) -> impl IntoResponse {
     dbg!("Logging out user: {}", &auth.current_user);
     auth.logout().await;
     Redirect::to("/instances")

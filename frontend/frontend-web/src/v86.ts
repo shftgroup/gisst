@@ -8,13 +8,22 @@ let db:GISSTDBConnector;
 
 
 export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
+  db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
   nested_replace(environment.environment_config, "$CONTENT", content_path);
   let entry_state:string|null = null;
+  let entry_screenshot:string|null = null;
   if (start.type == "state") {
     const data = (start as StateStart).data;
     entry_state = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
+    if(!data.screenshot_id) {
+      console.error("No screenshot for entry state");
+      entry_screenshot = "";
+    } else {
+      const screenshot_data = (await db.getRecordById("screenshot", data.screenshot_id)) as GISSTModels.Screenshot;
+      entry_screenshot = screenshot_data.screenshot_data;
+    }
   }
   let movie:string|null = null;
   if (start.type == "replay") {
@@ -25,7 +34,6 @@ export async function init(environment:Environment, start:ColdStart | StateStart
 
   /* eslint prefer-const: ["error", { ignoreReadBeforeAssign: true }], no-use-before-define: "error" */
   let v86:EmbedV86;
-  db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
   let is_muted = false;
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
@@ -107,7 +115,14 @@ export async function init(environment:Environment, start:ColdStart | StateStart
     record_from_start:true,
     content_root:window.location.origin,
     container: <HTMLDivElement>document.getElementById("canvas_div")!,
-    register_replay:(nom:string)=>ui_state.newReplay(nom),
+    register_replay:(nom:string)=> {
+      if(movie && nom == "replay0") {
+        const data = (start as ReplayStart).data;
+        ui_state.newReplay(nom, data);
+      } else {
+        ui_state.newReplay(nom);
+      }
+    },
     stop_replay:()=>{
       ui_state.clearCheckpoints();
     },
@@ -116,7 +131,13 @@ export async function init(environment:Environment, start:ColdStart | StateStart
         ui_state.removeState(si.name);
       }
       for(const si of added) {
-        ui_state.newState(si.name,si.thumbnail);
+        if(entry_state && si.name == "state0") {
+          si.thumbnail = entry_screenshot!;
+          const data = (start as StateStart).data;
+          ui_state.newState(si.name, si.thumbnail, data);
+        } else {
+          ui_state.newState(si.name,si. thumbnail);
+        }
       }
     },
     replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
