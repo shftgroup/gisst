@@ -11,12 +11,12 @@
       {
         "ordinal": 1,
         "name": "creator_username",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 2,
         "name": "creator_full_name",
-        "type_info": "Varchar"
+        "type_info": "Text"
       },
       {
         "ordinal": 3,
@@ -33,7 +33,7 @@
       false,
       false,
       false,
-      true
+      false
     ]
   },
   "hash": "390e7998895c5e895992c166f19ebf2434e566aa35715e6ba153d6511a3ec74a"

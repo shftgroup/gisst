@@ -89,7 +89,7 @@ async fn main() -> Result<(), IngestError> {
     info!("DB connection successful.");
     let storage_root = gisst_storage_root_path.to_string();
     info!("Storage root is set to: {}", &storage_root);
-    let created_on = None;
+    let created_on = chrono::Utc::now();
     let ra_cfg_object_id = {
         let ra_cfg = std::path::Path::new(&ra_cfg);
         let ra = &read(ra_cfg)?;
@@ -184,6 +184,7 @@ async fn main() -> Result<(), IngestError> {
                         .map_get("rom_name")
                         .unwrap_or_else(|| file_name.clone()),
                     work_platform: platform.clone(),
+                    // TODO this should use the real cataloguing data
                     created_on,
                 };
                 let env = Environment {
@@ -236,7 +237,7 @@ async fn main() -> Result<(), IngestError> {
                     object_id,
                     file_id: file_uuid,
                     object_description: rval.map_get("description"),
-                    created_on: None,
+                    created_on,
                 };
                 Work::insert(&mut conn, work).await?;
                 Environment::insert(&mut conn, env).await?;
