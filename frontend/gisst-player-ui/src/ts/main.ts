@@ -355,6 +355,8 @@ export class UI {
         if(canEdit("replay", field.field_name)){
           const field_element:HTMLParagraphElement = document.createElement("p");
           field_element.classList.add(valid_for_css(replay_file) + "-edit-fields");
+          field_element.classList.add("d-flex");
+          field_element.classList.add("flex-row");
           const ele_id = valid_for_css(replay_file) + "_" + field.field_name;
           if (field.value_type === "string"){
             field_element.innerHTML = `<label for="${ele_id}">${field.field_name}</label><input type="text" class="${valid_for_css(replay_file)}-field" id="${ele_id}" name="${ele_id}"/>`;
@@ -364,12 +366,13 @@ export class UI {
               (replay_metadata.record as Replay)[field.field_name] = (e.currentTarget! as HTMLInputElement).value;
             });
           }
-          replay_list_object.appendChild(field_element)
+          replay_list_object.querySelector(".card-body")!.appendChild(field_element)
         }
       }
     } else {
       replay_metadata.editing = false;
-      replay_list_object.querySelector("a")!.textContent = (replay_metadata.record as Replay).replay_name;
+      replay_list_object.querySelector(".card-title")!.textContent = (replay_metadata.record as Replay).replay_name;
+      replay_list_object.querySelector(".card-text")!.textContent = (replay_metadata.record as Replay).replay_description;
       const edit_fields = replay_list_object.querySelectorAll("." + valid_for_css(replay_file) + "-edit-fields")!;
       for(let i = 0; i < edit_fields.length; i++){
         edit_fields[i].remove();
