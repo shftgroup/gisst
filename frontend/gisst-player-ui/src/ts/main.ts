@@ -234,7 +234,8 @@ export class UI {
 
     const li = <HTMLUListElement>elementFromTemplates("replay_list_item");
     li.querySelector(".replay-list-item")!.setAttribute("id", valid_for_css(replay_file));
-    li.querySelector("a")!.textContent = replay_file;
+    li.querySelector(".replay-list-item-replay-name")!.textContent = replay_file;
+    li.querySelector(".replay-list-item-replay-desc")!.textContent = replay_file;
 
     li.querySelector(".replay-list-item-play-button")!.addEventListener("click", () => {
       console.log("Play", replay_file, replay_num);
@@ -251,7 +252,11 @@ export class UI {
           .then((md:Metadata) => {
             this.completeUpload("rp__"+replay_file, md);
           })
-    })
+    });
+
+    li.querySelector(".replay-list-item-edit-button")!.addEventListener("click", () => {
+      this.toggleEditReplay(replay_file);
+    });
 
     const replay_metadata:Metadata = {
       record: {
@@ -337,8 +342,8 @@ export class UI {
 
   toggleEditReplay(replay_file:string) {
     const replay_fields = generateReplayFields();
-    const replay_list_object = <HTMLDivElement>this.entries_by_name["st__"+replay_file];
-    const replay_metadata = this.metadata_by_name["st__"+replay_file];
+    const replay_list_object = <HTMLDivElement>this.entries_by_name["rp__"+replay_file];
+    const replay_metadata = this.metadata_by_name["rp__"+replay_file];
 
     if(replay_metadata.stored_on_server){
       return;
@@ -350,6 +355,8 @@ export class UI {
         if(canEdit("replay", field.field_name)){
           const field_element:HTMLParagraphElement = document.createElement("p");
           field_element.classList.add(valid_for_css(replay_file) + "-edit-fields");
+          field_element.classList.add("d-flex");
+          field_element.classList.add("flex-row");
           const ele_id = valid_for_css(replay_file) + "_" + field.field_name;
           if (field.value_type === "string"){
             field_element.innerHTML = `<label for="${ele_id}">${field.field_name}</label><input type="text" class="${valid_for_css(replay_file)}-field" id="${ele_id}" name="${ele_id}"/>`;
@@ -359,12 +366,13 @@ export class UI {
               (replay_metadata.record as Replay)[field.field_name] = (e.currentTarget! as HTMLInputElement).value;
             });
           }
-          replay_list_object.appendChild(field_element)
+          replay_list_object.querySelector(".card-body")!.appendChild(field_element)
         }
       }
     } else {
       replay_metadata.editing = false;
-      replay_list_object.querySelector("a")!.textContent = (replay_metadata.record as Replay).replay_name;
+      replay_list_object.querySelector(".card-title")!.textContent = (replay_metadata.record as Replay).replay_name;
+      replay_list_object.querySelector(".card-text")!.textContent = (replay_metadata.record as Replay).replay_description;
       const edit_fields = replay_list_object.querySelectorAll("." + valid_for_css(replay_file) + "-edit-fields")!;
       for(let i = 0; i < edit_fields.length; i++){
         edit_fields[i].remove();
