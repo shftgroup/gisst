@@ -24,6 +24,8 @@ use std::path::{Path, PathBuf};
 use std::{fs, fs::read, io};
 use uuid::{uuid, Uuid};
 use walkdir::WalkDir;
+use gisst::models::Screenshot;
+use crate::args::CreateScreenshot;
 
 #[tokio::main]
 async fn main() -> Result<(), GISSTCliError> {
@@ -116,6 +118,13 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
+        RecordType::Screenshot(screenshot) => match screenshot.command {
+            BaseSubcommand::Create(create) => create_screenshot(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => {
+                delete_record(d, db).await?
+            }
+        }
     }
     Ok(())
 }
@@ -717,6 +726,36 @@ async fn create_replay(
         .await
         .map(|_| ())
         .map_err(GISSTCliError::NewModel)
+}
+
+async fn create_screenshot(
+    CreateScreenshot {
+    file,
+    force_uuid,
+    }: CreateScreenshot,
+    db: PgPool,
+) -> Result<(), GISSTCliError> {
+    let file = Path::new(&file);
+
+    if !file.exists() || !file.is_file() {
+        return Err(GISSTCliError::CreateScreenshot(format!(
+            "File not found: {}",
+            file.to_string_lossy()
+        )));
+    }
+
+    let mut conn = db.acquire().await?;
+    let data = read(file)?;
+
+    Screenshot::insert(
+        &mut conn,
+        Screenshot{
+            screenshot_data: data,
+            screenshot_id: force_uuid.unwrap_or_else(Uuid::new_v4()),
+        }
+    ).await.map_err(|e| GISSTCliError::NewModel(e))?;
+
+    info!("Wrote screenshot {} to database.", file.to_string_lossy());
 }
 
 async fn create_state(

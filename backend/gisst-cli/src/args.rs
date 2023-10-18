@@ -19,6 +19,8 @@ pub enum GISSTCliError {
     CreateState(String),
     #[error("create replay error")]
     CreateReplay(String),
+    #[error("create screenshot error")]
+    CreateScreenshot(String),
     #[error("directory traversal error")]
     Directory(#[from] walkdir::Error),
     #[error("file read error")]
@@ -105,6 +107,8 @@ pub enum RecordType {
     State(GISSTCommand<BaseSubcommand<CreateState, UpdateState, DeleteRecord, ExportState>>),
     /// Manage replay records
     Replay(GISSTCommand<BaseSubcommand<CreateReplay, UpdateReplay, DeleteRecord, ExportReplay>>),
+    /// Manage screenshot records
+    Screenshot(GISSTCommand<BaseSubcommand<CreateScreenshot, UpdateScreenshot, DeleteRecord, ExportScreenshot>>),
 }
 
 #[derive(Debug, Args)]
@@ -374,3 +378,15 @@ pub struct CreateCreator {
 pub struct UpdateCreator {}
 #[derive(Debug, Args)]
 pub struct ExportCreator {}
+
+
+#[derive(Debug, Args)]
+pub struct CreateScreenshot {
+    /// (DEBUG) Force the use of specific screenshot UUID
+    #[arg(long = "force-uuid")]
+    pub force_uuid: Option<Uuid>,
+
+    /// Path to image file to create in the database, must be a PNG file
+    #[arg(long)]
+    pub file: String,
+}
