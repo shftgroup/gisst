@@ -2,6 +2,7 @@ use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use thiserror::Error;
 use uuid::Uuid;
+use gisst::models::ObjectRole;
 
 #[derive(Debug, Error)]
 pub enum GISSTCliError {
@@ -37,13 +38,15 @@ pub enum GISSTCliError {
     Config(#[from] config::ConfigError),
     #[error("record not found error")]
     RecordNotFound(Uuid),
+    #[error("invalid link record type")]
+    InvalidRecordType(String)
 }
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct GISSTCli {
     #[command(subcommand)]
-    pub record_type: RecordType,
+    pub command: Commands,
 
     #[command(flatten)]
     pub verbose: Verbosity<InfoLevel>,
@@ -80,7 +83,17 @@ pub enum BaseSubcommand<
 }
 
 #[derive(Debug, Subcommand)]
-pub enum RecordType {
+pub enum Commands {
+    /// Link records together
+    Link {
+        /// Record type that is being linked to another record
+        record_type: String,
+        source_uuid: Uuid,
+        target_uuid: Uuid,
+        #[arg(long)]
+        role: Option<ObjectRole>
+    },
+
     /// Manage object records and files
     Object(GISSTCommand<BaseSubcommand<CreateObject, UpdateObject, DeleteRecord, ExportObject>>),
     /// Manage image records and files
