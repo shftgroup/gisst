@@ -6,7 +6,7 @@ use anyhow::Result;
 use args::{
     BaseSubcommand, CreateCreator, CreateEnvironment, CreateImage, CreateInstance, CreateObject,
     CreateReplay, CreateSave, CreateState, CreateWork, DeleteRecord, GISSTCli, GISSTCliError,
-    RecordType,
+    Commands,
 };
 use clap::Parser;
 use gisst::{
@@ -24,7 +24,7 @@ use std::path::{Path, PathBuf};
 use std::{fs, fs::read, io};
 use uuid::{uuid, Uuid};
 use walkdir::WalkDir;
-use gisst::models::Screenshot;
+use gisst::models::{ObjectRole, Screenshot};
 use crate::args::CreateScreenshot;
 
 #[tokio::main]
@@ -53,8 +53,9 @@ async fn main() -> Result<(), GISSTCliError> {
         cli_config.storage.root_folder_path.to_string()
     );
 
-    match dbg!(args).record_type {
-        RecordType::Object(object) => match object.command {
+    match dbg!(args).command {
+        Commands::Link {record_type, source_uuid, target_uuid, role} => link_record(&record_type, source_uuid, target_uuid, db, role),
+        Commands::Object(object) => match object.command {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -62,19 +63,19 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Creator(creator) => match creator.command {
+        Commands::Creator(creator) => match creator.command {
             BaseSubcommand::Create(create) => create_creator(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_record::<Creator>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Environment(environment) => match environment.command {
+        Commands::Environment(environment) => match environment.command {
             BaseSubcommand::Create(create) => create_environment(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_record::<Environment>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Image(image) => match image.command {
+        Commands::Image(image) => match image.command {
             BaseSubcommand::Create(create) => create_image(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -82,19 +83,19 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Instance(instance) => match instance.command {
+        Commands::Instance(instance) => match instance.command {
             BaseSubcommand::Create(create) => create_instance(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_record::<Instance>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Work(work) => match work.command {
+        Commands::Work(work) => match work.command {
             BaseSubcommand::Create(create) => create_work(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_record::<Work>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::State(state) => match state.command {
+        Commands::State(state) => match state.command {
             BaseSubcommand::Create(create) => create_state(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -102,7 +103,7 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Save(save) => match save.command {
+        Commands::Save(save) => match save.command {
             BaseSubcommand::Create(create) => create_save(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -110,7 +111,7 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Replay(replay) => match replay.command {
+        Commands::Replay(replay) => match replay.command {
             BaseSubcommand::Create(create) => create_replay(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -118,13 +119,24 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Screenshot(screenshot) => match screenshot.command {
+        Commands::Screenshot(screenshot) => match screenshot.command {
             BaseSubcommand::Create(create) => create_screenshot(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
                 delete_record(d, db).await?
             }
         }
+    }
+    Ok(())
+}
+
+async fn link_record(record_type:&str, source_id:Uuid, target_id:Uuid, db: PgPool, role:Option<ObjectRole>) -> Result<(), GISSTCliError> {
+    match record_type {
+        "object" => {
+            let mut conn = db.acquire().await?;
+            Object::link_object_to_instance(&mut conn, source_id, target_id, role.unwrap()).await?;
+        },
+        _ => Err(GISSTCliError::InvalidRecordType(format!("{} is not a valid record type", record_type)))
     }
     Ok(())
 }
