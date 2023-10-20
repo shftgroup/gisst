@@ -4,6 +4,27 @@ use config::{Config, ConfigError, Environment, File};
 use secrecy::Secret;
 use serde::Deserialize;
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct DebugConfig {
+    pub log_level: u8,
+    pub log_to_file: bool,
+    pub log_to_terminal: bool,
+    pub log_path: String,
+    pub log_rolling_type: String,
+}
+
+impl Default for DebugConfig {
+    fn default() -> Self {
+        Self {
+            log_level: 3,
+            log_to_file: true,
+            log_to_terminal: true,
+            log_path: "./logs".to_string(),
+            log_rolling_type: "daily".to_string(),
+        }
+    }
+}
+
 //Configuration file setup taken from https://github.com/shanesveller/axum-rest-example/blob/develop/src/config.rs
 #[derive(Debug, Default, Deserialize)]
 pub struct ServerConfig {
@@ -18,6 +39,9 @@ pub struct ServerConfig {
 
     #[serde(default)]
     pub auth: AuthConfig,
+
+    #[serde(default)]
+    pub debug: DebugConfig,
 }
 
 impl ServerConfig {
