@@ -54,7 +54,7 @@ async fn main() -> Result<(), GISSTCliError> {
     );
 
     match dbg!(args).command {
-        Commands::Link {record_type, source_uuid, target_uuid, role} => link_record(&record_type, source_uuid, target_uuid, db, role),
+        Commands::Link {record_type, source_uuid, target_uuid, role} => link_record(&record_type, source_uuid, target_uuid, db, role).await?,
         Commands::Object(object) => match object.command {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
@@ -123,8 +123,9 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Create(create) => create_screenshot(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
-                delete_record(d, db).await?
-            }
+                delete_record::<Screenshot>(delete, db).await?
+            },
+            BaseSubcommand::Export(_export) => (),
         }
     }
     Ok(())
@@ -136,7 +137,7 @@ async fn link_record(record_type:&str, source_id:Uuid, target_id:Uuid, db: PgPoo
             let mut conn = db.acquire().await?;
             Object::link_object_to_instance(&mut conn, source_id, target_id, role.unwrap()).await?;
         },
-        _ => Err(GISSTCliError::InvalidRecordType(format!("{} is not a valid record type", record_type)))
+        _ => return Err(GISSTCliError::InvalidRecordType(format!("{} is not a valid record type", record_type)))
     }
     Ok(())
 }
@@ -763,11 +764,12 @@ async fn create_screenshot(
         &mut conn,
         Screenshot{
             screenshot_data: data,
-            screenshot_id: force_uuid.unwrap_or_else(Uuid::new_v4()),
+            screenshot_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         }
     ).await.map_err(|e| GISSTCliError::NewModel(e))?;
 
     info!("Wrote screenshot {} to database.", file.to_string_lossy());
+    Ok(())
 }
 
 async fn create_state(

@@ -48,7 +48,7 @@ cargo build --bin gisst-cli
 ../target/debug/gisst-cli environment create --json-file ./records/snes/snes_snes9x_1_62_3_environment.json
 ../target/debug/gisst-cli environment create --json-file ./records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT","async":true}}'
 
-# Create instances
+## Create instances
 ../target/debug/gisst-cli instance create --json-file ./records/nes/240p_test_suite_instance.json
 ../target/debug/gisst-cli instance create --json-file ./records/nes/alter_ego_instance.json
 ../target/debug/gisst-cli instance create --json-file ./records/nes/bobl_instance.json
@@ -64,34 +64,40 @@ cargo build --bin gisst-cli
 ../target/debug/gisst-cli instance create --json-file ./records/snes/n_warp_daisakusen_europe_instance.json
 ../target/debug/gisst-cli instance create --json-file ./records/snes/super_boss_gaiden_japan_instance.json
 ../target/debug/gisst-cli instance create --json-file ./records/v86/snake_instance.json
-
+#
 # Create NES objects
-../target/debug/gisst-cli object create -i --force_uuid $uuid_0 --link $uuid_0 --role content './data/nes/240p Test Suite.nes'
-../target/debug/gisst-cli object create -i --force_uuid $uuid_1 --link $uuid_1 --role content './data/nes/Alter Ego.nes'
-../target/debug/gisst-cli object create -i --force_uuid $uuid_2 --link $uuid_2 --role content './data/nes/Bobl (v1.1).nes'
-../target/debug/gisst-cli object create -i --force_uuid $uuid_3 --link $uuid_3 --role content './data/nes/Chrono Knight.nes'
-../target/debug/gisst-cli object create -i --force_uuid $uuid_4 --link $uuid_4 --role content './data/nes/Curse of the Shadow (Prototype).nes'
-../target/debug/gisst-cli object create -i --force_uuid $uuid_5 --link $uuid_5 --role content './data/nes/Curse of the Shadow (Prototype).nes'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_0 --link $uuid_0 --role content './data/nes/240p Test Suite.nes'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_1 --link $uuid_1 --role content './data/nes/Alter Ego.nes'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_2 --link $uuid_2 --role content './data/nes/Bobl (v1.1).nes'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_3 --link $uuid_3 --role content './data/nes/Chrono Knight.nes'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_4 --link $uuid_4 --role content './data/nes/Curse of the Shadow (Prototype).nes'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_5 --link $uuid_5 --role content './data/nes/Forgotten In Time (Demo).nes'
 
-# Create SNES objects
-../target/debug/gisst-cli object create -i --force_uuid $uuid_13 --link $uuid_13 --role content './data/snes/240pSuite.sfc'
-../target/debug/gisst-cli object create -i --force_uuid $uuid_14 --link $uuid_14 --role content './data/snes/KeepingSNESalive.sfc'
-../target/debug/gisst-cli object create -i --force_uuid $uuid_15 --link $uuid_15 --role content './data/snes/N-Warp Daisakusen (Europe).sfc'
-../target/debug/gisst-cli object create -i --force_uuid $uuid_16 --link $uuid_16 --role content './data/snes/Super Boss Gaiden (J) (V1.0).sfc'
-
-# Create v86 objects
-../target/debug/gisst-cli object create -i --force_uuid $uuid_21 --link $uuid_21 --role content './data/v86/freedos722.img'
-
-# Create NES config file
-../target/debug/gisst-cli object create -i --force_uuid $uuid_6 --link $uuid_0 --role config ./data/nes/retroarch.cfg
-
-# Link NES config object to NES instances
+## Create SNES objects
+../target/debug/gisst-cli object create -i --force-uuid $uuid_13 --link $uuid_13 --role content './data/snes/240pSuite.sfc'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_14 --link $uuid_14 --role content './data/snes/KeepingSNESalive.sfc'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_15 --link $uuid_15 --role content './data/snes/N-Warp Daisakusen (Europe).sfc'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_16 --link $uuid_16 --role content './data/snes/Super Boss Gaiden (J) (V1.0).sfc'
+#
+## Create v86 objects
+../target/debug/gisst-cli object create -i --force-uuid $uuid_21 --link $uuid_21 --role content './data/v86/freedos722.img'
+#
+## Create NES config file
+../target/debug/gisst-cli object create -i --force-uuid $uuid_6 --link $uuid_0 --role config ./data/nes/retroarch.cfg
+#
+## Link NES config object to NES instances
 ../target/debug/gisst-cli link object $uuid_6 $uuid_1 --role config
 ../target/debug/gisst-cli link object $uuid_6 $uuid_2 --role config
 ../target/debug/gisst-cli link object $uuid_6 $uuid_3 --role config
 ../target/debug/gisst-cli link object $uuid_6 $uuid_4 --role config
 ../target/debug/gisst-cli link object $uuid_6 $uuid_5 --role config
 
-
-
-
+## Create dummy screenshot
+../target/debug/gisst-cli screenshot create --force-uuid $uuid_0 ./data/default_screenshot.png
+#
+## Create demo states for instances
+../target/debug/gisst-cli state create --force-uuid $uuid_1 --link $uuid_1 --file ./data/v86/snake_state0.v86state --name "Snake Test State" --screenshot-id $uuid_0 --creator-id $uuid_0
+## Create demo replays for instances
+../target/debug/gisst-cli replay create --force-uuid $uuid_1 --link $uuid_1 --file ./data/v86/snake_replay0.v86replay --name "Snake Test Replay" --creator-id $uuid_0
+#
+#
