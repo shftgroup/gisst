@@ -51,11 +51,12 @@ use tower_http::{
     trace::{self, TraceLayer},
 };
 use tracing::Level;
-use tracing_appender::rolling;
+use tracing_appender::rolling::{self, RollingFileAppender};
 use tracing_subscriber::{
     fmt,
     layer::SubscriberExt,
-    Registry
+    Registry,
+    EnvFilter,
 };
 use uuid::Uuid;
 
@@ -106,21 +107,45 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .with_secure(false)
         .with_same_site_policy(SameSite::Lax);
 
-    let info_file = rolling::daily("./logs", "info.log");
+    let debug_config = &config.debug;
+   
+    let log_level = match debug_config.log_level {
+         0 => Level::ERROR,
+         1 => Level::WARN,
+         2 => Level::INFO,
+         3 => Level::DEBUG,
+         4 => Level::TRACE,
+         _ => Level::DEBUG,
+    };
+   
+    let env_filter = EnvFilter::from_default_env()
+        .add_directive(log_level.into());
+
+    let rolling_function: Box<dyn Fn(&str, &str) -> RollingFileAppender> = match debug_config.log_rolling_type.as_str() {
+        "daily" => Box::new(|dir: &str, file: &str| rolling::daily(dir, file)),
+        "hourly" => Box::new(|dir: &str, file: &str| rolling::hourly(dir, file)),
+        "minutely" => Box::new(|dir: &str, file: &str| rolling::minutely(dir, file)),
+        "never" => Box::new(|dir: &str, file: &str| rolling::never(dir, file)),
+        _ => Box::new(|dir: &str, file: &str| rolling::daily(dir, file)),
+    };
+
+    let writer = rolling_function(&debug_config.log_path, "info.log");
 
     let file_layer = fmt::layer()
-        .with_writer(info_file)
+        .with_writer(writer)
         .with_ansi(false)
+        .with_target(true)
         .pretty();
 
     let terminal_layer = fmt::layer()
-        .with_target(false)
+        .with_target(true)
         .pretty();
 
     let subscriber = Registry::default()
-        .with(file_layer)
-        .with(terminal_layer);
-
+        .with(env_filter)
+        .with(if debug_config.log_to_file { Some(file_layer) } else { None})
+        .with(if debug_config.log_to_terminal { Some(terminal_layer) } else { None});
+    
     tracing::subscriber::set_global_default(subscriber)
         .expect("Failed to set default subscriber");
 
@@ -190,8 +215,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(session_layer)
         .layer(
             TraceLayer::new_for_http()
-                .make_span_with(trace::DefaultMakeSpan::new().level(Level::DEBUG))
-                .on_response(trace::DefaultOnResponse::new().level(Level::DEBUG))
+                .make_span_with(trace::DefaultMakeSpan::new().level(log_level))
+                .on_response(trace::DefaultOnResponse::new().level(log_level))
         );
             
     let addr = SocketAddr::new(
