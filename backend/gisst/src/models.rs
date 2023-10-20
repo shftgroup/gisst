@@ -8,6 +8,7 @@ use sqlx::postgres::{PgConnection, PgQueryResult};
 
 use crate::model_enums::Framework;
 use serde_with::{base64::Base64, serde_as};
+use base64::{Engine as _, engine::general_purpose};
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error, Serialize)]
@@ -54,6 +55,8 @@ pub enum UpdateRecordError {
     Replay,
     #[error("could not update save record in database")]
     Save,
+    #[error("could not update screenshot record in database")]
+    Screenshot,
     #[error("could not update state record in database")]
     State,
     #[error("could not update work record in database")]
@@ -108,6 +111,7 @@ pub struct Creator {
     pub creator_id: Uuid,
     pub creator_username: String,
     pub creator_full_name: String,
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 
@@ -120,6 +124,7 @@ pub struct Environment {
     pub environment_core_version: String,
     pub environment_derived_from: Option<Uuid>,
     pub environment_config: Option<sqlx::types::JsonValue>,
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 
@@ -131,6 +136,7 @@ pub struct File {
     pub file_source_path: String,
     pub file_dest_path: String,
     pub file_size: i64, //PostgeSQL does not have native uint support
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 
@@ -140,6 +146,7 @@ pub struct Image {
     pub file_id: Uuid,
     pub image_description: Option<String>,
     pub image_config: Option<sqlx::types::JsonValue>,
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 
@@ -149,6 +156,7 @@ pub struct Instance {
     pub work_id: Uuid,
     pub environment_id: Uuid,
     pub instance_config: Option<sqlx::types::JsonValue>,
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 
@@ -194,6 +202,7 @@ pub struct Object {
     pub object_id: Uuid,
     pub file_id: Uuid,
     pub object_description: Option<String>,
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 
@@ -207,6 +216,7 @@ pub struct Replay {
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
     pub file_id: Uuid,
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 
@@ -218,6 +228,7 @@ pub struct Save {
     pub save_description: String,
     pub file_id: Uuid,
     pub creator_id: Uuid,
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 
@@ -235,6 +246,7 @@ pub struct State {
     pub creator_id: Uuid,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 
@@ -244,6 +256,7 @@ pub struct Work {
     pub work_name: String,
     pub work_version: String,
     pub work_platform: String,
+    #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
 #[async_trait]
@@ -1822,8 +1835,50 @@ impl Work {
     }
 }
 
-impl Screenshot {
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+#[async_trait]
+impl DBModel for Screenshot {
+
+    fn id(&self) -> &Uuid {
+        &self.screenshot_id
+    }
+
+    fn fields() -> Vec<(String, String)> {
+        vec![
+            ("screenshot_id".to_string(), "Uuid".to_string()),
+            ("screenshot_data".to_string(), "Vec<u8>".to_string()),
+        ]
+    }
+
+    fn values_to_strings(&self) -> Vec<Option<String>> {
+        vec![
+            Some(self.screenshot_id.to_string()),
+            Some(general_purpose::STANDARD.encode(self.screenshot_data.clone())),
+        ]
+    }
+
+    async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Screenshot,
+            r#" SELECT screenshot_id, screenshot_data FROM screenshot
+            WHERE screenshot_id = $1
+            "#,
+            id
+        )
+            .fetch_optional(conn)
+            .await
+    }
+
+    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT screenshot_id, screenshot_data FROM screenshot LIMIT $1"#,
+            limit
+        )
+            .fetch_all(conn)
+            .await
+    }
+
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
         sqlx::query_as!(
             Screenshot,
             r#"INSERT INTO screenshot (screenshot_id, screenshot_data) VALUES ($1, $2)
@@ -1832,20 +1887,31 @@ impl Screenshot {
             model.screenshot_id,
             model.screenshot_data
         )
-        .fetch_one(conn)
-        .await
-        .map_err(|_| NewRecordError::Screenshot)
+            .fetch_one(conn)
+            .await
+            .map_err(|_| NewRecordError::Screenshot)
     }
-    pub async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+
+    async fn update(conn: &mut PgConnection, model: Self) -> Result<Self, UpdateRecordError> {
         sqlx::query_as!(
-            Screenshot,
-            r#" SELECT screenshot_id, screenshot_data FROM screenshot
-            WHERE screenshot_id = $1
-            "#,
-            id
+            Self,
+            r#"UPDATE screenshot SET
+            screenshot_data = $1
+            WHERE screenshot_id = $2
+            RETURNING screenshot_id, screenshot_data"#,
+            model.screenshot_data,
+            model.screenshot_id,
         )
-        .fetch_optional(conn)
-        .await
+            .fetch_one(conn)
+            .await
+            .map_err(|_| UpdateRecordError::Screenshot)
+
+    }
+
+    async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!("DELETE FROM screenshot WHERE screenshot_id = $1", id)
+            .execute(conn)
+            .await
     }
 }
 
@@ -1856,3 +1922,5 @@ fn unwrap_to_option_string<T: ToString>(o: &Option<T>) -> Option<String> {
 pub fn default_uuid() -> Uuid {
     Uuid::new_v4()
 }
+
+fn utc_datetime_now() -> DateTime<Utc> { Utc::now() }

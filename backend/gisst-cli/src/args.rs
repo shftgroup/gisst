@@ -400,6 +400,9 @@ pub struct CreateScreenshot {
     pub force_uuid: Option<Uuid>,
 
     /// Path to image file to create in the database, must be a PNG file
-    #[arg(long)]
     pub file: String,
 }
+#[derive(Debug, Args)]
+pub struct UpdateScreenshot {}
+#[derive(Debug, Args)]
+pub struct ExportScreenshot {}
