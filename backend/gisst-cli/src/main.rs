@@ -211,7 +211,7 @@ async fn create_object(
         let mut object = Object {
             object_id: Uuid::new_v4(),
             file_id: file_record.file_id,
-            object_description: Some(path.to_path_buf().to_string_lossy().to_string()),
+            object_description: Some(path.to_path_buf().file_name().unwrap().to_string_lossy().to_string()),
             created_on: chrono::Utc::now(),
         };
 
