@@ -8,8 +8,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   const retro_args = ["-v"];
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_file = content.file_filename!;
-  const dash_point = content_file.indexOf("-");
-  const content_base = content_file.substring(dash_point < 0 ? 0 : dash_point, content_file.lastIndexOf("."));
+  const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
   if (entryState) {
@@ -22,7 +21,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   }
   retro_args.push("--appendconfig");
   retro_args.push("/home/web_user/content/retroarch.cfg");
-  retro_args.push("/home/web_user/content/" + content_file);
+  retro_args.push("/home/web_user/content/" + content.file_source_path! + content.file_filename!);
   console.log(retro_args);
   return new Promise((res) => {
     loadRetroArch(gisst_root, core,
@@ -34,7 +33,12 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
       proms.push(fetchfs.fetchZip(module,gisst_root+"/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
 
       for(const file of manifest) {
-        const file_prom = fetchfs.fetchFile(module,gisst_root+"/storage/"+file.file_dest_path+"/"+file.file_hash+"-"+file.file_filename,"/home/web_user/content/"+file.file_source_path);
+        const source_path = "/home/web_user/content/" + file.file_source_path!;
+        fetchfs.mkdirp(module, source_path);
+        const file_prom = fetchfs.fetchFile(
+            module,
+            gisst_root + "/storage/" + file.file_dest_path + "/" + file.file_hash + "-" + file.file_filename,
+            source_path + "/" + file.file_filename);
         proms.push(file_prom);
       }
       if (entryState) {

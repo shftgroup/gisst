@@ -193,6 +193,9 @@ async fn create_object(
     for path in &valid_paths {
         let data = &read(path)?;
 
+        let mut source_path = PathBuf::from(path);
+        source_path.pop();
+
         let mut file_record = gisst::models::File {
             file_id: Uuid::new_v4(),
             file_hash: StorageHandler::get_md5_hash(data),
@@ -202,9 +205,9 @@ async fn create_object(
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
-            file_source_path: path.to_path_buf().to_string_lossy().to_string(),
+            file_source_path: source_path.to_string_lossy().to_string().replace("./",""),
             file_dest_path: Default::default(),
-            file_size: 0,
+            file_size: data.len() as i64,
             created_on: chrono::Utc::now(),
         };
 
@@ -569,6 +572,9 @@ async fn create_image(
     for path in &valid_paths {
         let data = &read(path)?;
 
+        let mut source_path = PathBuf::from(path);
+        source_path.pop();
+
         let mut file_record = gisst::models::File {
             file_id: Uuid::new_v4(),
             file_hash: StorageHandler::get_md5_hash(data),
@@ -578,9 +584,9 @@ async fn create_image(
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
-            file_source_path: path.to_path_buf().to_string_lossy().to_string(),
+            file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
             file_dest_path: Default::default(),
-            file_size: 0,
+            file_size: data.len() as i64,
             created_on: chrono::Utc::now(),
         };
         let mut image = Image {
@@ -703,7 +709,9 @@ async fn create_replay(
         file.file_id
     } else {
         let uuid = Uuid::new_v4();
+
         let filename = file.file_name().unwrap().to_string_lossy().to_string();
+
         let file_info =
             StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, data)
                 .await?;
@@ -711,11 +719,15 @@ async fn create_replay(
             "Wrote file {} to {}",
             file_info.dest_filename, file_info.dest_path
         );
+
+        let mut source_path = PathBuf::from(file);
+        source_path.pop();
+
         let file_record = gisst::models::File {
             file_id: uuid,
             file_hash: hash,
             file_filename: filename,
-            file_source_path: file.to_string_lossy().to_string(),
+            file_source_path: source_path.to_string_lossy().to_string().replace("./",""),
             file_dest_path: file_info.dest_path,
             file_size: data.len() as i64,
             created_on,
@@ -800,6 +812,8 @@ async fn create_state(
 
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
+    let mut source_path = PathBuf::from(file);
+    source_path.pop();
     let created_on = created_on
         .and_then(|s| {
             chrono::DateTime::parse_from_rfc3339(&s)
@@ -817,9 +831,9 @@ async fn create_state(
             .unwrap()
             .to_string_lossy()
             .to_string(),
-        file_source_path: file.to_path_buf().to_string_lossy().to_string(),
+        file_source_path: source_path.to_string_lossy().to_string().replace("./",""),
         file_dest_path: Default::default(),
-        file_size: 0,
+        file_size: data.len() as i64,
         created_on,
     };
     let state = State {
