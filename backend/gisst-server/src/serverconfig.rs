@@ -120,13 +120,16 @@ impl Default for StorageConfig {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct HttpConfig {
     #[serde(default = "default_listen_address")]
     pub listen_address: Ipv4Addr,
 
     #[serde(default = "default_port")]
     pub listen_port: u16,
+
+    #[serde(default = "default_base_url")]
+    pub base_url: String,
 }
 
 // Not sure if all of this is redundant, it appears so
@@ -138,11 +141,16 @@ fn default_port() -> u16 {
     3000
 }
 
+fn default_base_url() -> String {
+    String::from("http://localhost:3000")
+}
+
 impl Default for HttpConfig {
     fn default() -> Self {
         Self {
-            listen_address: "0.0.0.0".parse().unwrap(),
-            listen_port: 3000,
+            listen_address: default_listen_address(),
+            listen_port: default_port(),
+            base_url: default_base_url(),
         }
     }
 }
