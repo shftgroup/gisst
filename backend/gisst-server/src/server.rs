@@ -76,6 +76,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         pending_uploads: Default::default(),
         templates: TemplateHandler::new("gisst-server/src/templates")?,
         oauth_client: auth::build_oauth_client(
+            &config.http.base_url,
             config.auth.google_client_id.expose_secret(),
             config.auth.google_client_secret.expose_secret(),
         ),
@@ -133,7 +134,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                 .layer(HandleErrorLayer::new(handle_error))
                 // This map_err is needed to get the types to work out after handleerror and before servedir.
                 .map_err(|e| panic!("{:?}", e))
-                /* if the x-accept-encoding header is present, dispatch to tthe custom servedir that does not serve precompressed stuff */
+                /* if the x-accept-encoding header is present, dispatch to the custom servedir that does not serve precompressed stuff */
                 .service(selective_serve_dir::SelectiveServeDir::new("storage")),
         )
         .nest_service(
