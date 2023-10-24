@@ -291,8 +291,12 @@ pub async fn logout_handler(mut auth: AuthContext) -> impl IntoResponse {
     Redirect::to("/instances")
 }
 
-pub fn build_oauth_client(client_id: &String, client_secret: &String) -> BasicClient {
-    let redirect_url = "http://localhost:3000/auth/google/callback".to_string();
+pub fn build_oauth_client(
+    client_base_url: &str,
+    client_id: &str,
+    client_secret: &str,
+) -> BasicClient {
+    let redirect_url = format!("{client_base_url}/auth/google/callback");
 
     let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
         .expect("Invalid authorization endpoint URL");
