@@ -21,7 +21,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   }
   retro_args.push("--appendconfig");
   retro_args.push("/home/web_user/content/retroarch.cfg");
-  retro_args.push("/home/web_user/content/" + content.file_source_path! + content.file_filename!);
+  retro_args.push("/home/web_user/content/" + content.file_source_path! + "/" + content.file_filename!);
   console.log(retro_args);
   return new Promise((res) => {
     loadRetroArch(gisst_root, core,
