@@ -75,9 +75,9 @@ cargo build --bin gisst-cli
 
 ## Create SNES objects
 ../target/debug/gisst-cli object create -i --force-uuid $uuid_13 --link $uuid_13 --role content './data/snes/240pSuite.sfc'
-../target/debug/gisst-cli object create -i --force-uuid $uuid_14 --link $uuid_14 --role content './data/snes/KeepingSNESalive.sfc'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_14 --link $uuid_14 --role content './data/snes/Super Boss Gaiden (J) (V1.0).sfc'
 ../target/debug/gisst-cli object create -i --force-uuid $uuid_15 --link $uuid_15 --role content './data/snes/N-Warp Daisakusen (Europe).sfc'
-../target/debug/gisst-cli object create -i --force-uuid $uuid_16 --link $uuid_16 --role content './data/snes/Super Boss Gaiden (J) (V1.0).sfc'
+../target/debug/gisst-cli object create -i --force-uuid $uuid_16 --link $uuid_16 --role content './data/snes/KeepingSNESalive.sfc'
 #
 ## Create v86 objects
 ../target/debug/gisst-cli object create -i --force-uuid $uuid_21 --link $uuid_21 --role content './data/v86/freedos722.img'
@@ -96,8 +96,8 @@ cargo build --bin gisst-cli
 ../target/debug/gisst-cli screenshot create --force-uuid $uuid_0 ./data/default_screenshot.png
 #
 ## Create demo states for instances
-../target/debug/gisst-cli state create --force-uuid $uuid_1 --link $uuid_1 --file ./data/v86/snake_state0.v86state --name "Snake Test State" --screenshot-id $uuid_0 --creator-id $uuid_0
+../target/debug/gisst-cli state create --force-uuid $uuid_1 --link $uuid_21 --file ./data/v86/snake_state0.v86state --name "Snake Test State" --screenshot-id $uuid_0 --creator-id $uuid_0
 ## Create demo replays for instances
-../target/debug/gisst-cli replay create --force-uuid $uuid_1 --link $uuid_1 --file ./data/v86/snake_replay0.v86replay --name "Snake Test Replay" --creator-id $uuid_0
+../target/debug/gisst-cli replay create --force-uuid $uuid_1 --link $uuid_21 --file ./data/v86/snake_replay0.v86replay --name "Snake Test Replay" --creator-id $uuid_0
 #
 #
