@@ -21,3 +21,4 @@ config                  = { version = "0.13.3", features = ["toml"], default-fea
 async-compression       = { version = "0.4", features = ["tokio", "gzip", "zstdmt"] }
 chrono = {version = "0.4.28", features = ["serde"]}
 serde_with = { version = "3.3.0", features = ["base64"] }
+base64 = "0.21.4"

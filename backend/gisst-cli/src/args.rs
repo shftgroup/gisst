@@ -2,6 +2,7 @@ use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use thiserror::Error;
 use uuid::Uuid;
+use gisst::models::ObjectRole;
 
 #[derive(Debug, Error)]
 pub enum GISSTCliError {
@@ -19,6 +20,8 @@ pub enum GISSTCliError {
     CreateState(String),
     #[error("create replay error")]
     CreateReplay(String),
+    #[error("create screenshot error")]
+    CreateScreenshot(String),
     #[error("directory traversal error")]
     Directory(#[from] walkdir::Error),
     #[error("file read error")]
@@ -35,13 +38,15 @@ pub enum GISSTCliError {
     Config(#[from] config::ConfigError),
     #[error("record not found error")]
     RecordNotFound(Uuid),
+    #[error("invalid link record type")]
+    InvalidRecordType(String)
 }
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct GISSTCli {
     #[command(subcommand)]
-    pub record_type: RecordType,
+    pub command: Commands,
 
     #[command(flatten)]
     pub verbose: Verbosity<InfoLevel>,
@@ -78,7 +83,17 @@ pub enum BaseSubcommand<
 }
 
 #[derive(Debug, Subcommand)]
-pub enum RecordType {
+pub enum Commands {
+    /// Link records together
+    Link {
+        /// Record type that is being linked to another record
+        record_type: String,
+        source_uuid: Uuid,
+        target_uuid: Uuid,
+        #[arg(long)]
+        role: Option<ObjectRole>
+    },
+
     /// Manage object records and files
     Object(GISSTCommand<BaseSubcommand<CreateObject, UpdateObject, DeleteRecord, ExportObject>>),
     /// Manage image records and files
@@ -105,6 +120,8 @@ pub enum RecordType {
     State(GISSTCommand<BaseSubcommand<CreateState, UpdateState, DeleteRecord, ExportState>>),
     /// Manage replay records
     Replay(GISSTCommand<BaseSubcommand<CreateReplay, UpdateReplay, DeleteRecord, ExportReplay>>),
+    /// Manage screenshot records
+    Screenshot(GISSTCommand<BaseSubcommand<CreateScreenshot, UpdateScreenshot, DeleteRecord, ExportScreenshot>>),
 }
 
 #[derive(Debug, Args)]
@@ -374,3 +391,18 @@ pub struct CreateCreator {
 pub struct UpdateCreator {}
 #[derive(Debug, Args)]
 pub struct ExportCreator {}
+
+
+#[derive(Debug, Args)]
+pub struct CreateScreenshot {
+    /// (DEBUG) Force the use of specific screenshot UUID
+    #[arg(long = "force-uuid")]
+    pub force_uuid: Option<Uuid>,
+
+    /// Path to image file to create in the database, must be a PNG file
+    pub file: String,
+}
+#[derive(Debug, Args)]
+pub struct UpdateScreenshot {}
+#[derive(Debug, Args)]
+pub struct ExportScreenshot {}
