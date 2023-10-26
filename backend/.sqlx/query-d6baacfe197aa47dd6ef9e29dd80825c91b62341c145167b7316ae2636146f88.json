@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE screenshot SET\n            screenshot_data = $1\n            WHERE screenshot_id = $2\n            RETURNING screenshot_id, screenshot_data",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "screenshot_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "screenshot_data",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "d6baacfe197aa47dd6ef9e29dd80825c91b62341c145167b7316ae2636146f88"
+}
