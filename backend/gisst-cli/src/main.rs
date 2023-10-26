@@ -778,7 +778,7 @@ async fn create_screenshot(
             screenshot_data: data,
             screenshot_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         }
-    ).await.map_err(|e| GISSTCliError::NewModel(e))?;
+    ).await.map_err(GISSTCliError::NewModel)?;
 
     info!("Wrote screenshot {} to database.", file.to_string_lossy());
     Ok(())
