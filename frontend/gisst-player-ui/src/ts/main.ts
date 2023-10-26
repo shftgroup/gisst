@@ -224,6 +224,10 @@ export class UI {
       stored_on_server: metadata !== undefined,
       editing: false
     }
+    if(state_metadata.stored_on_server){
+      this.entries_by_name["st__"+state_file].querySelector(".bi-cloud-upload")!.classList.add("hidden");
+      this.entries_by_name["st__"+state_file].querySelector(".bi-cloud-arrow-up-fill")!.classList.remove("hidden");
+    }
 
     this.metadata_by_name["st__"+state_file] = state_metadata;
   }
@@ -277,6 +281,10 @@ export class UI {
     this.replay_elt.appendChild(li);
     this.entries_by_name["rp__"+replay_file] = document.getElementById(valid_for_css(replay_file))!;
     this.metadata_by_name["rp__"+replay_file] = replay_metadata;
+    if(replay_metadata.stored_on_server){
+      this.entries_by_name["rp__"+replay_file].querySelector(".bi-cloud-upload")!.classList.add("hidden");
+      this.entries_by_name["rp__"+replay_file].querySelector(".bi-cloud-arrow-up-fill")!.classList.remove("hidden");
+    }
   }
   clearCheckpoints() {
     const toRemove = [];

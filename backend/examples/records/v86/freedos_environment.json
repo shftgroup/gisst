@@ -1,0 +1,7 @@
+{
+  "environment_id": "00000000000000000000000000000002",
+  "environment_name": "FreeDOS",
+  "environment_framework": "v86",
+  "environment_core_name": "v86",
+  "environment_core_version": "0.1.0"
+}

@@ -15,7 +15,6 @@ storage
 .env
 backend/config/local.toml
 backend/test_content/
-backend/examples/
 backend/rdb-sys/libretro-util
 backend/ingest/rdb
 backend/web-dist

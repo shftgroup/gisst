@@ -6,7 +6,7 @@ use anyhow::Result;
 use args::{
     BaseSubcommand, CreateCreator, CreateEnvironment, CreateImage, CreateInstance, CreateObject,
     CreateReplay, CreateSave, CreateState, CreateWork, DeleteRecord, GISSTCli, GISSTCliError,
-    RecordType,
+    Commands,
 };
 use clap::Parser;
 use gisst::{
@@ -24,6 +24,8 @@ use std::path::{Path, PathBuf};
 use std::{fs, fs::read, io};
 use uuid::{uuid, Uuid};
 use walkdir::WalkDir;
+use gisst::models::{ObjectRole, Screenshot};
+use crate::args::CreateScreenshot;
 
 #[tokio::main]
 async fn main() -> Result<(), GISSTCliError> {
@@ -51,8 +53,9 @@ async fn main() -> Result<(), GISSTCliError> {
         cli_config.storage.root_folder_path.to_string()
     );
 
-    match dbg!(args).record_type {
-        RecordType::Object(object) => match object.command {
+    match dbg!(args).command {
+        Commands::Link {record_type, source_uuid, target_uuid, role} => link_record(&record_type, source_uuid, target_uuid, db, role).await?,
+        Commands::Object(object) => match object.command {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -60,19 +63,19 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Creator(creator) => match creator.command {
+        Commands::Creator(creator) => match creator.command {
             BaseSubcommand::Create(create) => create_creator(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_record::<Creator>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Environment(environment) => match environment.command {
+        Commands::Environment(environment) => match environment.command {
             BaseSubcommand::Create(create) => create_environment(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_record::<Environment>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Image(image) => match image.command {
+        Commands::Image(image) => match image.command {
             BaseSubcommand::Create(create) => create_image(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -80,19 +83,19 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Instance(instance) => match instance.command {
+        Commands::Instance(instance) => match instance.command {
             BaseSubcommand::Create(create) => create_instance(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_record::<Instance>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Work(work) => match work.command {
+        Commands::Work(work) => match work.command {
             BaseSubcommand::Create(create) => create_work(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => delete_record::<Work>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::State(state) => match state.command {
+        Commands::State(state) => match state.command {
             BaseSubcommand::Create(create) => create_state(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -100,7 +103,7 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Save(save) => match save.command {
+        Commands::Save(save) => match save.command {
             BaseSubcommand::Create(create) => create_save(create, db).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -108,7 +111,7 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
-        RecordType::Replay(replay) => match replay.command {
+        Commands::Replay(replay) => match replay.command {
             BaseSubcommand::Create(create) => create_replay(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
             BaseSubcommand::Delete(delete) => {
@@ -116,6 +119,25 @@ async fn main() -> Result<(), GISSTCliError> {
             }
             BaseSubcommand::Export(_export) => (),
         },
+        Commands::Screenshot(screenshot) => match screenshot.command {
+            BaseSubcommand::Create(create) => create_screenshot(create, db).await?,
+            BaseSubcommand::Update(_update) => (),
+            BaseSubcommand::Delete(delete) => {
+                delete_record::<Screenshot>(delete, db).await?
+            },
+            BaseSubcommand::Export(_export) => (),
+        }
+    }
+    Ok(())
+}
+
+async fn link_record(record_type:&str, source_id:Uuid, target_id:Uuid, db: PgPool, role:Option<ObjectRole>) -> Result<(), GISSTCliError> {
+    match record_type {
+        "object" => {
+            let mut conn = db.acquire().await?;
+            Object::link_object_to_instance(&mut conn, source_id, target_id, role.unwrap()).await?;
+        },
+        _ => return Err(GISSTCliError::InvalidRecordType(format!("{} is not a valid record type", record_type)))
     }
     Ok(())
 }
@@ -171,6 +193,9 @@ async fn create_object(
     for path in &valid_paths {
         let data = &read(path)?;
 
+        let mut source_path = PathBuf::from(path);
+        source_path.pop();
+
         let mut file_record = gisst::models::File {
             file_id: Uuid::new_v4(),
             file_hash: StorageHandler::get_md5_hash(data),
@@ -180,16 +205,16 @@ async fn create_object(
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
-            file_source_path: path.to_path_buf().to_string_lossy().to_string(),
+            file_source_path: source_path.to_string_lossy().to_string().replace("./",""),
             file_dest_path: Default::default(),
-            file_size: 0,
+            file_size: data.len() as i64,
             created_on: chrono::Utc::now(),
         };
 
         let mut object = Object {
             object_id: Uuid::new_v4(),
             file_id: file_record.file_id,
-            object_description: Some(path.to_path_buf().to_string_lossy().to_string()),
+            object_description: Some(path.to_path_buf().file_name().unwrap().to_string_lossy().to_string()),
             created_on: chrono::Utc::now(),
         };
 
@@ -547,6 +572,9 @@ async fn create_image(
     for path in &valid_paths {
         let data = &read(path)?;
 
+        let mut source_path = PathBuf::from(path);
+        source_path.pop();
+
         let mut file_record = gisst::models::File {
             file_id: Uuid::new_v4(),
             file_hash: StorageHandler::get_md5_hash(data),
@@ -556,9 +584,9 @@ async fn create_image(
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
-            file_source_path: path.to_path_buf().to_string_lossy().to_string(),
+            file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
             file_dest_path: Default::default(),
-            file_size: 0,
+            file_size: data.len() as i64,
             created_on: chrono::Utc::now(),
         };
         let mut image = Image {
@@ -681,7 +709,9 @@ async fn create_replay(
         file.file_id
     } else {
         let uuid = Uuid::new_v4();
+
         let filename = file.file_name().unwrap().to_string_lossy().to_string();
+
         let file_info =
             StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, data)
                 .await?;
@@ -689,11 +719,15 @@ async fn create_replay(
             "Wrote file {} to {}",
             file_info.dest_filename, file_info.dest_path
         );
+
+        let mut source_path = PathBuf::from(file);
+        source_path.pop();
+
         let file_record = gisst::models::File {
             file_id: uuid,
             file_hash: hash,
             file_filename: filename,
-            file_source_path: file.to_string_lossy().to_string(),
+            file_source_path: source_path.to_string_lossy().to_string().replace("./",""),
             file_dest_path: file_info.dest_path,
             file_size: data.len() as i64,
             created_on,
@@ -717,6 +751,37 @@ async fn create_replay(
         .await
         .map(|_| ())
         .map_err(GISSTCliError::NewModel)
+}
+
+async fn create_screenshot(
+    CreateScreenshot {
+    file,
+    force_uuid,
+    }: CreateScreenshot,
+    db: PgPool,
+) -> Result<(), GISSTCliError> {
+    let file = Path::new(&file);
+
+    if !file.exists() || !file.is_file() {
+        return Err(GISSTCliError::CreateScreenshot(format!(
+            "File not found: {}",
+            file.to_string_lossy()
+        )));
+    }
+
+    let mut conn = db.acquire().await?;
+    let data = read(file)?;
+
+    Screenshot::insert(
+        &mut conn,
+        Screenshot{
+            screenshot_data: data,
+            screenshot_id: force_uuid.unwrap_or_else(Uuid::new_v4),
+        }
+    ).await.map_err(GISSTCliError::NewModel)?;
+
+    info!("Wrote screenshot {} to database.", file.to_string_lossy());
+    Ok(())
 }
 
 async fn create_state(
@@ -747,6 +812,8 @@ async fn create_state(
 
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
+    let mut source_path = PathBuf::from(file);
+    source_path.pop();
     let created_on = created_on
         .and_then(|s| {
             chrono::DateTime::parse_from_rfc3339(&s)
@@ -764,9 +831,9 @@ async fn create_state(
             .unwrap()
             .to_string_lossy()
             .to_string(),
-        file_source_path: file.to_path_buf().to_string_lossy().to_string(),
+        file_source_path: source_path.to_string_lossy().to_string().replace("./",""),
         file_dest_path: Default::default(),
-        file_size: 0,
+        file_size: data.len() as i64,
         created_on,
     };
     let state = State {

@@ -216,7 +216,7 @@ impl StorageHandler {
 
         Ok(FileInformation {
             source_filename: filename.to_string(),
-            // TODO: take in a path and not just a filename, and do away with filename?
+            // add trailing "/" to file_source_path
             source_path: filename.to_string(),
             dest_filename: save_filename,
             dest_path: path.strip_prefix(root_path)?.to_string_lossy().to_string(),
