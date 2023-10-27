@@ -40,7 +40,6 @@ do
   ext=${file##*.};
   work_uuid=$(get_uuid_from_counter)
 
-  ../target/debug/gisst-cli object create -i --force-uuid "$work_uuid" --link "$work_uuid" --role content "$work"
 
   if [ "$ext" = "nes" ]
   then
@@ -52,6 +51,7 @@ do
     ../target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_snes9x\", \"work_id\":\"$work_uuid\"}"
   fi
 
+  ../target/debug/gisst-cli object create -i --force-uuid "$work_uuid" --link "$work_uuid" --role content "$work"
 
   uuid_counter=$((uuid_counter+1));
 done
