@@ -130,38 +130,37 @@
         <div class="accordion-item">
           <h2 class="accordion-header" id="headingFive">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
-              GISST Keyboard Shortcuts
+              Core Specific Controls
             </button>
           </h2>
           <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#accordionExample">
             <div class="accordion-body">
-              <p>You can use the following shortcuts to manipulate GISST and any emulator core:</p>
-              <ul class="list-group">
-                <li class="list-group-item">
-                  <p>Press <kbd class="kbc-button-sm">F2</kbd> to <b>save</b> the state. <br>If you are recording a performance you will save a checkpoint.</p>
-                  <p>Press <kbd class="kbc-button-sm">F4</kbd> to <b>load</b> the last saved state. <br>If you are recording you will load the last saved checkpoint.</p>
-                  <p>Press <kbd class="kbc-button-sm">U</kbd> to <b>start recording</b> a performance.</p>
-                  <p>Press <kbd class="kbc-button-sm">I</kbd> to <b>stop </b> recording or playback of a performance.</p>
-                  <p>Press <kbd class="kbc-button-sm">O</kbd> to <b>replay</b> the last recorded performance.</p>
-                  <p>Press <kbd class="kbc-button-sm">P</kbd> to <b>pause and unpause</b> the emulator.</p>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="headingSix">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
-              Core Specific Controls
-            </button>
-          </h2>
-          <div id="collapseSix" class="accordion-collapse collapse" aria-labelledby="headingSix" data-bs-parent="#accordionExample">
-            <div class="accordion-body">
               <p>Use the <b>arrow keys</b> for movement in any core.</p>
               <p><b>Keyboard and mouse input</b> will work in cores that support them.</p>
               <p>The emulator window needs <b>focus</b> to take input. <br>It may be necessary to <b>click</b> on it. </p>
-              Below are core specific inputs:
               <div class="accordion" id="core-controls-accordion">
+                <div class="accordion-item">
+                  <h2 class="accordion-header" id="retroarch-controls">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#retroarch-controls-collapse" aria-expanded="true" aria-controls="retroarch-controls-collapse">
+                      Retroarch Keyboard Shortcuts
+                    </button>
+                  </h2>
+                  <div id="retroarch-controls-collapse" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#core-controls-accordion">
+                    <div class="accordion-body">
+                      <p>You can use the following shortcuts to manipulate any Retroarch core:</p>
+                      <ul class="list-group">
+                        <li class="list-group-item">
+                          <p>Press <kbd class="kbc-button-sm">F2</kbd> to <b>save</b> the state. <br>If you are recording a performance you will save a checkpoint.</p>
+                          <p>Press <kbd class="kbc-button-sm">F4</kbd> to <b>load</b> the last saved state. <br>If you are recording you will load the last saved checkpoint.</p>
+                          <p>Press <kbd class="kbc-button-sm">U</kbd> to <b>start recording</b> a performance.</p>
+                          <p>Press <kbd class="kbc-button-sm">I</kbd> to <b>stop </b> recording or playback of a performance.</p>
+                          <p>Press <kbd class="kbc-button-sm">O</kbd> to <b>replay</b> the last recorded performance.</p>
+                          <p>Press <kbd class="kbc-button-sm">P</kbd> to <b>pause and unpause</b> the emulator.</p>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
                 <div class="accordion-item">
                   <h2 class="accordion-header" id="nes-controls">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#nes-controls-collapse" aria-expanded="true" aria-controls="nes-controls-collapse">
