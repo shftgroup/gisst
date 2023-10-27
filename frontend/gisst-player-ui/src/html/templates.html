@@ -43,7 +43,7 @@
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="gisst-instructions-tab" data-bs-toggle="pill"
               data-bs-target="#gisst-instructions" type="button" role="tab"
-              aria-controls="gisst-instructions" aria-selected="true">How To</button>
+              aria-controls="gisst-instructions" aria-selected="true">Info</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="gisst-states-tab" data-bs-toggle="pill"
@@ -53,7 +53,7 @@
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="gisst-replays-tab" data-bs-toggle="pill"
               data-bs-target="#gisst-replays" type="button" role="tab"
-              aria-controls="gisst-replays" aria-selected="false">Replays</button>
+              aria-controls="gisst-replays" aria-selected="false">Performances</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="gisst-checkpoints-tab" data-bs-toggle="pill"
@@ -77,7 +77,7 @@
             <div class="accordion-body">
               <p>GISST will save the current state of the emulator if you press the "Save State" button or hit <kbd class="kbc-button-sm">F2</kbd>. The state will then appear in the "States" tab.</p>
               <p>If you are recording a replay, the state will be saved as "checkpoint". </p>
-              <p>Checkpoints will appear in the "Checkpoints" tab when recording or replaying a replay.</p>
+              <p>Checkpoints will appear in the "Checkpoints" tab when recording or replaying a performance.</p>
             </div>
           </div>
         </div>
@@ -89,26 +89,33 @@
           </h2>
           <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
             <div class="accordion-body">
-              GISST will load the last saved state if you press <kbd class="kbc-button-sm">F4</kbd>. You can load a previously saved state by clicking on its screenshot in the "States" tab.
+              <p>GISST will load the last saved state if you press <kbd class="kbc-button-sm">F4</kbd>.</p>
+              <p>You can load a previously saved state by clicking on its screenshot in the "States" tab.</p>
+              <p>You can also load a checkpoint by clicking on its screenshot while recording or replaying a performance.</p>
             </div>
           </div>
         </div>
         <div class="accordion-item">
           <h2 class="accordion-header" id="headingThree">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-              Recording Replays
+              Recording and Replaying Performances
             </button>
           </h2>
           <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
             <div class="accordion-body">
-              <strong>This is the third item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+              <p>To start recording a performance click on the "Start Performance" button or hit <kbd class="kbc-button-sm">U</kbd>.</p>
+              <p>When you are finished, click on the "Finish Performance" button or hit <kbd class="kbc-button-sm">I</kbd>.</p>
+              <p>While recording a performance, you can save states as checkpoints and load them from the "Checkpoints" tab.</p>
+              <p>To replay the last recorded performance, you can hit <kbd class="kbc-button-sm">O</kbd> or click on the play button in the performances entry on the "Performances" tab</p>
+              <p>While recording, a <span style="color:red;">red border</span> will appear around the emulator window.</p>
+              <p>While replaying, a <span style="color:green;">green border</span> will appear around the emulator window.</p>
             </div>
           </div>
         </div>
         <div class="accordion-item">
           <h2 class="accordion-header" id="headingFour">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
-              Uploading Replays and States
+              Uploading Performances and States
             </button>
           </h2>
           <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#accordionExample">
@@ -128,11 +135,11 @@
               <p>You can use the following shortcuts to manipulate GISST and any emulator core:</p>
               <ul class="list-group">
                 <li class="list-group-item">
-                  <p>Press <kbd class="kbc-button-sm">F2</kbd> to <b>save</b> the state. <br>If you are recording a replay you will save a checkpoint.</p>
+                  <p>Press <kbd class="kbc-button-sm">F2</kbd> to <b>save</b> the state. <br>If you are recording a performance you will save a checkpoint.</p>
                   <p>Press <kbd class="kbc-button-sm">F4</kbd> to <b>load</b> the last saved state. <br>If you are recording you will load the last saved checkpoint.</p>
-                  <p>Press <kbd class="kbc-button-sm">U</kbd> to <b>start recording</b> a replay.</p>
-                  <p>Press <kbd class="kbc-button-sm">O</kbd> to <b>replay</b> the last recording.</p>
-                  <p>Press <kbd class="kbc-button-sm">I</kbd> to <b>stop </b> recording or playback of a replay.</p>
+                  <p>Press <kbd class="kbc-button-sm">U</kbd> to <b>start recording</b> a performance.</p>
+                  <p>Press <kbd class="kbc-button-sm">I</kbd> to <b>stop </b> recording or playback of a performance.</p>
+                  <p>Press <kbd class="kbc-button-sm">O</kbd> to <b>replay</b> the last recorded performance.</p>
                   <p>Press <kbd class="kbc-button-sm">P</kbd> to <b>pause and unpause</b> the emulator.</p>
                 </li>
               </ul>
@@ -239,9 +246,9 @@
       <button id="save_state_button" type="button" class="btn btn-secondary">Save State</button>
       <!-- <button id="checkpoint_button" type="button" class="btn btn-secondary">Checkpoint</button> -->
     </div>
-    <div class="btn-group me-2" role="group" aria-label="Replay creation tools">
-      <button id="start_replay_button" type="button" class="btn btn-secondary">Start Replay</button>
-      <button id="finish_replay_button" type="button" class="btn btn-secondary">Finish Replay</button>
+    <div class="btn-group me-2" role="group" aria-label="Performance creation tools">
+      <button id="start_replay_button" type="button" class="btn btn-secondary">Start Performance</button>
+      <button id="finish_replay_button" type="button" class="btn btn-secondary">Finish Performance</button>
     </div>
 <!--    <div class="btn-group me-2" role="group" aria-label="Deletion tools">-->
 <!--      <button id="remove_last_save_button" type="button" class="btn btn-secondary">Pop Save</button>-->
