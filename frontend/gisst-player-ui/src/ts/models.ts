@@ -49,7 +49,8 @@ export interface FrontendConfig {
     instance: Instance,
     manifest: ObjectFileLink[],
     save: Save,
-    start: PlayerStartTemplateInfo
+    start: PlayerStartTemplateInfo,
+    boot_into_record:boolean,
 }
 
 export interface ObjectFileLink {

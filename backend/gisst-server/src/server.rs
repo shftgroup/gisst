@@ -336,6 +336,7 @@ struct PlayerTemplateInfo {
     save: Option<Save>,
     start: PlayerStartTemplateInfo,
     manifest: Vec<ObjectLink>,
+    boot_into_record: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -360,6 +361,7 @@ enum PlayerStartTemplateInfo {
 struct PlayerParams {
     state: Option<Uuid>,
     replay: Option<Uuid>,
+    boot_into_record: bool,
 }
 
 async fn get_data(
@@ -454,7 +456,8 @@ async fn get_player(
                 save: None,
                 user,
                 start,
-                manifest
+                manifest,
+                boot_into_record: params.boot_into_record,
             }
         )),
     )

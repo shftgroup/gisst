@@ -7,9 +7,8 @@ let ui_state:UI;
 let db:GISSTDBConnector;
 
 
-export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
+export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
   db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
-  const boot_into_record = true;
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
   nested_replace(environment.environment_config, "$CONTENT", content_path);

@@ -16,7 +16,7 @@ let RA:LibretroModule;
 let ui_state:UI;
 let db:GISSTDBConnector;
 
-export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[]) {
+export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
   db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
 
   const content = manifest.find((o) => o.object_role=="content")!;
@@ -24,7 +24,6 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
-  const boot_into_record = true;
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
