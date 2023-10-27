@@ -361,7 +361,7 @@ enum PlayerStartTemplateInfo {
 struct PlayerParams {
     state: Option<Uuid>,
     replay: Option<Uuid>,
-    boot_into_record: bool,
+    boot_into_record: Option<bool>,
 }
 
 async fn get_data(
@@ -457,7 +457,7 @@ async fn get_player(
                 user,
                 start,
                 manifest,
-                boot_into_record: params.boot_into_record,
+                boot_into_record: params.boot_into_record.unwrap_or_default(),
             }
         )),
     )
