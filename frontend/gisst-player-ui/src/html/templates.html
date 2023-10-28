@@ -41,9 +41,9 @@
 <template id="emulator_object_tabs_e">
   <ul class="nav nav-pills mb-3" id="gisst-artifacts-tab" role="tablist">
     <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="gisst-saves-tab" data-bs-toggle="pill"
-              data-bs-target="#gisst-saves" type="button" role="tab"
-              aria-controls="gisst-saves" aria-selected="true">Saves</button>
+      <button class="nav-link active" id="gisst-instructions-tab" data-bs-toggle="pill"
+              data-bs-target="#gisst-instructions" type="button" role="tab"
+              aria-controls="gisst-instructions" aria-selected="true">Info</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="gisst-states-tab" data-bs-toggle="pill"
@@ -53,7 +53,7 @@
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="gisst-replays-tab" data-bs-toggle="pill"
               data-bs-target="#gisst-replays" type="button" role="tab"
-              aria-controls="gisst-replays" aria-selected="false">Replays</button>
+              aria-controls="gisst-replays" aria-selected="false">Performances</button>
     </li>
     <li class="nav-item" role="presentation">
       <button class="nav-link" id="gisst-checkpoints-tab" data-bs-toggle="pill"
@@ -62,7 +62,150 @@
     </li>
   </ul>
   <div class="tab-content" id="pills-tabContent">
-    <div class="tab-pane fade show active" id="gisst-saves" role="tabpanel" aria-labelledby="gisst-saves-tab">Saves</div>
+    <div class="tab-pane fade show active" id="gisst-instructions" role="tabpanel" aria-labelledby="gisst-instructions-tab">
+      <div id="gisst-how-to-panel-content">
+      <p>Welcome to the Game and Interactive Software Scholarship Toolkit (GISST)! </p>
+        <p>The following information should help you start:</p>
+      <div class="accordion" id="accordionExample">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingOne">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+              Saving States and Checkpoints
+            </button>
+          </h2>
+          <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+              <p>GISST will save the current state of the emulator if you press the "Save State" button or hit <kbd class="kbc-button-sm">F2</kbd>. The state will then appear in the "States" tab.</p>
+              <p>If you are recording a replay, the state will be saved as "checkpoint". </p>
+              <p>Checkpoints will appear in the "Checkpoints" tab when recording or replaying a performance.</p>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingTwo">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+              Loading States and Checkpoints
+            </button>
+          </h2>
+          <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+              <p>GISST will load the last saved state if you press <kbd class="kbc-button-sm">F4</kbd>.</p>
+              <p>You can load a previously saved state by clicking on its screenshot in the "States" tab.</p>
+              <p>You can also load a checkpoint by clicking on its screenshot while recording or replaying a performance.</p>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingThree">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+              Recording and Replaying Performances
+            </button>
+          </h2>
+          <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+              <p>To start recording a performance click on the "Start Performance" button or hit <kbd class="kbc-button-sm">U</kbd>.</p>
+              <p>When you are finished, click on the "Finish Performance" button or hit <kbd class="kbc-button-sm">I</kbd>.</p>
+              <p>While recording a performance, you can save states as checkpoints and load them from the "Checkpoints" tab.</p>
+              <p>To replay the last recorded performance, you can hit <kbd class="kbc-button-sm">O</kbd> or click on the play button in the performances entry on the "Performances" tab</p>
+              <p>While recording, a <span style="color:red;">red border</span> will appear around the emulator window.</p>
+              <p>While replaying, a <span style="color:green;">green border</span> will appear around the emulator window.</p>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingFour">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+              Uploading Performances and States
+            </button>
+          </h2>
+          <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+              <p>Once you are satisfied with a state or performance, you can upload it to the server to allow for sharing and embedding.</p>
+              <p>Uploading will permanently save the record, and allow others to view and play with it.</p>
+              <p>To upload, click on the cloud icon on a state or performance entry. Once the cloud is "filled" the record is uploaded.</p>
+              <p>Checkpoints are saved with their performances.</p>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingFive">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+              Core Specific Controls
+            </button>
+          </h2>
+          <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+              <p>Use the <b>arrow keys</b> for movement in any core.</p>
+              <p><b>Keyboard and mouse input</b> will work in cores that support them.</p>
+              <p>The emulator window needs <b>focus</b> to take input. <br>It may be necessary to <b>click</b> on it. </p>
+              <div class="accordion" id="core-controls-accordion">
+                <div class="accordion-item">
+                  <h2 class="accordion-header" id="retroarch-controls">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#retroarch-controls-collapse" aria-expanded="true" aria-controls="retroarch-controls-collapse">
+                      Retroarch Keyboard Shortcuts
+                    </button>
+                  </h2>
+                  <div id="retroarch-controls-collapse" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#core-controls-accordion">
+                    <div class="accordion-body">
+                      <p>You can use the following shortcuts to manipulate any Retroarch core:</p>
+                      <ul class="list-group">
+                        <li class="list-group-item">
+                          <p>Press <kbd class="kbc-button-sm">F2</kbd> to <b>save</b> the state. <br>If you are recording a performance you will save a checkpoint.</p>
+                          <p>Press <kbd class="kbc-button-sm">F4</kbd> to <b>load</b> the last saved state. <br>If you are recording you will load the last saved checkpoint.</p>
+                          <p>Press <kbd class="kbc-button-sm">U</kbd> to <b>start recording</b> a performance.</p>
+                          <p>Press <kbd class="kbc-button-sm">I</kbd> to <b>stop </b> recording or playback of a performance.</p>
+                          <p>Press <kbd class="kbc-button-sm">O</kbd> to <b>replay</b> the last recorded performance.</p>
+                          <p>Press <kbd class="kbc-button-sm">P</kbd> to <b>pause and unpause</b> the emulator.</p>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div class="accordion-item">
+                  <h2 class="accordion-header" id="nes-controls">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#nes-controls-collapse" aria-expanded="true" aria-controls="nes-controls-collapse">
+                      Nintendo Entertainment System and Gameboy
+                    </button>
+                  </h2>
+                  <div id="nes-controls-collapse" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#core-controls-accordion">
+                    <div class="accordion-body">
+                      <ul class="list-group">
+                          <p><kbd class="kbc-button">Z</kbd> -> <span class="nes-button-circle">B</span> </p>
+                          <p><kbd class="kbc-button">X</kbd> -> <span class="nes-button-circle">A</span> </p>
+                          <p><kbd class="kbc-button">Enter</kbd> -> <b>Start</b></p>
+                          <p><kbd class="kbc-button">Shift</kbd> -> <b>Select</b></p>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div class="accordion-item">
+                  <h2 class="accordion-header" id="snes-controls">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#snes-controls-collapse" aria-expanded="true" aria-controls="snes-controls-collapse">
+                      Super Nintendo Entertainment System
+                    </button>
+                  </h2>
+                  <div id="snes-controls-collapse" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#core-controls-accordion">
+                    <div class="accordion-body">
+                      <ul class="list-group">
+                        <p><kbd class="kbc-button">Z</kbd> -> <span class="nes-button-circle" style="background-color: darkorange;">B</span> </p>
+                        <p><kbd class="kbc-button">X</kbd> -> <span class="nes-button-circle" style="background-color: red;">A</span> </p>
+                        <p><kbd class="kbc-button">A</kbd> -> <span class="nes-button-circle" style="background-color: green;">Y</span> </p>
+                        <p><kbd class="kbc-button">S</kbd> -> <span class="nes-button-circle" style="background-color: blue;">X</span> </p>
+                        <div class="d-flex flex-row gap-2 mb-3"><kbd class="kbc-button">Q</kbd> -> <div class="snes-shoulder-button-box">L</div> </div>
+                        <div class="d-flex flex-row gap-2 mb-3"><kbd class="kbc-button">W</kbd> -> <div class="snes-shoulder-button-box">R</div> </div>
+                        <p><kbd class="kbc-button">Enter</kbd> -> <b>Start</b></p>
+                        <p><kbd class="kbc-button">Shift</kbd> -> <b>Select</b></p>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
     <div class="tab-pane fade" id="gisst-states" role="tabpanel" aria-labelledby="gisst-states-tab">
       <div class="btn-group" role="group" aria-label="Buttons to toggle from list to card to image grid">
         <input type="radio" class="btn-check" name="btn_states_display_toggle" id="btn_states_display_list" autocomplete="off">
@@ -101,13 +244,13 @@
   <div class="btn-toolbar justify-content-center" role="toolbar" aria-label="Emulator manipulation toolbar with buttons" id="emulator_single_button_toolbar">
     <div class="btn-group me-2" role="group" aria-label="Save and state creation tools">
       <button id="toggle_mute_button" type="button" class="btn btn-secondary">Mute/Unmute</button>
-      <button id="save_button" type="button" class="btn btn-secondary">Save</button>
+      <!--<button id="save_button" type="button" class="btn btn-secondary">Save</button>-->
       <button id="save_state_button" type="button" class="btn btn-secondary">Save State</button>
       <!-- <button id="checkpoint_button" type="button" class="btn btn-secondary">Checkpoint</button> -->
     </div>
-    <div class="btn-group me-2" role="group" aria-label="Replay creation tools">
-      <button id="start_replay_button" type="button" class="btn btn-secondary">Start Replay</button>
-      <button id="finish_replay_button" type="button" class="btn btn-secondary">Finish Replay</button>
+    <div class="btn-group me-2" role="group" aria-label="Performance creation tools">
+      <button id="start_replay_button" type="button" class="btn btn-secondary">Start Performance</button>
+      <button id="finish_replay_button" type="button" class="btn btn-secondary">Finish Performance</button>
     </div>
 <!--    <div class="btn-group me-2" role="group" aria-label="Deletion tools">-->
 <!--      <button id="remove_last_save_button" type="button" class="btn btn-secondary">Pop Save</button>-->
@@ -224,4 +367,9 @@
       </div>
     </div>
   </div>
+</template>
+
+
+<template id="controls_ra">
+
 </template>

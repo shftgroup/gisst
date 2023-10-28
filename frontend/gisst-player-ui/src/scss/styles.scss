@@ -1,11 +1,41 @@
 // Import Bootstrap CSS dependency
 @import "~bootstrap/scss/bootstrap";
+// Import Keyboard CSS fanciness
+@import "~keyboard-css/dist/scss/main";
 #emulator_single_div{
   background-color: black;
 }
 
 #gisst-states-list {
-  height: 385px;
+  height: 500px;
+  overflow: auto;
+}
+
+#gisst-how-to-panel-content {
+  height: 500px;
+  overflow: auto;
+}
+
+.snes-shoulder-button-box {
+  border-radius: 5px;
+  background-color: #2e2e2e;
+  color: #fff;
+  font-size: 22px;
+  width: 50px;
+  height: 30px;
+  text-align: center;
+}
+
+.nes-button-circle {
+  display: inline-block;
+  background-color: #ff0000;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 30px; /* set to same size as width, height */
+  width: 30px;
+  height: 30px;
+  text-align: center;
 }
 
 // state_list_object styles for save state listing
