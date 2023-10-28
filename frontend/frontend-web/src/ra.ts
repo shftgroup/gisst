@@ -186,7 +186,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           const replayUUID = ra_util.replay_info(new Uint8Array(RA.FS.readFile("/home/web_user/content/replay.replay1"))).id;
           seen_replays[content_base+".replay1"] = replayUUID;
           ui_state.newReplay(content_base+".replay1", data);
-        } else {
+        } else if (boot_into_record) {
           const f = RA.FS.open(state_dir+"/"+content_base+".replay1", 'w');
           const te = new TextEncoder();
           RA.FS.write(f, te.encode("\0"), 0, 1);
