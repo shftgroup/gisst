@@ -303,7 +303,7 @@ async function update_checkpoints() {
   const id = (matches?.[1]) ?? "0";
   const flags = parseInt((matches?.[2]) ?? "0",10);
   if(id == "0" || flags == 0) {
-    console.log("no current replay or different replay started");
+    // console.log("no current replay or different replay started");
     clear_current_replay();
   } else {
     if(current_replay && current_replay.id != id) {
@@ -311,7 +311,7 @@ async function update_checkpoints() {
     }
     const finished = (flags & BSVFlags.END) != 0;
     const mode = (flags & BSVFlags.PLAYBACK) != 0 ? ReplayMode.Playback : (flags & BSVFlags.RECORDING ? ReplayMode.Record : ReplayMode.Inactive);
-    console.log("current replay",id,mode,finished);
+    // console.log("current replay",id,mode,finished);
     current_replay = {id:id,mode:mode,finished:finished};
     if(finished) {
       ui_state.setReplayMode(UIReplayMode.Finished);
@@ -339,9 +339,9 @@ function find_checkpoints_inner() {
   // console.log("seen:",seen_states);
   for(const state_file in seen_states) {
     if(state_file in seen_checkpoints) { continue; }
-    console.log("Check ",state_file);
+    // console.log("Check ",state_file);
     const replay = ra_util.replay_of_state(new Uint8Array(RA.FS.readFile(state_dir+"/"+state_file)));
-    console.log("Replay info",replay,"vs",current_replay);
+    // console.log("Replay info",replay,"vs",current_replay);
     if(replay && replay.id == current_replay.id) {
       seen_checkpoints[state_file] = seen_states[state_file];
       ui_state.newCheckpoint(state_file, seen_states[state_file]);
@@ -369,7 +369,7 @@ function checkChangedStatesAndSaves() {
   for (const state of states) {
     if(state == "." || state == "..") { continue; }
     if(state.endsWith(".png") || state.includes(".state")) {
-      console.log("check state file",state);
+      // console.log("check state file",state);
       const png_file = state.endsWith(".png") ? state : state + ".png";
       const state_file = state.endsWith(".png") ? state.substring(0,state.length-4) : state;
       if(state_file in seen_states || state_file in seen_checkpoints) {
@@ -379,7 +379,7 @@ function checkChangedStatesAndSaves() {
       if(!(file_exists(RA,state_dir+"/"+png_file) && file_exists(RA,state_dir+"/"+state_file))) {
         continue;
       }
-      console.log("check state file",state);
+      // console.log("check state file",state);
       const replay = ra_util.replay_of_state((RA.FS.readFile(state_dir+"/"+state_file)));
       let known_replay = false;
       if(replay) {

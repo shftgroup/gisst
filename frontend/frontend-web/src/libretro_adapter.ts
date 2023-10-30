@@ -63,8 +63,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
             if(!canvas.tabIndex) { canvas.tabIndex = 1; }
             canvas.addEventListener("click", () => canvas.focus());
             me.canvas = canvas;
-            me.arguments = retro_args;
-            me.callMain(me.arguments);
+            me.callMain(retro_args);
             me.resumeMainLoop();
             initialized_cb();
             canvas.focus();
