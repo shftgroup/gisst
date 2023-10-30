@@ -36,6 +36,8 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
     retro_args.push(state_dir+"/"+content_base+".replay1");
   }
 
+  retro_args.push("-c");
+  retro_args.push("/home/web_user/retroarch/userdata/retroarch.cfg");
   retro_args.push("--appendconfig");
   retro_args.push("/home/web_user/content/retroarch.cfg");
   retro_args.push("/home/web_user/content/" + content.file_source_path! + "/" + content.file_filename!);

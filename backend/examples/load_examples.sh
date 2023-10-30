@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/zsh
 
 export GISST_CONFIG_PATH=../config
 ## Build most recent GISST Command Line Interface
