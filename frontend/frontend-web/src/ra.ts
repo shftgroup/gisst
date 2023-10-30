@@ -35,11 +35,13 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
     retro_args.push("-R");
     retro_args.push(state_dir+"/"+content_base+".replay1");
   }
-
   retro_args.push("-c");
   retro_args.push("/home/web_user/retroarch/userdata/retroarch.cfg");
-  retro_args.push("--appendconfig");
-  retro_args.push("/home/web_user/content/retroarch.cfg");
+  const has_config = manifest.find((o) => o.object_role=="config")!;
+  if(has_config) {
+    retro_args.push("--appendconfig");
+    retro_args.push("/home/web_user/content/retroarch.cfg");
+  }
   retro_args.push("/home/web_user/content/" + content.file_source_path! + "/" + content.file_filename!);
   console.log(retro_args);
 
@@ -124,6 +126,8 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
     function (module:LibretroModule) {
       RA = module;
       fetchfs.mkdirp(RA,"/home/web_user/content");
+      fetchfs.mkdirp(RA, saves_dir);
+      fetchfs.mkdirp(RA, state_dir);
 
       const proms = [];
 
@@ -137,7 +141,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
             "/storage/" + file.file_dest_path + "/" + file.file_hash + "-" + file.file_filename,
             source_path + "/" + file.file_filename);
         proms.push(file_prom);
-        }
+      }
       let entryScreenshot:Promise<GISSTModels.DBRecord> | null = null;
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
@@ -158,11 +162,8 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
         console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
         proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1"));
       }
-      proms.push(fetchfs.registerFetchFS(RA, {"retroarch_web_base.cfg":null}, "/assets", "/home/web_user/retroarch/"));
-      fetchfs.mkdirp(RA, saves_dir);
-      fetchfs.mkdirp(RA, state_dir);
+      proms.push(fetchfs.fetchFile(RA, "/assets/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg"));
       Promise.all(proms).then(function () {
-        copyFile(RA, "/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
         // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
         if (entryState) {
           copyFile(RA, "/home/web_user/content/entry_state",
@@ -188,7 +189,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           const replayUUID = ra_util.replay_info(new Uint8Array(RA.FS.readFile("/home/web_user/content/replay.replay1"))).id;
           seen_replays[content_base+".replay1"] = replayUUID;
           ui_state.newReplay(content_base+".replay1", data);
-        } else if (boot_into_record) {
+        } else if(boot_into_record) {
           const f = RA.FS.open(state_dir+"/"+content_base+".replay1", 'w');
           const te = new TextEncoder();
           RA.FS.write(f, te.encode("\0"), 0, 1);
