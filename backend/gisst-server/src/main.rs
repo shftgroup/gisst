@@ -4,7 +4,6 @@ mod routes;
 mod selective_serve_dir;
 mod server;
 mod serverconfig;
-mod templates;
 mod tus;
 mod utils;
 mod auth;

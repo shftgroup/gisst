@@ -17,7 +17,6 @@ use crate::{
         work_router,
     },
     serverconfig::ServerConfig,
-    templates::TemplateHandler,
     tus::{tus_creation, tus_head, tus_patch},
 };
 use anyhow::Result;
@@ -37,7 +36,7 @@ use crate::routes::screenshot_router;
 use axum_login::axum_sessions::async_session::MemoryStore;
 use axum_login::axum_sessions::{SameSite, SessionLayer};
 use gisst::storage::{PendingUpload, StorageHandler};
-use minijinja::render;
+use minijinja::{context,};
 use oauth2::basic::BasicClient;
 use rand::Rng;
 use secrecy::ExposeSecret;
@@ -57,7 +56,7 @@ pub struct ServerState {
     pub folder_depth: u8,
     pub default_chunk_size: usize,
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
-    pub templates: TemplateHandler,
+    pub templates: minijinja::Environment<'static>,
     pub oauth_client: BasicClient,
 }
 
@@ -67,6 +66,10 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         &config.storage.root_folder_path,
         &config.storage.temp_folder_path,
     )?;
+
+    let mut template_environment = minijinja::Environment::new();
+    template_environment.set_loader(minijinja::path_loader("gisst-server/src/templates"));
+
     let app_state = ServerState {
         pool: db::new_pool(config).await?,
         root_storage_path: config.storage.root_folder_path.clone(),
@@ -74,7 +77,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         folder_depth: config.storage.folder_depth,
         default_chunk_size: config.storage.chunk_size,
         pending_uploads: Default::default(),
-        templates: TemplateHandler::new("gisst-server/src/templates")?,
+        templates: template_environment,
         oauth_client: auth::build_oauth_client(
             &config.http.base_url,
             config.auth.google_client_id.expose_secret(),
@@ -453,54 +456,23 @@ async fn get_player(
         dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
     Ok((
         [("Access-Control-Allow-Origin", "*")],
-        Html(render!(
-            app_state.templates.get_template("player")?,
-            player_params => PlayerTemplateInfo {
-                environment,
-                instance,
-                work,
-                save: None,
-                user,
-                start,
-                manifest,
-                boot_into_record: params.boot_into_record.unwrap_or_default(),
-            }
-        )),
+        Html(
+            app_state.templates.get_template("player.liquid").unwrap()
+                .render(
+                context!(
+                        player_params => PlayerTemplateInfo {
+                            environment,
+                            instance,
+                            work,
+                            save: None,
+                            user,
+                            start,
+                            manifest,
+                            boot_into_record: params.boot_into_record.unwrap_or_default(),
+                        }
+                    )
+                )?
+        ),
     )
         .into_response())
 }
-
-// #[derive(Serialize)]
-// struct ModelInfo {
-//     name: String,
-//     fields: Vec<ModelField>
-// }
-
-// #[derive(Serialize)]
-// struct ModelField { name: String, field_type: String }
-//
-#[allow(dead_code)]
-async fn get_upload_form(app_state: Extension<ServerState>) -> Result<Html<String>, GISSTError> {
-    Ok(Html(render!(app_state
-        .templates
-        .get_template("debug_upload")?,)))
-}
-
-// Utility Functions
-
-// fn convert_model_field_vec_to_form_fields(fields:Vec<(String,String)>) -> Vec<ModelField> {
-//     fields.iter().map(|(field, ft)| match ft.as_str() {
-//         "OffsetDateTime" => ModelField { name: field.to_string(), field_type: "datetime-local".to_string() },
-//         "i32" => ModelField { name: field.to_string(), field_type: "number".to_string() },
-//         "Uuid" => ModelField { name: field.to_string(), field_type: "text".to_string() },
-//         "String" => ModelField { name: field.to_string(), field_type: "text".to_string() },
-//         "Json" => ModelField { name: field.to_string(), field_type: "file".to_string() },
-//          _ => ModelField { name: field.to_string(), field_type: ft.to_string() }
-//     }).collect()
-// }
-
-// fn make_ascii_title_case(s: &mut str) {
-//     if let Some(r) = s.get_mut(0..1) {
-//         r.make_ascii_uppercase();
-//     }
-// }

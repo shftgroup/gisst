@@ -14,7 +14,7 @@ use gisst::models::FileRecordFlatten;
 use gisst::models::{
     DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
 };
-use minijinja::render;
+use minijinja::{context, };
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
@@ -326,12 +326,16 @@ async fn get_instances(
 
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-            Html(render!(
-                app_state.templates.get_template("instance_listing")?,
-                instances => instance_results,
-                user => user,
-            ))
-            .into_response()
+            let instance_listing = app_state.templates.get_template("instance_listing.liquid").unwrap();
+            Html(
+                instance_listing.render(
+                    context!(
+                            instances => instance_results,
+                            user => user,
+                    )
+                )?
+            )
+                .into_response()
         } else if accept
             .as_ref()
             .is_some_and(|hv| hv.contains("application/json"))
@@ -399,12 +403,16 @@ async fn get_all_for_instance(
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-                Html(render!(
-                    app_state.templates.get_template("instance_all_listing")?,
-                    instance => full_instance,
-                    user => user
-                ))
-                .into_response()
+                let instance_all_listing = app_state.templates.get_template("instance_all_listing.liquid").unwrap();
+                Html(
+                    instance_all_listing.render(
+                        context!(
+                            instance => full_instance,
+                            user => user,
+                        )
+                    )?
+                )
+                    .into_response()
             } else if accept
                 .as_ref()
                 .is_some_and(|hv| hv.contains("application/json"))

@@ -21,8 +21,6 @@ pub enum GISSTError {
     RecordCreateError(#[from] models::NewRecordError),
     #[error("record creation error")]
     RecordUpdateError(#[from] models::UpdateRecordError),
-    #[error("template error")]
-    TemplateError,
     #[error("path prefix error")]
     PathPrefixError(#[from] std::path::StripPrefixError),
     #[error("tokio task error")]
@@ -31,6 +29,8 @@ pub enum GISSTError {
     ReqwestError(#[from] reqwest::Error),
     #[error("auth error")]
     AuthError(#[from] AuthError),
+    #[error("minijinja error")]
+    MiniJinjaError(#[from] minijinja::Error),
     #[error("generic error")]
     Generic,
 }
@@ -58,13 +58,13 @@ impl IntoResponse for GISSTError {
             GISSTError::PathPrefixError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "file creation error")
             },
-            GISSTError::TemplateError => (StatusCode::INTERNAL_SERVER_ERROR, "template error"),
             GISSTError::JoinError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "tokio task error"),
             GISSTError::FileNotFoundError => (StatusCode::NOT_FOUND, "file not found"),
             GISSTError::ReqwestError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "oauth reqwest error")
             },
             GISSTError::AuthError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "auth error"),
+            GISSTError::MiniJinjaError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "minijinja error"),
             GISSTError::Generic => (StatusCode::INTERNAL_SERVER_ERROR, "generic error"),
         };
 
