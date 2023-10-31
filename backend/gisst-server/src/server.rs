@@ -95,7 +95,22 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     let session_layer = SessionLayer::new(session_store, &secret)
         .with_secure(false)
         .with_same_site_policy(SameSite::Lax);
-
+    let builder = ServiceBuilder::new()
+        .layer(
+            CorsLayer::new()
+                .allow_origin(tower_http::cors::AllowOrigin::any())
+                .allow_headers(tower_http::cors::AllowHeaders::any())
+                .expose_headers([
+                    axum::http::header::ACCEPT_RANGES,
+                    axum::http::header::CONTENT_LENGTH,
+                    axum::http::header::RANGE,
+                    axum::http::header::CONTENT_RANGE,
+                ])
+                .allow_methods([axum::http::Method::GET]),
+        )
+        .layer(HandleErrorLayer::new(handle_error))
+        // This map_err is needed to get the types to work out after handleerror and before servedir.
+        .map_err(|e| panic!("{:?}", e));
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
         .route("/resources/:id", patch(tus_patch).head(tus_head))
@@ -118,44 +133,35 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/works", work_router())
         .nest_service(
             "/storage",
-            ServiceBuilder::new()
-                .layer(
-                    CorsLayer::new()
-                        .allow_origin(tower_http::cors::AllowOrigin::any())
-                        .allow_headers(tower_http::cors::AllowHeaders::any())
-                        .expose_headers([
-                            axum::http::header::ACCEPT_RANGES,
-                            axum::http::header::CONTENT_LENGTH,
-                            axum::http::header::RANGE,
-                            axum::http::header::CONTENT_RANGE,
-                        ])
-                        .allow_methods([axum::http::Method::GET]),
-                )
-                .layer(HandleErrorLayer::new(handle_error))
-                // This map_err is needed to get the types to work out after handleerror and before servedir.
-                .map_err(|e| panic!("{:?}", e))
+            builder.clone()
                 /* if the x-accept-encoding header is present, dispatch to the custom servedir that does not serve precompressed stuff */
                 .service(selective_serve_dir::SelectiveServeDir::new("storage")),
         )
         .nest_service(
-            "/",
-            ServiceBuilder::new()
-                .layer(
-                    CorsLayer::new()
-                        .allow_origin(tower_http::cors::AllowOrigin::any())
-                        .expose_headers([
-                            axum::http::header::ACCEPT_RANGES,
-                            axum::http::header::CONTENT_LENGTH,
-                            axum::http::header::RANGE,
-                            axum::http::header::CONTENT_RANGE,
-                        ])
-                        .allow_methods([axum::http::Method::GET]),
-                )
-                .layer(HandleErrorLayer::new(handle_error))
-                // This map_err is needed to get the types to work out after handleerror and before servedir.
-                .map_err(|e| panic!("{:?}", e))
-                .service(selective_serve_dir::SelectiveServeDir::new("web-dist")),
+            "/assets",
+            builder.clone()
+                .service(selective_serve_dir::SelectiveServeDir::new("web-dist/assets")),
         )
+        .nest_service(
+            "/cores",
+            builder.clone()
+                .service(selective_serve_dir::SelectiveServeDir::new("web-dist/cores")),
+        )
+        .nest_service(
+            "/media",
+            builder.clone()
+                .service(selective_serve_dir::SelectiveServeDir::new("web-dist/media")),
+        )
+        .nest_service(
+            "/ra",
+            builder.clone().service(selective_serve_dir::SelectiveServeDir::new("web-dist/ra")),
+        )
+        .nest_service(
+            "/v86",
+            builder.clone()
+                .service(selective_serve_dir::SelectiveServeDir::new("web-dist/v86")),
+        )
+        .route("/", get(|| async { axum::response::Redirect::temporary("/instances")}))
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432))
         .layer(auth_layer)
