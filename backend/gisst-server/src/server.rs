@@ -164,7 +164,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             builder.clone()
                 .service(selective_serve_dir::SelectiveServeDir::new("web-dist/v86")),
         )
-        .route("/", get(|| async { axum::response::Redirect::temporary("/instances")}))
+        .route("/", get(get_homepage))
+        .route("/about", get(get_about))
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432))
         .layer(auth_layer)
@@ -373,6 +374,27 @@ struct PlayerParams {
     boot_into_record: Option<bool>,
 }
 
+async fn get_about(
+    app_state: Extension<ServerState>,
+) -> Result<axum::response::Response, GISSTError> {
+    Ok(
+        Html(
+            app_state.templates.get_template("about.html").unwrap().render(context!()).unwrap()
+        )
+            .into_response()
+    )
+}
+async fn get_homepage(
+    app_state: Extension<ServerState>,
+) -> Result<axum::response::Response, GISSTError> {
+    Ok(
+        Html(
+            app_state.templates.get_template("index.html").unwrap().render(context!()).unwrap()
+        )
+            .into_response()
+        )
+}
+
 async fn get_data(
     app_state: Extension<ServerState>,
     _headers: HeaderMap,
@@ -457,7 +479,7 @@ async fn get_player(
     Ok((
         [("Access-Control-Allow-Origin", "*")],
         Html(
-            app_state.templates.get_template("player.liquid").unwrap()
+            app_state.templates.get_template("player.html").unwrap()
                 .render(
                 context!(
                         player_params => PlayerTemplateInfo {

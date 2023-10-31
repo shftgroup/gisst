@@ -16,6 +16,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .current_dir(FRONT_DIR))
         .output()?;
     }
+
+    Command::new("mkdir").args(["-p", "../web-dist/assets/backend"]).output()?;
+    Command::new("cp").args(["-r", "src/assets/*", "../web-dist/assets/backend"]).output()?;
+
     println!("cargo:rerun-if-changed={FRONT_DIR}/ra-util/src");
     println!("cargo:rerun-if-changed={FRONT_DIR}/embedv86/src");
     println!("cargo:rerun-if-changed={FRONT_DIR}/gisst-player-ui/src");
