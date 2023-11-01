@@ -13,7 +13,9 @@
                     </div>
                 </div>
             </div>
-            <div class="col-xl-5 col-xxl-6 d-none d-xl-block text-center"><img class="img-fluid rounded-3 my-5" src="https://dummyimage.com/600x400/343a40/6c757d" alt="..." /></div>
+            <div id="embedExample" class="col-xl-5 col-xxl-6 d-none d-xl-block text-center">
+                <!-- <img class="img-fluid rounded-3 my-5" src="https://dummyimage.com/600x400/343a40/6c757d" alt="..." />-->
+            </div>
         </div>
     </div>
 </header>
@@ -30,4 +32,10 @@
         </div>
     </div>
 </section>
+<link rel="stylesheet" href="/embed/assets/style.css"/>
+<script type="module" src="/embed/assets/main.js"></script>
+<script type="module">
+    import {embed} from './embed/assets/main.js';
+    embed("http://localhost:3000/00000000-0000-0000-0000-000000000026", document.getElementById("embedExample"));
+</script>
 {% endblock %}

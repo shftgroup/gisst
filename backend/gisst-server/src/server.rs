@@ -164,6 +164,11 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             builder.clone()
                 .service(selective_serve_dir::SelectiveServeDir::new("web-dist/v86")),
         )
+        .nest_service(
+            "/embed",
+            builder.clone()
+                .service(selective_serve_dir::SelectiveServeDir::new("embed-dist")),
+        )
         .route("/", get(get_homepage))
         .route("/about", get(get_about))
         .layer(Extension(app_state))
