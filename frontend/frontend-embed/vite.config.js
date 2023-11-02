@@ -16,18 +16,18 @@ export default {
     lib: {
       // Could also be a dictionary or array of multiple entry points
       entry: resolve(__dirname, 'src/main.ts'),
-      name: 'GISSTEmbed',
+      name: 'GISST',
       // the proper extensions will be added
       fileName: 'embed',
     },
     sourcemap: true,
-    rollupOptions: {
-      output: {
-        entryFileNames: `embed/[name].js`,
-        chunkFileNames: `embed/[name].js`,
-        assetFileNames: `embed/[name].[ext]`
-      }
-    }
+    // rollupOptions: {
+    //   output: {
+    //     entryFileNames: `embed/[name].js`,
+    //     chunkFileNames: `embed/[name].js`,
+    //     assetFileNames: `embed/[name].[ext]`
+    //   }
+    // }
   },
   server: {
     headers:{
