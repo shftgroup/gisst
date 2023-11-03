@@ -117,8 +117,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(HandleErrorLayer::new(handle_error))
         // This map_err is needed to get the types to work out after handleerror and before servedir.
         .map_err(|e| panic!("{:?}", e));
-    let info_file = rolling::daily("./logs", "info.log");
-
     let debug_config = &config.debug;
 
     let log_level = match debug_config.log_level {
