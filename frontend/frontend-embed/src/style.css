@@ -1,6 +1,7 @@
 .gisst-embed-webplayer-container {
   background-color: black;
   line-height: 0;
+  container-type: inline-size;
 }
 
 .gisst-embed-hidden {
@@ -12,6 +13,7 @@
     cursor: wait;
     opacity: 0.2;
     transition: all 0.8s;
+    height: inherit;
     -webkit-animation: gisst-loading 0.8s ease-in-out infinite alternate;
     -moz-animation: gisst-loading 0.8s ease-in-out infinite alternate;
     animation: gisst-loading 0.8s ease-in-out infinite alternate;
@@ -80,14 +82,37 @@ canvas.gisst-embed-webplayer {
 .gisst-embed-webplayer-textmode {
   white-space: pre;
   font: 14px monospace;
-  line-height: 14px;
+  line-height: 16px;
 }
+
+@container (width >= 600px) {
+  .gisst-embed-webplayer-textmode {
+    font-size: 12px;
+    line-height: 14px;
+  }
+}
+
+@container (width >= 500px) and (width < 600px) {
+  .gisst-embed-webplayer-textmode {
+    font-size: 9px;
+    line-height: 11px;
+  }
+}
+
+@container (width >= 400px) and (width < 500px) {
+  .gisst-embed-webplayer-textmode {
+    font-size: 8px;
+    line-height: 10px;
+  }
+}
+
 
 .gisst-embed-webplayer-button {
   background-color: #CCCCCC33;
   width: 32px;
   height: 32px;
 }
+
 
 .gisst-embed-webplayer-button:hover {
     background-color: #CCCCCCDD;
