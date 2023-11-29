@@ -1547,6 +1547,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f232d6ef707e1956a43342693d2a31e72989554d58299d7a88738cc95b0d35c"
 
 [[package]]
+name = "memo-map"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "374c335b2df19e62d4cb323103473cbc6510980253119180de862d89184f6a83"
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1564,10 +1570,12 @@ dependencies = [
 
 [[package]]
 name = "minijinja"
-version = "0.34.0"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75aa91cba87dcad6af3e53bc7adb9c99755eba2d49b6c5f10dbcc79d4727c1bd"
+checksum = "1f98b09920c8be9ff96a5625aca5b5db7a4f4ba025132ff7d7aacb72c0244a45"
 dependencies = [
+ "memo-map",
+ "self_cell",
  "serde",
  "serde_json",
 ]
@@ -2218,6 +2226,12 @@ dependencies = [
  "core-foundation-sys",
  "libc",
 ]
+
+[[package]]
+name = "self_cell"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c309e515543e67811222dbc9e3dd7e1056279b782e1dacffe4242b718734fb6"
 
 [[package]]
 name = "serde"

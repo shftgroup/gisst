@@ -16,8 +16,8 @@ export async function embed(gisst:string, container:HTMLDivElement) {
   const preview_img = document.createElement("img");
   preview_img.classList.add("gisst-embed-webplayer-preview");
   preview_img.src = imgUrl;
-  preview_img.width = 960;
-  preview_img.height = 720;
+  // preview_img.width = 960;
+  // preview_img.height = 720;
   preview_img.alt = "Loading Icon";
   const mute_a = document.createElement("a");
   mute_a.classList.add("gisst-embed-webplayer-mute");
