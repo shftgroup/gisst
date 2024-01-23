@@ -1,3 +1,9 @@
+DEFAULT_DB_USER="postgres"
+DEFAULT_DB_NAME="gisstdb"
+
+DB_USER="${DB_USER:-$DEFAULT_DB_USER}"
+DB_NAME="${DB_NAME:-$DEFAULT_DB_NAME}"
+
 # Check that sqlx-cli is installed
 if ! command -v sqlx &> /dev/null
 then
@@ -23,10 +29,10 @@ rm -r storage
 #sqlx migrate revert # remove creator changes
 
 # Remove and recreate test database
-echo "Dropping database gisstdb."
-psql -U postgres -c "drop database gisstdb"
-echo "Creating database gisstdb."
-psql -U postgres -c "create database gisstdb"
+echo "Dropping database $DB_NAME."
+psql -U "$DB_USER" -c "drop database if exists \"$DB_NAME\""
+echo "Creating database $DB_NAME."
+psql -U "$DB_USER" -c "create database \"$DB_NAME\""
 
 # Recreate tables and data load
 sqlx migrate run
