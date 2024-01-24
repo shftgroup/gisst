@@ -699,7 +699,7 @@ async fn create_replay(
                 .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
                 .ok()
         })
-        .and_then(|dt| chrono::DateTime::<chrono::Utc>::try_from(dt).ok())
+        .map(chrono::DateTime::<chrono::Utc>::from)
         .unwrap_or(chrono::Utc::now());
     let mut conn = db.acquire().await?;
     let data = &read(file)?;
@@ -820,7 +820,7 @@ async fn create_state(
                 .map_err(|e| GISSTCliError::CreateState(e.to_string()))
                 .ok()
         })
-        .and_then(|dt| chrono::DateTime::<chrono::Utc>::try_from(dt).ok())
+        .map(chrono::DateTime::<chrono::Utc>::from)
         .unwrap_or(chrono::Utc::now());
     let mut file_record = gisst::models::File {
         file_id: Uuid::new_v4(),

@@ -3,6 +3,10 @@ name = "gisst-server"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default=[]
+dummy_auth=[]
+
 [dependencies]
 anyhow = "1.0.70"
 async-trait = "0.1.68"

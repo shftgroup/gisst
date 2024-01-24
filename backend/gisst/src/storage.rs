@@ -89,7 +89,7 @@ impl StorageHandler {
     pub fn get_folder_depth_from_path(path: &Path, filename: Option<String>) -> u8 {
         let mut depth = 1;
         let mut path_buf = path.to_path_buf();
-        if filename.is_some() && path_buf.ends_with(&filename.unwrap()) {
+        if filename.is_some() && path_buf.ends_with(filename.unwrap()) {
             path_buf.pop();
         }
         for component in path_buf.components() {
