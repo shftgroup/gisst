@@ -52,6 +52,21 @@ pub struct OpenIDUserInfo {
     picture: Option<String>,            //OpenID (this is a url string)
 }
 
+#[cfg(feature = "dummy_auth")]
+impl OpenIDUserInfo {
+    fn test_user() -> Self {
+        Self {
+            sub: Some("test sub".to_string()),
+            name: Some("test name".to_string()),
+            given_name: Some("givenname".to_string()),
+            family_name: Some("familyname".to_string()),
+            preferred_username: Some("test".to_string()),
+            email: Some("test@test.edu".to_string()),
+            picture: None,
+        }
+    }
+}
+
 impl AuthUser<i32, Role> for User {
     fn get_id(&self) -> i32 {
         self.id
@@ -214,7 +229,18 @@ pub async fn oauth_callback_handler(
     let profile: OpenIDUserInfo = profile.json::<OpenIDUserInfo>().await.unwrap();
     println!("Getting db connection");
 
-    let mut conn = state.pool.acquire().await?;
+    let user = auth_get_user(state.pool, &profile, token.access_token().secret()).await?;
+    auth.login(&user).await.map_err(|_e| GISSTError::Generic)?;
+    println!("Logged in the user: {user:?}");
+    Ok(Redirect::to("/instances"))
+}
+
+async fn auth_get_user(
+    pool: PgPool,
+    profile: &OpenIDUserInfo,
+    secret: &str,
+) -> Result<User, GISSTError> {
+    let mut conn = pool.acquire().await?;
     if let Some(user) = sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", profile.email)
         .fetch_optional(&mut *conn)
         .await?
@@ -223,23 +249,29 @@ pub async fn oauth_callback_handler(
         let user = User::update(
             &mut conn,
             &User {
-                password_hash: token.access_token().secret().to_owned(),
+                password_hash: secret.to_owned(),
                 ..user
             },
         )
         .await?;
         println!("Got user {user:?}. Logging in.");
-        auth.login(&user).await.unwrap();
-        println!("Logged in the user: {user:?}");
-        Ok(Redirect::to("/instances"))
+        Ok(user)
     } else {
         println!("New user login, creating creator and user records.");
         let creator = Creator::insert(
             &mut conn,
             Creator {
                 creator_id: Uuid::new_v4(),
-                creator_username: profile.email.clone().unwrap(),
-                creator_full_name: profile.given_name.clone().unwrap(),
+                creator_username: profile
+                    .email
+                    .as_ref()
+                    .ok_or(AuthError::UserCreateError)?
+                    .clone(),
+                creator_full_name: profile
+                    .given_name
+                    .as_ref()
+                    .ok_or(AuthError::UserCreateError)?
+                    .clone(),
                 created_on: Utc::now(),
             },
         )
@@ -249,27 +281,26 @@ pub async fn oauth_callback_handler(
             &mut conn,
             &User {
                 id: 0, // will be ignored on insert since insert id is serial auto-increment
-                sub: profile.sub,
+                sub: profile.sub.clone(),
                 creator_id: creator.creator_id,
-                password_hash: token.access_token().secret().to_owned(),
-                name: profile.name,
-                given_name: profile.given_name,
-                family_name: profile.family_name,
-                preferred_username: profile.preferred_username,
-                email: profile.email,
-                picture: profile.picture,
+                password_hash: secret.to_owned(),
+                name: profile.name.clone(),
+                given_name: profile.given_name.clone(),
+                family_name: profile.family_name.clone(),
+                preferred_username: profile.preferred_username.clone(),
+                email: profile.email.clone(),
+                picture: profile.picture.clone(),
             },
         )
         .await?;
 
         println!("User record created: {user:?}.");
         println!("Logging in.;");
-        auth.login(&user).await.unwrap();
-        println!("Logged in the user: {user:?}");
-        Ok(Redirect::to("/instances"))
+        Ok(user)
     }
 }
 
+#[cfg(not(feature = "dummy_auth"))]
 pub async fn login_handler(
     Extension(state): Extension<ServerState>,
     mut session: WritableSession,
@@ -283,6 +314,18 @@ pub async fn login_handler(
     session.insert("csrf_state", csrf_state).unwrap();
 
     Redirect::to(auth_url.as_ref())
+}
+
+#[cfg(feature = "dummy_auth")]
+pub async fn login_handler(
+    mut auth: AuthContext,
+    Extension(state): Extension<ServerState>,
+) -> Result<impl IntoResponse, GISSTError> {
+    let dummy = OpenIDUserInfo::test_user();
+    let user = auth_get_user(state.pool, &dummy, "verysecret").await?;
+    auth.login(&user).await.map_err(|_e| GISSTError::Generic)?;
+    println!("Logged in the user: {user:?}");
+    Ok(Redirect::to("/instances"))
 }
 
 pub async fn logout_handler(mut auth: AuthContext) -> impl IntoResponse {

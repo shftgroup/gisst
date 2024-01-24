@@ -36,7 +36,7 @@ use crate::routes::screenshot_router;
 use axum_login::axum_sessions::async_session::MemoryStore;
 use axum_login::axum_sessions::{SameSite, SessionLayer};
 use gisst::storage::{PendingUpload, StorageHandler};
-use minijinja::{context,};
+use minijinja::context;
 use oauth2::basic::BasicClient;
 use rand::Rng;
 use secrecy::ExposeSecret;
@@ -382,22 +382,28 @@ struct PlayerParams {
 async fn get_about(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, GISSTError> {
-    Ok(
-        Html(
-            app_state.templates.get_template("about.html").unwrap().render(context!()).unwrap()
-        )
-            .into_response()
+    Ok(Html(
+        app_state
+            .templates
+            .get_template("about.html")
+            .unwrap()
+            .render(context!())
+            .unwrap(),
     )
+    .into_response())
 }
 async fn get_homepage(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, GISSTError> {
-    Ok(
-        Html(
-            app_state.templates.get_template("index.html").unwrap().render(context!()).unwrap()
-        )
-            .into_response()
-        )
+    Ok(Html(
+        app_state
+            .templates
+            .get_template("index.html")
+            .unwrap()
+            .render(context!())
+            .unwrap(),
+    )
+    .into_response())
 }
 
 async fn get_data(
@@ -484,21 +490,22 @@ async fn get_player(
     Ok((
         [("Access-Control-Allow-Origin", "*")],
         Html(
-            app_state.templates.get_template("player.html").unwrap()
-                .render(
-                context!(
-                        player_params => PlayerTemplateInfo {
-                            environment,
-                            instance,
-                            work,
-                            save: None,
-                            user,
-                            start,
-                            manifest,
-                            boot_into_record: params.boot_into_record.unwrap_or_default(),
-                        }
-                    )
-                )?
+            app_state
+                .templates
+                .get_template("player.html")
+                .unwrap()
+                .render(context!(
+                    player_params => PlayerTemplateInfo {
+                        environment,
+                        instance,
+                        work,
+                        save: None,
+                        user,
+                        start,
+                        manifest,
+                        boot_into_record: params.boot_into_record.unwrap_or_default(),
+                    }
+                ))?,
         ),
     )
         .into_response())
