@@ -19,3 +19,4 @@ backend/rdb-sys/libretro-util
 backend/ingest/rdb
 backend/web-dist
 backend/embed-dist
+backend/examples/data/v86/win31.img

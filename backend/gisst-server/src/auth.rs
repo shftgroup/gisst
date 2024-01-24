@@ -11,7 +11,7 @@ use gisst::models::{Creator, DBModel};
 
 use uuid::Uuid;
 
-use axum_login::axum_sessions::extractors::{ReadableSession, WritableSession};
+use axum_login::axum_sessions::extractors::{ReadableSession};
 use axum_login::{secrecy::SecretVec, AuthUser, UserStore};
 use chrono::Utc;
 use sqlx::{PgConnection, PgPool};
@@ -20,8 +20,14 @@ use crate::error::{AuthError, GISSTError};
 use crate::server::ServerState;
 use oauth2::{
     basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
-    ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl,
+    ClientSecret, CsrfToken, RedirectUrl, TokenResponse, TokenUrl,
 };
+#[cfg(not(feature="dummy_auth"))]
+use oauth2::Scope;
+
+#[cfg(not(feature="dummy_auth"))]
+use axum_login::axum_sessions::extractors::WritableSession;
+
 use serde::Deserialize;
 
 // User attributes based on OpenID specification for "userinfo"
