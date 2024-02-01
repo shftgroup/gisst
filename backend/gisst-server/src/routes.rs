@@ -29,6 +29,11 @@ use uuid::Uuid;
 //             .delete(delete_creator))
 // }
 
+pub fn creator_router() -> Router {
+    Router::new()
+        .route("/:id", get(get_single_creator))
+}
+
 pub fn screenshot_router() -> Router {
     Router::new()
         .route("/create", post(create_screenshot))
@@ -124,22 +129,14 @@ pub fn work_router() -> Router {
 }
 
 // CREATOR method handlers
-// #[derive(Deserialize)]
-// struct CreatorsGetQueryParams {
-//     limit: Option<i64>,
-// }
 
-// async fn get_creators(
-//     app_state: Extension<Arc<ServerState>>,
-//     Query(params): Query<CreatorsGetQueryParams>,
-// ) -> Result<Json<Vec<Creator>>, GISSTError> {
-//     let mut conn = app_state.pool.acquire().await?;
-//     if let Ok(creators) = Creator::get_all(&mut conn, params.limit).await {
-//         Ok(creators.into())
-//     } else {
-//         Ok(Json(vec![]))
-//     }
-// }
+async fn get_single_creator(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+) -> Result<axum::response::Response, GISSTError> {
+    Ok(().into_response())
+}
+
 #[serde_as]
 #[derive(Debug, Deserialize)]
 struct ScreenshotCreateInfo {
