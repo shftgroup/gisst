@@ -259,6 +259,70 @@ pub struct Work {
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
+
+impl Creator {
+
+    pub async fn get_all_states(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<State>> {
+        sqlx::query_as!(
+            State,
+            r#"SELECT state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            FROM state WHERE creator_id = $1"#,
+            id
+        )
+            .fetch_all(conn)
+            .await
+    }
+
+    pub async fn get_all_replays(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<Replay>> {
+        sqlx::query_as!(
+            Replay,
+            r#"SELECT replay_id,
+            replay_name,
+            replay_description,
+            instance_id,
+            creator_id,
+            file_id,
+            replay_forked_from,
+            created_on
+            FROM replay WHERE creator_id = $1"#,
+            creator_id
+        )
+            .fetch_all(conn)
+            .await
+    }
+
+    pub async fn get_all_saves(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<Save>> {
+        sqlx::query_as!(
+            Save,
+            r#"SELECT
+            save_id,
+            instance_id,
+            save_short_desc,
+            save_description,
+            file_id,
+            creator_id,
+            created_on
+            FROM save WHERE creator_id = $1"#,
+            creator_id
+        )
+            .fetch_all(conn)
+            .await
+
+    }
+
+}
+
 #[async_trait]
 impl DBModel for Creator {
     fn id(&self) -> &Uuid {
@@ -353,6 +417,7 @@ impl DBModel for Creator {
             .execute(conn)
             .await
     }
+
 }
 
 #[async_trait]
