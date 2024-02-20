@@ -1,0 +1,7 @@
+{
+  "environment_id": "00000000000000000000000000000064",
+  "environment_name": "Nintendo 64",
+  "environment_framework": "retroarch",
+  "environment_core_name": "mupen64plus_next",
+  "environment_core_version": "1.62.3"
+}

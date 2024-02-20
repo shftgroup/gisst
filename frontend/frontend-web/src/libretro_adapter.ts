@@ -7,6 +7,7 @@ export interface LibretroModule extends EmscriptenModule, LibretroModuleDef {
 }
 interface LibretroModuleDef {
   startRetroArch(canvas:HTMLCanvasElement, args:string[], initialized_cb:() => void):void;
+  locateFile(path:string,prefix:string):string;
   retroArchSend(msg:string):void;
   retroArchRecv():string|undefined;
   message_queue:[Uint8Array,number][];
@@ -127,6 +128,9 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
                 module.FS.init(stdin,stdout,null);
             },
         ],
+        locateFile: function(path, _prefix) {
+            return gisst_root+'/cores/'+path;
+        },
         postRun: [],
         printErr: function(text:string) {
             console.log(text);
