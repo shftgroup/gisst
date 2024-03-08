@@ -1,0 +1,7 @@
+{
+  "environment_id": "00000000000000000000000000000004",
+  "environment_name": "Game Boy",
+  "environment_framework": "retroarch",
+  "environment_core_name": "gambatte",
+  "environment_core_version": "1.52.0"
+}

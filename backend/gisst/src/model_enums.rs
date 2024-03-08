@@ -36,6 +36,9 @@ impl fmt::Display for Framework {
 pub enum Platform {
     NES,
     SNES,
+    GB,
+    GBC,
+    GBA,
     N64,
     DOS,
 }
@@ -47,6 +50,9 @@ impl FromStr for Platform {
         match value {
             "Microsoft Disk Operating System" => Ok(Platform::DOS),
             "Nintendo Entertainment System" => Ok(Platform::NES),
+            "Nintendo Game Boy" => Ok(Platform::GB),
+            "Nintendo Game Boy (Color)" => Ok(Platform::GBC),
+            "Nintendo Game Boy Advance" => Ok(Platform::GBA),
             "Super Nintendo Entertainment System" => Ok(Platform::SNES),
             "Nintendo 64" => Ok(Platform::N64),
             _ => Err("Attempting to convert Platform that does not exist"),
