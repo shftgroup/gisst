@@ -244,28 +244,36 @@ export class Replay {
       x += 1;
       view.setBigUint64(x,BigInt(evt.when),true);
       x += 8;
+      let val;
       switch(evt.code) {
       case Evt.KeyCode:
         view.setUint8(x,evt.value as number);
         x += 1;
         break;
       case Evt.MouseClick:
-        view.setUint8(x,(evt.value as number[])[0]);
-        view.setUint8(x+1,(evt.value as number[])[1]);
-        view.setUint8(x+2,(evt.value as number[])[2]);
+        val = <number[]>evt.value;
+        view.setUint8(x,val[0]);
+        view.setUint8(x+1,val[1]);
+        view.setUint8(x+2,val[2]);
         x += 3;
         break;
       case Evt.MouseDelta:
       case Evt.MouseWheel:
-        view.setFloat64(x,evt.value as number[][0],true);
-        view.setFloat64(x+8,evt.value as number[][1],true);
+        val = <number[]>evt.value;
+        view.setFloat64(x,val[0],true);
+        if (Number.isNaN(view.getFloat64(x,true))) {
+          console.error("uh oh");
+          throw "no way";
+        }
+        view.setFloat64(x+8,val[1],true);
         x += 8*2;
         break;
       case Evt.MouseAbsolute:
-        view.setFloat64(x,evt.value as number[][0],true);
-        view.setFloat64(x+8,evt.value as number[][1],true);
-        view.setFloat64(x+16,evt.value as number[][2],true);
-        view.setFloat64(x+24,evt.value as number[][3],true);
+        val = <number[]>evt.value;
+        view.setFloat64(x,val[0],true);
+        view.setFloat64(x+8,val[1],true);
+        view.setFloat64(x+16,val[2],true);
+        view.setFloat64(x+24,val[3],true);
         x += 8*4;
         break;
       default:
