@@ -140,11 +140,10 @@ export async function init(local:FileSystemDirectoryHandle, database:GISSTDBConn
           const data = (start as StateStart).data;
           ui_state.newState(si.name, si.thumbnail, data);
         } else {
-          // TODO LOCAL try to load data from local storage if available?
           ui_state.newState(si.name,si. thumbnail);
         }
       }
-      // TODO LOCAL write added/delete removed to local storage
+      // TODO LOCAL write added/delete removed to local storage?
       // can use download_file
     },
     replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {

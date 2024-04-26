@@ -196,19 +196,34 @@ export async function init(storage:FileSystemDirectoryHandle, database:GISSTDBCo
           RA.FS.write(f, te.encode("\0"), 0, 1);
           RA.FS.close(f);
         }
+        let screenshot_folder = await local.getDirectoryHandle("screenshots");
         let state_idx = 2;
-        for await (const state of (await local.getDirectoryHandle("states")).values()) {
-          // TODO LOCAL load data, copy file, copy png
-          seen_states[`${content_base}.state${state_idx}`] = screenshot_data;
-          ui_state.newState(`${content_base}.state${state_idx}`, screenshot_data, data);
+        for await (const [name,state] of (await local.getDirectoryHandle("states")).entries()) {
+          const state_file_name = `${content_base}.state${state_idx}`;
+          let screenshot_data = (await screenshot_folder.getFileHandle(name).getFile()).arrayBuffer();
+          let state_data = (await state.getFile()).arrayBuffer();
+          // write state_data to state_file_name, write screenshot_data to state_file_name.png, in emscripten FS
+          module.FS.writeFile(state_dir+"/"+state_file_name, state_data);
+          module.FS.writeFile(state_dir+"/"+state_file_name+".png", screenshot_data);
+          // set up state in UI
+          const img_data_b64 = base64EncArr(screenshot_data);
+          seen_states[state_file_name] = img_data_b64;
+          // TODO LOCAL what to do for metadata?
+          let data = null;
+          ui_state.newState(`${content_base}.state${state_idx}`, img_data_b64, data);
           state_idx += 1;
         }
         let replay_idx = 2;
         for await (const replay of (await local.getDirectoryHandle("replays")).values()) {
-          // TODO LOCAL load data, copy file
-          const replayUUID = ra_util.replay_info(replay_bytes).id;
-          seen_replays[`${content_base}.replay${replay_idx}`] = replayUUID;
-          ui_state.newReplay(`${content_base}.replay${replay_idx}`, data);
+          const replay_file_name = `${content_base}.replay${replay_idx}`;
+          let replay_data = (await replay.getFile()).arrayBuffer();
+          module.FS.writeFile(state_dir+"/"+replay_file_name, replay_data);
+
+          const replayUUID = ra_util.replay_info((await replay.getFile()).arrayBuffer()).id;
+          seen_replays[replay_file_name] = replayUUID;
+          // TODO LOCAL what to do for metadata?
+          let data = null;
+          ui_state.newReplay(replay_file_name, data);
           replay_idx += 1;
         }
         retroReady();
@@ -415,10 +430,10 @@ function checkChangedStatesAndSaves() {
       } else if(!replay || !known_replay) {
         seen_states[state_file] = img_data_b64;
         ui_state.newState(state_file, img_data_b64);
-        // TODO LOCAL copy state and screenshot and maybe metadata to local storage
+        // TODO LOCAL copy state and screenshot and maybe metadata to local storage with checksum name
       }
     } else if(state.includes(".replay")) {
-      // TODO LOCAL copy replay file and data to local storage if not present/different size
+      // TODO LOCAL copy replay file and data to local storage if not present/different size with checksum name
       if(!(state in seen_replays)) {
         const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(state_dir+"/"+state)));
         seen_replays[state] = replay.id;
