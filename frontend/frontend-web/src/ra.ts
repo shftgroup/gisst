@@ -17,7 +17,7 @@ let ui_state:UI;
 let db:GISSTDBConnector;
 let local:FileSystemDirectoryHandle;
 
-export function init(storage:FileSystemDirectoryHandle, database:GISSTDBConnector, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
+export async function init(storage:FileSystemDirectoryHandle, database:GISSTDBConnector, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
   local = storage;
   db = database;
   const content = manifest.find((o) => o.object_role=="content")!;
@@ -164,7 +164,7 @@ export function init(storage:FileSystemDirectoryHandle, database:GISSTDBConnecto
         proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1"));
       }
       proms.push(fetchfs.fetchFile(RA, "/assets/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg"));
-      Promise.all(proms).then(function () {
+      Promise.all(proms).then(async function () {
         // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
         if (entryState) {
           copyFile(RA, "/home/web_user/content/entry_state",
@@ -197,15 +197,15 @@ export function init(storage:FileSystemDirectoryHandle, database:GISSTDBConnecto
           RA.FS.close(f);
         }
         let state_idx = 2;
-        for await (const state of local.getDirectoryHandle("states")) {
-          // TODO load data, copy file, copy png
+        for await (const state of (await local.getDirectoryHandle("states")).values()) {
+          // TODO LOCAL load data, copy file, copy png
           seen_states[`${content_base}.state${state_idx}`] = screenshot_data;
           ui_state.newState(`${content_base}.state${state_idx}`, screenshot_data, data);
           state_idx += 1;
         }
         let replay_idx = 2;
-        for await (const replay of local.getDirectoryHandle("replays")) {
-          // TODO load data, copy file
+        for await (const replay of (await local.getDirectoryHandle("replays")).values()) {
+          // TODO LOCAL load data, copy file
           const replayUUID = ra_util.replay_info(replay_bytes).id;
           seen_replays[`${content_base}.replay${replay_idx}`] = replayUUID;
           ui_state.newReplay(`${content_base}.replay${replay_idx}`, data);
@@ -269,7 +269,7 @@ async function play_replay_slot(n:number) {
     return;
   }
   current_replay = {mode:ReplayMode.Playback,id:num_str,finished:false};
-  ui_state.setReplayMode(ReplayMode.Playback);
+  ui_state.setReplayMode(UIReplayMode.Playback);
   find_checkpoints_inner();
 }
 enum BSVFlags {
@@ -415,10 +415,10 @@ function checkChangedStatesAndSaves() {
       } else if(!replay || !known_replay) {
         seen_states[state_file] = img_data_b64;
         ui_state.newState(state_file, img_data_b64);
-        // TODO copy state and screenshot and maybe metadata to local storage
+        // TODO LOCAL copy state and screenshot and maybe metadata to local storage
       }
     } else if(state.includes(".replay")) {
-      // TODO copy replay file and data to local storage if not present/different size
+      // TODO LOCAL copy replay file and data to local storage if not present/different size
       if(!(state in seen_replays)) {
         const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(state_dir+"/"+state)));
         seen_replays[state] = replay.id;

@@ -7,7 +7,8 @@ let ui_state:UI;
 let db:GISSTDBConnector;
 let storage:FileSystemDirectoryHandle;
 
-export async function init(storage:FileSystemDirectoryHandle, database:GISSTDBConnector, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
+export async function init(local:FileSystemDirectoryHandle, database:GISSTDBConnector, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
+  storage = local;
   db = database;
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
@@ -126,7 +127,7 @@ export async function init(storage:FileSystemDirectoryHandle, database:GISSTDBCo
     },
     stop_replay:()=>{
       ui_state.clearCheckpoints();
-      // TODO write replay to local storage if it was playing before?
+      // TODO LOCAL  write replay to local storage if it was playing before?
       // can use download_file
     },
     states_changed:(added:StateInfo[], removed:StateInfo[]) => {
@@ -139,11 +140,11 @@ export async function init(storage:FileSystemDirectoryHandle, database:GISSTDBCo
           const data = (start as StateStart).data;
           ui_state.newState(si.name, si.thumbnail, data);
         } else {
-          // TODO: try to load data from local storage if available?
+          // TODO LOCAL try to load data from local storage if available?
           ui_state.newState(si.name,si. thumbnail);
         }
       }
-      // TODO write added/delete removed to local storage
+      // TODO LOCAL write added/delete removed to local storage
       // can use download_file
     },
     replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
@@ -165,16 +166,15 @@ export async function init(storage:FileSystemDirectoryHandle, database:GISSTDBCo
       const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
       prev.classList.add("hidden");
       document.getElementById("webplayer-textmode")!.classList.remove("hidden");
-      v86.run(environment.environment_config, entry_state, movie).then((_) => {
-        for await (const state of local.getDirectoryHandle("states")) {
-          // TODO load metadata, load state file, load png
-          v86.add_state(state_data, screenshot);
-        }
-        for await (const replay of local.getDirectoryHandle("replays")) {
-          // TODO load metadata, load replay data
-          v86.add_replay(replay_data);
-        }
-      });
+      await v86.run(environment.environment_config, entry_state, movie);
+      for await (const state of await storage.getDirectoryHandle("states")) {
+        // TODO LOCAL load metadata, load state file, load png
+        v86.add_state(state_data, screenshot);
+      }
+      for await (const replay of await storage.getDirectoryHandle("replays")) {
+        // TODO LOCAL load metadata, load replay data
+        v86.add_replay(replay_data);
+      }
       canv.classList.remove("hidden");
       return false;
     });

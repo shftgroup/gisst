@@ -38,6 +38,8 @@ export declare class EmbedV86 {
     active_replay: number | null;
     constructor(config: EmbedV86Config);
     clear(): void;
+    add_state(state_data: ArrayBuffer, screenshot_data: string): void;
+    add_replay(replay_data: ArrayBuffer): Promise<void>;
     get_active_replay(): Replay;
     save_state(): Promise<void>;
     record_replay(): Promise<void>;

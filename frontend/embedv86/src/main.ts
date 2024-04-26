@@ -39,7 +39,6 @@ export class State {
 export class EmbedV86 {
   emulator:V86Starter | null;
   config:EmbedV86Config;
-  // TODO wrap in a State class that includes the current replay ID if any
   states:State[];
   replays:Replay[];
   active_replay:number|null;
@@ -63,7 +62,7 @@ export class EmbedV86 {
     this.states.push(new State("state"+this.states.length.toString(), state_data, screenshot_data));
     this.config.states_changed([this.states[this.states.length-1]], []);
   }
-  add_replay(replay_data:ArrayBuffer) {
+  async add_replay(replay_data:ArrayBuffer) {
     const replay = await Replay.deserialize(replay_data);
     console.log(replay.id,replay.events.length,replay.checkpoints.length);
     this.config.register_replay("replay"+this.replays.length.toString());
@@ -194,7 +193,7 @@ export class EmbedV86 {
       const replay_resp = await fetch(content_folder+"/"+movie);
       if(!replay_resp.ok) { alert("Failed to load replay movie"); return; }
       const replay_data = await replay_resp.arrayBuffer();
-      this.add_replay(replay_data);
+      await this.add_replay(replay_data);
     }
     let content_json;
     if (typeof content == "string") {

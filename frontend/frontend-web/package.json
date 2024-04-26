@@ -15,10 +15,10 @@
     "@typescript-eslint/parser": "^6.2.1",
     "coffeescript": "^2.7.0",
     "eslint": "^8.46.0",
-    "typescript": "^4.9.5",
+    "rollup-plugin-sourcemaps": "0.6.3",
+    "typescript": "^5.4.5",
     "vite": "^4.1.0",
-    "vite-plugin-checker": "^0.5.5",
-    "rollup-plugin-sourcemaps":"0.6.3"
+    "vite-plugin-checker": "^0.5.5"
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.7.24",
