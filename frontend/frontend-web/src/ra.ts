@@ -15,10 +15,11 @@ const retro_args = ["-v"];
 let RA:LibretroModule;
 let ui_state:UI;
 let db:GISSTDBConnector;
+let local:FileSystemDirectoryHandle;
 
-export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
-  db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
-
+export function init(storage:FileSystemDirectoryHandle, database:GISSTDBConnector, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
+  local = storage;
+  db = database;
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_file = content.file_filename!;
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
@@ -194,6 +195,21 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           const te = new TextEncoder();
           RA.FS.write(f, te.encode("\0"), 0, 1);
           RA.FS.close(f);
+        }
+        let state_idx = 2;
+        for await (const state of local.getDirectoryHandle("states")) {
+          // TODO load data, copy file, copy png
+          seen_states[`${content_base}.state${state_idx}`] = screenshot_data;
+          ui_state.newState(`${content_base}.state${state_idx}`, screenshot_data, data);
+          state_idx += 1;
+        }
+        let replay_idx = 2;
+        for await (const replay of local.getDirectoryHandle("replays")) {
+          // TODO load data, copy file
+          const replayUUID = ra_util.replay_info(replay_bytes).id;
+          seen_replays[`${content_base}.replay${replay_idx}`] = replayUUID;
+          ui_state.newReplay(`${content_base}.replay${replay_idx}`, data);
+          replay_idx += 1;
         }
         retroReady();
       });
@@ -399,8 +415,10 @@ function checkChangedStatesAndSaves() {
       } else if(!replay || !known_replay) {
         seen_states[state_file] = img_data_b64;
         ui_state.newState(state_file, img_data_b64);
+        // TODO copy state and screenshot and maybe metadata to local storage
       }
     } else if(state.includes(".replay")) {
+      // TODO copy replay file and data to local storage if not present/different size
       if(!(state in seen_replays)) {
         const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(state_dir+"/"+state)));
         seen_replays[state] = replay.id;

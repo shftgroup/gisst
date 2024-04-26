@@ -59,6 +59,16 @@ export class EmbedV86 {
       this.emulator = null;
     }
   }
+  add_state(state_data:ArrayBuffer, screenshot_data:string) {
+    this.states.push(new State("state"+this.states.length.toString(), state_data, screenshot_data));
+    this.config.states_changed([this.states[this.states.length-1]], []);
+  }
+  add_replay(replay_data:ArrayBuffer) {
+    const replay = await Replay.deserialize(replay_data);
+    console.log(replay.id,replay.events.length,replay.checkpoints.length);
+    this.config.register_replay("replay"+this.replays.length.toString());
+    this.replays.push(replay);
+  }
   get_active_replay():Replay {
     nonnull(this.active_replay);
     return this.replays[this.active_replay];
@@ -177,18 +187,14 @@ export class EmbedV86 {
       const state_data = await state_resp.arrayBuffer();
       config["initial_state"] = {buffer:state_data};
       const screenshot = "";
-      this.states.push(new State("state"+this.states.length.toString(), state_data, screenshot));
-      this.config.states_changed([this.states[this.states.length-1]], []);
+      this.add_state(state_data, screenshot);
     }
     if(movie) {
       // do nothing for now
       const replay_resp = await fetch(content_folder+"/"+movie);
       if(!replay_resp.ok) { alert("Failed to load replay movie"); return; }
       const replay_data = await replay_resp.arrayBuffer();
-      const replay = await Replay.deserialize(replay_data);
-      console.log(replay.id,replay.events.length,replay.checkpoints.length);
-      this.config.register_replay("replay"+this.replays.length.toString());
-      this.replays.push(replay);
+      this.add_replay(replay_data);
     }
     let content_json;
     if (typeof content == "string") {

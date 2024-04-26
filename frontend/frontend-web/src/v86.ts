@@ -5,10 +5,10 @@ import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './typ
 import * as tus from 'tus-js-client';
 let ui_state:UI;
 let db:GISSTDBConnector;
+let storage:FileSystemDirectoryHandle;
 
-
-export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
-  db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
+export async function init(storage:FileSystemDirectoryHandle, database:GISSTDBConnector, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
+  db = database;
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
   nested_replace(environment.environment_config, "$CONTENT", content_path);
@@ -126,6 +126,8 @@ export async function init(environment:Environment, start:ColdStart | StateStart
     },
     stop_replay:()=>{
       ui_state.clearCheckpoints();
+      // TODO write replay to local storage if it was playing before?
+      // can use download_file
     },
     states_changed:(added:StateInfo[], removed:StateInfo[]) => {
       for(const si of removed) {
@@ -137,9 +139,12 @@ export async function init(environment:Environment, start:ColdStart | StateStart
           const data = (start as StateStart).data;
           ui_state.newState(si.name, si.thumbnail, data);
         } else {
+          // TODO: try to load data from local storage if available?
           ui_state.newState(si.name,si. thumbnail);
         }
       }
+      // TODO write added/delete removed to local storage
+      // can use download_file
     },
     replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
       for(const si of removed) {
@@ -160,7 +165,16 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
       prev.classList.add("hidden");
       document.getElementById("webplayer-textmode")!.classList.remove("hidden");
-      v86.run(environment.environment_config, entry_state, movie);
+      v86.run(environment.environment_config, entry_state, movie).then((_) => {
+        for await (const state of local.getDirectoryHandle("states")) {
+          // TODO load metadata, load state file, load png
+          v86.add_state(state_data, screenshot);
+        }
+        for await (const replay of local.getDirectoryHandle("replays")) {
+          // TODO load metadata, load replay data
+          v86.add_replay(replay_data);
+        }
+      });
       canv.classList.remove("hidden");
       return false;
     });
