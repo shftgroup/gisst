@@ -13,54 +13,54 @@ use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum NewRecordError {
-    #[error("could not insert creator record into database")]
-    Creator,
-    #[error("could not insert environment record into database")]
-    Environment,
-    #[error("could not insert file record into database")]
-    File,
-    #[error("could not insert instance record into database")]
-    Instance,
-    #[error("could not insert image record into database")]
-    Image,
-    #[error("could not insert object record into database")]
-    Object,
-    #[error("could not insert replay record into database")]
-    Replay,
-    #[error("could not insert save record into database")]
-    Save,
-    #[error("could not insert screenshot record into database")]
-    Screenshot,
-    #[error("could not insert state record into database")]
-    State,
-    #[error("could not insert work record into database")]
-    Work,
+    #[error("could not insert creator record into database due to `{0}`")]
+    Creator(String),
+    #[error("could not insert environment record into database due to `{0}`")]
+    Environment(String),
+    #[error("could not insert file record into database due to `{0}`")]
+    File(String),
+    #[error("could not insert instance record into database due to `{0}`")]
+    Instance(String),
+    #[error("could not insert image record into database due to `{0}`")]
+    Image(String),
+    #[error("could not insert object record into database due to `{0}`")]
+    Object(String),
+    #[error("could not insert replay record into database due to `{0}`")]
+    Replay(String),
+    #[error("could not insert save record into database due to `{0}`")]
+    Save(String),
+    #[error("could not insert screenshot record into database due to `{0}`")]
+    Screenshot(String),
+    #[error("could not insert state record into database due to `{0}`")]
+    State(String),
+    #[error("could not insert work record into database due to `{0}`")]
+    Work(String),
 }
 
 #[derive(Debug, thiserror::Error, Serialize)]
 pub enum UpdateRecordError {
-    #[error("could not update creator record in database")]
-    Creator,
-    #[error("could not update environment record in database")]
-    Environment,
-    #[error("could not update file record in database")]
-    File,
-    #[error("could not update instance record into database")]
-    Instance,
-    #[error("could not update image record in database")]
-    Image,
-    #[error("could not update object record in database")]
-    Object,
-    #[error("could not update replay record in database")]
-    Replay,
-    #[error("could not update save record in database")]
-    Save,
-    #[error("could not update screenshot record in database")]
-    Screenshot,
-    #[error("could not update state record in database")]
-    State,
-    #[error("could not update work record in database")]
-    Work,
+    #[error("could not update creator record in database due to `{0}`")]
+Creator(String),
+    #[error("could not update environment record in database due to `{0}`")]
+    Environment(String),
+    #[error("could not update file record in database due to `{0}`")]
+    File(String),
+    #[error("could not update instance record into database due to `{0}`")]
+    Instance(String),
+    #[error("could not update image record in database due to `{0}`")]
+    Image(String),
+    #[error("could not update object record in database due to `{0}`")]
+    Object(String),
+    #[error("could not update replay record in database due to `{0}`")]
+    Replay(String),
+    #[error("could not update save record in database due to `{0}`")]
+    Save(String),
+    #[error("could not update screenshot record in database due to `{0}`")]
+    Screenshot(String),
+    #[error("could not update state record in database due to `{0}`")]
+    State(String),
+    #[error("could not update work record in database due to `{0}`")]
+    Work(String),
 }
 
 // empty_string_as_none taken from axum docs here: https://github.com/tokio-rs/axum/blob/main/examples/query-params-with-empty-strings/src/main.rs
@@ -327,7 +327,7 @@ impl DBModel for Creator {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::Creator)
+        .map_err(|e| NewRecordError::Creator(e.to_string()))
     }
 
     async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, UpdateRecordError> {
@@ -345,7 +345,7 @@ impl DBModel for Creator {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| UpdateRecordError::Creator)
+        .map_err(|e| UpdateRecordError::Creator(e.to_string()))
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -472,7 +472,7 @@ impl DBModel for File {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| NewRecordError::File)
+            .map_err(|e| NewRecordError::File(e.to_string()))
     }
 
     async fn update(conn: &mut PgConnection, file: File) -> Result<Self, UpdateRecordError> {
@@ -493,7 +493,7 @@ impl DBModel for File {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| UpdateRecordError::File)
+            .map_err(|e| UpdateRecordError::File(e.to_string()))
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -574,7 +574,7 @@ impl DBModel for Instance {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::Instance)
+        .map_err(|e| NewRecordError::Instance(e.to_string()))
     }
 
     async fn update(
@@ -596,7 +596,7 @@ impl DBModel for Instance {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| UpdateRecordError::Instance)
+        .map_err(|e| UpdateRecordError::Instance(e.to_string()))
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -771,7 +771,7 @@ impl DBModel for Image {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::Image)
+        .map_err(|e| NewRecordError::Image(e.to_string()))
     }
 
     async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, UpdateRecordError> {
@@ -790,7 +790,7 @@ impl DBModel for Image {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| UpdateRecordError::Image)
+        .map_err(|e| UpdateRecordError::Image(e.to_string()))
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -945,7 +945,7 @@ impl DBModel for Environment {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| NewRecordError::Environment)
+            .map_err(|e| NewRecordError::Environment(e.to_string()))
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -973,7 +973,7 @@ impl DBModel for Environment {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| UpdateRecordError::Environment)
+            .map_err(|e| UpdateRecordError::Environment(e.to_string()))
     }
 }
 
@@ -1082,7 +1082,7 @@ impl DBModel for Object {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::Object)
+        .map_err(|e| NewRecordError::Object(e.to_string()))
     }
 
     async fn update(conn: &mut PgConnection, object: Object) -> Result<Self, UpdateRecordError> {
@@ -1100,7 +1100,7 @@ impl DBModel for Object {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| UpdateRecordError::Object)
+        .map_err(|e| UpdateRecordError::Object(e.to_string()))
     }
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM object WHERE object_id = $1", id)
@@ -1245,7 +1245,7 @@ impl DBModel for Replay {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::Replay)
+        .map_err(|e| NewRecordError::Replay(e.to_string()))
     }
 
     async fn update(conn: &mut PgConnection, replay: Replay) -> Result<Self, UpdateRecordError> {
@@ -1267,7 +1267,7 @@ impl DBModel for Replay {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| UpdateRecordError::Replay)
+        .map_err(|e| UpdateRecordError::Replay(e.to_string()))
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1413,7 +1413,7 @@ impl DBModel for Save {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::Save)
+        .map_err(|e| NewRecordError::Save(e.to_string()))
     }
 
     async fn update(conn: &mut PgConnection, save: Save) -> Result<Self, UpdateRecordError> {
@@ -1434,7 +1434,7 @@ impl DBModel for Save {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| UpdateRecordError::Save)
+            .map_err(|e| UpdateRecordError::Save(e.to_string()))
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1617,8 +1617,9 @@ impl DBModel for State {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::State)
+        .map_err(|e| NewRecordError::State(e.to_string()))
     }
+
 
     async fn update(conn: &mut PgConnection, state: State) -> Result<Self, UpdateRecordError> {
         sqlx::query_as!(
@@ -1664,7 +1665,7 @@ impl DBModel for State {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| UpdateRecordError::State)
+        .map_err(|e| UpdateRecordError::State(e.to_string()))
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1781,7 +1782,7 @@ impl DBModel for Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| NewRecordError::Work)
+        .map_err(|e| NewRecordError::Work(e.to_string()))
     }
 
     async fn update(conn: &mut PgConnection, work: Work) -> Result<Self, UpdateRecordError> {
@@ -1800,7 +1801,7 @@ impl DBModel for Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| UpdateRecordError::Work)
+        .map_err(|e| UpdateRecordError::Work(e.to_string()))
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1889,7 +1890,7 @@ impl DBModel for Screenshot {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| NewRecordError::Screenshot)
+            .map_err(|e| NewRecordError::Screenshot(e.to_string()))
     }
 
     async fn update(conn: &mut PgConnection, model: Self) -> Result<Self, UpdateRecordError> {
@@ -1904,7 +1905,7 @@ impl DBModel for Screenshot {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| UpdateRecordError::Screenshot)
+            .map_err(|e| UpdateRecordError::Screenshot(e.to_string()))
 
     }
 

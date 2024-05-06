@@ -256,7 +256,7 @@ async fn create_image(
         Ok(Json(Image::insert(&mut conn, image).await?))
     } else {
         Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::Image,
+            gisst::models::NewRecordError::Image(format!("File with id {} not found in database", image.file_id).to_string()),
         ))
     }
 }
@@ -493,7 +493,7 @@ async fn create_object(
         Ok(Json(Object::insert(&mut conn, object).await?))
     } else {
         Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::Object,
+            gisst::models::NewRecordError::Object(format!("File with id {} not found in database", object.file_id).to_string()),
         ))
     }
 }
@@ -587,7 +587,7 @@ async fn create_replay(
         ))
     } else {
         Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::Replay,
+            gisst::models::NewRecordError::Replay(format!("File with id {} not found in database", replay.file_id).to_string()),
         ))
     }
 }
@@ -640,7 +640,7 @@ async fn create_save(
         Ok(Json(Save::insert(&mut conn, save).await?))
     } else {
         Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::Save,
+            gisst::models::NewRecordError::Save(format!("File with id {} not found in database", save.file_id).to_string()),
         ))
     }
 }
@@ -727,7 +727,7 @@ async fn create_state(
         ))
     } else {
         Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::State,
+            gisst::models::NewRecordError::State(format!("File with id {} not found in database", state.file_id).to_string()),
         ))
     }
 }
