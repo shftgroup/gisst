@@ -17,3 +17,4 @@ folder_depth = 4
 
 [env]
 default_directive = "gisst_server=debug"
+rust_log = "gisst_server=debug"
