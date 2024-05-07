@@ -29,6 +29,7 @@ use oauth2::Scope;
 use axum_login::axum_sessions::extractors::WritableSession;
 
 use serde::Deserialize;
+use tracing::{debug,info,warn};
 
 // User attributes based on OpenID specification for "userinfo"
 #[derive(Debug, Default, Clone, sqlx::FromRow)]
@@ -196,7 +197,7 @@ pub async fn oauth_callback_handler(
     Extension(state): Extension<ServerState>,
     session: ReadableSession,
 ) -> impl IntoResponse {
-    println!("Running oauth callback {query:?}");
+    debug!("Running oauth callback {query:?}");
     // Compare the csrf state in the callback with the state generated before the
     // request
     let original_csrf_state: CsrfToken = session.get("csrf_state").unwrap();
@@ -206,13 +207,13 @@ pub async fn oauth_callback_handler(
     drop(session);
 
     if !csrf_state_equal {
-        println!("csrf state is invalid, cannot login",);
+        warn!("csrf state is invalid, cannot login",);
 
         // Return to some error
         return Ok(Redirect::to("/instances"));
     }
 
-    println!("Getting oauth token");
+    debug!("Getting oauth token");
     // Get an auth token
     let token = state
         .oauth_client
@@ -233,11 +234,11 @@ pub async fn oauth_callback_handler(
     };
 
     let profile: OpenIDUserInfo = profile.json::<OpenIDUserInfo>().await.unwrap();
-    println!("Getting db connection");
+    debug!("Getting db connection");
 
     let user = auth_get_user(state.pool, &profile, token.access_token().secret()).await?;
     auth.login(&user).await.map_err(|_e| GISSTError::Generic)?;
-    println!("Logged in the user: {user:?}");
+    info!("Logged in the user: {user:?}");
     Ok(Redirect::to("/instances"))
 }
 
@@ -251,7 +252,7 @@ async fn auth_get_user(
         .fetch_optional(&mut *conn)
         .await?
     {
-        println!("Found user: {user:?} updating.");
+        debug!("Found user: {user:?} updating.");
         let user = User::update(
             &mut conn,
             &User {
@@ -260,10 +261,10 @@ async fn auth_get_user(
             },
         )
         .await?;
-        println!("Got user {user:?}. Logging in.");
+        debug!("Got user {user:?}. Logging in.");
         Ok(user)
     } else {
-        println!("New user login, creating creator and user records.");
+        info!("New user login, creating creator and user records.");
         let creator = Creator::insert(
             &mut conn,
             Creator {
@@ -282,7 +283,7 @@ async fn auth_get_user(
             },
         )
         .await?;
-        println!("Creator record created: {creator:?}.");
+        debug!("Creator record created: {creator:?}.");
         let user = User::insert(
             &mut conn,
             &User {
@@ -300,8 +301,8 @@ async fn auth_get_user(
         )
         .await?;
 
-        println!("User record created: {user:?}.");
-        println!("Logging in.;");
+        debug!("User record created: {user:?}.");
+        info!("Logging in.;");
         Ok(user)
     }
 }
@@ -330,12 +331,13 @@ pub async fn login_handler(
     let dummy = OpenIDUserInfo::test_user();
     let user = auth_get_user(state.pool, &dummy, "verysecret").await?;
     auth.login(&user).await.map_err(|_e| GISSTError::Generic)?;
-    println!("Logged in the user: {user:?}");
+    debug!("Logged in the user: {user:?}");
     Ok(Redirect::to("/instances"))
 }
 
 pub async fn logout_handler(mut auth: AuthContext) -> impl IntoResponse {
-    dbg!("Logging out user: {}", &auth.current_user);
+    let c_user = &auth.current_user.clone().unwrap();
+    debug!("Logging out user: {c_user:?}");
     auth.logout().await;
     Redirect::to("/instances")
 }
