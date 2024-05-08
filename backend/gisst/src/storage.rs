@@ -152,7 +152,6 @@ impl StorageHandler {
 
         tokio::task::spawn_blocking(move || {
             let file = OpenOptions::new()
-                .write(true)
                 .append(true)
                 .create(false)
                 .read(false)
