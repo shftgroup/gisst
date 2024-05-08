@@ -9,15 +9,28 @@ mod utils;
 mod auth;
 
 use anyhow::Result;
-use tracing::debug;
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let path = std::env::current_dir()?;
-    println!("The current directory is {}", path.display());
     let config = serverconfig::ServerConfig::new()?;
-    println!("{:?}", &config);
-    debug!(?config);
+
+    let default_tracing_directive = config.env.default_directive.clone()
+        .parse()
+        .expect("default tracing directive has to be valid");
+    let filter = EnvFilter::builder()
+        .with_default_directive(default_tracing_directive)
+        .parse(config.env.rust_log.clone())?;
+    tracing_subscriber::fmt()
+        .with_target(false)
+        .with_env_filter(filter)
+        .pretty()
+        .init();
+
+    tracing::info!("The current directory is {}", path.display());
+    tracing::debug!("{:?}", &config);
+
     server::launch(&config).await?;
     Ok(())
 }

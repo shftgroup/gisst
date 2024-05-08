@@ -18,6 +18,9 @@ pub struct ServerConfig {
 
     #[serde(default)]
     pub auth: AuthConfig,
+
+    #[serde(default)]
+    pub env: EnvConfig,
 }
 
 impl ServerConfig {
@@ -29,6 +32,26 @@ impl ServerConfig {
             .add_source(File::with_name("config/local.toml").required(false))
             .add_source(Environment::with_prefix("GISST").separator("__"));
         builder.build()?.try_deserialize()
+    }
+}
+
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EnvConfig {
+    // Default directive is the fallback default for tracing if `rust_log` does not parse
+    // Default directive MUST parse for application to start
+    pub default_directive: String,
+    // RUST_LOG env variable as parsed by EnvFilter in tracing_subscriber
+    // May change this to an environment (dev / test / prod) variable with internal
+    pub rust_log: String,
+}
+
+impl Default for EnvConfig {
+    fn default() -> Self {
+       Self {
+           default_directive: "gisst_server=debug".to_string(),
+           rust_log: "warn,gisst_server=debug,gisst=debug".to_string(),
+       }
     }
 }
 

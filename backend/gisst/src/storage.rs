@@ -6,7 +6,7 @@ use tokio::{
 use std::fs::OpenOptions;
 use std::io::{BufWriter, Write};
 
-use log::info;
+use tracing::debug;
 use std::path::{Component, Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 
@@ -106,11 +106,11 @@ impl StorageHandler {
         uuid: Uuid,
         dest_filename: &str,
     ) -> tokio::io::Result<()> {
-        info!("Deleting file with filename: {}", dest_filename);
+        debug!("Deleting file with filename: {}", dest_filename);
         let mut path =
             Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
         path.push(dest_filename);
-        info!("Deleting file at path: {}", path.to_string_lossy());
+        debug!("Deleting file at path: {}", path.to_string_lossy());
         remove_file(path).await
     }
 
@@ -120,10 +120,10 @@ impl StorageHandler {
         file_info: &FileInformation,
     ) -> Result<(), StorageError> {
         let mut path = Self::get_dest_file_path(root_path, file_info);
-        println!("In rename_file, dest_path is {}", path.to_string_lossy());
+        debug!("In rename_file, dest_path is {}", path.to_string_lossy());
 
         path.pop();
-        println!("In rename_file, dest_path is {}", path.to_string_lossy());
+        debug!("In rename_file, dest_path is {}", path.to_string_lossy());
 
         if !path.is_dir() {
             create_dir_all(path.as_path()).await?
@@ -152,7 +152,6 @@ impl StorageHandler {
 
         tokio::task::spawn_blocking(move || {
             let file = OpenOptions::new()
-                .write(true)
                 .append(true)
                 .create(false)
                 .read(false)
@@ -206,7 +205,7 @@ impl StorageHandler {
         let save_filename = Self::get_dest_filename(&hash_string, dest_filename);
 
         path.push(&save_filename);
-        info!("writing path {:?}", path);
+        debug!("writing path {:?}", path);
         let mut file = File::create(&path).await?;
         file.write_all(file_data).await?;
 

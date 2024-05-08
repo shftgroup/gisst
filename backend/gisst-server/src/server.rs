@@ -45,8 +45,9 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use uuid::Uuid;
+use tracing::debug;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -98,6 +99,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     let session_layer = SessionLayer::new(session_store, &secret)
         .with_secure(false)
         .with_same_site_policy(SameSite::Lax);
+
     let builder = ServiceBuilder::new()
         .layer(
             CorsLayer::new()
@@ -114,6 +116,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(HandleErrorLayer::new(handle_error))
         // This map_err is needed to get the types to work out after handleerror and before servedir.
         .map_err(|e| panic!("{:?}", e));
+
+
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
         .route("/resources/:id", patch(tus_patch).head(tus_head))
@@ -174,6 +178,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432))
         .layer(auth_layer)
+        .layer(TraceLayer::new_for_http())
         .layer(session_layer);
 
     let addr = SocketAddr::new(
@@ -437,8 +442,8 @@ async fn get_data(
         (_, _) => return Err(GISSTError::Generic),
     };
     let manifest =
-        dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
-    println!("send json response");
+        ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
+    debug!("{manifest:?}");
     Ok((
         [("Access-Control-Allow-Origin", "*")],
         axum::Json(EmbedDataInfo {
