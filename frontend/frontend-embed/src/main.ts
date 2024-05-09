@@ -71,4 +71,18 @@ export async function embed(gisst:string, container:HTMLDivElement) {
     }
   );
 
+  const ro = new ResizeObserver((_entries, _observer) => {
+    const w = canvas.width;
+    const h = canvas.height;
+    if (w == 0 || h == 0) { return; }
+    const aspect = w/h;
+    const target_w = container.offsetWidth;
+    const target_h = target_w / aspect;
+    if (w > target_w) {
+      canvas.style.width = `${target_w}px`;
+      canvas.style.height = `${target_h}px`; // h/w * w = h
+    }
+  })
+  ro.observe(canvas);
+  ro.observe(container);
 }
