@@ -150,7 +150,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       }
     },
   });
-  (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-v86.png";
+  (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-v86.svg";
   // document.getElementById("v86_controls")!.classList.remove("hidden");
   const prev = document.getElementById("webplayer-preview")!;
   prev.classList.add("loaded");

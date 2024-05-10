@@ -2,7 +2,7 @@ import './style.css';
 import * as ra from './ra';
 import * as v86 from './v86';
 import {EmuControls} from './types';
-import imgUrl from './canvas.png';
+import imgUrl from './canvas.svg';
 export async function embed(gisst:string, container:HTMLDivElement) {
   container.classList.add("gisst-embed-webplayer-container");
   const canvas = document.createElement("canvas");
@@ -16,8 +16,8 @@ export async function embed(gisst:string, container:HTMLDivElement) {
   const preview_img = document.createElement("img");
   preview_img.classList.add("gisst-embed-webplayer-preview");
   preview_img.src = imgUrl;
-  // preview_img.width = 960;
-  // preview_img.height = 720;
+  preview_img.width = container.getBoundingClientRect().width;
+  preview_img.height = container.getBoundingClientRect().height;
   preview_img.alt = "Loading Icon";
   const mute_a = document.createElement("a");
   mute_a.classList.add("gisst-embed-webplayer-mute");
@@ -71,4 +71,18 @@ export async function embed(gisst:string, container:HTMLDivElement) {
     }
   );
 
+  const ro = new ResizeObserver((_entries, _observer) => {
+    const w = canvas.width;
+    const h = canvas.height;
+    if (w == 0 || h == 0) { return; }
+    const aspect = w/h;
+    const target_w = container.offsetWidth;
+    const target_h = target_w / aspect;
+    if (w > target_w) {
+      canvas.style.width = `${target_w}px`;
+      canvas.style.height = `${target_h}px`; // h/w * w = h
+    }
+  })
+  ro.observe(canvas);
+  ro.observe(container);
 }
