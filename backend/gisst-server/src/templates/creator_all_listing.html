@@ -1,20 +1,38 @@
-{% extends "layout_internal.html %}
+{% extends "layout_internal.html" %}
 
-{% block content%}
+{% block style_imports %}
+{% endblock style_imports %}
+
+{% block js_preload %}
+{% endblock js_preload %}
+
+{% block content %}
 <div class="container">
     <div class="row">
-        <h1>States</h1>
+        <h1>{{user.name}}'s Citations</h1>
+    </div>
+    <div class="row">
+        <h2>States</h2>
         <table class="table">
-            <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Description</th>
-            </tr>
+            <thead>
+                <tr>
+                    <th scope="col">Work</th>
+                    <th scope="col">Version</th>
+                    <th scope="col">Platform</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Description</th>
+                </tr>
+            </thead>
+            <tbody>
             {% for state in creator.states %}
             <tr>
-                <td>{{ state.record.state_name}}</td>
-                <td>{{ state.record.state_description}}</td>
+                <td>{{ state.work_name }}</td>
+                <td>{{ state.work_version }}</td>
+                <td>{{ state.work_platform }}</td>
+                <td>{{ state.state_name}}</td>
+                <td>{{ state.state_description}}</td>
                 <td>
-                    <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}?state={{ state.record.state_id }}" target="_blank">
+                    <a class="btn btn-primary" href="/play/{{ state.instance_id }}?state={{ state.state_id }}" target="_blank">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
                             <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
                         </svg>
@@ -22,7 +40,7 @@
                     </a>
                 </td>
                 <td>
-                    <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}?state={{ state.record.state_id }}&?boot_into_record=true" target="_blank">
+                    <a class="btn btn-primary" href="/play/{{ state.instance_id }}?state={{ state.state_id }}&?boot_into_record=true" target="_blank">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-record" viewBox="0 0 16 16">
                             <path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0 1A5 5 0 1 0 8 3a5 5 0 0 0 0 10z"/>
                         </svg>
@@ -31,21 +49,28 @@
                 </td>
             </tr>
             {% endfor %}
+            </tbody>
         </table>
     </div>
     <div class="row">
-        <h1>Performances</h1>
+        <h2>Performances</h2>
         <table class="table">
             <tr>
+                <th scope="col">Work</th>
+                <th scope="col">Version</th>
+                <th scope="col">Platform</th>
                 <th scope="col">Name</th>
                 <th scope="col">Description</th>
             </tr>
             {% for replay in creator.replays %}
             <tr>
-                <td>{{ replay.record.replay_name}}</td>
-                <td>{{ replay.record.replay_description}}</td>
+                <td>{{ replay.work_name }}</td>
+                <td>{{ replay.work_version }}</td>
+                <td>{{ replay.work_platform }}</td>
+                <td>{{ replay.replay_name}}</td>
+                <td>{{ replay.replay_description}}</td>
                 <td>
-                    <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}?replay={{ replay.record.replay_id }}" target="_blank">
+                    <a class="btn btn-primary" href="/play/{{ replay.instance_id }}?replay={{ replay.replay_id }}" target="_blank">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
                             <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
                         </svg>
@@ -56,6 +81,5 @@
             {% endfor %}
         </table>
     </div>
-    </div>
 </div>
-{% endblock content%}
+{% endblock content %}

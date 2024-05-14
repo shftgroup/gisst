@@ -1,8 +1,8 @@
-{% extends "layout.html" %}
+{% extends "layout_internal.html" %}
 
 {% block title %} Playing {{ player_params.work.work_name}} {% endblock %}
 
-{% block imports %}
+{% block gisst_imports %}
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <script type="module" crossorigin src="/assets/index.js"></script>
 <link rel="stylesheet" href="/assets/index.css">
@@ -14,7 +14,7 @@
 <script id="config" type="application/json">
     {{ player_params|tojson }}
 </script>
-{% endblock %}
+{% endblock gisst_imports %}
 
 {% block body%}
 <div id="ui"></div>

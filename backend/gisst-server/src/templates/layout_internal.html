@@ -10,7 +10,7 @@
             </a>
             <div class="col-md-3 text-end">
                 {% if user %}
-                <a href="/creator/{{ user.creator_id }}">{{ user.email }}</a>
+                <a href="/creators/{{ user.creator_id }}">{{ user.email }}</a>
                 <a class="btn btn-outline-primary" me-2 href="/logout">Logout</a>
                 {% else %}
                 <a class="btn btn-outline-primary me-2" href="/login" >Login</a>
@@ -19,7 +19,7 @@
         </div>
     </div>
 </header>
-{% endblock%}
+{% endblock header %}
 
 <!-- Remove informational navigation bar for internal app pages -->
 {% block nav %}{% endblock nav %}

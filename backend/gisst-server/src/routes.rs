@@ -10,25 +10,16 @@ use axum::{
     Extension, Router,
 };
 use axum_login::RequireAuthorizationLayer;
-use gisst::models::FileRecordFlatten;
+use gisst::models::{CreatorReplayInfo, CreatorStateInfo, FileRecordFlatten};
 use gisst::models::{
     Creator, DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
 };
 use minijinja::{context, };
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
-use std::collections::HashSet;
 use uuid::Uuid;
 
 // Nested Router structs for easier reading and manipulation
-// pub fn creator_router() -> Router {
-//     Router::new()
-//         .route("/", get(get_creators))
-//         .route("/create", post(create_creator))
-//         .route("/:id", get(get_single_creator)
-//             .put(edit_creator)
-//             .delete(delete_creator))
-// }
 
 pub fn creator_router() -> Router {
     Router::new()
@@ -133,11 +124,9 @@ pub fn work_router() -> Router {
 
 #[derive(Serialize)]
 struct GetAllCreatorResult {
-    states: Vec<FileRecordFlatten<State>>,
-    replays: Vec<FileRecordFlatten<Replay>>,
-    saves: Vec<FileRecordFlatten<Save>>,
-    instances: Vec<Instance>,
-    works: Vec<Work>,
+    states: Vec<CreatorStateInfo>,
+    replays: Vec<CreatorReplayInfo>,
+    creator: Creator,
 }
 
 async fn get_single_creator(
@@ -148,54 +137,11 @@ async fn get_single_creator(
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(creator) = Creator::get_by_id(&mut conn, id).await?{
-        let mut work_set = HashSet::new();
-        let mut instance_set = HashSet::new();
 
-        let states = Creator::get_all_states(&mut conn, creator.creator_id).await?;
-        let mut flattened_states: Vec<FileRecordFlatten<State>> = vec![];
-
-        for state in states.iter() {
-            instance_set.insert(state.instance_id);
-            flattened_states.push(State::flatten_file(&mut conn, state.clone()).await?);
-        }
-
-        let replays = Creator::get_all_replays(&mut conn, id).await?;
-        let mut flattened_replays: Vec<FileRecordFlatten<Replay>> = vec![];
-
-        for replay in replays.iter() {
-            instance_set.insert(replay.instance_id);
-            flattened_replays.push(Replay::flatten_file(&mut conn, replay.clone()).await?);
-        }
-
-        let saves = Creator::get_all_saves(&mut conn, id).await?;
-        let mut flattened_saves: Vec<FileRecordFlatten<Save>> = vec![];
-
-        for save in saves.iter() {
-            instance_set.insert(save.instance_id);
-            flattened_saves.push(Save::flatten_file(&mut conn, save.clone()).await?);
-        }
-
-        let mut instances: Vec<Instance> = vec![];
-        let mut works: Vec<Work> = vec![];
-
-        for instance in instance_set {
-            if let Some(inst) = Instance::get_by_id(&mut conn, instance).await {
-                instances.push(inst);
-            }
-        }
-
-        for instance in instances.iter() {
-            if let Some(work) = Work::get_by_id(&mut conn, instance.work_id).await {
-                works.push(work);
-            }
-        }
-
-        let creator_results = GetAllCreatorResult {
-            states: flattened_states,
-            replays: flattened_replays,
-            saves: flattened_saves,
-            works,
-            instances,
+        let creator_results = GetAllCreatorResult{
+            states: Creator::get_all_state_info(&mut conn, creator.creator_id).await?,
+            replays: Creator::get_all_replay_info(&mut conn, creator.creator_id).await?,
+            creator
         };
 
         let accept: Option<String> = parse_header(&headers, "Accept");

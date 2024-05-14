@@ -260,7 +260,83 @@ pub struct Work {
     pub created_on: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreatorStateInfo {
+    pub work_id: Uuid,
+    pub work_name: String,
+    pub work_version: String,
+    pub work_platform: String,
+    pub state_id: Uuid,
+    pub state_name: String,
+    pub state_description: String,
+    pub screenshot_id: Uuid,
+    pub file_id: Uuid,
+    pub instance_id: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreatorReplayInfo {
+    pub work_id: Uuid,
+    pub work_name: String,
+    pub work_version: String,
+    pub work_platform: String,
+    pub replay_id: Uuid,
+    pub replay_name: String,
+    pub replay_description: String,
+    pub file_id: Uuid,
+    pub instance_id: Uuid,
+}
+
 impl Creator {
+
+    // Join to allow for all creator home page information in one query
+    pub async fn get_all_state_info(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Vec<CreatorStateInfo>> {
+        sqlx::query_as!(
+            CreatorStateInfo,
+            r#"SELECT
+            work_id,
+            work_name,
+            work_version,
+            work_platform,
+            state_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            file_id,
+            instance_id
+            FROM work JOIN instance USING (work_id)
+            JOIN state USING (instance_id)
+            WHERE state.creator_id = $1
+            "#,
+            id
+        )
+            .fetch_all(conn)
+            .await
+    }
+
+    // Join to allow for all creator home page information in one query
+    pub async fn get_all_replay_info(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Vec<CreatorReplayInfo>> {
+        sqlx::query_as!(
+            CreatorReplayInfo,
+            r#"SELECT
+            work_id,
+            work_name,
+            work_version,
+            work_platform,
+            replay_id,
+            replay_name,
+            replay_description,
+            file_id,
+            instance_id
+            FROM work JOIN instance USING (work_id)
+            JOIN replay USING (instance_id)
+            WHERE replay.creator_id = $1
+            "#,
+            id
+        )
+            .fetch_all(conn)
+            .await
+    }
 
     pub async fn get_all_states(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<State>> {
         sqlx::query_as!(
@@ -296,7 +372,7 @@ impl Creator {
             replay_forked_from,
             created_on
             FROM replay WHERE creator_id = $1"#,
-            creator_id
+            id
         )
             .fetch_all(conn)
             .await
@@ -314,7 +390,7 @@ impl Creator {
             creator_id,
             created_on
             FROM save WHERE creator_id = $1"#,
-            creator_id
+            id
         )
             .fetch_all(conn)
             .await
