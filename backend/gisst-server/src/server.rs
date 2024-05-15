@@ -6,7 +6,7 @@ use tower::ServiceBuilder;
 use crate::{
     auth, db,
     routes::{
-        // creator_router,
+        creator_router,
         environment_router,
         image_router,
         instance_router,
@@ -128,7 +128,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/auth/google/callback", get(auth::oauth_callback_handler))
         .route("/logout", get(auth::logout_handler))
         //.route("/debug/tus_test", get(get_upload_form))
-        // .nest("/creators", creator_router())
+        .nest("/creators", creator_router())
         .nest("/environments", environment_router())
         .nest("/instances", instance_router())
         .nest("/images", image_router())

@@ -1,0 +1,25 @@
+{% extends "layout_external.html" %}
+
+<!-- Add internal header, with user information -->
+{% block header %}
+<header class="p-2 bg-dark text-white">
+    <div class="container">
+        <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start justify-content-lg-between">
+            <a class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none" href="/instances">
+                <span class="fs-4">GISST</span>
+            </a>
+            <div class="col-md-3 text-end">
+                {% if user %}
+                <a href="/creators/{{ user.creator_id }}">{{ user.email }}</a>
+                <a class="btn btn-outline-primary" me-2 href="/logout">Logout</a>
+                {% else %}
+                <a class="btn btn-outline-primary me-2" href="/login" >Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</header>
+{% endblock header %}
+
+<!-- Remove informational navigation bar for internal app pages -->
+{% block nav %}{% endblock nav %}

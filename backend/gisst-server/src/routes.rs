@@ -10,9 +10,9 @@ use axum::{
     Extension, Router,
 };
 use axum_login::RequireAuthorizationLayer;
-use gisst::models::FileRecordFlatten;
+use gisst::models::{CreatorReplayInfo, CreatorStateInfo, FileRecordFlatten};
 use gisst::models::{
-    DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
+    Creator, DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
 };
 use minijinja::{context, };
 use serde::{Deserialize, Serialize};
@@ -20,14 +20,11 @@ use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
 
 // Nested Router structs for easier reading and manipulation
-// pub fn creator_router() -> Router {
-//     Router::new()
-//         .route("/", get(get_creators))
-//         .route("/create", post(create_creator))
-//         .route("/:id", get(get_single_creator)
-//             .put(edit_creator)
-//             .delete(delete_creator))
-// }
+
+pub fn creator_router() -> Router {
+    Router::new()
+        .route("/:id", get(get_single_creator))
+}
 
 pub fn screenshot_router() -> Router {
     Router::new()
@@ -124,22 +121,63 @@ pub fn work_router() -> Router {
 }
 
 // CREATOR method handlers
-// #[derive(Deserialize)]
-// struct CreatorsGetQueryParams {
-//     limit: Option<i64>,
-// }
 
-// async fn get_creators(
-//     app_state: Extension<Arc<ServerState>>,
-//     Query(params): Query<CreatorsGetQueryParams>,
-// ) -> Result<Json<Vec<Creator>>, GISSTError> {
-//     let mut conn = app_state.pool.acquire().await?;
-//     if let Ok(creators) = Creator::get_all(&mut conn, params.limit).await {
-//         Ok(creators.into())
-//     } else {
-//         Ok(Json(vec![]))
-//     }
-// }
+#[derive(Serialize)]
+struct GetAllCreatorResult {
+    states: Vec<CreatorStateInfo>,
+    replays: Vec<CreatorReplayInfo>,
+    creator: Creator,
+}
+
+async fn get_single_creator(
+    app_state: Extension<ServerState>,
+    headers: HeaderMap,
+    Path(id): Path<Uuid>,
+    auth: auth::AuthContext,
+) -> Result<axum::response::Response, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    if let Some(creator) = Creator::get_by_id(&mut conn, id).await?{
+
+        let creator_results = GetAllCreatorResult{
+            states: Creator::get_all_state_info(&mut conn, creator.creator_id).await?,
+            replays: Creator::get_all_replay_info(&mut conn, creator.creator_id).await?,
+            creator
+        };
+
+        let accept: Option<String> = parse_header(&headers, "Accept");
+
+        let user = auth
+            .current_user
+            .as_ref()
+            .map(LoggedInUserInfo::generate_from_user);
+
+        Ok(
+            (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
+                let creator_page = app_state.templates.get_template("creator_all_listing.html").unwrap();
+                Html(
+                    creator_page.render(
+                        context!(
+                            creator => creator_results,
+                            user => user,
+                        )
+                    )?
+                )
+                    .into_response()
+            } else if accept
+                .as_ref()
+                .is_some_and(|hv| hv.contains("application/json"))
+            {
+                Json(creator_results).into_response()
+            } else {
+                Err(GISSTError::Generic)?
+            })
+                .into_response()
+        )
+    } else {
+        Err(GISSTError::Generic)
+    }
+}
+
 #[serde_as]
 #[derive(Debug, Deserialize)]
 struct ScreenshotCreateInfo {
