@@ -56,9 +56,9 @@ pub enum IngestError {
     #[error("nul error")]
     Nul(#[from] std::ffi::NulError),
     #[error("storage error")]
-    Storage(#[from] gisst::storage::StorageError),
+    Storage(#[from] gisst::error::StorageError),
     #[error("new record")]
-    NewRecord(#[from] gisst::models::NewRecordError),
+    NewRecord(#[from] gisst::error::RecordSQLError),
     #[error("directory traversal error")]
     Directory(#[from] walkdir::Error),
     #[error("rdb open error")]
