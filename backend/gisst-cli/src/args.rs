@@ -29,11 +29,11 @@ pub enum GISSTCliError {
     #[error("database error")]
     Sql(#[from] sqlx::Error),
     #[error("gisst new model error")]
-    NewModel(#[from] gisst::models::NewRecordError),
+    NewModel(#[from] gisst::error::RecordSQLError),
     #[error("json parse error")]
     JsonParse(#[from] serde_json::Error),
     #[error("storage error")]
-    Storage(#[from] gisst::storage::StorageError),
+    Storage(#[from] gisst::error::StorageError),
     #[error("configuration error")]
     Config(#[from] config::ConfigError),
     #[error("record not found error")]
