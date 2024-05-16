@@ -16,7 +16,7 @@ use axum_login::{secrecy::SecretVec, AuthUser, UserStore};
 use chrono::Utc;
 use sqlx::{PgConnection, PgPool};
 
-use crate::error::{AuthError, GISSTError};
+use crate::error::GISSTError;
 use crate::server::ServerState;
 use oauth2::{
     basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
@@ -107,7 +107,7 @@ impl User {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
+    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, GISSTError> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO users (sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)
@@ -136,10 +136,10 @@ impl User {
         )
             .fetch_one(conn)
             .await
-            .map_err(|_| AuthError::UserCreateError)
+            .map_err(|e| GISSTError::SqlError(e))
     }
 
-    async fn update(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
+    async fn update(conn: &mut PgConnection, model: &User) -> Result<Self, GISSTError> {
         sqlx::query_as!(
             Self,
             r#"
@@ -179,7 +179,7 @@ impl User {
         )
         .fetch_one(conn)
         .await
-        .map_err(|_| AuthError::UserUpdateError)
+        .map_err(|e| GISSTError::SqlError(e))
     }
 }
 
@@ -237,7 +237,7 @@ pub async fn oauth_callback_handler(
     debug!("Getting db connection");
 
     let user = auth_get_user(state.pool, &profile, token.access_token().secret()).await?;
-    auth.login(&user).await.map_err(|_e| GISSTError::Generic)?;
+    auth.login(&user).await.map_err(|e| GISSTError::AuthUserSerdeLoginError(e))?;
     info!("Logged in the user: {user:?}");
     Ok(Redirect::to("/instances"))
 }
@@ -272,12 +272,12 @@ async fn auth_get_user(
                 creator_username: profile
                     .email
                     .as_ref()
-                    .ok_or(AuthError::UserCreateError)?
+                    .ok_or(GISSTError::AuthMissingProfileInfoError { field: "email".to_string() })?
                     .clone(),
                 creator_full_name: profile
                     .given_name
                     .as_ref()
-                    .ok_or(AuthError::UserCreateError)?
+                    .ok_or(GISSTError::AuthMissingProfileInfoError { field: "given_name".to_string() })?
                     .clone(),
                 created_on: Utc::now(),
             },
@@ -330,7 +330,7 @@ pub async fn login_handler(
 ) -> Result<impl IntoResponse, GISSTError> {
     let dummy = OpenIDUserInfo::test_user();
     let user = auth_get_user(state.pool, &dummy, "verysecret").await?;
-    auth.login(&user).await.map_err(|_e| GISSTError::Generic)?;
+    auth.login(&user).await.map_err(|e| GISSTError::AuthUserSerdeLoginError(e))?;
     debug!("Logged in the user: {user:?}");
     Ok(Redirect::to("/instances"))
 }

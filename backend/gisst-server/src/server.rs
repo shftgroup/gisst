@@ -48,6 +48,7 @@ use std::sync::{Arc, RwLock};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use uuid::Uuid;
 use tracing::debug;
+use gisst::error::ErrorTable;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -420,26 +421,26 @@ async fn get_data(
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
         .await?
-        .ok_or(GISSTError::Generic)?;
+        .ok_or(GISSTError::RecordMissingError { table: ErrorTable::Instance, uuid: id })?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::Generic)?;
+        .ok_or(GISSTError::RecordMissingError { table: ErrorTable::Environment, uuid: instance.environment_id })?;
     let work = Work::get_by_id(&mut conn, instance.work_id)
         .await?
-        .ok_or(GISSTError::Generic)?;
+        .ok_or(GISSTError::RecordMissingError { table: ErrorTable::Work, uuid: instance.work_id })?;
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => PlayerStartTemplateInfo::State(
             StateLink::get_by_id(&mut conn, id)
                 .await?
-                .ok_or(GISSTError::Generic)?,
+                .ok_or(GISSTError::RecordLinkingError { table: ErrorTable::State, uuid: id })?,
         ),
         (None, Some(id)) => PlayerStartTemplateInfo::Replay(
             ReplayLink::get_by_id(&mut conn, id)
                 .await?
-                .ok_or(GISSTError::Generic)?,
+                .ok_or(GISSTError::RecordLinkingError { table: ErrorTable::Replay, uuid: id })?,
         ),
         (None, None) => PlayerStartTemplateInfo::Cold,
-        (_, _) => return Err(GISSTError::Generic),
+        (_, _) => return Err(GISSTError::Unreachable),
     };
     let manifest =
         ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
@@ -468,27 +469,27 @@ async fn get_player(
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
         .await?
-        .ok_or(GISSTError::Generic)?;
+        .ok_or(GISSTError::RecordMissingError {table:ErrorTable::Instance, uuid:id})?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::Generic)?;
+        .ok_or(GISSTError::RecordMissingError {table:ErrorTable::Environment, uuid: instance.environment_id})?;
     let work = Work::get_by_id(&mut conn, instance.work_id)
         .await?
-        .ok_or(GISSTError::Generic)?;
+        .ok_or(GISSTError::RecordMissingError {table:ErrorTable::Work, uuid: instance.work_id})?;
     let user = LoggedInUserInfo::generate_from_user(&auth.current_user.unwrap());
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => PlayerStartTemplateInfo::State(
             StateLink::get_by_id(&mut conn, id)
                 .await?
-                .ok_or(GISSTError::Generic)?,
+                .ok_or(GISSTError::RecordLinkingError { table: ErrorTable::State, uuid: id })?,
         ),
         (None, Some(id)) => PlayerStartTemplateInfo::Replay(
             ReplayLink::get_by_id(&mut conn, id)
                 .await?
-                .ok_or(GISSTError::Generic)?,
+                .ok_or(GISSTError::RecordLinkingError { table: ErrorTable::Replay, uuid: id })?,
         ),
         (None, None) => PlayerStartTemplateInfo::Cold,
-        (_, _) => return Err(GISSTError::Generic),
+        (_, _) => return Err(GISSTError::Unreachable),
     };
     let manifest =
         dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);

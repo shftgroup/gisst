@@ -11,57 +11,7 @@ use serde_with::{base64::Base64, serde_as};
 use base64::{Engine as _, engine::general_purpose};
 use uuid::Uuid;
 
-#[derive(Debug, thiserror::Error, Serialize)]
-pub enum NewRecordError {
-    #[error("could not insert creator record into database due to `{0}`")]
-    Creator(String),
-    #[error("could not insert environment record into database due to `{0}`")]
-    Environment(String),
-    #[error("could not insert file record into database due to `{0}`")]
-    File(String),
-    #[error("could not insert instance record into database due to `{0}`")]
-    Instance(String),
-    #[error("could not insert image record into database due to `{0}`")]
-    Image(String),
-    #[error("could not insert object record into database due to `{0}`")]
-    Object(String),
-    #[error("could not insert replay record into database due to `{0}`")]
-    Replay(String),
-    #[error("could not insert save record into database due to `{0}`")]
-    Save(String),
-    #[error("could not insert screenshot record into database due to `{0}`")]
-    Screenshot(String),
-    #[error("could not insert state record into database due to `{0}`")]
-    State(String),
-    #[error("could not insert work record into database due to `{0}`")]
-    Work(String),
-}
-
-#[derive(Debug, thiserror::Error, Serialize)]
-pub enum UpdateRecordError {
-    #[error("could not update creator record in database due to `{0}`")]
-Creator(String),
-    #[error("could not update environment record in database due to `{0}`")]
-    Environment(String),
-    #[error("could not update file record in database due to `{0}`")]
-    File(String),
-    #[error("could not update instance record into database due to `{0}`")]
-    Instance(String),
-    #[error("could not update image record in database due to `{0}`")]
-    Image(String),
-    #[error("could not update object record in database due to `{0}`")]
-    Object(String),
-    #[error("could not update replay record in database due to `{0}`")]
-    Replay(String),
-    #[error("could not update save record in database due to `{0}`")]
-    Save(String),
-    #[error("could not update screenshot record in database due to `{0}`")]
-    Screenshot(String),
-    #[error("could not update state record in database due to `{0}`")]
-    State(String),
-    #[error("could not update work record in database due to `{0}`")]
-    Work(String),
-}
+use crate::error::{ErrorAction, ErrorTable, RecordSQLError};
 
 // empty_string_as_none taken from axum docs here: https://github.com/tokio-rs/axum/blob/main/examples/query-params-with-empty-strings/src/main.rs
 /// Serde deserialization decorator to map empty Strings to None,
@@ -85,8 +35,8 @@ pub trait DBModel: Sized {
     fn values_to_strings(&self) -> Vec<Option<String>>;
     async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>>;
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>>;
-    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError>;
-    async fn update(conn: &mut PgConnection, model: Self) -> Result<Self, UpdateRecordError>;
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError>;
+    async fn update(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError>;
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult>;
 }
 
@@ -453,7 +403,7 @@ impl DBModel for Creator {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Creator) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, model: Creator) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO creator(creator_id, creator_username, creator_full_name, created_on)
@@ -467,10 +417,14 @@ impl DBModel for Creator {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| NewRecordError::Creator(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Creator,
+            action: ErrorAction::Insert,
+            source: e
+        },)
     }
 
-    async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Creator,
             r#"UPDATE creator SET
@@ -485,7 +439,11 @@ impl DBModel for Creator {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| UpdateRecordError::Creator(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Creator,
+            action: ErrorAction::Update,
+            source: e
+        },)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -596,7 +554,7 @@ impl DBModel for File {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO file(file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on)
@@ -613,10 +571,14 @@ impl DBModel for File {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| NewRecordError::File(e.to_string()))
+            .map_err(|e| RecordSQLError{
+                table: ErrorTable::File,
+                action: ErrorAction::Insert,
+                source: e
+            },)
     }
 
-    async fn update(conn: &mut PgConnection, file: File) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, file: File) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             File,
             r#"UPDATE file SET
@@ -634,7 +596,11 @@ impl DBModel for File {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| UpdateRecordError::File(e.to_string()))
+            .map_err(|e| RecordSQLError{
+                table: ErrorTable::File,
+                action: ErrorAction::Update,
+                source: e
+            },)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -695,7 +661,7 @@ impl DBModel for Instance {
         .fetch_all(conn)
         .await
     }
-    async fn insert(conn: &mut PgConnection, model: Instance) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, model: Instance) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Instance,
             r#"INSERT INTO instance(
@@ -715,13 +681,17 @@ impl DBModel for Instance {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| NewRecordError::Instance(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Instance,
+            action: ErrorAction::Insert,
+            source: e
+        },)
     }
 
     async fn update(
         conn: &mut PgConnection,
         instance: Instance,
-    ) -> Result<Self, UpdateRecordError> {
+    ) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Instance,
             r#"UPDATE instance SET
@@ -737,7 +707,11 @@ impl DBModel for Instance {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| UpdateRecordError::Instance(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Instance,
+            action: ErrorAction::Update,
+            source: e
+        },)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -892,7 +866,7 @@ impl DBModel for Image {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Image) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, model: Image) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Image,
             r#"INSERT INTO image(
@@ -912,10 +886,14 @@ impl DBModel for Image {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| NewRecordError::Image(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Image,
+            action: ErrorAction::Insert,
+            source: e
+        },)
     }
 
-    async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Image,
             r#"UPDATE image SET
@@ -931,7 +909,11 @@ impl DBModel for Image {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| UpdateRecordError::Image(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Image,
+            action: ErrorAction::Update,
+            source: e
+        },)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1068,7 +1050,7 @@ impl DBModel for Environment {
             .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO environment (environment_id, environment_name, environment_framework, environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on)
@@ -1086,7 +1068,11 @@ impl DBModel for Environment {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| NewRecordError::Environment(e.to_string()))
+            .map_err(|e| RecordSQLError{
+                table: ErrorTable::Environment,
+                action: ErrorAction::Insert,
+                source: e
+            },)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1095,7 +1081,7 @@ impl DBModel for Environment {
             .await
     }
 
-    async fn update(conn: &mut PgConnection, env: Environment) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, env: Environment) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Environment,
             r#"UPDATE environment SET
@@ -1114,7 +1100,11 @@ impl DBModel for Environment {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| UpdateRecordError::Environment(e.to_string()))
+            .map_err(|e| RecordSQLError{
+                table: ErrorTable::Environment,
+                action: ErrorAction::Update,
+                source: e
+            },)
     }
 }
 
@@ -1207,7 +1197,7 @@ impl DBModel for Object {
         .fetch_all(conn)
         .await
     }
-    async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, RecordSQLError> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
@@ -1223,10 +1213,14 @@ impl DBModel for Object {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| NewRecordError::Object(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Object,
+            action: ErrorAction::Insert,
+            source: e
+        },)
     }
 
-    async fn update(conn: &mut PgConnection, object: Object) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, object: Object) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Object,
             r#"UPDATE object SET
@@ -1241,7 +1235,11 @@ impl DBModel for Object {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| UpdateRecordError::Object(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Object,
+            action: ErrorAction::Update,
+            source: e
+        },)
     }
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM object WHERE object_id = $1", id)
@@ -1352,7 +1350,7 @@ impl DBModel for Replay {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Replay,
             r#"INSERT INTO replay (
@@ -1386,10 +1384,14 @@ impl DBModel for Replay {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| NewRecordError::Replay(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Replay,
+            action: ErrorAction::Insert,
+            source: e
+        },)
     }
 
-    async fn update(conn: &mut PgConnection, replay: Replay) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, replay: Replay) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Replay,
             r#"UPDATE replay SET
@@ -1408,7 +1410,11 @@ impl DBModel for Replay {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| UpdateRecordError::Replay(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Replay,
+            action: ErrorAction::Update,
+            source: e
+        },)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1523,7 +1529,7 @@ impl DBModel for Save {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO save (
@@ -1554,10 +1560,14 @@ impl DBModel for Save {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| NewRecordError::Save(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Save,
+            action: ErrorAction::Insert,
+            source: e
+        },)
     }
 
-    async fn update(conn: &mut PgConnection, save: Save) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, save: Save) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Save,
             r#"UPDATE save SET
@@ -1575,7 +1585,11 @@ impl DBModel for Save {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| UpdateRecordError::Save(e.to_string()))
+            .map_err(|e| RecordSQLError{
+                table: ErrorTable::Save,
+                action: ErrorAction::Update,
+                source: e
+            },)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1710,7 +1724,7 @@ impl DBModel for State {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, RecordSQLError> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
@@ -1758,11 +1772,15 @@ impl DBModel for State {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| NewRecordError::State(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::State,
+            action: ErrorAction::Insert,
+            source: e
+        },)
     }
 
 
-    async fn update(conn: &mut PgConnection, state: State) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, state: State) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             State,
             r#"UPDATE state SET
@@ -1806,7 +1824,11 @@ impl DBModel for State {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| UpdateRecordError::State(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::State,
+            action: ErrorAction::Update,
+            source: e
+        },)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1905,7 +1927,7 @@ impl DBModel for Work {
             .await
     }
 
-    async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, RecordSQLError> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
@@ -1923,10 +1945,14 @@ impl DBModel for Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| NewRecordError::Work(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Work,
+            action: ErrorAction::Insert,
+            source: e
+        },)
     }
 
-    async fn update(conn: &mut PgConnection, work: Work) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, work: Work) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Work,
             r#"UPDATE work SET
@@ -1942,7 +1968,11 @@ impl DBModel for Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| UpdateRecordError::Work(e.to_string()))
+        .map_err(|e| RecordSQLError{
+            table: ErrorTable::Work,
+            action: ErrorAction::Update,
+            source: e
+        },)
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -2020,7 +2050,7 @@ impl DBModel for Screenshot {
             .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, NewRecordError> {
+    async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Screenshot,
             r#"INSERT INTO screenshot (screenshot_id, screenshot_data) VALUES ($1, $2)
@@ -2031,10 +2061,14 @@ impl DBModel for Screenshot {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| NewRecordError::Screenshot(e.to_string()))
+            .map_err(|e| RecordSQLError{
+                table: ErrorTable::Screenshot,
+                action: ErrorAction::Insert,
+                source: e
+            },)
     }
 
-    async fn update(conn: &mut PgConnection, model: Self) -> Result<Self, UpdateRecordError> {
+    async fn update(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Self,
             r#"UPDATE screenshot SET
@@ -2046,7 +2080,11 @@ impl DBModel for Screenshot {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| UpdateRecordError::Screenshot(e.to_string()))
+            .map_err(|e| RecordSQLError{
+                table: ErrorTable::Screenshot,
+                action: ErrorAction::Update,
+                source: e
+            },)
 
     }
 
