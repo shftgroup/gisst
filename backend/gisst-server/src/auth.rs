@@ -330,7 +330,7 @@ pub async fn login_handler(
 ) -> Result<impl IntoResponse, GISSTError> {
     let dummy = OpenIDUserInfo::test_user();
     let user = auth_get_user(state.pool, &dummy, "verysecret").await?;
-    auth.login(&user).await.map_err(|e| GISSTError::AuthUserSerdeLoginError(e))?;
+    auth.login(&user).await.map_err(GISSTError::AuthUserSerdeLoginError)?;
     debug!("Logged in the user: {user:?}");
     Ok(Redirect::to("/instances"))
 }

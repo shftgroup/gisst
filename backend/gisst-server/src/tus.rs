@@ -226,7 +226,7 @@ pub async fn tus_creation(
 
     let metadata = metadata.unwrap();
     for key in ["filename", "hash"].iter() {
-        if metadata.get(&key.to_string()).is_none() {
+        if !metadata.contains_key(*key) {
             return Ok((
                 StatusCode::BAD_REQUEST,
                 format!(
