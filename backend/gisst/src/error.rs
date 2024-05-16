@@ -55,7 +55,7 @@ impl fmt::Display for ErrorTable {
             ErrorTable::Screenshot => "screenshot",
             ErrorTable::State => "state",
             ErrorTable::Users => "users",
-            ErrorTable::Work => "users",
+            ErrorTable::Work => "work",
         };
         write!(f, "{}", s)
     }
