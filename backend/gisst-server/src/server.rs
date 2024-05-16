@@ -391,10 +391,8 @@ async fn get_about(
     Ok(Html(
         app_state
             .templates
-            .get_template("about.html")
-            .unwrap()
-            .render(context!())
-            .unwrap(),
+            .get_template("about.html")?
+            .render(context!())?,
     )
     .into_response())
 }
@@ -404,10 +402,8 @@ async fn get_homepage(
     Ok(Html(
         app_state
             .templates
-            .get_template("index.html")
-            .unwrap()
-            .render(context!())
-            .unwrap(),
+            .get_template("index.html")?
+            .render(context!())?,
     )
     .into_response())
 }
@@ -498,8 +494,7 @@ async fn get_player(
         Html(
             app_state
                 .templates
-                .get_template("player.html")
-                .unwrap()
+                .get_template("player.html")?
                 .render(context!(
                     player_params => PlayerTemplateInfo {
                         environment,

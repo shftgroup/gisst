@@ -155,7 +155,7 @@ async fn get_single_creator(
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
                 let creator_page = app_state.templates
-                    .get_template("creator_all_listing.html").map_err(|e| GISSTError::MiniJinjaError(e))?;
+                    .get_template("creator_all_listing.html")?;
                 Html(
                     creator_page.render(
                         context!(
@@ -366,7 +366,7 @@ async fn get_instances(
 
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-            let instance_listing = app_state.templates.get_template("instance_listing.html").unwrap();
+            let instance_listing = app_state.templates.get_template("instance_listing.html")?;
             Html(
                 instance_listing.render(
                     context!(
@@ -443,7 +443,7 @@ async fn get_all_for_instance(
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-                let instance_all_listing = app_state.templates.get_template("instance_all_listing.html").unwrap();
+                let instance_all_listing = app_state.templates.get_template("instance_all_listing.html")?;
                 Html(
                     instance_all_listing.render(
                         context!(
