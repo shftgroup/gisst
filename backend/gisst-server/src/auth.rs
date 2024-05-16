@@ -136,7 +136,7 @@ impl User {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| GISSTError::SqlError(e))
+            .map_err( GISSTError::SqlError )
     }
 
     async fn update(conn: &mut PgConnection, model: &User) -> Result<Self, GISSTError> {
@@ -179,7 +179,7 @@ impl User {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| GISSTError::SqlError(e))
+        .map_err(GISSTError::SqlError)
     }
 }
 
@@ -237,7 +237,7 @@ pub async fn oauth_callback_handler(
     debug!("Getting db connection");
 
     let user = auth_get_user(state.pool, &profile, token.access_token().secret()).await?;
-    auth.login(&user).await.map_err(|e| GISSTError::AuthUserSerdeLoginError(e))?;
+    auth.login(&user).await?;
     info!("Logged in the user: {user:?}");
     Ok(Redirect::to("/instances"))
 }

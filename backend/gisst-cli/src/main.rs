@@ -295,8 +295,6 @@ async fn create_object(
 
 #[allow(dead_code)]
 async fn delete_record<T: DBModel>(d: DeleteRecord, db: PgPool) -> Result<(), GISSTCliError>
-where
-    T: DBModel,
 {
     let mut conn = db.acquire().await?;
     T::delete_by_id(&mut conn, d.id)
