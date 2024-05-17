@@ -49,6 +49,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use uuid::Uuid;
 use tracing::debug;
 use gisst::error::ErrorTable;
+use crate::utils::parse_header;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -57,6 +58,7 @@ pub struct ServerState {
     pub temp_storage_path: String,
     pub folder_depth: u8,
     pub default_chunk_size: usize,
+    pub base_url: String,
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: minijinja::Environment<'static>,
     pub oauth_client: BasicClient,
@@ -78,6 +80,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         temp_storage_path: config.storage.temp_folder_path.clone(),
         folder_depth: config.storage.folder_depth,
         default_chunk_size: config.storage.chunk_size,
+        base_url: config.http.base_url.clone(),
         pending_uploads: Default::default(),
         templates: template_environment,
         oauth_client: auth::build_oauth_client(
@@ -368,6 +371,7 @@ struct EmbedDataInfo {
     save: Option<Save>,
     start: PlayerStartTemplateInfo,
     manifest: Vec<ObjectLink>,
+    host_url: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -410,7 +414,7 @@ async fn get_homepage(
 
 async fn get_data(
     app_state: Extension<ServerState>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
 ) -> Result<axum::response::Response, GISSTError> {
@@ -441,18 +445,41 @@ async fn get_data(
     let manifest =
         ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     debug!("{manifest:?}");
-    Ok((
-        [("Access-Control-Allow-Origin", "*")],
-        axum::Json(EmbedDataInfo {
-            environment,
-            instance,
-            work,
-            save: None,
-            start,
-            manifest,
-        }),
+
+    let embed_data = EmbedDataInfo{
+        environment,
+        instance,
+        work,
+        save: None,
+        start,
+        manifest,
+        host_url: app_state.base_url.clone(),
+    };
+
+    let accept: Option<String> = parse_header(&headers, "Accept");
+    Ok(
+        (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
+            let citation_page = app_state.templates.get_template("single_citation_page.html")?;
+                Html(
+                    citation_page.render(
+                        context! {
+                            embed_data => embed_data,
+                        }
+                    )?
+                ).into_response()
+        } else if accept
+            .as_ref()
+            .is_some_and(|hv| hv.contains("application/json"))
+        {
+            (
+                [("Access-Control-Allow-Origin", "*")],
+                axum::Json(embed_data),
+            ).into_response()
+        } else {
+            Err(GISSTError::Generic)?
+        })
+            .into_response()
     )
-        .into_response())
 }
 
 async fn get_player(
