@@ -12,19 +12,8 @@ use tokio::io::AsyncWriteExt;
 
 use bytes::Bytes;
 use uuid::Uuid;
+use crate::error::StorageError;
 
-use thiserror::Error;
-#[derive(Debug, Error)]
-pub enum StorageError {
-    #[error("IO error")]
-    IO(#[from] std::io::Error),
-    #[error("tokio task error")]
-    JoinError(#[from] tokio::task::JoinError),
-    #[error("path prefix error")]
-    PathPrefixError(#[from] std::path::StripPrefixError),
-    #[error("Storage file not found")]
-    FileNotFoundError,
-}
 
 pub struct StorageHandler;
 

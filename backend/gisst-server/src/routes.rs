@@ -18,6 +18,7 @@ use minijinja::{context, };
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
+use gisst::error::ErrorTable;
 
 // Nested Router structs for easier reading and manipulation
 
@@ -153,7 +154,8 @@ async fn get_single_creator(
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-                let creator_page = app_state.templates.get_template("creator_all_listing.html").unwrap();
+                let creator_page = app_state.templates
+                    .get_template("creator_all_listing.html")?;
                 Html(
                     creator_page.render(
                         context!(
@@ -169,12 +171,15 @@ async fn get_single_creator(
             {
                 Json(creator_results).into_response()
             } else {
-                Err(GISSTError::Generic)?
+                Err(GISSTError::MimeTypeError)?
             })
                 .into_response()
         )
     } else {
-        Err(GISSTError::Generic)
+        Err(GISSTError::RecordMissingError {
+            table: ErrorTable::Creator,
+            uuid: id,
+        })
     }
 }
 
@@ -254,9 +259,7 @@ async fn edit_environment(
 ) -> Result<Json<Environment>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(
-        Environment::update(&mut conn, environment)
-            .await
-            .map_err(GISSTError::RecordUpdateError)?,
+        Environment::update(&mut conn, environment).await?
     ))
 }
 
@@ -293,9 +296,10 @@ async fn create_image(
     if File::get_by_id(&mut conn, image.file_id).await?.is_some() {
         Ok(Json(Image::insert(&mut conn, image).await?))
     } else {
-        Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::Image(format!("File with id {} not found in database", image.file_id).to_string()),
-        ))
+        Err(GISSTError::RecordMissingError {
+            table: ErrorTable::File,
+            uuid: image.file_id
+        })
     }
 }
 
@@ -313,9 +317,7 @@ async fn edit_image(
 ) -> Result<Json<Image>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(
-        Image::update(&mut conn, image)
-            .await
-            .map_err(GISSTError::RecordUpdateError)?,
+        Image::update(&mut conn, image).await?
     ))
 }
 
@@ -364,7 +366,7 @@ async fn get_instances(
 
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-            let instance_listing = app_state.templates.get_template("instance_listing.html").unwrap();
+            let instance_listing = app_state.templates.get_template("instance_listing.html")?;
             Html(
                 instance_listing.render(
                     context!(
@@ -380,7 +382,7 @@ async fn get_instances(
         {
             Json(instances).into_response()
         } else {
-            Err(GISSTError::Generic)?
+            Err(GISSTError::MimeTypeError)?
         })
         .into_response(),
     )
@@ -441,7 +443,7 @@ async fn get_all_for_instance(
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-                let instance_all_listing = app_state.templates.get_template("instance_all_listing.html").unwrap();
+                let instance_all_listing = app_state.templates.get_template("instance_all_listing.html")?;
                 Html(
                     instance_all_listing.render(
                         context!(
@@ -457,12 +459,15 @@ async fn get_all_for_instance(
             {
                 Json(full_instance).into_response()
             } else {
-                Err(GISSTError::Generic)?
+                Err(GISSTError::MimeTypeError)?
             })
             .into_response(),
         )
     } else {
-        Err(GISSTError::Generic)
+        Err(GISSTError::RecordMissingError {
+            table: ErrorTable::Instance,
+            uuid: id,
+        })
     }
 }
 
@@ -530,9 +535,10 @@ async fn create_object(
     if File::get_by_id(&mut conn, object.file_id).await?.is_some() {
         Ok(Json(Object::insert(&mut conn, object).await?))
     } else {
-        Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::Object(format!("File with id {} not found in database", object.file_id).to_string()),
-        ))
+        Err(GISSTError::RecordMissingError {
+            table: ErrorTable::File,
+            uuid: object.file_id
+        })
     }
 }
 
@@ -604,6 +610,7 @@ async fn create_replay(
     auth: AuthContext,
     Json(replay): Json<CreateReplay>,
 ) -> Result<Json<Replay>, GISSTError> {
+
     let mut conn = app_state.pool.acquire().await?;
 
     if File::get_by_id(&mut conn, replay.file_id).await?.is_some() {
@@ -615,7 +622,7 @@ async fn create_replay(
                     replay_name: replay.replay_name,
                     replay_description: replay.replay_description,
                     instance_id: replay.instance_id,
-                    creator_id: auth.current_user.ok_or(GISSTError::Generic)?.creator_id,
+                    creator_id: auth.current_user.ok_or(GISSTError::UserNotAuthenticatedError)?.creator_id,
                     replay_forked_from: replay.replay_forked_from,
                     file_id: replay.file_id,
                     created_on: chrono::Utc::now(),
@@ -624,9 +631,10 @@ async fn create_replay(
             .await?,
         ))
     } else {
-        Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::Replay(format!("File with id {} not found in database", replay.file_id).to_string()),
-        ))
+        Err(GISSTError::RecordMissingError {
+            table: ErrorTable::File,
+            uuid: replay.file_id,
+        })?
     }
 }
 // Save method handlers
@@ -677,9 +685,10 @@ async fn create_save(
     if File::get_by_id(&mut conn, save.file_id).await?.is_some() {
         Ok(Json(Save::insert(&mut conn, save).await?))
     } else {
-        Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::Save(format!("File with id {} not found in database", save.file_id).to_string()),
-        ))
+        Err(GISSTError::RecordMissingError {
+            table: ErrorTable::File,
+            uuid: save.file_id,
+        })?
     }
 }
 // State method handlers
@@ -755,7 +764,7 @@ async fn create_state(
                     state_description: state.state_description,
                     screenshot_id: state.screenshot_id,
                     replay_id: state.replay_id,
-                    creator_id: auth.current_user.ok_or(GISSTError::Generic)?.creator_id,
+                    creator_id: auth.current_user.ok_or(GISSTError::UserNotAuthenticatedError)?.creator_id,
                     state_replay_index: state.state_replay_index,
                     state_derived_from: state.state_derived_from,
                     created_on: chrono::Utc::now(),
@@ -764,9 +773,10 @@ async fn create_state(
             .await?,
         ))
     } else {
-        Err(GISSTError::RecordCreateError(
-            gisst::models::NewRecordError::State(format!("File with id {} not found in database", state.file_id).to_string()),
-        ))
+        Err(GISSTError::RecordMissingError {
+            table: ErrorTable::File,
+            uuid: state.file_id,
+        })?
     }
 }
 
