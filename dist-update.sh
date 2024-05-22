@@ -30,6 +30,7 @@ cp -r retroarch-web/assets/frontend frontend/frontend-web/public/assets/
 pushd frontend/frontend-web/public/assets/frontend
 rm -f bundle.zip
 cat bundle.* > bundle-ra.zip
+rm bundle.zip.*
 unzip bundle-ra.zip
 rm bundle-ra.zip
 cd bundle
@@ -42,6 +43,7 @@ rm -f assets/pkg/chinese-*
 rm -f assets/pkg/korean-*
 cd ..
 zip -r -1 bundle.zip bundle
+rm -rf bundle
 popd
 
 cd frontend
