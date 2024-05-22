@@ -19,9 +19,14 @@ window.onload = async function() {
     const aspect = w/h;
     const target_w = container.offsetWidth;
     const target_h = target_w / aspect;
-    if (w > target_w) {
-      canv.style.width = `${target_w}px`;
-      canv.style.height = `${target_h}px`; // h/w * w = h
+    if (w != target_w) {
+      if (kind == "v86") {
+        canv.style.width = `${target_w}px`;
+        canv.style.height = `${target_h}px`; // h/w * w = h
+      } else {
+        canv.width = target_w;
+        canv.height = target_h;
+      }
     }
   })
   ro.observe(canv);

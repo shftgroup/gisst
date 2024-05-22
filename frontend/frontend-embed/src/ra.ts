@@ -11,6 +11,8 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
+  // TODO detect mobile or whatever
+  const use_gamepad_overlay = true;
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
@@ -19,8 +21,13 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     retro_args.push("-P");
     retro_args.push(state_dir+"/"+content_base+".replay1");
   }
-  retro_args.push("--appendconfig");
-  retro_args.push("/home/web_user/content/retroarch.cfg");
+  retro_args.push("-c");
+  retro_args.push("/home/web_user/retroarch/userdata/retroarch.cfg");
+  const has_config = manifest.find((o) => o.object_role=="config")!;
+  if(has_config) {
+    retro_args.push("--appendconfig");
+    retro_args.push("/home/web_user/content/retroarch.cfg");
+  }
   retro_args.push("/home/web_user/content/" + content.file_source_path! + "/" + content.file_filename!);
   console.log(retro_args);
   return new Promise((res) => {
@@ -58,6 +65,26 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
       fetchfs.mkdirp(module,state_dir);
       Promise.all(proms).then(function () {
         copyFile(module,"/home/web_user/retroarch/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg");
+        if (use_gamepad_overlay) {
+          // gameboy, gba, nes, snes, retropad
+          // gambatte, vba_next, fceumm, snes9x
+          const overlays = {
+            "gambatte": "gameboy",
+            "vba_next": "gba",
+            "fceumm": "nes",
+            "snes9x": "snes"
+          };
+          let overlay = "retropad";
+          if (core in overlays) {
+            overlay = overlays[core as keyof typeof overlays];
+          }
+          const cfg = module.FS.open("/home/web_user/retroarch/userdata/retroarch.cfg", "a");
+          const lines = "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/bundle/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
+          const enc = new TextEncoder();
+          const lines_enc = enc.encode(lines);
+          module.FS.write(cfg,lines_enc,0,lines_enc.length);
+          module.FS.close(cfg);
+        }
         // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
         if (entryState) {
           copyFile(module,"/home/web_user/content/entry_state",
