@@ -76,9 +76,15 @@ export async function embed(gisst:string, container:HTMLDivElement) {
     const aspect = w/h;
     const target_w = container.offsetWidth;
     const target_h = target_w / aspect;
-    if (w > target_w) {
-      canvas.style.width = `${target_w}px`;
-      canvas.style.height = `${target_h}px`; // h/w * w = h
+    // console.log("resize canvas to",target_w,target_h,aspect,w,h);
+    if (w != target_w) {
+      if (kind == "v86") {
+        canvas.style.width = `${target_w}px`;
+        canvas.style.height = `${target_h}px`; // h/w * w = h
+      } else {
+        canvas.width = target_w;
+        canvas.height = target_h;
+      }
     }
   })
   ro.observe(canvas);
