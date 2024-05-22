@@ -36,7 +36,7 @@ use crate::routes::screenshot_router;
 use axum_login::axum_sessions::async_session::MemoryStore;
 use axum_login::axum_sessions::{SameSite, SessionLayer};
 use gisst::storage::{PendingUpload, StorageHandler};
-use minijinja::context;
+use minijinja::{context, HtmlEscape};
 use oauth2::basic::BasicClient;
 use rand::Rng;
 use secrecy::ExposeSecret;
@@ -73,6 +73,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 
     let mut template_environment = minijinja::Environment::new();
     template_environment.set_loader(minijinja::path_loader("gisst-server/src/templates"));
+
+    debug!("Configured URL is {}",config.http.base_url.clone());
 
     let app_state = ServerState {
         pool: db::new_pool(config).await?,
@@ -372,6 +374,7 @@ struct EmbedDataInfo {
     start: PlayerStartTemplateInfo,
     manifest: Vec<ObjectLink>,
     host_url: String,
+    host_protocol: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -446,6 +449,10 @@ async fn get_data(
         ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     debug!("{manifest:?}");
 
+    let url_string = app_state.base_url.clone();
+
+    let url_parts: Vec<&str> = url_string.split("//").collect();
+
     let embed_data = EmbedDataInfo{
         environment,
         instance,
@@ -453,7 +460,8 @@ async fn get_data(
         save: None,
         start,
         manifest,
-        host_url: app_state.base_url.clone(),
+        host_url: url_parts[1].to_string(),
+        host_protocol: url_parts[0].to_string(),
     };
 
     let accept: Option<String> = parse_header(&headers, "Accept");
@@ -476,7 +484,7 @@ async fn get_data(
                 axum::Json(embed_data),
             ).into_response()
         } else {
-            Err(GISSTError::Generic)?
+            Err(GISSTError::MimeTypeError)?
         })
             .into_response()
     )
