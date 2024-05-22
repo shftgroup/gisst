@@ -58,8 +58,6 @@ addEventListener("load", () =>
     //   ui_state.removeState("a state.state"+statenum.toString());
     // });
 
-    (<HTMLAnchorElement>document.getElementById(UIIDConst.UI_CLEAR_BUTTON)!).addEventListener("click",
-      () => ui_state.clear());
     (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_FINISH_REPLAY_BUTTON)!).addEventListener("click",
       () => ui_state.clearCheckpoints());
 
