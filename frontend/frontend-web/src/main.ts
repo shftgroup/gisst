@@ -31,4 +31,30 @@ window.onload = async function() {
   })
   ro.observe(canv);
   ro.observe(container);
-};
+
+  canv.style.touchAction = "none";
+  canv.addEventListener("touchstart", touchHandler, true);
+  canv.addEventListener("touchmove", touchHandler, true);
+  canv.addEventListener("touchend", touchHandler, true);
+  canv.addEventListener("touchcancel", touchHandler, true);
+}
+// qua https://stackoverflow.com/a/1781750
+function touchHandler(event:TouchEvent)
+{
+    const touches = event.changedTouches, first = touches[0];
+    let type = "";
+    switch(event.type)
+    {
+        case "touchstart": type = "mousedown"; break;
+        case "touchmove":  type = "mousemove"; break;        
+        case "touchend":   type = "mouseup";   break;
+        default:           return;
+    }
+    const simulatedEvent = document.createEvent("MouseEvent");
+    simulatedEvent.initMouseEvent(type, true, true, window, 1, 
+                                  first.screenX, first.screenY, 
+                                  first.clientX, first.clientY, false, 
+                                  false, false, false, 0/*left*/, null);
+    first.target.dispatchEvent(simulatedEvent);
+    event.preventDefault();
+}
