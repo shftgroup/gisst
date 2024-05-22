@@ -36,7 +36,7 @@ use crate::routes::screenshot_router;
 use axum_login::axum_sessions::async_session::MemoryStore;
 use axum_login::axum_sessions::{SameSite, SessionLayer};
 use gisst::storage::{PendingUpload, StorageHandler};
-use minijinja::context;
+use minijinja::{context};
 use oauth2::basic::BasicClient;
 use rand::Rng;
 use secrecy::ExposeSecret;
@@ -45,10 +45,13 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
+use axum::extract::OriginalUri;
+use chrono::{DateTime, Local};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use uuid::Uuid;
 use tracing::debug;
 use gisst::error::ErrorTable;
+use crate::utils::parse_header;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -57,6 +60,7 @@ pub struct ServerState {
     pub temp_storage_path: String,
     pub folder_depth: u8,
     pub default_chunk_size: usize,
+    pub base_url: String,
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: minijinja::Environment<'static>,
     pub oauth_client: BasicClient,
@@ -72,12 +76,15 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     let mut template_environment = minijinja::Environment::new();
     template_environment.set_loader(minijinja::path_loader("gisst-server/src/templates"));
 
+    debug!("Configured URL is {}",config.http.base_url.clone());
+
     let app_state = ServerState {
         pool: db::new_pool(config).await?,
         root_storage_path: config.storage.root_folder_path.clone(),
         temp_storage_path: config.storage.temp_folder_path.clone(),
         folder_depth: config.storage.folder_depth,
         default_chunk_size: config.storage.chunk_size,
+        base_url: config.http.base_url.clone(),
         pending_uploads: Default::default(),
         templates: template_environment,
         oauth_client: auth::build_oauth_client(
@@ -368,6 +375,19 @@ struct EmbedDataInfo {
     save: Option<Save>,
     start: PlayerStartTemplateInfo,
     manifest: Vec<ObjectLink>,
+    host_url: String,
+    host_protocol: String,
+    citation_data: Option<CitationDataInfo>
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+struct CitationDataInfo {
+    website_title: String,
+    url: String,
+    gs_page_view_date: String,
+    mla_page_view_date: String,
+    bibtex_page_view_date: String,
+    site_published_year: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -410,8 +430,9 @@ async fn get_homepage(
 
 async fn get_data(
     app_state: Extension<ServerState>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Path(id): Path<Uuid>,
+    OriginalUri(uri): OriginalUri,
     Query(params): Query<PlayerParams>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -441,18 +462,63 @@ async fn get_data(
     let manifest =
         ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     debug!("{manifest:?}");
-    Ok((
-        [("Access-Control-Allow-Origin", "*")],
-        axum::Json(EmbedDataInfo {
-            environment,
-            instance,
-            work,
-            save: None,
-            start,
-            manifest,
-        }),
+
+    let url_string = app_state.base_url.clone();
+
+    let url_parts: Vec<&str> = url_string.split("//").collect();
+    let current_date:DateTime<Local> = Local::now();
+
+    let citation_website_title:String = match &start {
+        PlayerStartTemplateInfo::State(s) => format!("GISST Citation of {} in {}",s.state_name, work.work_name),
+        PlayerStartTemplateInfo::Replay(r) => format!("GISST Citation of {} in {}",r.replay_name, work.work_name),
+        PlayerStartTemplateInfo::Cold => "".to_string(),
+    };
+
+    let citation_data: CitationDataInfo = CitationDataInfo {
+        website_title: citation_website_title,
+        url: uri.to_string(),
+        gs_page_view_date: current_date.format("%Y, %B %d").to_string(),
+        mla_page_view_date: current_date.format("%d %b. %Y").to_string(),
+        bibtex_page_view_date: current_date.format("%Y-%m-%d").to_string(),
+        site_published_year: current_date.format("%Y").to_string(),
+    };
+
+    let embed_data = EmbedDataInfo{
+        environment,
+        instance,
+        work,
+        save: None,
+        start,
+        manifest,
+        host_url: url_parts[1].to_string(),
+        host_protocol: url_parts[0].to_string(),
+        citation_data: Some(citation_data),
+    };
+
+    let accept: Option<String> = parse_header(&headers, "Accept");
+    Ok(
+        (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
+            let citation_page = app_state.templates.get_template("single_citation_page.html")?;
+                Html(
+                    citation_page.render(
+                        context! {
+                            embed_data => embed_data,
+                        }
+                    )?
+                ).into_response()
+        } else if accept
+            .as_ref()
+            .is_some_and(|hv| hv.contains("application/json"))
+        {
+            (
+                [("Access-Control-Allow-Origin", "*")],
+                axum::Json(embed_data),
+            ).into_response()
+        } else {
+            Err(GISSTError::MimeTypeError)?
+        })
+            .into_response()
     )
-        .into_response())
 }
 
 async fn get_player(

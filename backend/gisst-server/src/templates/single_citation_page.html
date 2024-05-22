@@ -1,0 +1,86 @@
+{% extends "layout_external.html" %}
+
+{% block title %}
+{{embed_data.citation_data.website_title}}
+{% endblock title %}
+
+{% block gisst_imports %}
+<link rel="stylesheet" href="/embed/style.css"/>
+{% endblock gisst_imports %}
+
+
+{% block content %}
+
+<div class="container">
+  <div class="row">
+    <div class="col-xl-6">
+      <div id="embedTarget"></div>
+    </div>
+    <div class="col-xl-6">
+      <div class="pt-2">
+        {% if embed_data.start.type == "state" %}
+        <h2>{{ embed_data.start.data.state_name}}</h2>
+        <h3>{{ embed_data.start.data.state_description}}</h3>
+        {% elif embed_data.start.type == "replay" %}
+        <h2>{{ embed_data.start.data.replay_name}}</h2>
+        <h3>{{ embed_data.start.data.replay_description}}</h3>
+        {% endif %}
+        <div class="card">
+          <div class="card-header">
+            Work Information
+          </div>
+          <div class="card-body">
+            <h5 class="card-title">{{embed_data.work.work_name}}</h5>
+            <p>Version: {{ embed_data.work.work_version }}</p>
+            <p>Platform: {{ embed_data.work.work_platform }}</p>
+          </div>
+        </div>
+        <div class="pt-2 pb-2">
+          <div class="card">
+            <div class="card-header">
+              Citation for This Webpage
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Game Studies</h5>
+              ({{ embed_data.citation_data.gs_page_view_date }}) <i>{{embed_data.citation_data.website_title}}</i>. GISST. {{ embed_data.host_protocol}}//{{embed_data.host_url}}{{ embed_data.citation_data.url }}
+              <h5 class="pt-2 card-title">MLA</h5>
+              "{{embed_data.citation_data.website_title}}." <i>GISST</i>, {{ embed_data.citation_data.mla_page_view_date }}, {{embed_data.host_url}}{{embed_data.citation_data.url}}
+              <h5 class="pt-2 card-title">BibTeX</h5>
+              <pre><code>
+              &commat;misc &lcub;
+                title = &lcub;{{embed_data.citation_data.website_title }}&rcub;,
+                howpublished = &lcub;\url&lcub;{{ embed_data.host_protocol}}//{{embed_data.host_url}}{{ embed_data.citation_data.url }}&rcub;&rcub;,
+                note = &lcub;Accessed:{{embed_data.citation_data.bibtex_page_view_date}}&rcub;
+              &rcub;
+            </code></pre>
+              <h5 class="pt-2 card-title">BibLaTeX Online</h5>
+              <pre><code>
+              &commat;online &lcub;
+                author = &lcub;GISST&rcub;,
+                title = &lcub;{{embed_data.citation_data.website_title }}&rcub;,
+                url = &lcub;{{ embed_data.host_protocol }}//{{ embed_data.host_url }}{{ embed_data.citation_data.url }}&rcub;,
+                year = &lcub;{{ embed_data.citation_data.site_published_year }}&rcub;,
+                urldate = &lcub;{{ embed_data.citation_data.bibtex_page_view_date }}&rcub;
+              &rcub;
+            </code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script type="module">
+  import {embed} from '/embed/embed.js';
+  {% if embed_data.start.type == "replay" %}
+  embed("{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}?replay={{ embed_data.start.data.replay_id }}", document.getElementById("embedTarget"));
+  {% elif embed_data.start.type == "state" %}
+  embed("{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}?state={{ embed_data.start.data.state_id }}", document.getElementById("embedTarget"));
+  {% else %}
+  embed("{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}", document.getElementById("embedTarget"))
+  {% endif %}
+</script>
+{% endblock content %}

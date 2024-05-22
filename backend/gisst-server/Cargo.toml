@@ -10,7 +10,7 @@ dummy_auth=[]
 [dependencies]
 anyhow = "1.0.70"
 async-trait = "0.1.68"
-axum = { version = "0.6.12", features = ["multipart", "headers", "macros"] }
+axum = { version = "0.6.12", features = ["multipart", "headers", "macros", "original-uri"] }
 axum-macros = "0.3.8"
 base64 = "0.21.2"
 bytes = { version = "1.4.0", features = ["serde"] }

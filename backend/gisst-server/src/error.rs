@@ -10,6 +10,7 @@ use std::{fmt::Debug};
 use std::error::Error;
 use uuid::Uuid;
 use gisst::error::ErrorTable;
+use tracing::error;
 
 #[derive(thiserror::Error)]
 pub enum GISSTError {
@@ -81,6 +82,7 @@ impl IntoResponse for GISSTError {
             embed("https://gisst.pomona.edu/data/62f78345-b4b0-458d-a6ea-5c08724a6415?state=e32b9c0f-f56e-4a84-b2e6-e4996a82e35a", document.getElementById("embedExample"));
         </script>
         "#).unwrap();
+        error!("{}", self.source().unwrap().to_string());
         let error_template = env.get_template("error.html").unwrap();
         let (status, message) = match self {
             GISSTError::SqlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database error"),
