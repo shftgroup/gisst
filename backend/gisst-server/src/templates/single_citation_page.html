@@ -1,7 +1,7 @@
 {% extends "layout_external.html" %}
 
 {% block title %}
-GISST Citation for {{ embed_data.work.work_name }}
+{{embed_data.citation_data.website_title}}
 {% endblock title %}
 
 {% block gisst_imports %}
@@ -17,13 +17,55 @@ GISST Citation for {{ embed_data.work.work_name }}
       <div id="embedTarget"></div>
     </div>
     <div class="col-xl-6">
-      <div class="pt-1">
+      <div class="pt-2">
+        {% if embed_data.start.type == "state" %}
         <h2>{{ embed_data.start.data.state_name}}</h2>
         <h3>{{ embed_data.start.data.state_description}}</h3>
-        <h4>Work Information</h4>
-        <p>{{ embed_data.work.work_name }}</p>
-        <p>Version: {{ embed_data.work.work_version }}</p>
-        <p>Platform: {{ embed_data.work.work_platform }}</p>
+        {% elif embed_data.start.type == "replay" %}
+        <h2>{{ embed_data.start.data.replay_name}}</h2>
+        <h3>{{ embed_data.start.data.replay_description}}</h3>
+        {% endif %}
+        <div class="card">
+          <div class="card-header">
+            Work Information
+          </div>
+          <div class="card-body">
+            <h5 class="card-title">{{embed_data.work.work_name}}</h5>
+            <p>Version: {{ embed_data.work.work_version }}</p>
+            <p>Platform: {{ embed_data.work.work_platform }}</p>
+          </div>
+        </div>
+        <div class="pt-2 pb-2">
+          <div class="card">
+            <div class="card-header">
+              Citation for This Webpage
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Game Studies</h5>
+              ({{ embed_data.citation_data.gs_page_view_date }}) <i>{{embed_data.citation_data.website_title}}</i>. GISST. {{ embed_data.host_protocol}}//{{embed_data.host_url}}{{ embed_data.citation_data.url }}
+              <h5 class="pt-2 card-title">MLA</h5>
+              "{{embed_data.citation_data.website_title}}." <i>GISST</i>, {{ embed_data.citation_data.mla_page_view_date }}, {{embed_data.host_url}}{{embed_data.citation_data.url}}
+              <h5 class="pt-2 card-title">BibTeX</h5>
+              <pre><code>
+              &commat;misc &lcub;
+                title = &lcub;{{embed_data.citation_data.website_title }}&rcub;,
+                howpublished = &lcub;\url&lcub;{{ embed_data.host_protocol}}//{{embed_data.host_url}}{{ embed_data.citation_data.url }}&rcub;&rcub;,
+                note = &lcub;Accessed:{{embed_data.citation_data.bibtex_page_view_date}}&rcub;
+              &rcub;
+            </code></pre>
+              <h5 class="pt-2 card-title">BibLaTeX Online</h5>
+              <pre><code>
+              &commat;online &lcub;
+                author = &lcub;GISST&rcub;,
+                title = &lcub;{{embed_data.citation_data.website_title }}&rcub;,
+                url = &lcub;{{ embed_data.host_protocol }}//{{ embed_data.host_url }}{{ embed_data.citation_data.url }}&rcub;,
+                year = &lcub;{{ embed_data.citation_data.site_published_year }}&rcub;,
+                urldate = &lcub;{{ embed_data.citation_data.bibtex_page_view_date }}&rcub;
+              &rcub;
+            </code></pre>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

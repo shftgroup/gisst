@@ -36,7 +36,7 @@ use crate::routes::screenshot_router;
 use axum_login::axum_sessions::async_session::MemoryStore;
 use axum_login::axum_sessions::{SameSite, SessionLayer};
 use gisst::storage::{PendingUpload, StorageHandler};
-use minijinja::{context, HtmlEscape};
+use minijinja::{context};
 use oauth2::basic::BasicClient;
 use rand::Rng;
 use secrecy::ExposeSecret;
@@ -45,6 +45,8 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
+use axum::extract::OriginalUri;
+use chrono::{DateTime, Local};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use uuid::Uuid;
 use tracing::debug;
@@ -375,6 +377,17 @@ struct EmbedDataInfo {
     manifest: Vec<ObjectLink>,
     host_url: String,
     host_protocol: String,
+    citation_data: Option<CitationDataInfo>
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+struct CitationDataInfo {
+    website_title: String,
+    url: String,
+    gs_page_view_date: String,
+    mla_page_view_date: String,
+    bibtex_page_view_date: String,
+    site_published_year: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -419,6 +432,7 @@ async fn get_data(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
+    OriginalUri(uri): OriginalUri,
     Query(params): Query<PlayerParams>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -452,6 +466,22 @@ async fn get_data(
     let url_string = app_state.base_url.clone();
 
     let url_parts: Vec<&str> = url_string.split("//").collect();
+    let current_date:DateTime<Local> = Local::now();
+
+    let citation_website_title:String = match &start {
+        PlayerStartTemplateInfo::State(s) => format!("GISST Citation of {} in {}",s.state_name, work.work_name),
+        PlayerStartTemplateInfo::Replay(r) => format!("GISST Citation of {} in {}",r.replay_name, work.work_name),
+        PlayerStartTemplateInfo::Cold => "".to_string(),
+    };
+
+    let citation_data: CitationDataInfo = CitationDataInfo {
+        website_title: citation_website_title,
+        url: uri.to_string(),
+        gs_page_view_date: current_date.format("%Y, %B %d").to_string(),
+        mla_page_view_date: current_date.format("%d %b. %Y").to_string(),
+        bibtex_page_view_date: current_date.format("%Y-%m-%d").to_string(),
+        site_published_year: current_date.format("%Y").to_string(),
+    };
 
     let embed_data = EmbedDataInfo{
         environment,
@@ -462,6 +492,7 @@ async fn get_data(
         manifest,
         host_url: url_parts[1].to_string(),
         host_protocol: url_parts[0].to_string(),
+        citation_data: Some(citation_data),
     };
 
     let accept: Option<String> = parse_header(&headers, "Accept");
