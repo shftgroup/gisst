@@ -102,6 +102,10 @@ function activate(v86:EmbedV86) {
   for(const emu of emulators) {
     if(emu.emulator) {
       emu.emulator.keyboard_set_status(emu === v86);
+      emu.emulator.mouse_set_status(emu === v86);
+      if (emu == v86) {
+        emu.emulator.lock_mouse();
+      }
     }
   }
 }

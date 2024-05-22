@@ -108,13 +108,13 @@ export async function init(environment:Environment, start:ColdStart | StateStart
     false,
       JSON.parse(document.getElementById("config")!.textContent!) as GISSTModels.FrontendConfig
   );
-
+  const container = <HTMLDivElement>document.getElementById("canvas_div")!;
   v86 = new EmbedV86({
     wasm_root:"/v86",
     bios_root:"/v86/bios",
     record_from_start:boot_into_record,
     content_root:window.location.origin,
-    container: <HTMLDivElement>document.getElementById("canvas_div")!,
+    container,
     register_replay:(nom:string)=> {
       if(movie && nom == "replay0") {
         const data = (start as ReplayStart).data;
@@ -171,4 +171,5 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       ui_state.setReplayMode(v86.replays[v86.active_replay].mode as UIReplayMode);
     }
   }, 250);
+  container.addEventListener("click", () => { v86.emulator.lock_mouse(); } )
 }
