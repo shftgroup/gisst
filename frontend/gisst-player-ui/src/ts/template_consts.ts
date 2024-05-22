@@ -21,7 +21,5 @@ export class UIIDConst {
     static readonly EMU_REMOVE_LAST_SAVE_BUTTON:string = "remove_last_save_button";
     static readonly EMU_REMOVE_LAST_STATE_BUTTON:string = "remove_last_state_button";
     static readonly EMU_REMOVE_LAST_REPLAY_BUTTON:string = "remove_last_replay_button";
-    static readonly EMU_HIDE_BUTTON:string = "hide_emulator";
-    static readonly UI_CLEAR_BUTTON:string = "clear_ui_button";
 
 }
