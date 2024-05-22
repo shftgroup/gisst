@@ -27,21 +27,26 @@ mkdir -p frontend/frontend-web/public/assets
 rm -rf frontend/frontend-web/public/assets/frontend
 cp -r retroarch-web/assets/frontend frontend/frontend-web/public/assets/
 
+pushd frontend/frontend-web/public/assets/frontend
+rm -f bundle.zip
+cat bundle.* > bundle-ra.zip
+unzip bundle-ra.zip
+rm bundle-ra.zip
+cd bundle
+rm -rf shaders filters database assets/glui assets/xmb assets/rgui
+rm -rf overlays/{borders,ctr,effects,ipad,keyboards,misc,wii}
+rm -rf overlays/gamepads/{720-med,arcade,arcade-anim,arcade-minimal,cdi_anim_portrait,dual-shock,example,flat,flip_phone,gba-anim_landscape,gba-grey,gb_anim_portrait,genesis,lite,n64,neo-retropad,old,psx,rgpad,scummvm}
+rm -f assets/ozone/png/icons/*\ -\ *
+rm -f assets/sounds/*.wav
+rm -f assets/pkg/chinese-*
+rm -f assets/pkg/korean-*
+cd ..
+zip -r -1 bundle.zip bundle
+popd
+
 cd frontend
 npm i
 cd ..
-
-cd frontend/frontend-web/public/assets/frontend/bundle
-rm -rf overlays shaders filters database assets/glui assets/xmb assets/rgui
-rm assets/ozone/png/icons/*\ -\ *
-rm assets/sounds/*.wav
-rm assets/pkg/chinese-*
-rm assets/pkg/korean-*
-cd -
-
-cd frontend/frontend-web/public/assets/frontend
-zip -r -9 bundle.zip bundle
-cd -
 
 rm -rf frontend/frontend-elec/resources/ra-assets/
 mkdir -p frontend/frontend-elec/resources
