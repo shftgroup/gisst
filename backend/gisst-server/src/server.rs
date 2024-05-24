@@ -64,6 +64,7 @@ pub struct ServerState {
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: minijinja::Environment<'static>,
     pub oauth_client: BasicClient,
+    pub user_whitelist: Vec<String>,
 }
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
@@ -78,6 +79,10 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 
     debug!("Configured URL is {}",config.http.base_url.clone());
 
+    let mut user_whitelist_sorted:Vec<String> = config.auth.user_whitelist.iter().cloned().collect();
+
+    user_whitelist_sorted.sort();
+
     let app_state = ServerState {
         pool: db::new_pool(config).await?,
         root_storage_path: config.storage.root_folder_path.clone(),
@@ -87,6 +92,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         base_url: config.http.base_url.clone(),
         pending_uploads: Default::default(),
         templates: template_environment,
+        user_whitelist: user_whitelist_sorted,
         oauth_client: auth::build_oauth_client(
             &config.http.base_url,
             config.auth.google_client_id.expose_secret(),
