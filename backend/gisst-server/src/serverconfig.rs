@@ -59,6 +59,7 @@ impl Default for EnvConfig {
 pub struct AuthConfig {
     pub google_client_id: Secret<String>,
     pub google_client_secret: Secret<String>,
+    pub user_whitelist: Vec<String>,
 }
 
 impl Default for AuthConfig {
@@ -72,6 +73,7 @@ impl Default for AuthConfig {
                 .to_string()
                 .parse()
                 .unwrap(),
+            user_whitelist: vec![],
         }
     }
 }

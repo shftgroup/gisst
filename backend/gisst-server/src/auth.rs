@@ -30,6 +30,7 @@ use axum_login::axum_sessions::extractors::WritableSession;
 
 use serde::Deserialize;
 use tracing::{debug,info,warn};
+use crate::error::GISSTError::{AuthTokenResponseError, AuthUserNotPermittedError};
 
 // User attributes based on OpenID specification for "userinfo"
 #[derive(Debug, Default, Clone, sqlx::FromRow)]
@@ -220,7 +221,7 @@ pub async fn oauth_callback_handler(
         .exchange_code(AuthorizationCode::new(query.code))
         .request_async(async_http_client)
         .await
-        .unwrap();
+        .map_err(|_| AuthTokenResponseError)?;
 
     // Get OpenID provider userinfo from token
     let profile = match reqwest::Client::new()
@@ -234,6 +235,14 @@ pub async fn oauth_callback_handler(
     };
 
     let profile: OpenIDUserInfo = profile.json::<OpenIDUserInfo>().await.unwrap();
+
+    if let Some(email) = profile.email.as_ref() {
+        debug!("Comparing {email} ");
+        if state.user_whitelist.binary_search(email).is_err(){
+            return Err(AuthUserNotPermittedError)
+        }
+    }
+
     debug!("Getting db connection");
 
     let user = auth_get_user(state.pool, &profile, token.access_token().secret()).await?;
