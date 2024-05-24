@@ -79,7 +79,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 
     debug!("Configured URL is {}",config.http.base_url.clone());
 
-    let mut user_whitelist_sorted:Vec<String> = config.auth.user_whitelist.iter().cloned().collect();
+    let mut user_whitelist_sorted:Vec<String> = config.auth.user_whitelist.to_vec();
 
     user_whitelist_sorted.sort();
 
