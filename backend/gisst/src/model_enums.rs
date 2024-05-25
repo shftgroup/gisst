@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(rename_all = "lowercase", type_name = "environment_framework")]
 #[serde(rename_all = "lowercase")]
 pub enum Framework {

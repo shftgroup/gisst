@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE instance SET\n            (environment_id, work_id, instance_config, created_on) =\n            ($1, $2, $3, $4)\n            WHERE instance_id = $5\n            RETURNING instance_id, environment_id, work_id, instance_config, created_on",
+  "query": "UPDATE instance SET\n            (environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state) =\n            ($1, $2, $3, $4, $5, $6)\n            WHERE instance_id = $7\n            RETURNING instance_id, environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,16 @@
         "ordinal": 4,
         "name": "created_on",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "derived_from_instance",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "derived_from_state",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -35,6 +45,8 @@
         "Uuid",
         "Jsonb",
         "Timestamptz",
+        "Uuid",
+        "Uuid",
         "Uuid"
       ]
     },
@@ -43,8 +55,10 @@
       false,
       false,
       true,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "c823369073da24910b5570604100f87f5331ae009c144785b663ac00678fb6a8"
+  "hash": "b1d810c4717a4d9befdb44a4edc73c4b01d97485987061eb6e92ceb8745f8d58"
 }

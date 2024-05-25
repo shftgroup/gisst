@@ -1,18 +1,23 @@
 mod args;
 mod cliconfig;
 
+use crate::args::CreateScreenshot;
 use crate::cliconfig::CLIConfig;
 use anyhow::Result;
 use args::{
-    BaseSubcommand, CreateCreator, CreateEnvironment, CreateImage, CreateInstance, CreateObject,
-    CreateReplay, CreateSave, CreateState, CreateWork, DeleteRecord, GISSTCli, GISSTCliError,
-    Commands,
+    BaseSubcommand, Commands, CreateCreator, CreateEnvironment, CreateImage, CreateInstance,
+    CreateObject, CreateReplay, CreateSave, CreateState, CreateWork, DeleteRecord, GISSTCli,
+    GISSTCliError,
 };
 use clap::Parser;
 use gisst::{
+    model_enums::Framework,
+    models::{ObjectRole, Screenshot, StateLink},
+};
+use gisst::{
     models::{
-        Creator, DBHashable, DBModel, Environment, Image, Instance, Object, Replay, Save, State,
-        Work,
+        Creator, DBHashable, DBModel, Environment, Image, Instance, Object, ObjectLink, Replay,
+        Save, State, Work,
     },
     storage::StorageHandler,
 };
@@ -21,11 +26,9 @@ use sqlx::pool::PoolOptions;
 use sqlx::types::chrono;
 use sqlx::PgPool;
 use std::path::{Path, PathBuf};
-use std::{fs, fs::read, io};
+use std::{fs, io};
 use uuid::{uuid, Uuid};
 use walkdir::WalkDir;
-use gisst::models::{ObjectRole, Screenshot};
-use crate::args::CreateScreenshot;
 
 #[tokio::main]
 async fn main() -> Result<(), GISSTCliError> {
@@ -54,7 +57,13 @@ async fn main() -> Result<(), GISSTCliError> {
     );
 
     match dbg!(args).command {
-        Commands::Link {record_type, source_uuid, target_uuid, role} => link_record(&record_type, source_uuid, target_uuid, db, role).await?,
+        Commands::Link {
+            record_type,
+            source_uuid,
+            target_uuid,
+            role,
+            role_index,
+        } => link_record(&record_type, source_uuid, target_uuid, db, role, role_index).await?,
         Commands::Object(object) => match object.command {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
             BaseSubcommand::Update(_update) => (),
@@ -122,22 +131,206 @@ async fn main() -> Result<(), GISSTCliError> {
         Commands::Screenshot(screenshot) => match screenshot.command {
             BaseSubcommand::Create(create) => create_screenshot(create, db).await?,
             BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => {
-                delete_record::<Screenshot>(delete, db).await?
-            },
+            BaseSubcommand::Delete(delete) => delete_record::<Screenshot>(delete, db).await?,
             BaseSubcommand::Export(_export) => (),
+        },
+        Commands::CloneV86 {
+            instance,
+            state,
+            depth,
+        } => {
+            clone_v86_machine(db, instance, state, storage_root, depth).await?;
         }
     }
     Ok(())
 }
 
-async fn link_record(record_type:&str, source_id:Uuid, target_id:Uuid, db: PgPool, role:Option<ObjectRole>) -> Result<(), GISSTCliError> {
+async fn clone_v86_machine(
+    db: PgPool,
+    instance_id: Uuid,
+    state_id: Uuid,
+    storage_root: String,
+    depth: u8,
+) -> Result<Uuid, GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    let instance = Instance::get_by_id(&mut conn, instance_id)
+        .await?
+        .ok_or(GISSTCliError::RecordNotFound(instance_id))?;
+
+    let env = Environment::get_by_id(&mut conn, instance.environment_id)
+        .await?
+        .ok_or(GISSTCliError::RecordNotFound(instance.environment_id))?;
+    if env.environment_framework != Framework::V86 {
+        return Err(GISSTCliError::InvalidRecordType(
+            "Can only clone v86 instances".to_string(),
+        ));
+    }
+    let state = StateLink::get_by_id(&mut conn, state_id)
+        .await?
+        .ok_or(GISSTCliError::RecordNotFound(state_id))?;
+    if state.instance_id != instance_id {
+        return Err(GISSTCliError::InvalidRecordType(
+            "Can only clone state belonging to the given instance".to_string(),
+        ));
+    }
+    let state_file_path = format!(
+        "{storage_root}/{}/{}-{}",
+        state.file_dest_path, state.file_hash, state.file_filename
+    );
+    let objects = ObjectLink::get_all_for_instance_id(&mut conn, instance_id).await?;
+    // This unwrap is safe since we know it's a v86 framework environment
+    let mut env_json = env.config_for_v86(&objects).unwrap().to_string();
+    for obj in objects.iter() {
+        let file_path = format!(
+            "{storage_root}/{}/{}-{}",
+            obj.file_dest_path, obj.file_hash, obj.file_filename
+        );
+        match obj.object_role {
+            ObjectRole::Content => {
+                let idx = obj.object_role_index;
+                env_json = env_json.replace(&format!("$CONTENT{idx}"), &file_path);
+                if idx == 0 {
+                    env_json = env_json.replace("$CONTENT\"", &format!("{file_path}\""));
+                }
+            }
+            ObjectRole::Dependency => { /* nop */ }
+            ObjectRole::Config => { /*nop*/ }
+        }
+    }
+    env_json = env_json.replace("seabios.bin", "web-dist/v86/bios/seabios.bin");
+    env_json = env_json.replace("vgabios.bin", "web-dist/v86/bios/vgabios.bin");
+    use std::process::Command;
+    println!("Input {env_json}\n{state_file_path}");
+    let output = Command::new("node")
+        .arg("v86dump/index.js")
+        .arg(env_json)
+        .arg(state_file_path)
+        .output()?;
+    let err = String::from_utf8(output.stderr).expect("stderr not utf8");
+    println!("{err}");
+    let output = String::from_utf8(output.stdout).expect("disk image names not utf-8");
+    println!("Output {output}");
+    // create the new instance
+    let mut instance = instance;
+    instance.created_on = chrono::Utc::now();
+    instance.derived_from_instance = Some(instance.instance_id);
+    instance.derived_from_state = Some(state_id);
+    instance.instance_id = Uuid::new_v4();
+    let new_id = instance.instance_id;
+    Instance::insert(&mut conn, instance)
+        .await
+        .map_err(GISSTCliError::NewModel)?;
+
+    // add the requisite objects and link them
+    // TODO: the ? inside of this loop should get caught and I should delete the outFGSFDS/ folder either way after.
+    for line in output.lines() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let (drive, diskpath) = line.split_at(
+            line.find(':')
+                .unwrap_or_else(|| panic!("Invalid output from v86dump:{line}"))
+                + 1,
+        );
+        let index = match drive {
+            "fda:" => 0,
+            "fdb:" => 1,
+            "hda:" => 2,
+            "hdb:" => 3,
+            "cdrom:" => 4,
+            _ => panic!("Unrecognized drive type {drive}"),
+        };
+        println!("Linking {drive}{diskpath} as {index}");
+        let file_name = Path::new(diskpath)
+            .to_path_buf()
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        let file_size = std::fs::metadata(diskpath)?.len() as i64;
+        let mut file_record = gisst::models::File {
+            file_id: Uuid::new_v4(),
+            file_hash: StorageHandler::get_file_hash(diskpath)?,
+            file_filename: file_name.clone(),
+            file_source_path: String::new(),
+            file_dest_path: Default::default(),
+            file_size,
+            created_on: chrono::Utc::now(),
+        };
+        let object = Object {
+            object_id: Uuid::new_v4(),
+            file_id: file_record.file_id,
+            object_description: Some(file_name),
+            created_on: chrono::Utc::now(),
+        };
+        let file_info = StorageHandler::write_file_to_uuid_folder(
+            &storage_root,
+            depth,
+            file_record.file_id,
+            &file_record.file_filename,
+            diskpath,
+        )
+        .await?;
+        println!(
+            "Wrote file {} to {}",
+            file_info.dest_filename, file_info.dest_path
+        );
+        let obj_uuid = object.object_id;
+        let file_uuid = file_record.file_id;
+        file_record.file_dest_path = file_info.dest_path;
+        let file_insert = gisst::models::File::insert(&mut conn, file_record).await;
+        let obj_insert = Object::insert(&mut conn, object).await;
+        if file_insert.as_ref().and(obj_insert.as_ref()).is_ok() {
+            Object::link_object_to_instance(
+                &mut conn,
+                obj_uuid,
+                new_id,
+                ObjectRole::Content,
+                index,
+            )
+            .await?;
+        } else {
+            println!(
+                "Could not insert either file or object:\nf:{file_insert:?}\no:{obj_insert:?}"
+            );
+            StorageHandler::delete_file_with_uuid(
+                &storage_root,
+                depth,
+                file_uuid,
+                &file_info.dest_filename,
+            )
+            .await?;
+        }
+    }
+    Ok(new_id)
+}
+
+async fn link_record(
+    record_type: &str,
+    source_id: Uuid,
+    target_id: Uuid,
+    db: PgPool,
+    role: Option<ObjectRole>,
+    role_index: Option<usize>,
+) -> Result<(), GISSTCliError> {
     match record_type {
         "object" => {
             let mut conn = db.acquire().await?;
-            Object::link_object_to_instance(&mut conn, source_id, target_id, role.unwrap()).await?;
-        },
-        _ => return Err(GISSTCliError::InvalidRecordType(format!("{} is not a valid record type", record_type)))
+            Object::link_object_to_instance(
+                &mut conn,
+                source_id,
+                target_id,
+                role.unwrap(),
+                role_index.unwrap_or(0),
+            )
+            .await?;
+        }
+        _ => {
+            return Err(GISSTCliError::InvalidRecordType(format!(
+                "{} is not a valid record type",
+                record_type
+            )))
+        }
     }
     Ok(())
 }
@@ -149,6 +342,7 @@ async fn create_object(
         depth,
         link,
         role,
+        role_index,
         file,
         force_uuid,
         ..
@@ -191,30 +385,34 @@ async fn create_object(
     let mut conn = db.acquire().await?;
 
     for path in &valid_paths {
-        let data = &read(path)?;
-
         let mut source_path = PathBuf::from(path);
         source_path.pop();
-
+        let file_size = std::fs::metadata(path)?.len() as i64;
         let mut file_record = gisst::models::File {
             file_id: Uuid::new_v4(),
-            file_hash: StorageHandler::get_md5_hash(data),
+            file_hash: StorageHandler::get_file_hash(path)?,
             file_filename: path
                 .to_path_buf()
                 .file_name()
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
-            file_source_path: source_path.to_string_lossy().to_string().replace("./",""),
+            file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
             file_dest_path: Default::default(),
-            file_size: data.len() as i64,
+            file_size,
             created_on: chrono::Utc::now(),
         };
 
         let mut object = Object {
             object_id: Uuid::new_v4(),
             file_id: file_record.file_id,
-            object_description: Some(path.to_path_buf().file_name().unwrap().to_string_lossy().to_string()),
+            object_description: Some(
+                path.to_path_buf()
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string(),
+            ),
             created_on: chrono::Utc::now(),
         };
 
@@ -253,7 +451,7 @@ async fn create_object(
             depth,
             file_record.file_id,
             &file_record.file_filename,
-            data,
+            path,
         )
         .await
         {
@@ -272,7 +470,10 @@ async fn create_object(
                     && Object::insert(&mut conn, object).await.is_ok()
                 {
                     if let Some(link) = link {
-                        Object::link_object_to_instance(&mut conn, obj_uuid, link, role).await?;
+                        Object::link_object_to_instance(
+                            &mut conn, obj_uuid, link, role, role_index,
+                        )
+                        .await?;
                     }
                 } else {
                     StorageHandler::delete_file_with_uuid(
@@ -294,8 +495,7 @@ async fn create_object(
 }
 
 #[allow(dead_code)]
-async fn delete_record<T: DBModel>(d: DeleteRecord, db: PgPool) -> Result<(), GISSTCliError>
-{
+async fn delete_record<T: DBModel>(d: DeleteRecord, db: PgPool) -> Result<(), GISSTCliError> {
     let mut conn = db.acquire().await?;
     T::delete_by_id(&mut conn, d.id)
         .await
@@ -568,14 +768,12 @@ async fn create_image(
     let mut conn = db.acquire().await?;
 
     for path in &valid_paths {
-        let data = &read(path)?;
-
         let mut source_path = PathBuf::from(path);
         source_path.pop();
-
+        let file_size = std::fs::metadata(path)?.len() as i64;
         let mut file_record = gisst::models::File {
             file_id: Uuid::new_v4(),
-            file_hash: StorageHandler::get_md5_hash(data),
+            file_hash: StorageHandler::get_file_hash(path)?,
             file_filename: path
                 .to_path_buf()
                 .file_name()
@@ -584,7 +782,7 @@ async fn create_image(
                 .to_string(),
             file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
             file_dest_path: Default::default(),
-            file_size: data.len() as i64,
+            file_size,
             created_on: chrono::Utc::now(),
         };
         let mut image = Image {
@@ -630,7 +828,7 @@ async fn create_image(
             depth,
             file_record.file_id,
             &file_record.file_filename,
-            data,
+            path,
         )
         .await
         {
@@ -700,8 +898,8 @@ async fn create_replay(
         .map(chrono::DateTime::<chrono::Utc>::from)
         .unwrap_or(chrono::Utc::now());
     let mut conn = db.acquire().await?;
-    let data = &read(file)?;
-    let hash = StorageHandler::get_md5_hash(data);
+    let file_size = std::fs::metadata(file)?.len() as i64;
+    let hash = StorageHandler::get_file_hash(file)?;
     let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut conn, &hash).await? {
         info!("File exists in DB already");
         file.file_id
@@ -711,7 +909,7 @@ async fn create_replay(
         let filename = file.file_name().unwrap().to_string_lossy().to_string();
 
         let file_info =
-            StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, data)
+            StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, file)
                 .await?;
         info!(
             "Wrote file {} to {}",
@@ -725,9 +923,9 @@ async fn create_replay(
             file_id: uuid,
             file_hash: hash,
             file_filename: filename,
-            file_source_path: source_path.to_string_lossy().to_string().replace("./",""),
+            file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
             file_dest_path: file_info.dest_path,
-            file_size: data.len() as i64,
+            file_size,
             created_on,
         };
         gisst::models::File::insert(&mut conn, file_record).await?;
@@ -752,10 +950,7 @@ async fn create_replay(
 }
 
 async fn create_screenshot(
-    CreateScreenshot {
-    file,
-    force_uuid,
-    }: CreateScreenshot,
+    CreateScreenshot { file, force_uuid }: CreateScreenshot,
     db: PgPool,
 ) -> Result<(), GISSTCliError> {
     let file = Path::new(&file);
@@ -768,15 +963,16 @@ async fn create_screenshot(
     }
 
     let mut conn = db.acquire().await?;
-    let data = read(file)?;
 
     Screenshot::insert(
         &mut conn,
-        Screenshot{
-            screenshot_data: data,
+        Screenshot {
+            screenshot_data: std::fs::read(file)?,
             screenshot_id: force_uuid.unwrap_or_else(Uuid::new_v4),
-        }
-    ).await.map_err(GISSTCliError::NewModel)?;
+        },
+    )
+    .await
+    .map_err(GISSTCliError::NewModel)?;
 
     info!("Wrote screenshot {} to database.", file.to_string_lossy());
     Ok(())
@@ -809,7 +1005,6 @@ async fn create_state(
     }
 
     let mut conn = db.acquire().await?;
-    let data = &read(file)?;
     let mut source_path = PathBuf::from(file);
     source_path.pop();
     let created_on = created_on
@@ -820,18 +1015,19 @@ async fn create_state(
         })
         .map(chrono::DateTime::<chrono::Utc>::from)
         .unwrap_or(chrono::Utc::now());
+    let file_size = std::fs::metadata(file)?.len() as i64;
     let mut file_record = gisst::models::File {
         file_id: Uuid::new_v4(),
-        file_hash: StorageHandler::get_md5_hash(data),
+        file_hash: StorageHandler::get_file_hash(file)?,
         file_filename: file
             .to_path_buf()
             .file_name()
             .unwrap()
             .to_string_lossy()
             .to_string(),
-        file_source_path: source_path.to_string_lossy().to_string().replace("./",""),
+        file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
         file_dest_path: Default::default(),
-        file_size: data.len() as i64,
+        file_size,
         created_on,
     };
     let state = State {
@@ -867,7 +1063,7 @@ async fn create_state(
         depth,
         file_record.file_id,
         &file_record.file_filename,
-        data,
+        file,
     )
     .await
     {

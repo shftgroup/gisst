@@ -77,6 +77,8 @@ pub enum StorageError {
     PathPrefixError(#[from] std::path::StripPrefixError),
     #[error("Storage file not found")]
     FileNotFoundError,
+    #[error("File path not UTF-8")]
+    UTF8(#[from] std::string::FromUtf8Error),
 }
 
 impl fmt::Display for RecordSQLError {

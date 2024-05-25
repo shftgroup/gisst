@@ -1,20 +1,15 @@
 use crate::error::GISSTError;
-use gisst::models::{DBModel, Environment, Instance, Save, Work};
+use gisst::models::{
+    DBModel, Environment, Instance, ObjectLink, ReplayLink, Save, StateLink, Work,
+};
 use std::collections::HashMap;
 use tower::ServiceBuilder;
 
 use crate::{
     auth, db,
     routes::{
-        creator_router,
-        environment_router,
-        image_router,
-        instance_router,
-        object_router,
-        replay_router,
-        save_router,
-        state_router,
-        work_router,
+        creator_router, environment_router, image_router, instance_router, object_router,
+        replay_router, save_router, state_router, work_router,
     },
     serverconfig::ServerConfig,
     tus::{tus_creation, tus_head, tus_patch},
@@ -33,10 +28,14 @@ use axum_login::{AuthLayer, RequireAuthorizationLayer};
 
 use crate::auth::{AuthContext, User};
 use crate::routes::screenshot_router;
+use crate::utils::parse_header;
+use axum::extract::OriginalUri;
 use axum_login::axum_sessions::async_session::MemoryStore;
 use axum_login::axum_sessions::{SameSite, SessionLayer};
+use chrono::{DateTime, Local};
+use gisst::error::ErrorTable;
 use gisst::storage::{PendingUpload, StorageHandler};
-use minijinja::{context};
+use minijinja::context;
 use oauth2::basic::BasicClient;
 use rand::Rng;
 use secrecy::ExposeSecret;
@@ -45,13 +44,9 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
-use axum::extract::OriginalUri;
-use chrono::{DateTime, Local};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
-use uuid::Uuid;
 use tracing::debug;
-use gisst::error::ErrorTable;
-use crate::utils::parse_header;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -77,9 +72,9 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     let mut template_environment = minijinja::Environment::new();
     template_environment.set_loader(minijinja::path_loader("gisst-server/src/templates"));
 
-    debug!("Configured URL is {}",config.http.base_url.clone());
+    debug!("Configured URL is {}", config.http.base_url.clone());
 
-    let mut user_whitelist_sorted:Vec<String> = config.auth.user_whitelist.to_vec();
+    let mut user_whitelist_sorted: Vec<String> = config.auth.user_whitelist.to_vec();
 
     user_whitelist_sorted.sort();
 
@@ -130,7 +125,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(HandleErrorLayer::new(handle_error))
         // This map_err is needed to get the types to work out after handleerror and before servedir.
         .map_err(|e| panic!("{:?}", e));
-
 
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
@@ -214,130 +208,6 @@ async fn handle_error(error: axum::BoxError) -> impl axum::response::IntoRespons
     )
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ObjectLink {
-    pub object_id: Uuid,
-    pub object_role: gisst::models::ObjectRole,
-    pub file_hash: String,
-    pub file_filename: String,
-    pub file_source_path: String,
-    pub file_dest_path: String,
-}
-impl ObjectLink {
-    pub async fn get_all_for_instance_id(
-        conn: &mut sqlx::PgConnection,
-        id: Uuid,
-    ) -> sqlx::Result<Vec<Self>> {
-        sqlx::query_as!(
-            Self,
-            r#"
-            SELECT object_id, instanceObject.object_role as "object_role:_", file.file_hash as file_hash, file.file_filename as file_filename, file.file_source_path as file_source_path, file.file_dest_path as file_dest_path
-            FROM object
-            JOIN instanceObject USING(object_id)
-            JOIN instance USING(instance_id)
-            JOIN file USING(file_id)
-            WHERE instance_id = $1
-            "#,
-            id
-        )
-        .fetch_all(conn)
-        .await
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ReplayLink {
-    pub replay_id: Uuid,
-    pub replay_name: String,
-    pub replay_description: String,
-    pub instance_id: Uuid,
-    pub creator_id: Uuid,
-    pub replay_forked_from: Option<Uuid>,
-    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
-    pub file_id: Uuid,
-    pub file_hash: String,
-    pub file_filename: String,
-    pub file_source_path: String,
-    pub file_dest_path: String,
-}
-impl ReplayLink {
-    pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
-        sqlx::query_as!(
-            Self,
-            r#"SELECT replay_id,
-            replay_name,
-            replay_description,
-            instance_id,
-            creator_id,
-            replay_forked_from,
-            replay.created_on,
-            file_id,
-            file.file_hash as file_hash,
-            file.file_filename as file_filename,
-            file.file_source_path as file_source_path,
-            file.file_dest_path as file_dest_path
-            FROM replay
-            JOIN file USING(file_id)
-            WHERE replay_id = $1
-            "#,
-            id,
-        )
-        .fetch_optional(conn)
-        .await
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct StateLink {
-    pub state_id: Uuid,
-    pub instance_id: Uuid,
-    pub is_checkpoint: bool,
-    pub state_name: String,
-    pub state_description: String,
-    pub screenshot_id: Option<Uuid>,
-    pub replay_id: Option<Uuid>,
-    pub creator_id: Option<Uuid>,
-    pub state_replay_index: Option<i32>,
-    pub state_derived_from: Option<Uuid>,
-    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
-    pub file_id: Uuid,
-    pub file_hash: String,
-    pub file_filename: String,
-    pub file_source_path: String,
-    pub file_dest_path: String,
-}
-impl StateLink {
-    pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
-        sqlx::query_as!(
-            Self,
-            r#"SELECT
-            state_id,
-            instance_id,
-            is_checkpoint,
-            state_name,
-            state_description,
-            screenshot_id,
-            replay_id,
-            creator_id,
-            state_replay_index,
-            state_derived_from,
-            state.created_on,
-            file_id,
-            file.file_hash as file_hash,
-            file.file_filename as file_filename,
-            file.file_source_path as file_source_path,
-            file.file_dest_path as file_dest_path
-            FROM state
-            JOIN file USING(file_id)
-            WHERE state_id = $1
-            "#,
-            id,
-        )
-        .fetch_optional(conn)
-        .await
-    }
-}
-
 #[derive(Deserialize, Serialize, Debug)]
 pub struct LoggedInUserInfo {
     email: Option<String>,
@@ -383,7 +253,7 @@ struct EmbedDataInfo {
     manifest: Vec<ObjectLink>,
     host_url: String,
     host_protocol: String,
-    citation_data: Option<CitationDataInfo>
+    citation_data: Option<CitationDataInfo>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -442,41 +312,60 @@ async fn get_data(
     Query(params): Query<PlayerParams>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let instance = Instance::get_by_id(&mut conn, id)
-        .await?
-        .ok_or(GISSTError::RecordMissingError { table: ErrorTable::Instance, uuid: id })?;
+    let instance =
+        Instance::get_by_id(&mut conn, id)
+            .await?
+            .ok_or(GISSTError::RecordMissingError {
+                table: ErrorTable::Instance,
+                uuid: id,
+            })?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::RecordMissingError { table: ErrorTable::Environment, uuid: instance.environment_id })?;
-    let work = Work::get_by_id(&mut conn, instance.work_id)
-        .await?
-        .ok_or(GISSTError::RecordMissingError { table: ErrorTable::Work, uuid: instance.work_id })?;
+        .ok_or(GISSTError::RecordMissingError {
+            table: ErrorTable::Environment,
+            uuid: instance.environment_id,
+        })?;
+    let work = Work::get_by_id(&mut conn, instance.work_id).await?.ok_or(
+        GISSTError::RecordMissingError {
+            table: ErrorTable::Work,
+            uuid: instance.work_id,
+        },
+    )?;
     let start = match dbg!((params.state, params.replay)) {
-        (Some(id), None) => PlayerStartTemplateInfo::State(
-            StateLink::get_by_id(&mut conn, id)
-                .await?
-                .ok_or(GISSTError::RecordLinkingError { table: ErrorTable::State, uuid: id })?,
-        ),
-        (None, Some(id)) => PlayerStartTemplateInfo::Replay(
-            ReplayLink::get_by_id(&mut conn, id)
-                .await?
-                .ok_or(GISSTError::RecordLinkingError { table: ErrorTable::Replay, uuid: id })?,
-        ),
+        (Some(id), None) => {
+            PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
+                GISSTError::RecordLinkingError {
+                    table: ErrorTable::State,
+                    uuid: id,
+                },
+            )?)
+        }
+        (None, Some(id)) => {
+            PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
+                GISSTError::RecordLinkingError {
+                    table: ErrorTable::Replay,
+                    uuid: id,
+                },
+            )?)
+        }
         (None, None) => PlayerStartTemplateInfo::Cold,
         (_, _) => return Err(GISSTError::Unreachable),
     };
-    let manifest =
-        ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
+    let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     debug!("{manifest:?}");
 
     let url_string = app_state.base_url.clone();
 
     let url_parts: Vec<&str> = url_string.split("//").collect();
-    let current_date:DateTime<Local> = Local::now();
+    let current_date: DateTime<Local> = Local::now();
 
-    let citation_website_title:String = match &start {
-        PlayerStartTemplateInfo::State(s) => format!("GISST Citation of {} in {}",s.state_name, work.work_name),
-        PlayerStartTemplateInfo::Replay(r) => format!("GISST Citation of {} in {}",r.replay_name, work.work_name),
+    let citation_website_title: String = match &start {
+        PlayerStartTemplateInfo::State(s) => {
+            format!("GISST Citation of {} in {}", s.state_name, work.work_name)
+        }
+        PlayerStartTemplateInfo::Replay(r) => {
+            format!("GISST Citation of {} in {}", r.replay_name, work.work_name)
+        }
         PlayerStartTemplateInfo::Cold => "".to_string(),
     };
 
@@ -489,7 +378,7 @@ async fn get_data(
         site_published_year: current_date.format("%Y").to_string(),
     };
 
-    let embed_data = EmbedDataInfo{
+    let embed_data = EmbedDataInfo {
         environment,
         instance,
         work,
@@ -504,14 +393,13 @@ async fn get_data(
     let accept: Option<String> = parse_header(&headers, "Accept");
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-            let citation_page = app_state.templates.get_template("single_citation_page.html")?;
-                Html(
-                    citation_page.render(
-                        context! {
-                            embed_data => embed_data,
-                        }
-                    )?
-                ).into_response()
+            let citation_page = app_state
+                .templates
+                .get_template("single_citation_page.html")?;
+            Html(citation_page.render(context! {
+                embed_data => embed_data,
+            })?)
+            .into_response()
         } else if accept
             .as_ref()
             .is_some_and(|hv| hv.contains("application/json"))
@@ -519,11 +407,12 @@ async fn get_data(
             (
                 [("Access-Control-Allow-Origin", "*")],
                 axum::Json(embed_data),
-            ).into_response()
+            )
+                .into_response()
         } else {
             Err(GISSTError::MimeTypeError)?
         })
-            .into_response()
+        .into_response(),
     )
 }
 
@@ -535,27 +424,43 @@ async fn get_player(
     auth: AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let instance = Instance::get_by_id(&mut conn, id)
-        .await?
-        .ok_or(GISSTError::RecordMissingError {table:ErrorTable::Instance, uuid:id})?;
+    let instance =
+        Instance::get_by_id(&mut conn, id)
+            .await?
+            .ok_or(GISSTError::RecordMissingError {
+                table: ErrorTable::Instance,
+                uuid: id,
+            })?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::RecordMissingError {table:ErrorTable::Environment, uuid: instance.environment_id})?;
-    let work = Work::get_by_id(&mut conn, instance.work_id)
-        .await?
-        .ok_or(GISSTError::RecordMissingError {table:ErrorTable::Work, uuid: instance.work_id})?;
+        .ok_or(GISSTError::RecordMissingError {
+            table: ErrorTable::Environment,
+            uuid: instance.environment_id,
+        })?;
+    let work = Work::get_by_id(&mut conn, instance.work_id).await?.ok_or(
+        GISSTError::RecordMissingError {
+            table: ErrorTable::Work,
+            uuid: instance.work_id,
+        },
+    )?;
     let user = LoggedInUserInfo::generate_from_user(&auth.current_user.unwrap());
     let start = match dbg!((params.state, params.replay)) {
-        (Some(id), None) => PlayerStartTemplateInfo::State(
-            StateLink::get_by_id(&mut conn, id)
-                .await?
-                .ok_or(GISSTError::RecordLinkingError { table: ErrorTable::State, uuid: id })?,
-        ),
-        (None, Some(id)) => PlayerStartTemplateInfo::Replay(
-            ReplayLink::get_by_id(&mut conn, id)
-                .await?
-                .ok_or(GISSTError::RecordLinkingError { table: ErrorTable::Replay, uuid: id })?,
-        ),
+        (Some(id), None) => {
+            PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
+                GISSTError::RecordLinkingError {
+                    table: ErrorTable::State,
+                    uuid: id,
+                },
+            )?)
+        }
+        (None, Some(id)) => {
+            PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
+                GISSTError::RecordLinkingError {
+                    table: ErrorTable::Replay,
+                    uuid: id,
+                },
+            )?)
+        }
         (None, None) => PlayerStartTemplateInfo::Cold,
         (_, _) => return Err(GISSTError::Unreachable),
     };

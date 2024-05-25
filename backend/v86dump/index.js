@@ -36,9 +36,10 @@ emulator.add_listener("emulator-loaded", async function(){
   let out = fs.mkdtempSync("out");
   for (let disk of disks) {
     let buf = emulator.disk_images[disk];
-    if (buf == null) { continue; }
+    if (buf == null) {
+      continue;
+    }
     let in_path = buf.filename;
-    // TODO make randomized name?
     let filename = path.basename(in_path);
     filename = filename.substring(filename.indexOf("-")+1);
     let out_path = path.join(out,filename);
@@ -52,7 +53,7 @@ emulator.add_listener("emulator-loaded", async function(){
       }
     }
     fs.fsyncSync(outfile);
-    console.log(out_path);
+    console.log(disk+":"+out_path);
   }
   process.exit(0);
 });

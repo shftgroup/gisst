@@ -6,6 +6,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   const state_dir = "/home/web_user/retroarch/userdata/states";
   const saves_dir = "/home/web_user/retroarch/userdata/saves";
   const retro_args = ["-v"];
+  // TODO: handle many contents in the future
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_file = content.file_filename!;
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));

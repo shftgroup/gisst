@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO instanceObject(instance_id, object_id, object_role)  VALUES ($1, $2, $3)",
+  "query": "INSERT INTO instanceObject(instance_id, object_id, object_role, object_role_index)  VALUES ($1, $2, $3, $4)",
   "describe": {
     "columns": [],
     "parameters": {
@@ -18,10 +18,11 @@
               ]
             }
           }
-        }
+        },
+        "Int4"
       ]
     },
     "nullable": []
   },
-  "hash": "ee2a7483f69d2ac71d8023837bc5e6fec8e62fcb5752c97e5ba892d9e3a2e2a4"
+  "hash": "4b2625ec723dc2674420a122972113bbd5d62ae21f81e07493f997e42b80cf70"
 }

@@ -6,14 +6,13 @@ use tokio::{
 use std::fs::OpenOptions;
 use std::io::{BufWriter, Write};
 
-use tracing::debug;
 use std::path::{Component, Path, PathBuf};
 use tokio::io::AsyncWriteExt;
+use tracing::debug;
 
+use crate::error::StorageError;
 use bytes::Bytes;
 use uuid::Uuid;
-use crate::error::StorageError;
-
 
 pub struct StorageHandler;
 
@@ -23,7 +22,7 @@ pub struct PendingUpload {
     pub offset: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FileInformation {
     pub source_filename: String,
     pub source_path: String,
@@ -55,8 +54,16 @@ impl StorageHandler {
         path
     }
 
-    pub fn get_md5_hash(data: &[u8]) -> String {
-        format!("{:x}", md5::compute(data))
+    // TODO fixme: this is synchronous but should probably be async.
+    // But we don't have an async md5 hasher out there.
+    pub fn get_file_hash(path: impl AsRef<Path>) -> Result<String, StorageError> {
+        use md5::Digest;
+
+        let mut hasher = md5::Md5::new();
+        let mut file = std::fs::File::open(path)?;
+        std::io::copy(&mut file, &mut hasher)?;
+        let hash = hasher.finalize();
+        Ok(format!("{:x}", hash))
     }
     pub fn get_dest_filename(hash: &str, filename: &str) -> String {
         format!("{}-{}", hash, filename)
@@ -78,7 +85,10 @@ impl StorageHandler {
     pub fn get_folder_depth_from_path(path: &Path, filename: Option<String>) -> u8 {
         let mut depth = 1;
         let mut path_buf = path.to_path_buf();
-        if filename.is_some() && path_buf.ends_with(filename.unwrap()) {
+        if filename
+            .map(|filename| path_buf.ends_with(filename))
+            .unwrap_or(false)
+        {
             path_buf.pop();
         }
         for component in path_buf.components() {
@@ -100,6 +110,7 @@ impl StorageHandler {
             Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
         path.push(dest_filename);
         debug!("Deleting file at path: {}", path.to_string_lossy());
+        // TODO also delete file.gz
         remove_file(path).await
     }
 
@@ -178,8 +189,9 @@ impl StorageHandler {
         folder_depth: u8,
         uuid: Uuid,
         filename: &str,
-        file_data: &[u8],
+        file_path: impl AsRef<Path>,
     ) -> Result<FileInformation, StorageError> {
+        let file_path = file_path.as_ref();
         let mut path =
             Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
 
@@ -189,16 +201,15 @@ impl StorageHandler {
                 .expect("Unable to create directory for uuid")
         }
 
-        let hash_string = Self::get_md5_hash(file_data);
+        let hash_string = Self::get_file_hash(file_path)?;
         let dest_filename = filename;
         let save_filename = Self::get_dest_filename(&hash_string, dest_filename);
 
         path.push(&save_filename);
-        debug!("writing path {:?}", path);
-        let mut file = File::create(&path).await?;
-        file.write_all(file_data).await?;
+        debug!("copying from {file_path:?} to {path:?}");
+        tokio::fs::copy(&file_path, &path).await?;
 
-        Self::gzip_file(&path, file_data).await?;
+        Self::gzip_file(&path, File::open(file_path).await?).await?;
 
         path.pop();
 

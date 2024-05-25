@@ -10,21 +10,21 @@ use axum::{
     Extension, Router,
 };
 use axum_login::RequireAuthorizationLayer;
-use gisst::models::{CreatorReplayInfo, CreatorStateInfo, FileRecordFlatten};
+use gisst::error::ErrorTable;
 use gisst::models::{
-    Creator, DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State, Work,
+    Creator, DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State,
+    Work,
 };
-use minijinja::{context, };
+use gisst::models::{CreatorReplayInfo, CreatorStateInfo, FileRecordFlatten};
+use minijinja::context;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
-use gisst::error::ErrorTable;
 
 // Nested Router structs for easier reading and manipulation
 
 pub fn creator_router() -> Router {
-    Router::new()
-        .route("/:id", get(get_single_creator))
+    Router::new().route("/:id", get(get_single_creator))
 }
 
 pub fn screenshot_router() -> Router {
@@ -137,12 +137,11 @@ async fn get_single_creator(
     auth: auth::AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Some(creator) = Creator::get_by_id(&mut conn, id).await?{
-
-        let creator_results = GetAllCreatorResult{
+    if let Some(creator) = Creator::get_by_id(&mut conn, id).await? {
+        let creator_results = GetAllCreatorResult {
             states: Creator::get_all_state_info(&mut conn, creator.creator_id).await?,
             replays: Creator::get_all_replay_info(&mut conn, creator.creator_id).await?,
-            creator
+            creator,
         };
 
         let accept: Option<String> = parse_header(&headers, "Accept");
@@ -154,17 +153,14 @@ async fn get_single_creator(
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-                let creator_page = app_state.templates
+                let creator_page = app_state
+                    .templates
                     .get_template("creator_all_listing.html")?;
-                Html(
-                    creator_page.render(
-                        context!(
-                            creator => creator_results,
-                            user => user,
-                        )
-                    )?
-                )
-                    .into_response()
+                Html(creator_page.render(context!(
+                    creator => creator_results,
+                    user => user,
+                ))?)
+                .into_response()
             } else if accept
                 .as_ref()
                 .is_some_and(|hv| hv.contains("application/json"))
@@ -173,7 +169,7 @@ async fn get_single_creator(
             } else {
                 Err(GISSTError::MimeTypeError)?
             })
-                .into_response()
+            .into_response(),
         )
     } else {
         Err(GISSTError::RecordMissingError {
@@ -258,9 +254,7 @@ async fn edit_environment(
     Query(environment): Query<Environment>,
 ) -> Result<Json<Environment>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(
-        Environment::update(&mut conn, environment).await?
-    ))
+    Ok(Json(Environment::update(&mut conn, environment).await?))
 }
 
 async fn delete_environment(
@@ -298,7 +292,7 @@ async fn create_image(
     } else {
         Err(GISSTError::RecordMissingError {
             table: ErrorTable::File,
-            uuid: image.file_id
+            uuid: image.file_id,
         })
     }
 }
@@ -316,9 +310,7 @@ async fn edit_image(
     Query(image): Query<Image>,
 ) -> Result<Json<Image>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(
-        Image::update(&mut conn, image).await?
-    ))
+    Ok(Json(Image::update(&mut conn, image).await?))
 }
 
 async fn delete_image(
@@ -350,32 +342,25 @@ async fn get_instances(
         .current_user
         .as_ref()
         .map(LoggedInUserInfo::generate_from_user);
-    let mut instance_results: Vec<GetAllInstanceResult> = Vec::new();
-    for inst in &instances {
-        instance_results.push(GetAllInstanceResult {
-            instance: Instance {
-                instance_id: inst.instance_id,
-                work_id: inst.work_id,
-                environment_id: inst.environment_id,
-                instance_config: inst.instance_config.clone(),
-                created_on: inst.created_on,
-            },
-            work: Work::get_by_id(&mut conn, inst.work_id).await?.unwrap(),
-        })
-    }
 
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             let instance_listing = app_state.templates.get_template("instance_listing.html")?;
-            Html(
-                instance_listing.render(
-                    context!(
-                            instances => instance_results,
-                            user => user,
-                    )
-                )?
-            )
-                .into_response()
+            let mut instance_results: Vec<GetAllInstanceResult> = Vec::new();
+            for inst in instances {
+                instance_results.push(GetAllInstanceResult {
+                    instance: Instance {
+                        instance_config: inst.instance_config.clone(),
+                        ..inst
+                    },
+                    work: Work::get_by_id(&mut conn, inst.work_id).await?.unwrap(),
+                })
+            }
+            Html(instance_listing.render(context!(
+                    instances => instance_results,
+                    user => user,
+            ))?)
+            .into_response()
         } else if accept
             .as_ref()
             .is_some_and(|hv| hv.contains("application/json"))
@@ -443,16 +428,14 @@ async fn get_all_for_instance(
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-                let instance_all_listing = app_state.templates.get_template("instance_all_listing.html")?;
-                Html(
-                    instance_all_listing.render(
-                        context!(
-                            instance => full_instance,
-                            user => user,
-                        )
-                    )?
-                )
-                    .into_response()
+                let instance_all_listing = app_state
+                    .templates
+                    .get_template("instance_all_listing.html")?;
+                Html(instance_all_listing.render(context!(
+                    instance => full_instance,
+                    user => user,
+                ))?)
+                .into_response()
             } else if accept
                 .as_ref()
                 .is_some_and(|hv| hv.contains("application/json"))
@@ -537,7 +520,7 @@ async fn create_object(
     } else {
         Err(GISSTError::RecordMissingError {
             table: ErrorTable::File,
-            uuid: object.file_id
+            uuid: object.file_id,
         })
     }
 }
@@ -610,7 +593,6 @@ async fn create_replay(
     auth: AuthContext,
     Json(replay): Json<CreateReplay>,
 ) -> Result<Json<Replay>, GISSTError> {
-
     let mut conn = app_state.pool.acquire().await?;
 
     if File::get_by_id(&mut conn, replay.file_id).await?.is_some() {
@@ -622,7 +604,10 @@ async fn create_replay(
                     replay_name: replay.replay_name,
                     replay_description: replay.replay_description,
                     instance_id: replay.instance_id,
-                    creator_id: auth.current_user.ok_or(GISSTError::AuthUserNotAuthenticatedError)?.creator_id,
+                    creator_id: auth
+                        .current_user
+                        .ok_or(GISSTError::AuthUserNotAuthenticatedError)?
+                        .creator_id,
                     replay_forked_from: replay.replay_forked_from,
                     file_id: replay.file_id,
                     created_on: chrono::Utc::now(),
@@ -764,7 +749,10 @@ async fn create_state(
                     state_description: state.state_description,
                     screenshot_id: state.screenshot_id,
                     replay_id: state.replay_id,
-                    creator_id: auth.current_user.ok_or(GISSTError::AuthUserNotAuthenticatedError)?.creator_id,
+                    creator_id: auth
+                        .current_user
+                        .ok_or(GISSTError::AuthUserNotAuthenticatedError)?
+                        .creator_id,
                     state_replay_index: state.state_replay_index,
                     state_derived_from: state.state_derived_from,
                     created_on: chrono::Utc::now(),

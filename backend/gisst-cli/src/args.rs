@@ -1,8 +1,8 @@
 use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
+use gisst::models::ObjectRole;
 use thiserror::Error;
 use uuid::Uuid;
-use gisst::models::ObjectRole;
 
 #[derive(Debug, Error)]
 pub enum GISSTCliError {
@@ -39,7 +39,7 @@ pub enum GISSTCliError {
     #[error("record not found error")]
     RecordNotFound(Uuid),
     #[error("invalid link record type")]
-    InvalidRecordType(String)
+    InvalidRecordType(String),
 }
 
 #[derive(Debug, Parser)]
@@ -91,7 +91,9 @@ pub enum Commands {
         source_uuid: Uuid,
         target_uuid: Uuid,
         #[arg(long)]
-        role: Option<ObjectRole>
+        role: Option<ObjectRole>,
+        #[arg(long)]
+        role_index: Option<usize>,
     },
 
     /// Manage object records and files
@@ -121,7 +123,19 @@ pub enum Commands {
     /// Manage replay records
     Replay(GISSTCommand<BaseSubcommand<CreateReplay, UpdateReplay, DeleteRecord, ExportReplay>>),
     /// Manage screenshot records
-    Screenshot(GISSTCommand<BaseSubcommand<CreateScreenshot, UpdateScreenshot, DeleteRecord, ExportScreenshot>>),
+    Screenshot(
+        GISSTCommand<
+            BaseSubcommand<CreateScreenshot, UpdateScreenshot, DeleteRecord, ExportScreenshot>,
+        >,
+    ),
+
+    /// Clone a v86 machine and state into a new instance
+    CloneV86 {
+        instance: Uuid,
+        state: Uuid,
+        #[arg(default_value_t = 4)]
+        depth: u8,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -155,6 +169,10 @@ pub struct CreateObject {
     /// Object role for instance link. Must be one of "content", "dependency", or "config".
     #[arg(long)]
     pub role: gisst::models::ObjectRole,
+
+    /// Object role index for instance link. For retroarch, this is typically 0 for all content; for v86, 0=fda, 1=fdb, 2=hda, 3=hdb, 4=cdrom.  Other roles ignore the index currently so please use 0.
+    #[arg(long)]
+    pub role_index: usize,
 
     /// Folder depth to use for input file to path based off of characters in assigned UUID
     #[arg(short, long, default_value_t = 4)]
@@ -391,7 +409,6 @@ pub struct CreateCreator {
 pub struct UpdateCreator {}
 #[derive(Debug, Args)]
 pub struct ExportCreator {}
-
 
 #[derive(Debug, Args)]
 pub struct CreateScreenshot {
