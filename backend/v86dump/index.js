@@ -4,6 +4,17 @@
 var fs = require("fs");
 var path = require("path");
 
+var args = process.argv.slice(2);
+if (args.length != 2) {
+  console.error("Usage: v86-json state-path");
+  process.exit(1);
+}
+var emu_info = JSON.parse(args[0]);
+var state_path = args[1];
+
+const disks = ["fda", "hda"];
+const bios = ["bios", "vgabios"];
+
 function readfile(path)
 {
     return new Uint8Array(fs.readFileSync(path)).buffer;
@@ -14,13 +25,8 @@ var V86Starter = require("../web-dist/v86/libv86.js").V86Starter;
 // console.log("Now booting, please stand by ...");
 
 // let state=readfile(__dirname+"/../storage/0/3/1/e/087bbdc6dbb84234b43ce0b562d8486c-state2.v86state");
-let state=readfile("/home/jcoa2018/Downloads/state1.v86state");
-var emulator = new V86Starter({
-  bios: { url:path.join(__dirname, "../web-dist/v86/bios/seabios.bin") },
-  vga_bios: { url:path.join(__dirname, "../web-dist/v86/bios/vgabios.bin") },
-  fda: { url:path.join(__dirname, "../storage/7/6/d/5/07cd9656778aa01e7f99f37e31b76e24-freedos722.img"), async:true },
-  autostart: false,
-});
+let state=readfile(state_path);
+var emulator = new V86Starter(emu_info);
 emulator.add_listener("emulator-loaded", async function(){
   // console.log("load state")
   emulator.stop();
@@ -28,7 +34,6 @@ emulator.add_listener("emulator-loaded", async function(){
   // console.log(emulator.disk_images);
   emulator.run();
   let out = fs.mkdtempSync("out");
-  const disks = ["fda", "hda"];
   for (let disk of disks) {
     let buf = emulator.disk_images[disk];
     if (buf == null) { continue; }
