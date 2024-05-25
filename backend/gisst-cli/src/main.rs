@@ -217,6 +217,7 @@ async fn clone_v86_machine(
     instance.derived_from_state = Some(state_id);
     instance.instance_id = Uuid::new_v4();
     let new_id = instance.instance_id;
+    let mut temp_folder = None;
     Instance::insert(&mut conn, instance)
         .await
         .map_err(GISSTCliError::NewModel)?;
@@ -240,6 +241,7 @@ async fn clone_v86_machine(
             "cdrom:" => 4,
             _ => panic!("Unrecognized drive type {drive}"),
         };
+        temp_folder = Some(Path::new(diskpath).parent().unwrap());
         println!("Linking {drive}{diskpath} as {index}");
         let file_name = Path::new(diskpath)
             .to_path_buf()
@@ -301,6 +303,9 @@ async fn clone_v86_machine(
             )
             .await?;
         }
+    }
+    if let Some(temp) = temp_folder {
+        std::fs::remove_dir(temp)?;
     }
     Ok(new_id)
 }
