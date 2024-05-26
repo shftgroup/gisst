@@ -431,14 +431,13 @@ async fn create_object(
                 .await?
                 .unwrap();
             warn!(
-                "Found object {}:{} with matching hash value {} to object {}:{}, skipping...",
+                "Found object {}:{} with matching hash value {} to object {}:{}",
                 found_hash.object_id,
                 found_file.file_filename,
                 found_file.file_hash,
                 object.object_id,
                 file_record.file_filename,
             );
-            continue;
         }
 
         if !ignore {
@@ -808,14 +807,13 @@ async fn create_image(
                 .await?
                 .unwrap();
             warn!(
-                "Found image {}:{} with matching hash value {} to image {}:{}, skipping...",
+                "Found image {}:{} with matching hash value {} to image {}:{}",
                 found_hash.image_id,
                 found_file.file_filename,
                 found_file.file_hash,
                 image.image_id,
                 file_record.file_filename,
             );
-            continue;
         }
 
         if !ignore {
@@ -1054,7 +1052,7 @@ async fn create_state(
             .await?
             .unwrap();
         return Err(GISSTCliError::CreateState(format!(
-            "Found state {}:{} with matching hash value {} to state {}:{}, skipping...",
+            "Found state {}:{} with matching hash value {} to state {}:{}",
             found_hash.state_id,
             found_file.file_filename,
             found_file.file_hash,

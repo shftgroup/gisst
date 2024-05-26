@@ -37,7 +37,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   }
   console.log("v86 loaded");
   for (const obj of manifest) {
-    if obj.object_role == "content" {
+    if (obj.object_role == "content") {
       const obj_path = "storage/"+obj.file_dest_path+"/"+obj.file_hash+"-"+obj.file_filename;
       const idx = obj.object_role_index.toString();
       nested_replace(environment.environment_config, "$CONTENT"+idx, content_path);

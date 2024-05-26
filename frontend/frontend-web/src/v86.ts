@@ -10,7 +10,7 @@ let db:GISSTDBConnector;
 export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
   db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
   for (const obj of manifest) {
-    if obj.object_role == "content" {
+    if (obj.object_role == "content") {
       const obj_path = "storage/"+obj.file_dest_path+"/"+obj.file_hash+"-"+obj.file_filename;
       const idx = obj.object_role_index.toString();
       nested_replace(environment.environment_config, "$CONTENT"+idx, content_path);
