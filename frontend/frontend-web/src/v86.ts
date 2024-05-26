@@ -13,11 +13,11 @@ export async function init(environment:Environment, start:ColdStart | StateStart
     if (obj.object_role == "content") {
       const obj_path = "storage/"+obj.file_dest_path+"/"+obj.file_hash+"-"+obj.file_filename;
       const idx = obj.object_role_index.toString();
-      nested_replace(environment.environment_config, "$CONTENT"+idx, content_path);
+      nested_replace(environment.environment_config, "$CONTENT"+idx, obj_path);
       // TODO for more robust back compatibility, this needs to check against not just 0,
       // but against whatever disk drive this CONTENT tag appears in.
       if (obj.object_role_index == 0) {
-        nested_replace(environment.environment_config, "$CONTENT\"", content_path+"\"");
+        nested_replace(environment.environment_config, "$CONTENT\"", obj_path+"\"");
       }
     }
   }
