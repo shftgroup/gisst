@@ -12,8 +12,8 @@ uuid_v86_win_31=00000000000000000000000000000003
 uuid_n64=00000000000000000000000000000064
 ../target/debug/gisst-cli environment create --json-file ./records/nes/nes_fceumm_1_52_environment.json
 ../target/debug/gisst-cli environment create --json-file ./records/snes/snes_snes9x_1_62_3_environment.json
-../target/debug/gisst-cli environment create --json-file ./records/v86/freedos_environment.json
-../target/debug/gisst-cli environment create --json-file ./records/v86/win_31_environment.json --environment-config-string '{"memory_size": 67108864}'
+../target/debug/gisst-cli environment create --json-file ./records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
+../target/debug/gisst-cli environment create --json-file ./records/v86/win_31_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
 ../target/debug/gisst-cli environment create --json-file ./records/n64/n64_gliden64_environment.json
 
 # Create retroarch.cfg for nes / snes / n64

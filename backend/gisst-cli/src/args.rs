@@ -10,10 +10,12 @@ pub enum GISSTCliError {
     CreateCreator(String),
     #[error("create object error")]
     CreateObject(String),
-    #[error("create object error")]
+    #[error("create image error")]
     CreateImage(String),
     #[error("create instance error")]
     CreateInstance(String),
+    #[error("create environment error")]
+    CreateEnvironment(String),
     #[error("create instance error")]
     CreateWork(String),
     #[error("create state error")]

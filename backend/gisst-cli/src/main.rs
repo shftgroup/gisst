@@ -179,7 +179,7 @@ async fn clone_v86_machine(
     );
     let objects = ObjectLink::get_all_for_instance_id(&mut conn, instance_id).await?;
     // This unwrap is safe since we know it's a v86 framework environment
-    let mut env_json = env.config_for_v86(&objects).unwrap().to_string();
+    let mut env_json = env.environment_config.unwrap().to_string();
     for obj in objects.iter() {
         let file_path = format!(
             "{storage_root}/{}/{}-{}",
@@ -221,9 +221,9 @@ async fn clone_v86_machine(
     Instance::insert(&mut conn, instance)
         .await
         .map_err(GISSTCliError::NewModel)?;
-
     // add the requisite objects and link them
     // TODO: the ? inside of this loop should get caught and I should delete the outFGSFDS/ folder either way after.
+    let mut content_index = 0;
     for line in output.lines() {
         if line.trim().is_empty() {
             continue;
@@ -233,16 +233,8 @@ async fn clone_v86_machine(
                 .unwrap_or_else(|| panic!("Invalid output from v86dump:{line}"))
                 + 1,
         );
-        let index = match drive {
-            "fda:" => 0,
-            "fdb:" => 1,
-            "hda:" => 2,
-            "hdb:" => 3,
-            "cdrom:" => 4,
-            _ => panic!("Unrecognized drive type {drive}"),
-        };
         temp_folder = Some(Path::new(diskpath).parent().unwrap());
-        println!("Linking {drive}{diskpath} as {index}");
+        println!("Linking {drive}{diskpath} as CONTENT{content_index}");
         let file_name = Path::new(diskpath)
             .to_path_buf()
             .file_name()
@@ -288,9 +280,10 @@ async fn clone_v86_machine(
                 obj_uuid,
                 new_id,
                 ObjectRole::Content,
-                index,
+                content_index,
             )
             .await?;
+            content_index += 1;
         } else {
             println!(
                 "Could not insert either file or object:\nf:{file_insert:?}\no:{obj_insert:?}"
@@ -634,18 +627,22 @@ async fn create_environment(
     }: CreateEnvironment,
     db: PgPool,
 ) -> Result<(), GISSTCliError> {
-    let environment_from_json: Option<Environment> = match (json_file, json_string) {
+    let environment: Environment = match (json_file, json_string) {
         (Some(file_path), None) => {
             let json_data = fs::read_to_string(file_path).map_err(GISSTCliError::Io)?;
-            Some(serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?)
+            serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?
         }
         (None, Some(json_str)) => {
-            Some(serde_json::from_str(&json_str).map_err(GISSTCliError::JsonParse)?)
+            serde_json::from_str(&json_str).map_err(GISSTCliError::JsonParse)?
         }
-        (_, _) => None,
+        (_, _) => {
+            return Err(GISSTCliError::CreateEnvironment(
+                "Need to provide a JSON string or file to create environment record.".to_string(),
+            ))
+        }
     };
 
-    let environment_config_json: Option<serde_json::Value> = match (
+    let environment_config: Option<serde_json::Value> = match (
         &environment_config_json_file,
         &environment_config_json_string,
     ) {
@@ -658,25 +655,17 @@ async fn create_environment(
         }
         (_, _) => None,
     };
-
-    match (environment_from_json, environment_config_json) {
-        (Some(environment), environment_config) => {
-            let mut conn = db.acquire().await?;
-            Environment::insert(
-                &mut conn,
-                Environment {
-                    environment_config,
-                    ..environment
-                },
-            )
-            .await
-            .map_err(GISSTCliError::NewModel)?;
-            Ok(())
-        }
-        _ => Err(GISSTCliError::CreateInstance(
-            "Need to provide a JSON string or file to create environment record.".to_string(),
-        )),
-    }
+    let mut conn = db.acquire().await?;
+    Environment::insert(
+        &mut conn,
+        Environment {
+            environment_config,
+            ..environment
+        },
+    )
+    .await
+    .map_err(GISSTCliError::NewModel)?;
+    Ok(())
 }
 
 async fn create_creator(
