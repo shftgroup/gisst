@@ -1,5 +1,7 @@
 use crate::error::FSListError;
 
+const DEPTH_LIMIT: usize = 1024;
+
 #[derive(serde::Serialize, Clone, Debug)]
 pub struct FSFileListing {
     pub name: String,
@@ -14,7 +16,6 @@ pub enum FSFileListingType {
     File,
 }
 
-// TODO don't use fatfs dir, use a bufread and get the partition table etc
 pub fn recursive_listing(image_file: std::fs::File) -> Result<Vec<FSFileListing>, FSListError> {
     use tracing::info;
     let file_len = image_file.metadata()?.len();
@@ -25,11 +26,11 @@ pub fn recursive_listing(image_file: std::fs::File) -> Result<Vec<FSFileListing>
             mbr.iter()
                 .filter(|(_, part)| part.is_used())
                 .map(|(idx, part)| {
-                    dbg!((
+                    (
                         idx as u32,
                         part.starting_lba as u64,
-                        part.sectors as u64 * mbr.sector_size as u64
-                    ))
+                        part.sectors as u64 * mbr.sector_size as u64,
+                    )
                 })
                 .collect()
         })
@@ -59,50 +60,63 @@ fn recursive_listing_fat_partition<R: std::io::Read + std::io::Write + std::io::
     use fscommon::{BufStream, StreamSlice};
     let image = BufStream::new(StreamSlice::new(image, start_lba, start_lba + sz)?);
     let fs = FileSystem::new(image, FsOptions::new())?;
-    let root = fs.root_dir();
-    dbg!(root
-        .iter()
-        .map(|e| Ok(e?.file_name()))
-        .collect::<Result<Vec<_>, FSListError>>()?);
-    // let mut idx_path = [];
-    // let mut path: PathBuf = path.to_owned();
-    // let mut root_elt = FSFileListing {
-    //     name: path.to_string_lossy().to_string(),
-    //     path: path.to_owned(),
-    //     children: Vec::with_capacity(16),
-    //     list_type: FSFileListingType::Partition,
-    // };
-    // let mut cur_elt = &mut root_elt;
-    // for entry in root.iter() {
-    //     let entry = entry?;
-    //     let name = entry.file_name();
-
-    //     stack.push((
-    //         path.join(&name),
-    //         if entry.is_dir() {
-    //             Vec::with_capacity(16)
-    //         } else {
-    //             vec![]
-    //         },
-    //         if entry.is_dir() {
-    //             FSFileListingType::Directory
-    //         } else if entry.is_file() {
-    //             FSFileListingType::File
-    //         } else {
-    //             return Err(FSListError::FATError(path.join(entry.file_name())));
-    //         },
-    //         entry,
-    //         0,
-    //     ));
-    // }
-    // //
-    // while let Some((path, children, ftype, entry, parent)) = stack.pop() {}
-    Ok(FSFileListing {
+    let mut stack = vec![(fs.root_dir(), vec![], path.to_owned())];
+    let mut root_lst = FSFileListing {
         name: path.to_string_lossy().to_string(),
         path: path.to_owned(),
-        children: vec![],
+        children: Vec::with_capacity(16),
         list_type: FSFileListingType::Partition,
-    })
+    };
+    while let Some((dir, idx, path)) = stack.pop() {
+        if idx.len() > DEPTH_LIMIT {
+            return Err(FSListError::Traversal);
+        }
+        let lst = get_lst_mut(&mut root_lst, &idx).ok_or(FSListError::Traversal)?;
+        for (eidx, entry) in dir.iter().enumerate() {
+            let entry = entry?;
+            let filename = entry.file_name();
+            if filename == "." || filename == ".." {
+                continue;
+            }
+            //dbg!(&filename, &idx, &path);
+            // add a file entry or dir entry
+            lst.children.push(FSFileListing {
+                path: path.join(&filename),
+                children: if entry.is_dir() {
+                    Vec::with_capacity(16)
+                } else {
+                    vec![]
+                },
+                list_type: if entry.is_dir() {
+                    FSFileListingType::Directory
+                } else if entry.is_file() {
+                    FSFileListingType::File
+                } else {
+                    return Err(FSListError::FATError(format!(
+                        "fat file entry is neither dir nor file {:?}",
+                        path.join(filename),
+                    )));
+                },
+                name: filename,
+            });
+            if entry.is_dir() {
+                let mut idx = idx.clone();
+                idx.push(eidx);
+                stack.push((entry.to_dir(), idx, path.join(entry.file_name())))
+            }
+        }
+    }
+    Ok(root_lst)
+}
+fn get_lst_mut<'a>(
+    lst: &'a mut FSFileListing,
+    idx_path: &[usize],
+) -> Option<&'a mut FSFileListing> {
+    if idx_path.is_empty() {
+        Some(lst)
+    } else {
+        get_lst_mut(lst.children.get_mut(idx_path[0])?, &idx_path[1..])
+    }
 }
 
 // fn recursive_listing_fat_directory<'a, T: fatfs::ReadWriteSeek + 'a>(

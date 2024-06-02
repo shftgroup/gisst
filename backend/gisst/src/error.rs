@@ -95,4 +95,6 @@ pub enum FSListError {
     MBRError(#[from] mbrman::Error),
     #[error("filesystem error")]
     FATError(String),
+    #[error("fs traversal error")]
+    Traversal,
 }
