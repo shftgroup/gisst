@@ -1,16 +1,15 @@
 use axum::{
-    extract::{multipart::MultipartError,},
+    extract::multipart::MultipartError,
     http::StatusCode,
-    response::{IntoResponse, Response, Html},
-
+    response::{Html, IntoResponse, Response},
 };
 
-use minijinja::{context, Environment};
-use std::{fmt::Debug};
-use std::error::Error;
-use uuid::Uuid;
 use gisst::error::ErrorTable;
+use minijinja::{context, Environment};
+use std::error::Error;
+use std::fmt::Debug;
 use tracing::error;
+use uuid::Uuid;
 
 #[derive(thiserror::Error)]
 pub enum GISSTError {
@@ -25,10 +24,7 @@ pub enum GISSTError {
     #[error("error with record SQL manipulation")]
     RecordManipulationError(#[from] gisst::error::RecordSQLError),
     #[error("{} record with uuid {} is missing", .table, .uuid)]
-    RecordMissingError {
-        table: ErrorTable,
-        uuid: Uuid,
-    },
+    RecordMissingError { table: ErrorTable, uuid: Uuid },
     #[error("path prefix error")]
     PathPrefixError(#[from] std::path::StripPrefixError),
     #[error("tokio task error")]
@@ -40,7 +36,7 @@ pub enum GISSTError {
     #[error("user login error")]
     AuthUserSerdeLoginError(#[from] serde_json::Error),
     #[error("missing user auth profile information: {}", .field)]
-    AuthMissingProfileInfoError{ field: String },
+    AuthMissingProfileInfoError { field: String },
     #[error("incorrect mimetype for request")]
     MimeTypeError,
     #[error("user not logged in")]
@@ -50,12 +46,11 @@ pub enum GISSTError {
     #[error("token response error")]
     AuthTokenResponseError,
     #[error("error linking uuid: {} to {} reference", .table, .uuid)]
-    RecordLinkingError{
-        table: ErrorTable,
-        uuid: Uuid,
-    },
+    RecordLinkingError { table: ErrorTable, uuid: Uuid },
     #[error("multipart request error")]
     MultipartError(#[from] MultipartError),
+    #[error("filesystem listing error")]
+    FSListError(#[from] gisst::error::FSListError),
     #[error("this should not be reachable!")]
     Unreachable,
 }
@@ -92,33 +87,61 @@ impl IntoResponse for GISSTError {
             GISSTError::SqlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database error"),
             GISSTError::IO(_) => (StatusCode::INTERNAL_SERVER_ERROR, "IO error"),
             GISSTError::StorageError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
-            GISSTError::RecordManipulationError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "record manipulation error"),
-            GISSTError::RecordLinkingError{..} => {
+            GISSTError::RecordManipulationError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "record manipulation error",
+            ),
+            GISSTError::RecordLinkingError { .. } => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "record creation error")
-            },
-            GISSTError::RecordMissingError{..} => {
+            }
+            GISSTError::RecordMissingError { .. } => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "record update error")
-            },
+            }
             GISSTError::PathPrefixError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "file creation error")
-            },
+            }
             GISSTError::JoinError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "tokio task error"),
             GISSTError::FileNotFoundError => (StatusCode::NOT_FOUND, "file not found"),
             GISSTError::ReqwestError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "oauth reqwest error")
-            },
-            GISSTError::AuthUserSerdeLoginError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "auth error"),
-            GISSTError::AuthMissingProfileInfoError{..} => (StatusCode::INTERNAL_SERVER_ERROR, "auth error, missing profile field"),
-            GISSTError::AuthUserNotAuthenticatedError => (StatusCode::INTERNAL_SERVER_ERROR, "auth error"),
-            GISSTError::AuthUserNotPermittedError => (StatusCode::FORBIDDEN, "user not permitted error"),
-            GISSTError::AuthTokenResponseError => (StatusCode::INTERNAL_SERVER_ERROR, "oauth token response error"),
+            }
+            GISSTError::AuthUserSerdeLoginError(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "auth error")
+            }
+            GISSTError::AuthMissingProfileInfoError { .. } => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "auth error, missing profile field",
+            ),
+            GISSTError::AuthUserNotAuthenticatedError => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "auth error")
+            }
+            GISSTError::AuthUserNotPermittedError => {
+                (StatusCode::FORBIDDEN, "user not permitted error")
+            }
+            GISSTError::AuthTokenResponseError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "oauth token response error",
+            ),
             GISSTError::MiniJinjaError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "minijinja error"),
-            GISSTError::MimeTypeError => (StatusCode::INTERNAL_SERVER_ERROR, "incompatible mimetype for request"),
-            GISSTError::MultipartError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "multipart request error"),
+            GISSTError::MimeTypeError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "incompatible mimetype for request",
+            ),
+            GISSTError::MultipartError(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "multipart request error")
+            }
+            GISSTError::FSListError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "filesystem listing error",
+            ),
             GISSTError::Unreachable => (StatusCode::INTERNAL_SERVER_ERROR, "uh oh error"),
         };
 
-        let body = Html(error_template.render(context!(status_code => status.clone().to_string(), message => message)).unwrap());
+        let body = Html(
+            error_template
+                .render(context!(status_code => status.clone().to_string(), message => message))
+                .unwrap(),
+        );
 
         (status, body).into_response()
     }

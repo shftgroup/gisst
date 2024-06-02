@@ -12,6 +12,9 @@
             <p class="col-4">
                 Platform: {{ instance.work.work_platform }}
             </p>
+            <p class="col-4">
+                Runtime: {{ instance.environment.environment_framework }} - {{ instance.environment.environment_core_name }} - {{ instance.environment.environment_core_version }}
+            </p>
         </div>
         <div>
             <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}" target="_blank">
@@ -78,6 +81,25 @@
                             Boot
                         </a>
                     </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div class="row">
+        <h1>Data Objects</h1>
+        <table class="table">
+            <tr>
+                <th scope="col">File</th>
+                <th scope="col">Role</th>
+                <th scope="col">Index</th>
+                <th scope="col">Source Path</th>
+            </tr>
+            {% for data in instance.objects %}
+                <tr>
+                    <td><a href="/objects/{{ data.object_id }}">{{ data.file_filename }}</a></td>
+                    <td>{{ data.object_role }}</td>
+                    <td>{{ data.object_role_index }}</td>
+                    <td>{{ data.file_source_path }}</td>
                 </tr>
             {% endfor %}
         </table>

@@ -86,3 +86,13 @@ impl fmt::Display for RecordSQLError {
         write!(f, "{} failed in table {}", self.table, self.action)
     }
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum FSListError {
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
+    #[error("mbr error")]
+    MBRError(#[from] mbrman::Error),
+    #[error("filesystem error")]
+    FATError(String),
+}

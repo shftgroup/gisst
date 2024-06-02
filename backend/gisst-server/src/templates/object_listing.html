@@ -1,0 +1,28 @@
+{% extends "layout_internal.html" %}
+
+{% block style_imports %}
+{% endblock style_imports %}
+
+{% block js_preload %}
+{% endblock js_preload %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <h1>Object {{ file.file_filename }}</h1>
+    </div>
+    <div class="row">
+      <ul class="path-0">
+        {% for item in directory recursive %}
+        <li>{{ item.name }}
+          {% if item.children %}
+          <ul class="path-{{ loop.depth }}">
+            {{ loop(item.children) }}
+          </ul>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+</div>
+{% endblock content %}
