@@ -17,7 +17,7 @@ pub enum FSFileListingType {
 // TODO don't use fatfs dir, use a bufread and get the partition table etc
 pub fn recursive_listing(image_file: std::fs::File) -> Result<Vec<FSFileListing>, FSListError> {
     use tracing::info;
-    let file_len = image_file.metadata()?.len() as u64;
+    let file_len = image_file.metadata()?.len();
     let mut image = fscommon::BufStream::new(image_file);
     let mut result = Vec::with_capacity(3);
     let partitions: Vec<(u32, u64, u64)> = mbrman::MBR::read_from(&mut image, 512)
@@ -40,8 +40,8 @@ pub fn recursive_listing(image_file: std::fs::File) -> Result<Vec<FSFileListing>
     for (idx, start_lba, sz) in partitions {
         let root = recursive_listing_fat_partition(
             &mut image,
-            start_lba as u64,
-            start_lba as u64 + sz as u64,
+            start_lba,
+            start_lba + sz,
             std::path::Path::new(&format!("part{idx}")),
         )?;
         result.push(root);
