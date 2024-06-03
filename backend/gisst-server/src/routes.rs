@@ -247,7 +247,6 @@ async fn get_single_environment(
     Path(id): Path<Uuid>,
 ) -> Result<Json<Environment>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    // TODO: if v86, show files with rust fat-rs
     Ok(Json(Environment::get_by_id(&mut conn, id).await?.unwrap()))
 }
 
