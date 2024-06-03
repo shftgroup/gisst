@@ -130,6 +130,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/play/:instance_id", get(get_player))
         .route("/resources/:id", patch(tus_patch).head(tus_head))
         .route("/resources", post(tus_creation))
+        .nest("/objects", object_router())
         .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login_or_redirect(Arc::new("/login".into()), None))
         .route("/data/:instance_id", get(get_data))
         .route("/login", get(auth::login_handler))
@@ -144,7 +145,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/saves", save_router())
         .nest("/screenshots", screenshot_router())
         .nest("/states", state_router())
-        .nest("/objects", object_router())
         .nest("/works", work_router())
         .nest_service(
             "/storage",
