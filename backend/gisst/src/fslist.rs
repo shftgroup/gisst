@@ -176,7 +176,7 @@ fn file_at_path_is_dir_fat<T: fatfs::ReadWriteSeek>(
     path: &std::path::Path,
 ) -> bool {
     let root = fs.root_dir();
-    root.open_dir(&path.to_string_lossy()).is_ok()
+    path.parent().is_none() || root.open_dir(&path.to_string_lossy()).is_ok()
 }
 
 fn get_file_at_path_fat<T: fatfs::ReadWriteSeek>(
@@ -194,9 +194,14 @@ fn get_dir_at_path_fat<T: fatfs::ReadWriteSeek>(
     fs: &fatfs::FileSystem<T>,
     path: &std::path::Path,
 ) -> Result<Vec<u8>, FSListError> {
+    dbg!(path);
     use zip::{write::SimpleFileOptions, ZipWriter};
     let mut out_bytes: Vec<u8> = Vec::with_capacity(16 * 1024);
-    let directory = fs.root_dir().open_dir(&path.to_string_lossy())?;
+    let directory = if path.parent().is_none() {
+        fs.root_dir()
+    } else {
+        fs.root_dir().open_dir(&path.to_string_lossy())?
+    };
     let mut writer = ZipWriter::new(std::io::Cursor::new(&mut out_bytes));
     let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
     let mut stack = Vec::with_capacity(1024);
