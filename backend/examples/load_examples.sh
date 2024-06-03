@@ -82,4 +82,4 @@ uuid_counter=$((uuid_counter+1));
 work_uuid=$(get_uuid_from_counter)
 ../target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"Window 3.1\", \"work_version\":\"Windows 3.1\", \"work_platform\":\"Windows 3.1\"}"
 ../target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_v86_win_31\", \"work_id\":\"$work_uuid\"}"
-../target/debug/gisst-cli object create -i --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 2 './data/v86/win31.img'
+../target/debug/gisst-cli object create -i --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 0 './data/v86/win31.img'
