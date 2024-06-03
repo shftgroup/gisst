@@ -78,6 +78,7 @@ pub fn object_router() -> Router {
                 .put(edit_object)
                 .delete(delete_object),
         )
+        .route("/:id/*path", get(get_subobject))
 }
 
 pub fn replay_router() -> Router {
@@ -566,6 +567,52 @@ async fn get_single_object(
         })
         .into_response(),
     )
+}
+
+async fn get_subobject(
+    app_state: Extension<ServerState>,
+    _headers: HeaderMap,
+    Path((id, subpath)): Path<(Uuid, String)>,
+    _auth: auth::AuthContext,
+) -> Result<impl IntoResponse, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+
+    let object = Object::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(GISSTError::RecordMissingError {
+            table: ErrorTable::Object,
+            uuid: id,
+        })?;
+    let file = File::get_by_id(&mut conn, object.file_id).await?.ok_or(
+        GISSTError::RecordMissingError {
+            table: ErrorTable::File,
+            uuid: object.file_id,
+        },
+    )?;
+    use gisst::fslist::*;
+    let path = file_to_path(&app_state.root_storage_path, &file);
+    let (mime, data) = if is_disk_image(&path) {
+        let image = std::fs::File::open(path)?;
+        get_file_at_path(image, std::path::Path::new(&subpath))?
+    } else {
+        return Err(GISSTError::SubobjectError(format!("{id}:{subpath}")));
+    };
+    let headers = [
+        (axum::http::header::CONTENT_TYPE, mime),
+        (
+            axum::http::header::CONTENT_DISPOSITION,
+            format!(
+                "attachment; filename=\"{}\"",
+                std::path::Path::new(&subpath)
+                    .file_name()
+                    .ok_or(GISSTError::SubobjectError(
+                        "can't download empty thing".to_string()
+                    ))?
+                    .to_string_lossy()
+            ),
+        ),
+    ];
+    Ok((headers, data))
 }
 
 async fn create_object(

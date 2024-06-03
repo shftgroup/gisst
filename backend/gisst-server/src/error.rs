@@ -51,6 +51,8 @@ pub enum GISSTError {
     MultipartError(#[from] MultipartError),
     #[error("filesystem listing error")]
     FSListError(#[from] gisst::error::FSListError),
+    #[error("subobject access error")]
+    SubobjectError(String),
     #[error("this should not be reachable!")]
     Unreachable,
 }
@@ -134,6 +136,9 @@ impl IntoResponse for GISSTError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "filesystem listing error",
             ),
+            GISSTError::SubobjectError(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "subobject access error")
+            }
             GISSTError::Unreachable => (StatusCode::INTERNAL_SERVER_ERROR, "uh oh error"),
         };
 

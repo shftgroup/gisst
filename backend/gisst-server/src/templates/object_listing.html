@@ -14,7 +14,7 @@
     <div class="row">
       <ul class="path-0">
         {% for item in directory recursive %}
-        <li>{{ item.name }}
+        <li><a href="{{object.object_id}}/{{item.path}}">{{ item.name }}</a>
           {% if item.children %}
           <ul class="path-{{ loop.depth }}">
             {{ loop(item.children) }}

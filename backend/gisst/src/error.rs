@@ -95,6 +95,14 @@ pub enum FSListError {
     MBRError(#[from] mbrman::Error),
     #[error("filesystem error")]
     FATError(String),
+    #[error("filetype DB error")]
+    FiletypeDBError,
+    #[error("subobject path error")]
+    PathError,
+    #[error("partition id error")]
+    PartitionIDError(#[from] std::num::ParseIntError),
+    #[error("file identifier error")]
+    FileMIMEError(#[from] magic::cookie::Error),
     #[error("fs traversal error")]
     Traversal,
 }
