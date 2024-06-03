@@ -52,6 +52,8 @@ pub enum GISSTError {
     },
     #[error("multipart request error")]
     MultipartError(#[from] MultipartError),
+    #[error("resource is forbidden")]
+    ForbiddenResourceError,
     #[error("this should not be reachable!")]
     Unreachable,
 }

@@ -9,6 +9,7 @@ use axum::{
     routing::{get, post, put},
     Extension, Router,
 };
+use axum::http::header::ACCEPT;
 use axum_login::RequireAuthorizationLayer;
 use gisst::models::{CreatorReplayInfo, CreatorStateInfo, FileRecordFlatten};
 use gisst::models::{
@@ -19,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
 use gisst::error::ErrorTable;
+use crate::error::GISSTError::{ForbiddenResourceError, MimeTypeError};
 
 // Nested Router structs for easier reading and manipulation
 
@@ -705,12 +707,49 @@ async fn get_states(
     }
 }
 
+struct StateFormData {
+    record: State,
+    fields: Vec<(String, String)>,
+    values: Vec<Option<String>>,
+}
+
+struct ReplayFormData {
+    record: Replay,
+    fields: Vec<(String, String)>,
+    values: Vec<Option<String>>,
+}
+
 async fn get_single_state(
     app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    auth: AuthContext,
 ) -> Result<Json<State>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(State::get_by_id(&mut conn, id).await?.unwrap()))
+
+    let mimetype = headers.get(ACCEPT).unwrap_or_default().to_str().map_err(MimeTypeError)?;
+
+    if mimetype.contains("application/json"){
+        Ok(Json(State::get_by_id(&mut conn, id).await?.unwrap()))
+    }else if mimetype.contains("text/html"){
+        if let Some(state) = State::get_by_id(&mut conn, id).await? {
+            if let Some(user) = auth.current_user {
+                if user.creator_id == state.creator_id{
+                    let edit_page_template = app_state.templates.get_template("debug_view")?;
+                    Html(
+                        edit_page_template.render(context! (
+                            fields => state.fields(),
+                            values => state.values_to_strings(),
+                            record => state
+                        ))?
+                    ).into_response()
+                }
+                Err(ForbiddenResourceError)?
+            }
+        }
+    }else{
+        Err(MimeTypeError)?
+    }
 }
 
 async fn edit_state(

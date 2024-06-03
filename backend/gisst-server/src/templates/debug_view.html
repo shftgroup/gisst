@@ -6,10 +6,10 @@
 </head>
 <body>
 <table>
-    <h1>{{ model.name }}s</h1>
+    <h1>{{ record.state_name}}s</h1>
     <table>
         <tr>
-            {% for field in model.fields %}
+            {% for field in fields %}
             <th>{{ field.name | capitalize }}</th>
             {% endfor %}
         </tr>
