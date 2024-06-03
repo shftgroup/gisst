@@ -574,7 +574,9 @@ async fn get_subobject(
     _headers: HeaderMap,
     Path((id, subpath)): Path<(Uuid, String)>,
     _auth: auth::AuthContext,
-) -> Result<impl IntoResponse, GISSTError> {
+) -> Result<axum::response::Response, GISSTError> {
+    use gisst::fslist::*;
+
     let mut conn = app_state.pool.acquire().await?;
 
     let object = Object::get_by_id(&mut conn, id)
@@ -589,13 +591,18 @@ async fn get_subobject(
             uuid: object.file_id,
         },
     )?;
-    use gisst::fslist::*;
     let path = file_to_path(&app_state.root_storage_path, &file);
-    let (mime, data) = if is_disk_image(&path) {
-        let image = std::fs::File::open(path)?;
-        get_file_at_path(image, std::path::Path::new(&subpath))?
-    } else {
-        return Err(GISSTError::SubobjectError(format!("{id}:{subpath}")));
+    let (mime, data) = {
+        let subpath = subpath.clone();
+        tokio::task::spawn_blocking(move || {
+            if is_disk_image(&path) {
+                get_file_at_path(std::fs::File::open(path)?, std::path::Path::new(&subpath))
+                    .map_err(GISSTError::FSListError)
+            } else {
+                Err(GISSTError::SubobjectError(format!("{id}:{subpath}")))
+            }
+        })
+        .await??
     };
     let headers = [
         (axum::http::header::CONTENT_TYPE, mime),
@@ -612,7 +619,7 @@ async fn get_subobject(
             ),
         ),
     ];
-    Ok((headers, data))
+    Ok((headers, data).into_response())
 }
 
 async fn create_object(

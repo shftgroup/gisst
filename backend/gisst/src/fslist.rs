@@ -132,7 +132,7 @@ pub fn file_to_path(storage_root: &str, file: &crate::models::File) -> std::path
 }
 
 pub fn get_file_at_path(
-    mut image_file: std::fs::File,
+    image_file: std::fs::File,
     path: &std::path::Path,
 ) -> Result<(String, Vec<u8>), FSListError> {
     let partitions = get_partitions(&image_file)?;
@@ -150,37 +150,81 @@ pub fn get_file_at_path(
         if idx != partid {
             continue;
         }
-        let file = get_file_at_path_fat(
-            &mut image_file,
-            start_lba,
-            start_lba + sz,
-            components.as_path(),
-        )?;
-        let cookie = magic::Cookie::open(magic::cookie::Flags::MIME)
-            .map_err(|_| FSListError::FiletypeDBError)?;
-        let db = Default::default();
-        let cookie = cookie.load(&db).map_err(|_| FSListError::FiletypeDBError)?;
-        let mime = cookie.buffer(&file)?;
-        return Ok((mime, file));
+        use fatfs::*;
+        use fscommon::{BufStream, StreamSlice};
+        let image = BufStream::new(StreamSlice::new(image_file, start_lba, start_lba + sz)?);
+        let fs = FileSystem::new(image, FsOptions::new())?;
+        let subpath = components.as_path();
+        if file_at_path_is_dir_fat(&fs, subpath) {
+            let dir_zipped = get_dir_at_path_fat(&fs, subpath)?;
+            return Ok(("application/zip".to_string(), dir_zipped));
+        } else {
+            let file = get_file_at_path_fat(&fs, subpath)?;
+            let cookie = magic::Cookie::open(magic::cookie::Flags::MIME)
+                .map_err(|_| FSListError::FiletypeDBError)?;
+            let db = Default::default();
+            let cookie = cookie.load(&db).map_err(|_| FSListError::FiletypeDBError)?;
+            let mime = cookie.buffer(&file)?;
+            return Ok((mime, file));
+        }
     }
     Err(FSListError::Traversal)
 }
 
-fn get_file_at_path_fat(
-    image: &mut std::fs::File,
-    start_lba: u64,
-    end_lba: u64,
+fn file_at_path_is_dir_fat<T: fatfs::ReadWriteSeek>(
+    fs: &fatfs::FileSystem<T>,
+    path: &std::path::Path,
+) -> bool {
+    let root = fs.root_dir();
+    root.open_dir(&path.to_string_lossy()).is_ok()
+}
+
+fn get_file_at_path_fat<T: fatfs::ReadWriteSeek>(
+    fs: &fatfs::FileSystem<T>,
     path: &std::path::Path,
 ) -> Result<Vec<u8>, FSListError> {
-    use fatfs::*;
-    use fscommon::{BufStream, StreamSlice};
     use std::io::Read;
-    let image = BufStream::new(StreamSlice::new(image, start_lba, end_lba)?);
-    let fs = FileSystem::new(image, FsOptions::new())?;
     let mut file = fs.root_dir().open_file(&path.to_string_lossy())?;
     let mut bytes = Vec::with_capacity(4096);
     file.read_to_end(&mut bytes)?;
     Ok(bytes)
+}
+
+fn get_dir_at_path_fat<T: fatfs::ReadWriteSeek>(
+    fs: &fatfs::FileSystem<T>,
+    path: &std::path::Path,
+) -> Result<Vec<u8>, FSListError> {
+    use zip::{write::SimpleFileOptions, ZipWriter};
+    let mut out_bytes: Vec<u8> = Vec::with_capacity(16 * 1024);
+    let directory = fs.root_dir().open_dir(&path.to_string_lossy())?;
+    let mut writer = ZipWriter::new(std::io::Cursor::new(&mut out_bytes));
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let mut stack = Vec::with_capacity(1024);
+    for entry in directory.iter() {
+        let entry = entry?;
+        let path = path.join(entry.file_name());
+        stack.push((entry, path));
+    }
+    while let Some((entry, path)) = stack.pop() {
+        let file_name = entry.file_name();
+        if file_name == "." || file_name == ".." {
+            continue;
+        }
+        let filepath = path.to_string_lossy().to_string();
+        if entry.is_file() {
+            writer.start_file(filepath, options)?;
+            std::io::copy(&mut entry.to_file(), &mut writer)?;
+        } else if entry.is_dir() {
+            writer.add_directory(filepath, options)?;
+            for subentry in entry.to_dir().iter() {
+                let subentry = subentry?;
+                let subpath = path.join(subentry.file_name());
+                stack.push((subentry, subpath));
+            }
+        }
+    }
+    writer.finish()?;
+    Ok(out_bytes)
 }
 
 pub fn is_disk_image(file: &std::path::Path) -> bool {

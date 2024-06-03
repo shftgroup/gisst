@@ -101,6 +101,8 @@ pub enum FSListError {
     PathError,
     #[error("partition id error")]
     PartitionIDError(#[from] std::num::ParseIntError),
+    #[error("directory zip error")]
+    ZIPError(#[from] zip::result::ZipError),
     #[error("file identifier error")]
     FileMIMEError(#[from] magic::cookie::Error),
     #[error("fs traversal error")]
