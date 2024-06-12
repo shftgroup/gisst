@@ -19,6 +19,7 @@ let db:GISSTDBConnector;
 export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
   db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
 
+  // TODO: handle many contents in the future
   const content = manifest.find((o) => o.object_role=="content")!;
   const content_file = content.file_filename!;
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));

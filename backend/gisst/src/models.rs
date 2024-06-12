@@ -7,8 +7,8 @@ use chrono::{DateTime, Utc};
 use sqlx::postgres::{PgConnection, PgQueryResult};
 
 use crate::model_enums::Framework;
+use base64::{engine::general_purpose, Engine as _};
 use serde_with::{base64::Base64, serde_as};
-use base64::{Engine as _, engine::general_purpose};
 use uuid::Uuid;
 
 use crate::error::{ErrorAction, ErrorTable, RecordSQLError};
@@ -108,6 +108,8 @@ pub struct Instance {
     pub instance_config: Option<sqlx::types::JsonValue>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub derived_from_instance: Option<Uuid>,
+    pub derived_from_state: Option<Uuid>,
 }
 
 #[serde_as]
@@ -118,7 +120,7 @@ pub struct Screenshot {
     pub screenshot_data: Vec<u8>,
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(rename_all = "lowercase", type_name = "object_role")]
 #[serde(rename_all = "lowercase")]
 pub enum ObjectRole {
@@ -144,6 +146,7 @@ pub struct InstanceObject {
     pub instance_id: Uuid,
     pub object_id: Uuid,
     pub object_role: ObjectRole,
+    pub object_role_index: i32,
     pub instance_object_config: Option<sqlx::types::JsonValue>,
 }
 
@@ -238,9 +241,11 @@ pub struct CreatorReplayInfo {
 }
 
 impl Creator {
-
     // Join to allow for all creator home page information in one query
-    pub async fn get_all_state_info(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Vec<CreatorStateInfo>> {
+    pub async fn get_all_state_info(
+        conn: &mut PgConnection,
+        id: Uuid,
+    ) -> sqlx::Result<Vec<CreatorStateInfo>> {
         sqlx::query_as!(
             CreatorStateInfo,
             r#"SELECT
@@ -260,12 +265,15 @@ impl Creator {
             "#,
             id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     // Join to allow for all creator home page information in one query
-    pub async fn get_all_replay_info(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Vec<CreatorReplayInfo>> {
+    pub async fn get_all_replay_info(
+        conn: &mut PgConnection,
+        id: Uuid,
+    ) -> sqlx::Result<Vec<CreatorReplayInfo>> {
         sqlx::query_as!(
             CreatorReplayInfo,
             r#"SELECT
@@ -284,8 +292,8 @@ impl Creator {
             "#,
             id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     pub async fn get_all_states(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<State>> {
@@ -306,8 +314,8 @@ impl Creator {
             FROM state WHERE creator_id = $1"#,
             id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     pub async fn get_all_replays(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<Replay>> {
@@ -324,8 +332,8 @@ impl Creator {
             FROM replay WHERE creator_id = $1"#,
             id
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     pub async fn get_all_saves(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<Save>> {
@@ -342,11 +350,9 @@ impl Creator {
             FROM save WHERE creator_id = $1"#,
             id
         )
-            .fetch_all(conn)
-            .await
-
+        .fetch_all(conn)
+        .await
     }
-
 }
 
 #[async_trait]
@@ -417,11 +423,11 @@ impl DBModel for Creator {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Creator,
             action: ErrorAction::Insert,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, RecordSQLError> {
@@ -439,11 +445,11 @@ impl DBModel for Creator {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Creator,
             action: ErrorAction::Update,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -451,7 +457,6 @@ impl DBModel for Creator {
             .execute(conn)
             .await
     }
-
 }
 
 #[async_trait]
@@ -639,7 +644,7 @@ impl DBModel for Instance {
     async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on
+            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state
             FROM instance WHERE instance_id = $1
             "#,
             id
@@ -651,7 +656,7 @@ impl DBModel for Instance {
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on
+            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state
             FROM instance
             ORDER BY created_on DESC
             LIMIT $1
@@ -669,49 +674,52 @@ impl DBModel for Instance {
             environment_id,
             work_id,
             instance_config,
-            created_on
+            created_on,
+            derived_from_instance,
+            derived_from_state
             )
-            VALUES($1, $2, $3, $4, $5)
-            RETURNING instance_id, environment_id, work_id, instance_config, created_on"#,
+            VALUES($1, $2, $3, $4, $5, $6, $7)
+            RETURNING instance_id, environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state"#,
             model.instance_id,
             model.environment_id,
             model.work_id,
             model.instance_config,
-            model.created_on
+            model.created_on,
+            model.derived_from_instance,
+            model.derived_from_state
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Instance,
             action: ErrorAction::Insert,
-            source: e
-        },)
+            source: e,
+        })
     }
 
-    async fn update(
-        conn: &mut PgConnection,
-        instance: Instance,
-    ) -> Result<Self, RecordSQLError> {
+    async fn update(conn: &mut PgConnection, instance: Instance) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Instance,
             r#"UPDATE instance SET
-            (environment_id, work_id, instance_config, created_on) =
-            ($1, $2, $3, $4)
-            WHERE instance_id = $5
-            RETURNING instance_id, environment_id, work_id, instance_config, created_on"#,
+            (environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state) =
+            ($1, $2, $3, $4, $5, $6)
+            WHERE instance_id = $7
+            RETURNING instance_id, environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state"#,
             instance.environment_id,
             instance.work_id,
             instance.instance_config,
             instance.created_on,
+            instance.derived_from_instance,
+            instance.derived_from_state,
             instance.instance_id,
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Instance,
             action: ErrorAction::Update,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -728,7 +736,7 @@ impl Instance {
     ) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on
+            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state
             FROM instance
             WHERE work_id = $1
             "#,
@@ -886,11 +894,11 @@ impl DBModel for Image {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Image,
             action: ErrorAction::Insert,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn update(conn: &mut PgConnection, image: Image) -> Result<Self, RecordSQLError> {
@@ -909,11 +917,11 @@ impl DBModel for Image {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Image,
             action: ErrorAction::Update,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1213,11 +1221,11 @@ impl DBModel for Object {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Object,
             action: ErrorAction::Insert,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn update(conn: &mut PgConnection, object: Object) -> Result<Self, RecordSQLError> {
@@ -1235,11 +1243,11 @@ impl DBModel for Object {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Object,
             action: ErrorAction::Update,
-            source: e
-        },)
+            source: e,
+        })
     }
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
         sqlx::query!("DELETE FROM object WHERE object_id = $1", id)
@@ -1254,12 +1262,14 @@ impl Object {
         object_id: Uuid,
         instance_id: Uuid,
         role: ObjectRole,
+        role_index: usize,
     ) -> sqlx::Result<PgQueryResult> {
         sqlx::query!(
-            r#"INSERT INTO instanceObject(instance_id, object_id, object_role)  VALUES ($1, $2, $3)"#,
+            r#"INSERT INTO instanceObject(instance_id, object_id, object_role, object_role_index)  VALUES ($1, $2, $3, $4)"#,
             instance_id,
             object_id,
-            role as _
+            role as _,
+            role_index as i32
         )
         .execute(conn)
         .await
@@ -1270,7 +1280,7 @@ impl Object {
         object_id: Uuid,
         instance_id: Uuid,
     ) -> sqlx::Result<Option<InstanceObject>> {
-        sqlx::query_as!(InstanceObject, r#"SELECT object_id, instance_id, instance_object_config, object_role as "object_role:_" FROM instanceObject WHERE object_id = $1 AND instance_id = $2"#, object_id, instance_id).fetch_optional(conn).await
+        sqlx::query_as!(InstanceObject, r#"SELECT object_id, instance_id, instance_object_config, object_role as "object_role:_", object_role_index FROM instanceObject WHERE object_id = $1 AND instance_id = $2"#, object_id, instance_id).fetch_optional(conn).await
     }
 
     pub async fn delete_object_instance_links_by_id(
@@ -1384,11 +1394,11 @@ impl DBModel for Replay {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Replay,
             action: ErrorAction::Insert,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn update(conn: &mut PgConnection, replay: Replay) -> Result<Self, RecordSQLError> {
@@ -1560,11 +1570,11 @@ impl DBModel for Save {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Save,
             action: ErrorAction::Insert,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn update(conn: &mut PgConnection, save: Save) -> Result<Self, RecordSQLError> {
@@ -1772,13 +1782,12 @@ impl DBModel for State {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::State,
             action: ErrorAction::Insert,
-            source: e
-        },)
+            source: e,
+        })
     }
-
 
     async fn update(conn: &mut PgConnection, state: State) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
@@ -1824,11 +1833,11 @@ impl DBModel for State {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::State,
             action: ErrorAction::Update,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -1945,11 +1954,11 @@ impl DBModel for Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Work,
             action: ErrorAction::Insert,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn update(conn: &mut PgConnection, work: Work) -> Result<Self, RecordSQLError> {
@@ -1968,11 +1977,11 @@ impl DBModel for Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError{
+        .map_err(|e| RecordSQLError {
             table: ErrorTable::Work,
             action: ErrorAction::Update,
-            source: e
-        },)
+            source: e,
+        })
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -2009,7 +2018,6 @@ impl Work {
 
 #[async_trait]
 impl DBModel for Screenshot {
-
     fn id(&self) -> &Uuid {
         &self.screenshot_id
     }
@@ -2036,8 +2044,8 @@ impl DBModel for Screenshot {
             "#,
             id
         )
-            .fetch_optional(conn)
-            .await
+        .fetch_optional(conn)
+        .await
     }
 
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
@@ -2046,8 +2054,8 @@ impl DBModel for Screenshot {
             r#"SELECT screenshot_id, screenshot_data FROM screenshot LIMIT $1"#,
             limit
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError> {
@@ -2059,13 +2067,13 @@ impl DBModel for Screenshot {
             model.screenshot_id,
             model.screenshot_data
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|e| RecordSQLError{
-                table: ErrorTable::Screenshot,
-                action: ErrorAction::Insert,
-                source: e
-            },)
+        .fetch_one(conn)
+        .await
+        .map_err(|e| RecordSQLError {
+            table: ErrorTable::Screenshot,
+            action: ErrorAction::Insert,
+            source: e,
+        })
     }
 
     async fn update(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError> {
@@ -2078,14 +2086,13 @@ impl DBModel for Screenshot {
             model.screenshot_data,
             model.screenshot_id,
         )
-            .fetch_one(conn)
-            .await
-            .map_err(|e| RecordSQLError{
-                table: ErrorTable::Screenshot,
-                action: ErrorAction::Update,
-                source: e
-            },)
-
+        .fetch_one(conn)
+        .await
+        .map_err(|e| RecordSQLError {
+            table: ErrorTable::Screenshot,
+            action: ErrorAction::Update,
+            source: e,
+        })
     }
 
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult> {
@@ -2103,4 +2110,131 @@ pub fn default_uuid() -> Uuid {
     Uuid::new_v4()
 }
 
-fn utc_datetime_now() -> DateTime<Utc> { Utc::now() }
+fn utc_datetime_now() -> DateTime<Utc> {
+    Utc::now()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ObjectLink {
+    pub object_id: Uuid,
+    pub object_role: ObjectRole,
+    pub object_role_index: i32,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+impl ObjectLink {
+    pub async fn get_all_for_instance_id(
+        conn: &mut sqlx::PgConnection,
+        id: Uuid,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"
+            SELECT object_id, instanceObject.object_role as "object_role:_", instanceObject.object_role_index, file.file_hash as file_hash, file.file_filename as file_filename, file.file_source_path as file_source_path, file.file_dest_path as file_dest_path
+            FROM object
+            JOIN instanceObject USING(object_id)
+            JOIN instance USING(instance_id)
+            JOIN file USING(file_id)
+            WHERE instance_id = $1
+            "#,
+            id
+        )
+        .fetch_all(conn)
+        .await
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReplayLink {
+    pub replay_id: Uuid,
+    pub replay_name: String,
+    pub replay_description: String,
+    pub instance_id: Uuid,
+    pub creator_id: Uuid,
+    pub replay_forked_from: Option<Uuid>,
+    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
+    pub file_id: Uuid,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+impl ReplayLink {
+    pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT replay_id,
+            replay_name,
+            replay_description,
+            instance_id,
+            creator_id,
+            replay_forked_from,
+            replay.created_on,
+            file_id,
+            file.file_hash as file_hash,
+            file.file_filename as file_filename,
+            file.file_source_path as file_source_path,
+            file.file_dest_path as file_dest_path
+            FROM replay
+            JOIN file USING(file_id)
+            WHERE replay_id = $1
+            "#,
+            id,
+        )
+        .fetch_optional(conn)
+        .await
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StateLink {
+    pub state_id: Uuid,
+    pub instance_id: Uuid,
+    pub is_checkpoint: bool,
+    pub state_name: String,
+    pub state_description: String,
+    pub screenshot_id: Option<Uuid>,
+    pub replay_id: Option<Uuid>,
+    pub creator_id: Option<Uuid>,
+    pub state_replay_index: Option<i32>,
+    pub state_derived_from: Option<Uuid>,
+    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
+    pub file_id: Uuid,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+impl StateLink {
+    pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT
+            state_id,
+            instance_id,
+            is_checkpoint,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            state.created_on,
+            file_id,
+            file.file_hash as file_hash,
+            file.file_filename as file_filename,
+            file.file_source_path as file_source_path,
+            file.file_dest_path as file_dest_path
+            FROM state
+            JOIN file USING(file_id)
+            WHERE state_id = $1
+            "#,
+            id,
+        )
+        .fetch_optional(conn)
+        .await
+    }
+}

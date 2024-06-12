@@ -1,4 +1,4 @@
-use std::{ffi::CString, fs::read};
+use std::ffi::CString;
 
 use anyhow::Result;
 use clap::Parser;
@@ -92,9 +92,8 @@ async fn main() -> Result<(), IngestError> {
     let created_on = chrono::Utc::now();
     let ra_cfg_object_id = {
         let ra_cfg = std::path::Path::new(&ra_cfg);
-        let ra = &read(ra_cfg)?;
-        info!("RA: {}", ra.len());
-        let hash = StorageHandler::get_md5_hash(ra);
+        let file_size = std::fs::metadata(ra_cfg)?.len() as i64;
+        let hash = StorageHandler::get_file_hash(ra_cfg)?;
         if let Some(obj) = Object::get_by_hash(&mut conn, &hash).await? {
             obj.object_id
         } else {
@@ -104,7 +103,7 @@ async fn main() -> Result<(), IngestError> {
                 4,
                 file_uuid,
                 "retroarch.cfg",
-                ra,
+                ra_cfg,
             )
             .await?;
             info!(
@@ -117,7 +116,7 @@ async fn main() -> Result<(), IngestError> {
                 file_filename: file_info.source_filename,
                 file_source_path: file_info.source_path,
                 file_dest_path: file_info.dest_path,
-                file_size: ra.len() as i64,
+                file_size,
                 created_on,
             };
             GFile::insert(&mut conn, file_record).await?;
@@ -162,18 +161,15 @@ async fn main() -> Result<(), IngestError> {
             if !entry.file_type().is_file() {
                 continue;
             }
-            let data = &read(entry.path())?;
-            let hash = md5::compute(data);
-            if GFile::get_by_hash(&mut conn, &format!("{:x}", hash))
-                .await?
-                .is_some()
-            {
-                info!("{:?}:{:x} already in DB, skip", entry.path(), hash);
+            let path = entry.path();
+            let hash = StorageHandler::get_file_hash(path)?;
+            if GFile::get_by_hash(&mut conn, &hash).await?.is_some() {
+                info!("{:?}:{hash} already in DB, skip", entry.path());
                 continue;
             }
             let file_name = entry.file_name().to_string_lossy().to_string();
             let key_bytes = hash.as_ptr();
-            info!("{:?}: {}: {:x}", entry.path(), hash.len(), hash);
+            info!("{:?}: {}: {hash}", entry.path(), hash.len());
             if libretrodb_find_entry(db, md5_idx.as_ptr(), key_bytes, &mut rval) == 0 {
                 info!("FOUND IT\n{}", rval);
                 // TODO: merge entries from result on libretrodb_query_compile(db, "{\"rom_name\":nom}", strlen query exp, error) cursor
@@ -204,6 +200,8 @@ async fn main() -> Result<(), IngestError> {
                     environment_id: env.environment_id,
                     instance_config: None,
                     created_on,
+                    derived_from_instance: None,
+                    derived_from_state: None,
                 };
                 let file_uuid = Uuid::new_v4();
                 let file_info = StorageHandler::write_file_to_uuid_folder(
@@ -211,16 +209,17 @@ async fn main() -> Result<(), IngestError> {
                     4,
                     file_uuid,
                     &file_name,
-                    data,
+                    path,
                 )
                 .await?;
                 info!(
                     "Wrote file {} to {}",
                     file_info.dest_filename, file_info.dest_path
                 );
+                let file_size = std::fs::metadata(path)?.len() as i64;
                 let file_record = GFile {
                     file_id: file_uuid,
-                    file_hash: format!("{:x}", hash),
+                    file_hash: hash,
                     file_filename: file_name,
                     file_source_path: entry
                         .path()
@@ -229,7 +228,7 @@ async fn main() -> Result<(), IngestError> {
                         .to_string_lossy()
                         .to_string(),
                     file_dest_path: file_info.dest_path,
-                    file_size: data.len() as i64,
+                    file_size,
                     created_on,
                 };
                 let object_id = Uuid::new_v4();
@@ -249,6 +248,8 @@ async fn main() -> Result<(), IngestError> {
                     object_id,
                     instance_id,
                     ObjectRole::Content,
+                    // TODO: this is where we can do PSX disk image order and stuff
+                    0,
                 )
                 .await?;
                 Object::link_object_to_instance(
@@ -256,6 +257,7 @@ async fn main() -> Result<(), IngestError> {
                     ra_cfg_object_id,
                     instance_id,
                     ObjectRole::Config,
+                    0,
                 )
                 .await?;
 

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT object_id, instance_id, instance_object_config, object_role as \"object_role:_\" FROM instanceObject WHERE object_id = $1 AND instance_id = $2",
+  "query": "SELECT object_id, instance_id, instance_object_config, object_role as \"object_role:_\", object_role_index FROM instanceObject WHERE object_id = $1 AND instance_id = $2",
   "describe": {
     "columns": [
       {
@@ -33,6 +33,11 @@
             }
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "object_role_index",
+        "type_info": "Int4"
       }
     ],
     "parameters": {
@@ -45,8 +50,9 @@
       false,
       false,
       true,
+      false,
       false
     ]
   },
-  "hash": "1bb7d7fb4a7ab3cb30be2a38cf5d81e15f5724986efdf8bff217d869978cc4c4"
+  "hash": "b518516435c0c5ca6edb8cb50096b177ea0323aa036a169a880782af2f75bfd0"
 }

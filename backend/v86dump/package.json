@@ -1,0 +1,12 @@
+{
+  "name": "v86dump",
+  "version": "1.0.0",
+  "description": "Dump out v86 disks given a machine and save state",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "run": "node index.js"
+  },
+  "author": "Joseph C. Osborn",
+  "license": "GPL-3.0"
+}

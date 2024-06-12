@@ -36,9 +36,18 @@ export async function init(gisst_root:string, environment:Environment, start:Col
     await new Promise(resolve => setTimeout(resolve, 2000));
   }
   console.log("v86 loaded");
-  const content = manifest.find((o) => o.object_role=="content")!;
-  const content_path = "storage/"+content.file_dest_path+"/"+content.file_hash+"-"+content.file_filename;
-  nested_replace(environment.environment_config as StringIndexable, "$CONTENT", content_path);
+  for (const obj of manifest) {
+    if (obj.object_role == "content") {
+      const obj_path = "storage/"+obj.file_dest_path+"/"+obj.file_hash+"-"+obj.file_filename;
+      const idx = obj.object_role_index.toString();
+      nested_replace(environment.environment_config as StringIndexable, "$CONTENT"+idx, obj_path);
+      // TODO for more robust back compatibility, this needs to check against not just 0,
+      // but against whatever disk drive this CONTENT tag appears in.
+      if (obj.object_role_index == 0) {
+        nested_replace(environment.environment_config as StringIndexable, "$CONTENT\"", obj_path+"\"");
+      }
+    }
+  }
   let entry_state:string|null = null;
   if (start.type == "state") {
     const data = (start as StateStart).data;

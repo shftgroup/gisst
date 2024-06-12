@@ -12,6 +12,7 @@ export interface Environment {
 }
 export interface ObjectLink {
   object_role:string,
+  object_role_index:integer,
   object_id:string,
   file_dest_path:string,
   file_filename:string,
