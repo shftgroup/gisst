@@ -93,6 +93,8 @@ pub enum FSListError {
     IO(#[from] std::io::Error),
     #[error("mbr error")]
     MBRError(#[from] mbrman::Error),
+    #[error("fat filesystem IO error")]
+    FATFSError(#[from] fatfs::Error<std::io::Error>),
     #[error("filesystem error")]
     FATError(String),
     #[error("filetype DB error")]

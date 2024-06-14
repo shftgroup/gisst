@@ -596,7 +596,7 @@ async fn get_subobject(
         tokio::task::spawn_blocking(move || {
             if is_disk_image(&path) {
                 get_file_at_path(std::fs::File::open(path)?, std::path::Path::new(&subpath))
-                    .map_err(GISSTError::FSListError)
+                    .map_err(GISSTError::from)
             } else {
                 Err(GISSTError::SubobjectError(format!("{id}:{subpath}")))
             }

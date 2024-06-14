@@ -63,8 +63,15 @@ fn recursive_listing_fat_partition(
 ) -> Result<FSFileListing, FSListError> {
     use fatfs::*;
     use fscommon::{BufStream, StreamSlice};
+    use tracing::debug;
+    debug!(
+        "Loading image {:?} with bounds {}..{} as FAT filesystem",
+        image, start_lba, sz
+    );
     let image = BufStream::new(StreamSlice::new(image, start_lba, start_lba + sz)?);
+    debug!("Stream slice initialized",);
     let fs = FileSystem::new(image, FsOptions::new())?;
+    debug!("FS initialized",);
     let mut stack = vec![(fs.root_dir(), vec![], path.to_owned())];
     let mut root_lst = FSFileListing {
         name: path.to_string_lossy().to_string(),
@@ -171,27 +178,35 @@ pub fn get_file_at_path(
     Err(FSListError::Traversal)
 }
 
-fn file_at_path_is_dir_fat<T: fatfs::ReadWriteSeek>(
-    fs: &fatfs::FileSystem<T>,
-    path: &std::path::Path,
-) -> bool {
+type FATStorage = fatfs::StdIoWrapper<fscommon::BufStream<fscommon::StreamSlice<std::fs::File>>>;
+
+fn file_at_path_is_dir_fat(fs: &fatfs::FileSystem<FATStorage>, path: &std::path::Path) -> bool {
     let root = fs.root_dir();
     path.parent().is_none() || root.open_dir(&path.to_string_lossy()).is_ok()
 }
 
-fn get_file_at_path_fat<T: fatfs::ReadWriteSeek>(
-    fs: &fatfs::FileSystem<T>,
+fn get_file_at_path_fat(
+    fs: &fatfs::FileSystem<FATStorage>,
     path: &std::path::Path,
 ) -> Result<Vec<u8>, FSListError> {
-    use std::io::Read;
-    let mut file = fs.root_dir().open_file(&path.to_string_lossy())?;
+    use fatfs::*;
+    let mut file = fs.root_dir().open_file(&path.to_string_lossy()).unwrap();
     let mut bytes = Vec::with_capacity(4096);
-    file.read_to_end(&mut bytes)?;
-    Ok(bytes)
+    loop {
+        match file.read(&mut bytes) {
+            Ok(0) => {
+                return Ok(bytes);
+            }
+            Ok(_n) => {
+                continue;
+            }
+            Err(e) => return Err(FSListError::from(e)),
+        }
+    }
 }
 
-fn get_dir_at_path_fat<T: fatfs::ReadWriteSeek>(
-    fs: &fatfs::FileSystem<T>,
+fn get_dir_at_path_fat(
+    fs: &fatfs::FileSystem<FATStorage>,
     path: &std::path::Path,
 ) -> Result<Vec<u8>, FSListError> {
     dbg!(path);
