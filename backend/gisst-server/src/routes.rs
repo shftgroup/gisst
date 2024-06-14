@@ -10,12 +10,12 @@ use axum::{
     Extension, Router,
 };
 use axum_login::RequireAuthorizationLayer;
-use gisst::error::ErrorTable;
 use gisst::models::{
     Creator, DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State,
     Work,
 };
 use gisst::models::{CreatorReplayInfo, CreatorStateInfo, FileRecordFlatten};
+use gisst::{error::ErrorTable, models::ObjectLink};
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
@@ -78,6 +78,7 @@ pub fn object_router() -> Router {
                 .put(edit_object)
                 .delete(delete_object),
         )
+        .route("/:id/*path", get(get_subobject))
 }
 
 pub fn replay_router() -> Router {
@@ -377,9 +378,11 @@ async fn get_instances(
 struct FullInstance {
     info: Instance,
     work: Work,
+    environment: Environment,
     states: Vec<FileRecordFlatten<State>>,
     replays: Vec<FileRecordFlatten<Replay>>,
     saves: Vec<FileRecordFlatten<Save>>,
+    objects: Vec<ObjectLink>,
 }
 
 async fn get_all_for_instance(
@@ -390,6 +393,13 @@ async fn get_all_for_instance(
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
+        // TODO: all this stuff should really come from a join query or whatever.
+        let environment = Environment::get_by_id(&mut conn, instance.environment_id)
+            .await?
+            .ok_or(GISSTError::RecordMissingError {
+                table: ErrorTable::Environment,
+                uuid: instance.environment_id,
+            })?;
         let states = Instance::get_all_states(&mut conn, instance.instance_id).await?;
         let mut flattened_states: Vec<FileRecordFlatten<State>> = vec![];
 
@@ -411,9 +421,13 @@ async fn get_all_for_instance(
             flattened_saves.push(Save::flatten_file(&mut conn, save.clone()).await?);
         }
 
+        let objects = ObjectLink::get_all_for_instance_id(&mut conn, id).await?;
+
         let full_instance = FullInstance {
             work: Work::get_by_id(&mut conn, instance.work_id).await?.unwrap(),
             info: instance,
+            environment,
+            objects,
             states: flattened_states,
             replays: flattened_replays,
             saves: flattened_saves,
@@ -503,10 +517,108 @@ async fn get_objects(
 
 async fn get_single_object(
     app_state: Extension<ServerState>,
+    headers: HeaderMap,
     Path(id): Path<Uuid>,
-) -> Result<Json<Object>, GISSTError> {
+    _auth: auth::AuthContext,
+) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Object::get_by_id(&mut conn, id).await?.unwrap()))
+
+    let object = Object::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(GISSTError::RecordMissingError {
+            table: ErrorTable::Object,
+            uuid: id,
+        })?;
+    let file = File::get_by_id(&mut conn, object.file_id).await?.ok_or(
+        GISSTError::RecordMissingError {
+            table: ErrorTable::File,
+            uuid: object.file_id,
+        },
+    )?;
+
+    let accept: Option<String> = parse_header(&headers, "Accept");
+
+    Ok(
+        (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
+            let object_page = app_state.templates.get_template("object_listing.html")?;
+            use gisst::fslist::*;
+            // TODO reuse cookie instead of reloading every time
+            let path = file_to_path(&app_state.root_storage_path, &file);
+            let directory = if is_disk_image(&path) {
+                let image = std::fs::File::open(path)?;
+                recursive_listing(image)?
+            } else {
+                vec![]
+            };
+            Html(object_page.render(context!(
+                object => object,
+                file => file,
+                directory => directory,
+            ))?)
+            .into_response()
+        } else if accept
+            .as_ref()
+            .is_some_and(|hv| hv.contains("application/json"))
+        {
+            Json(object).into_response()
+        } else {
+            Err(GISSTError::MimeTypeError)?
+        })
+        .into_response(),
+    )
+}
+
+async fn get_subobject(
+    app_state: Extension<ServerState>,
+    _headers: HeaderMap,
+    Path((id, subpath)): Path<(Uuid, String)>,
+    _auth: auth::AuthContext,
+) -> Result<axum::response::Response, GISSTError> {
+    use gisst::fslist::*;
+
+    let mut conn = app_state.pool.acquire().await?;
+
+    let object = Object::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(GISSTError::RecordMissingError {
+            table: ErrorTable::Object,
+            uuid: id,
+        })?;
+    let file = File::get_by_id(&mut conn, object.file_id).await?.ok_or(
+        GISSTError::RecordMissingError {
+            table: ErrorTable::File,
+            uuid: object.file_id,
+        },
+    )?;
+    let path = file_to_path(&app_state.root_storage_path, &file);
+    let (mime, data) = {
+        let subpath = subpath.clone();
+        tokio::task::spawn_blocking(move || {
+            if is_disk_image(&path) {
+                get_file_at_path(std::fs::File::open(path)?, std::path::Path::new(&subpath))
+                    .map_err(GISSTError::from)
+            } else {
+                Err(GISSTError::SubobjectError(format!("{id}:{subpath}")))
+            }
+        })
+        .await??
+    };
+    let headers = [
+        (axum::http::header::CONTENT_TYPE, mime),
+        (
+            axum::http::header::CONTENT_DISPOSITION,
+            format!(
+                "attachment; filename=\"{}\"",
+                std::path::Path::new(&subpath)
+                    .file_name()
+                    .ok_or(GISSTError::SubobjectError(
+                        "can't download empty thing".to_string()
+                    ))?
+                    .to_string_lossy()
+            ),
+        ),
+    ];
+    Ok((headers, data).into_response())
 }
 
 async fn create_object(

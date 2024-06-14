@@ -3,7 +3,9 @@ name                    = "gisst"
 version                 = "0.1.0"
 edition                 = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default=[]
+fatfs_logging=["fatfs/log_level_trace"]
 
 [dependencies]
 sqlx                    = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "time", "json"] }
@@ -23,3 +25,8 @@ chrono = {version = "0.4.28", features = ["serde"]}
 serde_with = { version = "3.3.0", features = ["base64"] }
 base64 = "0.21.4"
 tracing = "0.1.40"
+magic = "0.16.2"
+fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="85f06e08edbd3368e1b0562f2fc1b6d178bf7b8a"}
+mbrman = "0.5.2"
+fscommon = "0.1.1"
+zip = "2.1.2"

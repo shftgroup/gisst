@@ -86,3 +86,27 @@ impl fmt::Display for RecordSQLError {
         write!(f, "{} failed in table {}", self.table, self.action)
     }
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum FSListError {
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
+    #[error("mbr error")]
+    MBRError(#[from] mbrman::Error),
+    #[error("fat filesystem IO error")]
+    FATFSError(#[from] fatfs::Error<std::io::Error>),
+    #[error("filesystem error")]
+    FATError(String),
+    #[error("filetype DB error")]
+    FiletypeDBError,
+    #[error("subobject path error")]
+    PathError,
+    #[error("partition id error")]
+    PartitionIDError(#[from] std::num::ParseIntError),
+    #[error("directory zip error")]
+    ZIPError(#[from] zip::result::ZipError),
+    #[error("file identifier error")]
+    FileMIMEError(#[from] magic::cookie::Error),
+    #[error("fs traversal error")]
+    Traversal,
+}
