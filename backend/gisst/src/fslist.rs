@@ -211,7 +211,6 @@ fn get_dir_at_path_fat(
     fs: &fatfs::FileSystem<FATStorage>,
     path: &std::path::Path,
 ) -> Result<Vec<u8>, FSListError> {
-    dbg!(path);
     use zip::{write::SimpleFileOptions, ZipWriter};
     let mut out_bytes: Vec<u8> = Vec::with_capacity(16 * 1024);
     let directory = if path.parent().is_none() {
