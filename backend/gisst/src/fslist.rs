@@ -27,7 +27,7 @@ fn get_partitions(image_file: &std::fs::File) -> Result<Vec<(u32, u64, u64)>, FS
                 .map(|(idx, part)| {
                     (
                         idx as u32,
-                        part.starting_lba as u64,
+                        part.starting_lba as u64 * mbr.sector_size as u64,
                         part.sectors as u64 * mbr.sector_size as u64,
                     )
                 })
@@ -41,13 +41,15 @@ fn get_partitions(image_file: &std::fs::File) -> Result<Vec<(u32, u64, u64)>, FS
 }
 
 pub fn recursive_listing(mut image_file: std::fs::File) -> Result<Vec<FSFileListing>, FSListError> {
+    use tracing::info;
     let partitions = get_partitions(&image_file)?;
     let mut result = Vec::with_capacity(partitions.len());
-    for (idx, start_lba, sz) in partitions {
+    for (idx, start_byte, sz) in partitions {
+        info!("Slicing buffer for partition {idx}: {start_byte} <> {sz}");
         let root = recursive_listing_fat_partition(
             &mut image_file,
-            start_lba,
-            start_lba + sz,
+            start_byte,
+            start_byte + sz,
             std::path::Path::new(&format!("part{idx}")),
         )?;
         result.push(root);
@@ -57,7 +59,7 @@ pub fn recursive_listing(mut image_file: std::fs::File) -> Result<Vec<FSFileList
 
 fn recursive_listing_fat_partition(
     image: &mut std::fs::File,
-    start_lba: u64,
+    start_byte: u64,
     sz: u64,
     path: &std::path::Path,
 ) -> Result<FSFileListing, FSListError> {
@@ -66,9 +68,9 @@ fn recursive_listing_fat_partition(
     use tracing::debug;
     debug!(
         "Loading image {:?} with bounds {}..{} as FAT filesystem",
-        image, start_lba, sz
+        image, start_byte, sz
     );
-    let image = BufStream::new(StreamSlice::new(image, start_lba, start_lba + sz)?);
+    let image = BufStream::new(StreamSlice::new(image, start_byte, start_byte + sz)?);
     debug!("Stream slice initialized",);
     let fs = FileSystem::new(image, FsOptions::new())?;
     debug!("FS initialized",);
@@ -153,13 +155,13 @@ pub fn get_file_at_path(
         .strip_prefix("part")
         .ok_or(FSListError::PathError)?
         .parse::<u32>()?;
-    for (idx, start_lba, sz) in partitions {
+    for (idx, start_byte, sz) in partitions {
         if idx != partid {
             continue;
         }
         use fatfs::*;
         use fscommon::{BufStream, StreamSlice};
-        let image = BufStream::new(StreamSlice::new(image_file, start_lba, start_lba + sz)?);
+        let image = BufStream::new(StreamSlice::new(image_file, start_byte, start_byte + sz)?);
         let fs = FileSystem::new(image, FsOptions::new())?;
         let subpath = components.as_path();
         if file_at_path_is_dir_fat(&fs, subpath) {
