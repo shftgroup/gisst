@@ -54,10 +54,21 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
         "toggle_mute": () => send_message("MUTE"),
         "load_state": (num: number) => load_state_slot(num),
         "save_state": () => save_state(),
-        "load_checkpoint": (num: number) => load_state_slot(num),
         "play_replay": (num: number) => play_replay_slot(num),
         "start_replay": () => record_replay(),
         "stop_and_save_replay": () => stop_replay(),
+        "checkpoints_of":(replay_slot:number) => {
+          const replay_file = state_dir+"/"+content_base+".replay"+replay_slot;
+          const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(replay_file))).id;
+          const checkpoints = [];
+          for(const state of Object.keys(seen_states)) {
+            const state_replay = ra_util.replay_of_state((RA.FS.readFile(state_dir+"/"+state)))?.id;
+            if(state_replay == replay) {
+              checkpoints.push(state);
+            }
+          }
+          return checkpoints;
+        },
         "download_file": (category: "state" | "save" | "replay", file_name: string) => {
           let path = "/home/web_user/retroarch/userdata";
           if (category == "state") {
@@ -113,6 +124,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
                           resolve(metadata)
                         })
                       .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
+                    // upload all associated states too
                   }
                 })
                 .catch(() => reject("File upload from RA failed."));
@@ -201,7 +213,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
             // entryScreenshot is already settled from the all() above
             entryScreenshot!.then((screenshot) => {
               seen_states[content_base+".state1"] = (screenshot as GISSTModels.Screenshot).screenshot_data;
-              ui_state.newState(content_base+".state1", (screenshot as GISSTModels.Screenshot).screenshot_data, data);
+              ui_state.newState(content_base+".state1", (screenshot as GISSTModels.Screenshot).screenshot_data, "init", data);
             });
           }
         }
@@ -212,7 +224,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           // TODO it's ugly to read this in again right after downloading it but whatever
           const replayUUID = ra_util.replay_info(new Uint8Array(RA.FS.readFile("/home/web_user/content/replay.replay1"))).id;
           seen_replays[content_base+".replay1"] = replayUUID;
-          ui_state.newReplay(content_base+".replay1", data);
+          ui_state.newReplay(content_base+".replay1", "init", data);
         } else if(boot_into_record) {
           const f = RA.FS.open(state_dir+"/"+content_base+".replay1", 'w');
           const te = new TextEncoder();
@@ -278,7 +290,6 @@ async function play_replay_slot(n:number) {
   }
   current_replay = {mode:ReplayMode.Playback,id:num_str,finished:false};
   ui_state.setReplayMode(ReplayMode.Playback);
-  find_checkpoints_inner();
 }
 enum BSVFlags {
   START_RECORDING    = (1 << 0),
@@ -319,7 +330,7 @@ async function send_message(msg:string) {
   RA.retroArchSend(msg+"\n");
 }
 // Called by timer from time to time
-async function update_checkpoints() {
+async function update_replay_state() {
   await send_message("GET_CONFIG_PARAM active_replay");
   const resp = await read_response(true);
   nonnull(resp);
@@ -353,24 +364,6 @@ async function update_checkpoints() {
       }
     }
   }
-  if(current_replay) {
-    find_checkpoints_inner();
-  }
-}
-function find_checkpoints_inner() {
-  nonnull(current_replay);
-  // search state files for states saved of current replay
-  // console.log("seen:",seen_states);
-  for(const state_file in seen_states) {
-    if(state_file in seen_checkpoints) { continue; }
-    // console.log("Check ",state_file);
-    const replay = ra_util.replay_of_state(new Uint8Array(RA.FS.readFile(state_dir+"/"+state_file)));
-    // console.log("Replay info",replay,"vs",current_replay);
-    if(replay && replay.id == current_replay.id) {
-      seen_checkpoints[state_file] = seen_states[state_file];
-      ui_state.newCheckpoint(state_file, seen_states[state_file]);
-    }
-  }
 }
 enum ReplayMode {
   Record,
@@ -387,7 +380,6 @@ let current_replay:Replay | null = null;
 const seen_states:Record<string,string> = {};
 // const seen_saves:Record<string,null> = {};
 const seen_replays:Record<string,string> = {};
-let seen_checkpoints:Record<string,string> = {};
 function checkChangedStatesAndSaves() {
   const states = RA.FS.readdir(state_dir);
   for (const state of states) {
@@ -396,7 +388,7 @@ function checkChangedStatesAndSaves() {
       // console.log("check state file",state);
       const png_file = state.endsWith(".png") ? state : state + ".png";
       const state_file = state.endsWith(".png") ? state.substring(0,state.length-4) : state;
-      if(state_file in seen_states || state_file in seen_checkpoints) {
+      if(state_file in seen_states) {
         continue;
       }
       // If not yet seen and both files exist
@@ -405,47 +397,22 @@ function checkChangedStatesAndSaves() {
       }
       // console.log("check state file",state);
       const replay = ra_util.replay_of_state((RA.FS.readFile(state_dir+"/"+state_file)));
-      let known_replay = false;
-      if(replay) {
-        for(const seen in seen_replays) {
-          if(seen_replays[seen] == replay.id) {
-            known_replay = true;
-          }
-        }
-      }
       const img_data = RA.FS.readFile(state_dir+"/"+png_file);
       const img_data_b64 = base64EncArr(img_data);
-      // If this state belongs to the current replay...
-      if(replay && current_replay && replay.id == current_replay.id) {
-        seen_checkpoints[state_file] = img_data_b64;
-        ui_state.newCheckpoint(state_file, img_data_b64);
-        // otherwise ignore it if it's a checkpoint from a non-current replay we have locally
-      } else if(!replay || !known_replay) {
-        seen_states[state_file] = img_data_b64;
-        ui_state.newState(state_file, img_data_b64);
-      }
+      seen_states[state_file] = img_data_b64;
+      ui_state.newState(state_file, img_data_b64, replay?.id);
     } else if(state.includes(".replay")) {
       if(!(state in seen_replays)) {
         const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(state_dir+"/"+state)));
         seen_replays[state] = replay.id;
-        ui_state.newReplay(state);
+        ui_state.newReplay(state, replay.id);
       }
     }
   }
-  // const saves = RA.FS.readdir(saves_dir);
-  // for (const save of saves) {
-  //   if(save == "." || save == "..") { continue; }
-  //   if(!(save in seen_saves)) {
-  //     seen_saves[save] = null;
-  //     ui_state.newSave(save);
-  //   }
-  // }
-  update_checkpoints();
+  update_replay_state();
 }
 function clear_current_replay() {
   current_replay = null;
-  seen_checkpoints = {};
-  ui_state.clearCheckpoints();
   ui_state.setReplayMode(UIReplayMode.Inactive);
 }
 

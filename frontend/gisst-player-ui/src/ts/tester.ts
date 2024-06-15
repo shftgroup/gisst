@@ -13,7 +13,6 @@ addEventListener("load", () =>
       {
         toggle_mute: () => console.log("MUTE/UNMUTE"),
         load_state: (sn:number) => console.log("LOAD",sn),
-        load_checkpoint: (sn:number) => console.log("LOADCP",sn),
           save_state: () => {
               ui_state.newState("state"+statenum.toString(), IMG_DATA);
               statenum += 1;
@@ -28,38 +27,14 @@ addEventListener("load", () =>
           upload_file: (category:"save"|"state"|"replay", file_name:string, metadata:Metadata) => {
             console.log("Upload file", category, file_name, metadata);
             return new Promise((resolve, reject) => {metadata ? resolve(metadata): reject("metadata is null")})
-        }
+          },
+        checkpoints_of: (_replay:number) => {return []}
       },
       false,
       JSON.parse(document.getElementById("config")!.textContent!) as FrontendConfig
     );
     (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_SAVE_BUTTON)!).addEventListener("click",
       () => ui_state.newSave("yet another save.srm"));
-    // (<HTMLAnchorElement>document.getElementById("checkpoint_button")!).addEventListener("click",
-    //   () => {
-    //     ui_state.newCheckpoint("check"+cpnum.toString(),IMG_DATA);
-    //     cpnum +=1;
-    //   });
-
-    // (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_SAVE_BUTTON)!).addEventListener("click",
-    //   () => ui_state.removeSave("yet another save.srm"));
-    // (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_REPLAY_BUTTON)!).addEventListener("click",
-    //   () => {
-    //     replaynum -= 1;
-    //     ui_state.removeReplay("yet another replay.replay"+replaynum.toString());
-    //   });
-    // (<HTMLAnchorElement>document.getElementById("remove_last_checkpoint_button")!).addEventListener("click",
-    //   () => {
-    //     cpnum -= 1;
-    //     ui_state.removeCheckpoint("check"+cpnum.toString());
-    //   });
-    // (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_REMOVE_LAST_STATE_BUTTON)!).addEventListener("click", () => {
-    //   statenum -= 1;
-    //   ui_state.removeState("a state.state"+statenum.toString());
-    // });
-
-    (<HTMLAnchorElement>document.getElementById(UIIDConst.EMU_FINISH_REPLAY_BUTTON)!).addEventListener("click",
-      () => ui_state.clearCheckpoints());
 
 
 
