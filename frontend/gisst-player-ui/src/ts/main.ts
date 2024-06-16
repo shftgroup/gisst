@@ -18,6 +18,8 @@ import * as bootstrap from 'bootstrap'
 import templates from "../html/templates.html?raw"
 import {UITemplateConst, UIIDConst } from "./template_consts"
 
+const NEVER_UPLOADED_ID = "DECAFBADDECAFBADDECAFBADDECAFBAD";
+
 export enum ReplayMode {
   Inactive=0,
   Record,
@@ -175,7 +177,7 @@ export class UI {
     });
 
     const state_object_title = <HTMLHeadElement>new_state_list_object.querySelector("h5");
-    state_object_title.textContent = state_file + (group_key !== null ? " - " + group_key : "");
+    state_object_title.textContent = state_file + (group_key !== undefined ? " - " + group_key : "");
     const state_object_description = <HTMLElement>new_state_list_object.querySelector(".card-text");
     state_object_description.textContent = state_file;
     const state_object_timestamp = <HTMLElement>new_state_list_object.querySelector("small");
@@ -205,14 +207,14 @@ export class UI {
     nonnull(this.current_config);
     const state_metadata:Metadata = {
       record: {
-        state_id: metadata?.state_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        state_id: metadata?.state_id || NEVER_UPLOADED_ID,
         instance_id: this.current_config.instance.instance_id,
         is_checkpoint: metadata?.is_checkpoint || false,
-        file_id: metadata?.file_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        file_id: metadata?.file_id || NEVER_UPLOADED_ID,
         state_description: metadata?.state_description || state_file,
         state_name: metadata?.state_name || state_file,
         state_derived_from: metadata?.state_derived_from || (this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : null),
-        screenshot_id: metadata?.screenshot_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        screenshot_id: metadata?.screenshot_id || NEVER_UPLOADED_ID,
         replay_id: metadata?.replay_id || null,
         creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
         created_on: metadata?.created_on || new Date()
@@ -235,7 +237,7 @@ export class UI {
 
     const li = <HTMLUListElement>elementFromTemplates("replay_list_item");
     li.querySelector(".replay-list-item")!.setAttribute("id", valid_for_css(replay_file));
-    li.querySelector(".replay-list-item-replay-name")!.textContent = replay_file + (group_key !== null ? " - " + group_key : "");
+    li.querySelector(".replay-list-item-replay-name")!.textContent = replay_file + (group_key !== undefined ? " - " + group_key : "");
     li.querySelector(".replay-list-item-replay-desc")!.textContent = replay_file;
 
     li.querySelector(".replay-list-item-play-button")!.addEventListener("click", () => {
@@ -258,8 +260,9 @@ export class UI {
               const srec = smetadata.record as State;
               srec.replay_id = (md.record as Replay).replay_id;
               srec.is_checkpoint = true;
-              if(srec.state_id) {
+              if(srec.state_id != NEVER_UPLOADED_ID) {
                 srec.state_derived_from = srec.state_id;
+                srec.state_id = NEVER_UPLOADED_ID;
               }
               srec.creator_id = (md.record as Replay).creator_id;
               srec.created_on = (md.record as Replay).created_on;
@@ -279,13 +282,13 @@ export class UI {
 
     const replay_metadata:Metadata = {
       record: {
-        replay_id: metadata?.replay_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        replay_id: metadata?.replay_id || NEVER_UPLOADED_ID,
         replay_name: metadata?.replay_name || replay_file,
         replay_description: metadata?.replay_description || replay_file,
         instance_id: this.current_config.instance.instance_id,
         creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
         replay_forked_from: metadata?.replay_forked_from || (this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : null),
-        file_id: metadata?.file_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        file_id: metadata?.file_id || NEVER_UPLOADED_ID,
         created_on: metadata?.created_on || new Date()
       },
       stored_on_server: metadata !== undefined,
@@ -359,7 +362,7 @@ export class UI {
       }
     } else {
       replay_metadata.editing = false;
-      replay_list_object.querySelector(".card-title")!.textContent = (replay_metadata.record as Replay).replay_name + (replay_metadata.group_key !== null ? " - " + replay_metadata.group_key : "");
+      replay_list_object.querySelector(".card-title")!.textContent = (replay_metadata.record as Replay).replay_name + (replay_metadata.group_key !== undefined ? " - " + replay_metadata.group_key : "");
       replay_list_object.querySelector(".card-text")!.textContent = (replay_metadata.record as Replay).replay_description;
       const edit_fields = replay_list_object.querySelectorAll("." + valid_for_css(replay_file) + "-edit-fields")!;
       for(let i = 0; i < edit_fields.length; i++){
@@ -404,7 +407,7 @@ export class UI {
       }
     } else {
       state_metadata.editing = false;
-      state_list_object.querySelector("h5")!.textContent = (state_metadata.record as State).state_name + (state_metadata.group_key !== null ? " - " + state_metadata.group_key : "");
+      state_list_object.querySelector("h5")!.textContent = (state_metadata.record as State).state_name + (state_metadata.group_key !== undefined ? " - " + state_metadata.group_key : "");
       state_list_object.querySelector(".card-text")!.textContent = (state_metadata.record as State).state_description;
       const edit_fields = state_list_object.querySelectorAll("." + valid_for_css(state_file) + "-edit-fields")!;
       for(let i = 0; i < edit_fields.length; i++){

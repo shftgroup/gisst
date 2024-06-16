@@ -6,6 +6,8 @@ import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
 import * as tus from "tus-js-client";
 import {LibretroModule, loadRetroArch} from './libretro_adapter';
 const FS_CHECK_INTERVAL = 1000;
+// one auto state per 5 minutes feels reasonable
+const AUTO_STATE_INTERVAL = 5*60*1000;
 
 const state_dir = "/home/web_user/retroarch/userdata/states";
 const saves_dir = "/home/web_user/retroarch/userdata/saves";
@@ -252,10 +254,14 @@ function retroReady(): void {
       prev.classList.add("hidden");
       RA.startRetroArch(canv, retro_args, function () {
         setInterval(checkChangedStatesAndSaves, FS_CHECK_INTERVAL);
+        setInterval(autosave_state, AUTO_STATE_INTERVAL);
         canv.classList.remove("hidden");
       });
       return false;
     });
+}
+function autosave_state() {
+  save_state();
 }
 function nonnull(obj:unknown):asserts obj {
   if(obj == null) {
