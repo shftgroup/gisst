@@ -18,6 +18,8 @@ import * as bootstrap from 'bootstrap'
 import templates from "../html/templates.html?raw"
 import {UITemplateConst, UIIDConst } from "./template_consts"
 
+const NEVER_UPLOADED_ID = "DECAFBADDECAFBADDECAFBADDECAFBAD";
+
 export enum ReplayMode {
   Inactive=0,
   Record,
@@ -32,9 +34,9 @@ interface UIController {
   play_replay: (replay_num:number) => void;
   start_replay:() => void;
   stop_and_save_replay:() => void;
-  load_checkpoint: (state_num:number) => void;
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
   upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: Metadata) => Promise<Metadata>;
+  checkpoints_of:(replay_num:number) => string[];
 }
 
 export class UI {
@@ -43,7 +45,6 @@ export class UI {
   static readonly gisst_saves_list_content_id = "gisst-saves";
   static readonly gisst_states_list_content_id = "gisst-states-list";
   static readonly gisst_replays_list_content_id = "gisst-replays";
-  static readonly gisst_checkpoints_list_content_id = "gisst-checkpoints";
   ui_date_format:Intl.DateTimeFormatOptions = {
     day: "2-digit", year: "numeric", month: "short",
     hour:"numeric", minute:"numeric", second:"numeric"
@@ -56,7 +57,6 @@ export class UI {
   ui_root:HTMLDivElement;
   saves_elt:HTMLOListElement;
   replay_elt:HTMLUListElement;
-  checkpoint_elt:HTMLDivElement;
 
   entries_by_name:Record<string,HTMLElement>;
   metadata_by_name:Record<string,Metadata>;
@@ -118,7 +118,6 @@ export class UI {
     this.saves_elt = <HTMLOListElement>document.createElement("ol");
     this.ui_root.appendChild(this.saves_elt);
     this.replay_elt = <HTMLUListElement>document.getElementById("gisst-replays-list");
-    this.checkpoint_elt = <HTMLDivElement>document.getElementById("gisst-checkpoints-list");
     this.entries_by_name = {};
     this.metadata_by_name = {};
   }
@@ -158,8 +157,8 @@ export class UI {
     this.saves_elt.appendChild(li);
     this.entries_by_name["sv__"+save_file] = li;
   }
-  newState(state_file:string, state_thumbnail:string, metadata?:StateFileLink) {
-    console.log("found new state", state_file, metadata);
+  newState(state_file:string, state_thumbnail:string, group_key?:string, metadata?:StateFileLink) {
+    console.log("found new state", state_file, group_key, metadata);
     // Create state list template object
     const new_state_list_object = <HTMLDivElement>elementFromTemplates("card_list_object");
     new_state_list_object.querySelector(".card-list-object")!
@@ -178,7 +177,7 @@ export class UI {
     });
 
     const state_object_title = <HTMLHeadElement>new_state_list_object.querySelector("h5");
-    state_object_title.textContent = state_file;
+    state_object_title.textContent = state_file + (group_key !== undefined ? " - " + group_key : "");
     const state_object_description = <HTMLElement>new_state_list_object.querySelector(".card-text");
     state_object_description.textContent = state_file;
     const state_object_timestamp = <HTMLElement>new_state_list_object.querySelector("small");
@@ -188,12 +187,12 @@ export class UI {
 
     new_state_list_object.querySelector(".upload-button")!.addEventListener("click", () => {
       const metadata = this.metadata_by_name["st__"+state_file];
+      if(metadata.editing) { this.toggleEditState(state_file); }
       if(!metadata.editing && !metadata.stored_on_server){
         this.control.upload_file("state", state_file, metadata)
             .then((md:Metadata) =>{
               this.completeUpload("st__"+state_file, md);
             });
-
       }
     });
 
@@ -208,21 +207,22 @@ export class UI {
     nonnull(this.current_config);
     const state_metadata:Metadata = {
       record: {
-        state_id: metadata?.state_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        state_id: metadata?.state_id || NEVER_UPLOADED_ID,
         instance_id: this.current_config.instance.instance_id,
         is_checkpoint: metadata?.is_checkpoint || false,
-        file_id: metadata?.file_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        file_id: metadata?.file_id || NEVER_UPLOADED_ID,
         state_description: metadata?.state_description || state_file,
         state_name: metadata?.state_name || state_file,
         state_derived_from: metadata?.state_derived_from || (this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : null),
-        screenshot_id: metadata?.screenshot_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        screenshot_id: metadata?.screenshot_id || NEVER_UPLOADED_ID,
         replay_id: metadata?.replay_id || null,
         creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
         created_on: metadata?.created_on || new Date()
       },
       screenshot: state_thumbnail,
       stored_on_server: metadata !== undefined,
-      editing: false
+      editing: false,
+      group_key
     }
     if(state_metadata.stored_on_server){
       this.entries_by_name["st__"+state_file].querySelector(".bi-cloud-upload")!.classList.add("hidden");
@@ -231,14 +231,13 @@ export class UI {
 
     this.metadata_by_name["st__"+state_file] = state_metadata;
   }
-  newReplay(replay_file:string, metadata?:ReplayFileLink) {
-    this.clearCheckpoints();
+  newReplay(replay_file:string, group_key?:string, metadata?:ReplayFileLink) {
     const num_str = (replay_file.match(/replay([0-9]+)$/)?.[1]) ?? "0";
     const replay_num = parseInt(num_str,10);
 
     const li = <HTMLUListElement>elementFromTemplates("replay_list_item");
     li.querySelector(".replay-list-item")!.setAttribute("id", valid_for_css(replay_file));
-    li.querySelector(".replay-list-item-replay-name")!.textContent = replay_file;
+    li.querySelector(".replay-list-item-replay-name")!.textContent = replay_file + (group_key !== undefined ? " - " + group_key : "");
     li.querySelector(".replay-list-item-replay-desc")!.textContent = replay_file;
 
     li.querySelector(".replay-list-item-play-button")!.addEventListener("click", () => {
@@ -252,10 +251,29 @@ export class UI {
 
     li.querySelector(".replay-list-item-upload-button")!.addEventListener("click", () => {
       const metadata = this.metadata_by_name["rp__"+replay_file];
+      if(metadata.editing) { this.toggleEditReplay(replay_file); }
       this.control.upload_file("replay", replay_file, metadata)
           .then((md:Metadata) => {
             this.completeUpload("rp__"+replay_file, md);
-          })
+            for (const state_file of this.control.checkpoints_of(replay_num)) {
+              const smetadata = this.metadata_by_name["st__"+state_file];
+              const srec = smetadata.record as State;
+              srec.replay_id = (md.record as Replay).replay_id;
+              srec.is_checkpoint = true;
+              if(srec.state_id != NEVER_UPLOADED_ID) {
+                srec.state_derived_from = srec.state_id;
+                srec.state_id = NEVER_UPLOADED_ID;
+              }
+              srec.creator_id = (md.record as Replay).creator_id;
+              srec.created_on = (md.record as Replay).created_on;
+              if(smetadata.editing) { this.toggleEditState(state_file); }
+              this.control.upload_file("state", state_file, smetadata)
+                .then((smd:Metadata) =>{
+                  this.completeUpload("st__"+state_file, smd);
+                })
+
+            }
+          });
     });
 
     li.querySelector(".replay-list-item-edit-button")!.addEventListener("click", () => {
@@ -264,18 +282,19 @@ export class UI {
 
     const replay_metadata:Metadata = {
       record: {
-        replay_id: metadata?.replay_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        replay_id: metadata?.replay_id || NEVER_UPLOADED_ID,
         replay_name: metadata?.replay_name || replay_file,
         replay_description: metadata?.replay_description || replay_file,
         instance_id: this.current_config.instance.instance_id,
         creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
         replay_forked_from: metadata?.replay_forked_from || (this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : null),
-        file_id: metadata?.file_id || "DECAFBADDECAFBADDECAFBADDECAFBAD",
+        file_id: metadata?.file_id || NEVER_UPLOADED_ID,
         created_on: metadata?.created_on || new Date()
       },
       stored_on_server: metadata !== undefined,
       editing: false,
-      screenshot: ""
+      screenshot: "",
+      group_key,
     }
 
     this.replay_elt.appendChild(li);
@@ -285,39 +304,6 @@ export class UI {
       this.entries_by_name["rp__"+replay_file].querySelector(".bi-cloud-upload")!.classList.add("hidden");
       this.entries_by_name["rp__"+replay_file].querySelector(".bi-cloud-arrow-up-fill")!.classList.remove("hidden");
     }
-  }
-  clearCheckpoints() {
-    const toRemove = [];
-    for(const lit in this.entries_by_name) {
-      if(lit.startsWith("cp__")) {
-        toRemove.push(lit);
-      }
-    }
-    for(const lit of toRemove) {
-      this.removeLit(lit);
-    }
-    this.checkpoint_elt.innerHTML = "";
-  }
-  newCheckpoint(check_name:string, state_thumbnail:string) {
-    const checkpoint_list_object = <HTMLDivElement>elementFromTemplates("card_list_object");
-    checkpoint_list_object.querySelector(".card-list-object")!.setAttribute("id", valid_for_css(check_name));
-
-    const img = <HTMLImageElement>checkpoint_list_object.querySelector("img")!;
-    img.src = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
-
-    const num_str = (check_name.match(/(check|state)([0-9]+)$/)?.[2]) ?? "0";
-    const save_num = parseInt(num_str,10);
-
-    img.addEventListener("click", () => {
-      console.log("Load CP",check_name,save_num);
-      this.control["load_checkpoint"](save_num);
-    });
-
-    checkpoint_list_object.querySelector(".upload-button")!.remove();
-
-    this.checkpoint_elt.appendChild(checkpoint_list_object);
-    this.entries_by_name["cp__"+check_name] = document.getElementById(valid_for_css(check_name))!;
-    console.log("added CP","cp__"+check_name,this.entries_by_name["cp__"+check_name]);
   }
   clear() {
     for(const lit in this.entries_by_name) {
@@ -343,9 +329,6 @@ export class UI {
   }
   removeSave(save_file:string) {
     this.removeLit("sv__"+save_file);
-  }
-  removeCheckpoint(cp_file:string) {
-    this.removeLit("cp__"+cp_file);
   }
 
   toggleEditReplay(replay_file:string) {
@@ -379,7 +362,7 @@ export class UI {
       }
     } else {
       replay_metadata.editing = false;
-      replay_list_object.querySelector(".card-title")!.textContent = (replay_metadata.record as Replay).replay_name;
+      replay_list_object.querySelector(".card-title")!.textContent = (replay_metadata.record as Replay).replay_name + (replay_metadata.group_key !== undefined ? " - " + replay_metadata.group_key : "");
       replay_list_object.querySelector(".card-text")!.textContent = (replay_metadata.record as Replay).replay_description;
       const edit_fields = replay_list_object.querySelectorAll("." + valid_for_css(replay_file) + "-edit-fields")!;
       for(let i = 0; i < edit_fields.length; i++){
@@ -424,7 +407,7 @@ export class UI {
       }
     } else {
       state_metadata.editing = false;
-      state_list_object.querySelector("h5")!.textContent = (state_metadata.record as State).state_name;
+      state_list_object.querySelector("h5")!.textContent = (state_metadata.record as State).state_name + (state_metadata.group_key !== undefined ? " - " + state_metadata.group_key : "");
       state_list_object.querySelector(".card-text")!.textContent = (state_metadata.record as State).state_description;
       const edit_fields = state_list_object.querySelectorAll("." + valid_for_css(state_file) + "-edit-fields")!;
       for(let i = 0; i < edit_fields.length; i++){

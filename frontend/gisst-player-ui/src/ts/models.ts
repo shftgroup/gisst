@@ -29,7 +29,8 @@ export interface Metadata {
     record: DBFileRecord,
     screenshot: string,
     stored_on_server: boolean,
-    editing: boolean
+    editing: boolean,
+    group_key?: string
 }
 
 export enum ObjectRole {

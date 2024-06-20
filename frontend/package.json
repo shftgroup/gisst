@@ -5,11 +5,10 @@
     "embedv86",
     "gisst-player-ui",
     "frontend-web",
-    "frontend-elec",
     "frontend-embed"
   ],
   "scripts": {
-    "check": "npx tsc --noEmit -p embedv86 && npx tsc --noEmit -p ra-util && npx tsc --noEmit -p gisst-player-ui && npx tsc --noEmit -p frontend-embed && npx tsc --noEmit -p frontend-web && npx tsc --noEmit -p frontend-elec && npx eslint */src",
+    "check": "npx tsc --noEmit -p embedv86 && npx tsc --noEmit -p ra-util && npx tsc --noEmit -p gisst-player-ui && npx tsc --noEmit -p frontend-embed && npx tsc --noEmit -p frontend-web && npx eslint */src",
     "fix": "npx eslint */src --fix"
   },
   "devDependencies": {

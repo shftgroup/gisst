@@ -14,10 +14,8 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       const obj_path = "storage/"+obj.file_dest_path+"/"+obj.file_hash+"-"+obj.file_filename;
       const idx = obj.object_role_index.toString();
       nested_replace(environment.environment_config, "$CONTENT"+idx, obj_path);
-      // TODO for more robust back compatibility, this needs to check against not just 0,
-      // but against whatever disk drive this CONTENT tag appears in.
       if (obj.object_role_index == 0) {
-        nested_replace(environment.environment_config, "$CONTENT\"", obj_path+"\"");
+        nested_replace(environment.environment_config, "$CONTENT", obj_path);
       }
     }
   }
@@ -40,6 +38,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
     movie = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
   }
 
+  const state_to_replay:Array<number|null> = [];
 
   /* eslint prefer-const: ["error", { ignoreReadBeforeAssign: true }], no-use-before-define: "error" */
   let v86:EmbedV86;
@@ -52,66 +51,74 @@ export async function init(environment:Environment, start:ColdStart | StateStart
         v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined);
       },
       "load_state":(n:number) => {
-        if(v86.active_replay != null) { v86.stop_replay(); }
+        // get the replay of state n
+        // if it's not the same as the active replay we have to do something
+        const replay = state_to_replay[n];
+        if(replay !== v86.active_replay) {
+          v86.stop_replay();
+          if(replay !== null) {
+            v86.play_replay_slot(replay);
+          }
+        }
         v86.load_state_slot(n);
       },
-        "save_state":() => {
-            v86.save_state()
-        },
-        "start_replay":() => {
-            v86.record_replay()
-        },
-        "stop_and_save_replay":() => {
-            v86.stop_replay()
-        },
+      "save_state":() => {
+        v86.save_state()
+      },
+      "start_replay":() => {
+        v86.record_replay()
+      },
+      "stop_and_save_replay":() => {
+        v86.stop_replay()
+      },
       "play_replay":(n:number) => v86.play_replay_slot(n),
-      "load_checkpoint":(n:number) => {
-        if(v86.active_replay == null) { throw "Can't load checkpoint if no replay"; }
-        v86.load_state_slot(n);
-      },
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
         v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
       },
+      "checkpoints_of":(replay_slot:number) => {
+        const rep = v86.replays[replay_slot].checkpoints;
+        return rep.map((cp) => cp.name);
+      },
       "upload_file":(category:"state" | "save" | "replay", file_name:string, metadata:GISSTModels.Metadata) => {
-            return new Promise((resolve, reject) => {
-                v86.download_file(category, file_name).then(([blob, name]) => {
-                    db.uploadFile(new File([blob], name),
-                        (error:Error) => { reject(error.message)},
-                        (_percentage:number) => {},
-                        (upload:tus.Upload) => {
-                            const url_parts = upload.url!.split('/');
-                            const uuid_string = url_parts[url_parts.length - 1];
-                            metadata.record.file_id = uuid_string;
-                            if(category == "state"){
-                                db.uploadRecord({screenshot_data: metadata.screenshot.split(",")[1]}, "screenshot")
-                                    .then((screenshot:GISSTModels.DBRecord) => {
-                                        (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
-                                        console.log(metadata);
-                                        db.uploadRecord(metadata.record, "state")
-                                            .then((state:GISSTModels.DBRecord) => {
-                                                (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id
-                                                resolve(metadata);
-                                            })
-                                            .catch(() => reject("State upload from v86 failed."))
-                                    })
-                                    .catch(() => reject("Screenshot upload from v86 failed."))
-                            }else {
-                                db.uploadRecord(metadata.record, category)
-                                    .then((record:GISSTModels.DBRecord) => {
-                                        if (category === "replay") {
-                                            (metadata.record as GISSTModels.Replay).replay_id = (record as GISSTModels.Replay).replay_id;
-                                        } else {
-                                            (metadata.record as GISSTModels.Save).save_id = (record as GISSTModels.Save).save_id;
-                                        }
-                                        resolve(metadata)
-                                    })
-                                    .catch(() => reject(category + " upload from v86 failed"))
-                            }
-                        }
-                    )
-                        .catch(() => reject("File upload from v86 failed."))
-                })
-            })
+        return new Promise((resolve, reject) => {
+          v86.download_file(category, file_name).then(([blob, name]) => {
+            db.uploadFile(new File([blob], name),
+              (error:Error) => { reject(error.message)},
+              (_percentage:number) => {},
+              (upload:tus.Upload) => {
+                const url_parts = upload.url!.split('/');
+                const uuid_string = url_parts[url_parts.length - 1];
+                metadata.record.file_id = uuid_string;
+                if(category == "state"){
+                  db.uploadRecord({screenshot_data: metadata.screenshot.split(",")[1]}, "screenshot")
+                    .then((screenshot:GISSTModels.DBRecord) => {
+                      (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
+                      console.log(metadata);
+                      db.uploadRecord(metadata.record, "state")
+                        .then((state:GISSTModels.DBRecord) => {
+                          (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id
+                          resolve(metadata);
+                        })
+                        .catch(() => reject("State upload from v86 failed."))
+                    })
+                    .catch(() => reject("Screenshot upload from v86 failed."))
+                }else {
+                  db.uploadRecord(metadata.record, category)
+                    .then((record:GISSTModels.DBRecord) => {
+                      if (category === "replay") {
+                        (metadata.record as GISSTModels.Replay).replay_id = (record as GISSTModels.Replay).replay_id;
+                      } else {
+                        (metadata.record as GISSTModels.Save).save_id = (record as GISSTModels.Save).save_id;
+                      }
+                      resolve(metadata)
+                    })
+                    .catch(() => reject(category + " upload from v86 failed"))
+                }
+              }
+            )
+              .catch(() => reject("File upload from v86 failed."))
+          })
+        })
       }
     },
     false,
@@ -127,14 +134,13 @@ export async function init(environment:Environment, start:ColdStart | StateStart
     register_replay:(nom:string)=> {
       if(movie && nom == "replay0") {
         const data = (start as ReplayStart).data;
-        ui_state.newReplay(nom, data);
+        ui_state.newReplay(nom, "init", data);
       } else {
-        ui_state.newReplay(nom);
+        ui_state.newReplay(nom, nom);
       }
       //ui_state.setReplayMode(UIReplayMode.Record);
     },
     stop_replay:()=>{
-      ui_state.clearCheckpoints();
     },
     states_changed:(added:StateInfo[], removed:StateInfo[]) => {
       for(const si of removed) {
@@ -144,18 +150,18 @@ export async function init(environment:Environment, start:ColdStart | StateStart
         if(entry_state && si.name == "state0") {
           si.thumbnail = entry_screenshot!;
           const data = (start as StateStart).data;
-          ui_state.newState(si.name, si.thumbnail, data);
+          ui_state.newState(si.name, si.thumbnail, "init", data);
+          state_to_replay.push(v86.active_replay);
         } else {
-          ui_state.newState(si.name,si. thumbnail);
+          ui_state.newState(si.name,si. thumbnail, String(v86.active_replay));
+          state_to_replay.push(v86.active_replay);
         }
       }
     },
-    replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
-      for(const si of removed) {
-        ui_state.removeCheckpoint(si.name);
-      }
+    replay_checkpoints_changed:(added:StateInfo[], _removed:StateInfo[]) => {
       for(const si of added) {
-        ui_state.newCheckpoint(si.name,si.thumbnail);
+        ui_state.newState(si.name,si.thumbnail,String(v86.active_replay));
+        state_to_replay.push(v86.active_replay);
       }
     },
   });

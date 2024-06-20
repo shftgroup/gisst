@@ -849,6 +849,7 @@ async fn create_state(
     let mut conn = app_state.pool.acquire().await?;
 
     if File::get_by_id(&mut conn, state.file_id).await?.is_some() {
+        tracing::info!("Inserting state {state:?}");
         Ok(Json(
             State::insert(
                 &mut conn,
