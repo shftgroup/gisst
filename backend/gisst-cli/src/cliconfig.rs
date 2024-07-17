@@ -13,11 +13,13 @@ pub struct CLIConfig {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct DatabaseConfig {
     #[serde(default = "default_database_url")]
     pub database_url: String,
 }
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct StorageConfig {
     #[serde(default = "default_root_folder_path")]
     pub root_folder_path: String,
