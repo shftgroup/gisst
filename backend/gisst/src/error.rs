@@ -107,6 +107,10 @@ pub enum FSListError {
     ZIPError(#[from] zip::result::ZipError),
     #[error("file identifier error")]
     FileMIMEError(#[from] magic::cookie::Error),
-    #[error("fs traversal error")]
-    Traversal,
+    #[error("fs traversal error: depth limit exceeded")]
+    TraversalDepth,
+    #[error("fs traversal error: path {0} invalid or not found")]
+    TraversalPath(String),
+    #[error("fs traversal error: file {0} invalid or not found")]
+    FileNotFound(String),
 }

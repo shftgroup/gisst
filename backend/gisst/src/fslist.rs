@@ -83,16 +83,26 @@ fn recursive_listing_fat_partition(
     };
     while let Some((dir, idx, path)) = stack.pop() {
         if idx.len() > DEPTH_LIMIT {
-            return Err(FSListError::Traversal);
+            return Err(FSListError::TraversalDepth);
         }
-        let lst = get_lst_mut(&mut root_lst, &idx).ok_or(FSListError::Traversal)?;
-        for (eidx, entry) in dir.iter().enumerate() {
+        // dbg!(&path, &idx);
+        let lst = get_lst_mut(&mut root_lst, &idx).ok_or(FSListError::TraversalPath(
+            path.to_string_lossy().into_owned(),
+        ))?;
+        for (eidx, entry) in dir
+            .iter()
+            .filter(|entry| {
+                let Ok(entry) = entry.as_ref() else {
+                    return false;
+                };
+                let filename = entry.file_name();
+                filename != "." && filename != ".."
+            })
+            .enumerate()
+        {
             let entry = entry?;
             let filename = entry.file_name();
-            if filename == "." || filename == ".." {
-                continue;
-            }
-            //dbg!(&filename, &idx, &path);
+            // dbg!(&filename, &idx, eidx, &path);
             // add a file entry or dir entry
             lst.children.push(FSFileListing {
                 path: path.join(&filename),
@@ -129,6 +139,7 @@ fn get_lst_mut<'a>(
     if idx_path.is_empty() {
         Some(lst)
     } else {
+        // dbg!(&lst.children, &lst.children.get(idx_path[0]));
         get_lst_mut(lst.children.get_mut(idx_path[0])?, &idx_path[1..])
     }
 }
@@ -146,9 +157,13 @@ pub fn get_file_at_path(
 ) -> Result<(String, Vec<u8>), FSListError> {
     let partitions = get_partitions(&image_file)?;
     let mut components = path.components();
-    let std::path::Component::Normal(partid) = components.next().ok_or(FSListError::Traversal)?
+    let std::path::Component::Normal(partid) = components.next().ok_or(
+        FSListError::TraversalPath(path.to_string_lossy().into_owned()),
+    )?
     else {
-        return Err(FSListError::Traversal);
+        return Err(FSListError::TraversalPath(
+            path.to_string_lossy().into_owned(),
+        ));
     };
     let partid = partid
         .to_string_lossy()
@@ -177,7 +192,9 @@ pub fn get_file_at_path(
             return Ok((mime, file));
         }
     }
-    Err(FSListError::Traversal)
+    Err(FSListError::FileNotFound(
+        path.to_string_lossy().into_owned(),
+    ))
 }
 
 type FATStorage = fatfs::StdIoWrapper<fscommon::BufStream<fscommon::StreamSlice<std::fs::File>>>;
