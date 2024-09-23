@@ -23,3 +23,4 @@ anyhow = "1.0.70"
 gisst = { path = "../gisst" }
 rdb-sys = { path = "../rdb-sys" }
 chrono = { version = "0.4.28", features = ["clock"]}
+md-5                    = "0.10"

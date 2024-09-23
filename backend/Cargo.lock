@@ -1528,6 +1528,7 @@ dependencies = [
  "env_logger",
  "gisst",
  "log",
+ "md-5",
  "rdb-sys",
  "serde",
  "serde_json",

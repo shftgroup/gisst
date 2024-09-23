@@ -162,14 +162,22 @@ async fn main() -> Result<(), IngestError> {
                 continue;
             }
             let path = entry.path();
-            let hash = StorageHandler::get_file_hash(path)?;
-            if GFile::get_by_hash(&mut conn, &hash).await?.is_some() {
-                info!("{:?}:{hash} already in DB, skip", entry.path());
+            let hash = {
+                use md5::Digest;
+                let mut hasher = md5::Md5::new();
+                let mut file = std::fs::File::open(path)?;
+                std::io::copy(&mut file, &mut hasher)?;
+                hasher.finalize()
+            };
+            let hash_str = format!("{:x}", hash);
+            if GFile::get_by_hash(&mut conn, &hash_str).await?.is_some() {
+                info!("{:?}:{hash_str} already in DB, skip", entry.path());
                 continue;
             }
+
             let file_name = entry.file_name().to_string_lossy().to_string();
             let key_bytes = hash.as_ptr();
-            info!("{:?}: {}: {hash}", entry.path(), hash.len());
+            info!("{:?}: {}: {hash_str}", entry.path(), hash.len());
             if libretrodb_find_entry(db, md5_idx.as_ptr(), key_bytes, &mut rval) == 0 {
                 info!("FOUND IT\n{}", rval);
                 // TODO: merge entries from result on libretrodb_query_compile(db, "{\"rom_name\":nom}", strlen query exp, error) cursor
@@ -219,7 +227,7 @@ async fn main() -> Result<(), IngestError> {
                 let file_size = std::fs::metadata(path)?.len() as i64;
                 let file_record = GFile {
                     file_id: file_uuid,
-                    file_hash: hash,
+                    file_hash: hash_str,
                     file_filename: file_name,
                     file_source_path: entry
                         .path()
