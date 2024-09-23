@@ -120,9 +120,17 @@ export class EmbedV86 {
   }
   async download_file(category:"state" | "save" | "replay", file_name:string):Promise<[Blob,string]> {
     if(category == "state") {
-      const num_str = (file_name.match(/state([0-9]+)$/)?.[1]) ?? "0";
-      const save_num = parseInt(num_str,10);
-      return [new Blob([this.states[save_num].state]), file_name.toString()+".v86state"];
+      const checkpoint_matches = file_name.match(/replay([0-9]+)-check([0-9]+)/);
+      if(checkpoint_matches != null) {
+        const replay_idx = parseInt(checkpoint_matches[1],10);
+        const checkpoint_idx = parseInt(checkpoint_matches[2],10);
+        const checkpoint = this.replays[replay_idx].checkpoints[checkpoint_idx];
+        return [new Blob([checkpoint.state]), file_name.toString()+".v86state"];
+      } else {
+        const num_str = (file_name.match(/state([0-9]+)$/)?.[1]) ?? "0";
+        const save_num = parseInt(num_str,10);
+        return [new Blob([this.states[save_num].state]), file_name.toString()+".v86state"];
+      }
     } else if(category == "save") {
       throw "Not yet implemented";
     } else if(category == "replay") {

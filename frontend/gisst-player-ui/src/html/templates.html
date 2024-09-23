@@ -55,11 +55,6 @@
               data-bs-target="#gisst-replays" type="button" role="tab"
               aria-controls="gisst-replays" aria-selected="false">Performances</button>
     </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="gisst-checkpoints-tab" data-bs-toggle="pill"
-              data-bs-target="#gisst-checkpoints" type="button" role="tab"
-              aria-controls="gisst-checkpoints" aria-selected="false">Checkpoints</button>
-    </li>
   </ul>
   <div class="tab-content" id="pills-tabContent">
     <div class="tab-pane fade show active" id="gisst-instructions" role="tabpanel" aria-labelledby="gisst-instructions-tab">
@@ -70,21 +65,20 @@
         <div class="accordion-item">
           <h2 class="accordion-header" id="headingOne">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-              Saving States and Checkpoints
+              Saving States
             </button>
           </h2>
           <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
             <div class="accordion-body">
               <p>GISST will save the current state of the emulator if you press the "Save State" button or hit <kbd class="kbc-button-sm">F2</kbd>. The state will then appear in the "States" tab.</p>
-              <p>If you are recording a replay, the state will be saved as "checkpoint". </p>
-              <p>Checkpoints will appear in the "Checkpoints" tab when recording or replaying a performance.</p>
+              <p>If you are recording a replay, the state will be "attached" to the performance and will upload along with it. </p>
             </div>
           </div>
         </div>
         <div class="accordion-item">
           <h2 class="accordion-header" id="headingTwo">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-              Loading States and Checkpoints
+              Loading States
             </button>
           </h2>
           <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
@@ -105,7 +99,6 @@
             <div class="accordion-body">
               <p>To start recording a performance click on the "Start Performance" button or hit <kbd class="kbc-button-sm">U</kbd>.</p>
               <p>When you are finished, click on the "Finish Performance" button or hit <kbd class="kbc-button-sm">I</kbd>.</p>
-              <p>While recording a performance, you can save states as checkpoints and load them from the "Checkpoints" tab.</p>
               <p>To replay the last recorded performance, you can hit <kbd class="kbc-button-sm">O</kbd> or click on the play button in the performances entry on the "Performances" tab</p>
               <p>While recording, a <span style="color:red;">red border</span> will appear around the emulator window.</p>
               <p>While replaying, a <span style="color:green;">green border</span> will appear around the emulator window.</p>
@@ -232,9 +225,6 @@
     </div>
     <div class="tab-pane fade" id="gisst-replays" role="tabpanel" aria-labelledby="gisst-replays-tab">
       <ul class="list-group" id="gisst-replays-list"></ul>
-    </div>
-    <div class="tab-pane fade" id="gisst-checkpoints" role="tabpanel" aria-labelledby="gisst-checkpoints-tab">
-      <div class="overflow-auto" id="gisst-checkpoints-list"></div>
     </div>
   </div>
 </template>
