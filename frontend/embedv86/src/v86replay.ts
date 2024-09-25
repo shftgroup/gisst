@@ -414,7 +414,7 @@ export class Replay {
     return r;
   }
 }
-class ReplayEvent {
+export class ReplayEvent {
   when:number;
   code:Evt;
   value:object|number;
