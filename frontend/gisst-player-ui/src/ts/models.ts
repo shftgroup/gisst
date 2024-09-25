@@ -200,3 +200,8 @@ export interface FullInstance {
     replays: Replay[],
     saves: Save[]
 }
+
+export interface InputLogEvent<T> {
+  t: number,
+  evt:T
+}
