@@ -8,7 +8,8 @@ import {
   Metadata,
   ReplayFileLink,
   StateFileLink,
-  canEdit
+  canEdit,
+  InputLogEvent
 } from "./models";
 
 import '../scss/styles.scss'
@@ -27,7 +28,7 @@ export enum ReplayMode {
   Finished,
 }
 
-interface UIController {
+interface UIController<Evt> {
   toggle_mute: () => void;
   load_state: (state_num:number) => void;
   save_state: () => void;
@@ -37,9 +38,10 @@ interface UIController {
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
   upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: Metadata) => Promise<Metadata>;
   checkpoints_of:(replay_num:number) => string[];
+  evt_to_html:(evt:Evt) => HTMLElement;
 }
 
-export class UI {
+export class UI<Evt> {
   // static declarations for UI element names
   // assuming a single emulator window right now, will modify for multiple windows
   static readonly gisst_saves_list_content_id = "gisst-saves";
@@ -49,7 +51,7 @@ export class UI {
     day: "2-digit", year: "numeric", month: "short",
     hour:"numeric", minute:"numeric", second:"numeric"
   }
-  control:UIController;
+  control:UIController<Evt>;
   emulator_div:HTMLDivElement;
 
   headless:boolean;
@@ -57,13 +59,18 @@ export class UI {
   ui_root:HTMLDivElement;
   saves_elt:HTMLOListElement;
   replay_elt:HTMLUListElement;
+  evtlog_elt:HTMLUListElement;
 
   entries_by_name:Record<string,HTMLElement>;
   metadata_by_name:Record<string,Metadata>;
   current_config:FrontendConfig;
 
+  evtlog:InputLogEvent<Evt>[];
+  evtlog_playhead:number;
+  evtlog_playhead_eltidx:number;
+  
   // ... functions go here
-  constructor(ui_root:HTMLDivElement, control:UIController, headless:boolean, config:FrontendConfig) {
+  constructor(ui_root:HTMLDivElement, control:UIController<Evt>, headless:boolean, config:FrontendConfig) {
     const _unused = bootstrap.Alert; // needed to force TS compile to import bootstrap
     if(_unused) {
       // needed to avoid TS compile issue
@@ -120,6 +127,11 @@ export class UI {
     this.replay_elt = <HTMLUListElement>document.getElementById("gisst-replays-list");
     this.entries_by_name = {};
     this.metadata_by_name = {};
+
+    this.evtlog = [];
+    this.evtlog_playhead=0;
+    this.evtlog_playhead_eltidx=0;
+    this.evtlog_elt = <HTMLUListElement>document.getElementById("gisst-play-log");
   }
 
   setReplayMode(mode:ReplayMode) {
@@ -423,6 +435,46 @@ export class UI {
     // Change the upload icon to filled
     item_object.querySelector(".bi-cloud-upload")!.classList.add("hidden");
     item_object.querySelector(".bi-cloud-arrow-up-fill")!.classList.remove("hidden");
+  }
+  evtlog_set_playhead(t:number) {
+    const old_ph_idx=this.evtlog_playhead_eltidx;
+    this.evtlog_elt.children[this.evtlog_playhead_eltidx].classList.remove("playhead");
+    let lo=0;
+    let hi=this.evtlog.length;
+    if (this.evtlog_playhead <= t) {
+      lo = this.evtlog_playhead_eltidx;
+    } else {
+      hi = this.evtlog_playhead_eltidx;
+    }
+    let i;
+    for (i = lo; i < hi; i++) {
+      if (this.evtlog[i].t <= t && (this.evtlog.length==(i+1) || this.evtlog[i+1].t > t)) {
+        break;
+      }
+    }
+    this.evtlog_playhead_eltidx = i;
+    this.evtlog_playhead=t;
+    const new_ph = this.evtlog_elt.children[this.evtlog_playhead_eltidx];
+    new_ph.classList.add("playhead");
+    if (old_ph_idx != this.evtlog_playhead_eltidx) {
+      new_ph.scrollIntoView();
+    }
+  }
+  evtlog_clear() {
+    this.evtlog = [];
+    this.evtlog_playhead=0;
+    this.evtlog_playhead_eltidx = 0;
+    this.evtlog_elt.replaceChildren(); 
+  }
+  evtlog_append(evts:InputLogEvent<Evt>[]) {
+    for (const evt of evts) {
+      this.evtlog.push(evt);
+      const elt = this.control.evt_to_html(evt.evt);
+      const li = document.createElement("li");
+      li.innerText = evt.t.toString()+":";
+      li.appendChild(elt);
+      this.evtlog_elt.appendChild(li);
+    }
   }
 }
 

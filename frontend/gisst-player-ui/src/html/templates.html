@@ -55,6 +55,11 @@
               data-bs-target="#gisst-replays" type="button" role="tab"
               aria-controls="gisst-replays" aria-selected="false">Performances</button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="gisst-play-log-tab" data-bs-toggle="pill"
+              data-bs-target="#gisst-play-log-container" type="button" role="tab"
+              aria-controls="gisst-play-log" aria-selected="false">Action Log</button>
+    </li>
   </ul>
   <div class="tab-content" id="pills-tabContent">
     <div class="tab-pane fade show active" id="gisst-instructions" role="tabpanel" aria-labelledby="gisst-instructions-tab">
@@ -225,6 +230,9 @@
     </div>
     <div class="tab-pane fade" id="gisst-replays" role="tabpanel" aria-labelledby="gisst-replays-tab">
       <ul class="list-group" id="gisst-replays-list"></ul>
+    </div>
+    <div class="tab-pane fade" id="gisst-play-log-container" role="tabpanel" aria-labelledby="gisst-play-log-tab">
+      <ul class="play-log" id="gisst-play-log"></ul>
     </div>
   </div>
 </template>
