@@ -47,10 +47,9 @@ export declare class Replay {
     serialize(): Promise<ArrayBuffer>;
     static deserialize(buf: ArrayBuffer): Promise<Replay>;
 }
-declare class ReplayEvent {
+export declare class ReplayEvent {
     when: number;
     code: Evt;
     value: object | number;
     constructor(when: number, code: Evt, value: object | number);
 }
-export {};
