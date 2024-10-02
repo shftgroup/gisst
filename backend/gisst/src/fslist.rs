@@ -210,7 +210,11 @@ fn get_file_at_path_fat(
 ) -> Result<Vec<u8>, FSListError> {
     use fatfs::*;
     let mut file = fs.root_dir().open_file(&path.to_string_lossy()).unwrap();
-    let mut bytes = Vec::with_capacity(4096);
+    let file_size = file
+        .extents()
+        .try_fold(0, |sz, e| e.map(|ext| sz + ext.size))?;
+    tracing::info!("download single file {path:?}, size {file_size:?}");
+    let mut bytes = vec![0; file_size as usize];
     loop {
         match file.read(&mut bytes) {
             Ok(0) => {
