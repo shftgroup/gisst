@@ -66,6 +66,7 @@ pub fn instance_router() -> Router {
                 .delete(delete_instance),
         )
         .route("/:id/all", get(get_all_for_instance))
+        .route("/:id/clone", get(clone_v86_instance))
 }
 
 pub fn object_router() -> Router {
@@ -468,6 +469,29 @@ async fn get_all_for_instance(
     }
 }
 
+#[derive(Deserialize)]
+struct CloneParams {
+    state: Option<Uuid>,
+}
+
+async fn clone_v86_instance(
+    app_state: Extension<ServerState>,
+    Path(id): Path<Uuid>,
+    _auth: auth::AuthContext,
+    Query(params): Query<CloneParams>,
+) -> Result<axum::response::Response, GISSTError> {
+    let mut conn = app_state.pool.acquire().await?;
+    let state_id = params.state.ok_or(GISSTError::StateRequiredError)?;
+    let storage_path = &app_state.root_storage_path;
+    let storage_depth = app_state.folder_depth;
+    let new_instance =
+        gisst::v86clone::clone_v86_machine(&mut conn, id, state_id, storage_path, storage_depth)
+            .await?;
+    Ok(
+        axum::response::Redirect::permanent(&format!("/instances/{new_instance}/all"))
+            .into_response(),
+    )
+}
 async fn create_instance(
     app_state: Extension<ServerState>,
     Query(instance): Query<Instance>,

@@ -58,6 +58,13 @@
                             Record on Boot
                         </a>
                     </td>
+                    {% if instance.environment.environment_framework == "v86" %}
+                    <td>
+                        <a class="btn btn-primary" href="/instances/{{ instance.info.instance_id }}/clone?state={{ state.record.state_id }}" target="_blank">
+                            Clone
+                        </a>
+                    </td>
+                    {% endif %}
                 </tr>
             {% endfor %}
         </table>

@@ -42,6 +42,8 @@ pub enum GISSTCliError {
     RecordNotFound(Uuid),
     #[error("invalid link record type")]
     InvalidRecordType(String),
+    #[error("v86 clone error")]
+    V86CloneError(#[from] gisst::error::V86CloneError),
 }
 
 #[derive(Debug, Parser)]
