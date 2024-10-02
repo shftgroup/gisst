@@ -53,6 +53,10 @@ pub enum GISSTError {
     FSListError(#[from] gisst::error::FSListError),
     #[error("subobject access error")]
     SubobjectError(String),
+    #[error("state required for clone command")]
+    StateRequiredError,
+    #[error("clone execution error")]
+    V86CloneError(#[from] gisst::error::V86CloneError),
     #[error("this should not be reachable!")]
     Unreachable,
 }
@@ -144,6 +148,10 @@ impl IntoResponse for GISSTError {
             GISSTError::SubobjectError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "subobject access error")
             }
+            GISSTError::StateRequiredError => {
+                (StatusCode::BAD_REQUEST, "need a state to make a clone")
+            }
+            GISSTError::V86CloneError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "v86 clone failed"),
             GISSTError::Unreachable => (StatusCode::INTERNAL_SERVER_ERROR, "uh oh error"),
         };
 
