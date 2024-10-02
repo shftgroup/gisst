@@ -1,6 +1,8 @@
 use std::fmt;
 use std::fmt::Formatter;
 
+use uuid::Uuid;
+
 #[derive(Debug)]
 pub enum ErrorAction {
     Insert,
@@ -113,4 +115,32 @@ pub enum FSListError {
     TraversalPath(String),
     #[error("fs traversal error: file {0} invalid or not found")]
     FileNotFound(String),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum V86CloneError {
+    #[error("instance {0} not found")]
+    InstanceNotFound(Uuid),
+    #[error("enviroment {0} not found")]
+    EnvironmentNotFound(Uuid),
+    #[error("not a v86 environment")]
+    WrongEnvironmentType,
+    #[error("state is for different instance")]
+    WrongInstanceForState,
+    #[error("v86 state {0} not found")]
+    StateNotFound(Uuid),
+    #[error("clone script not found")]
+    NoCloneScript,
+    #[error("storage error")]
+    Storage(#[from] crate::error::StorageError),
+    #[error("database error")]
+    Sql(#[from] sqlx::Error),
+    #[error("record error")]
+    Record(#[from] RecordSQLError),
+    #[error("v86dump error: {0}")]
+    V86DumpError(String),
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
+    #[error("incomplete clone for {0}")]
+    IncompleteClone(Uuid),
 }
