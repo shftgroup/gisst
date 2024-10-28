@@ -67,6 +67,50 @@ pub enum IngestError {
     File(),
 }
 
+async fn insert_file_object(
+    conn: &mut PGConnection,
+    storage_root: &str,
+    path: &Path,
+    file_name: &str,
+    object_description: Option<String>,
+    file_source_path: String,
+) -> Result<Uuid, IngestError> {
+    let created_on = chrono::Utc::now();
+    let file_size = std::fs::metadata(path)?.len() as i64;
+    let hash = StorageHandler::get_file_hash(path)?;
+    if let Some(obj) = Object::get_by_hash(conn, &hash).await? {
+        obj.object_id
+    } else {
+        let file_uuid = Uuid::new_v4();
+        let file_info =
+            StorageHandler::write_file_to_uuid_folder(&storage_root, 4, file_uuid, file_name, path)
+                .await?;
+        info!(
+            "Wrote file {} to {}",
+            file_info.dest_filename, file_info.dest_path
+        );
+        let file_record = GFile {
+            file_id: file_uuid,
+            file_hash: file_info.file_hash,
+            file_filename: file_info.source_filename,
+            file_source_path,
+            file_dest_path: file_info.dest_path,
+            file_size,
+            created_on,
+        };
+        GFile::insert(conn, file_record).await?;
+        let object_id = Uuid::new_v4();
+        let object = Object {
+            object_id,
+            file_id: file_uuid,
+            object_description,
+            created_on,
+        };
+        Object::insert(conn, object).await?;
+        object_id
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), IngestError> {
     let Args {
@@ -90,47 +134,15 @@ async fn main() -> Result<(), IngestError> {
     let storage_root = gisst_storage_root_path.to_string();
     info!("Storage root is set to: {}", &storage_root);
     let created_on = chrono::Utc::now();
-    let ra_cfg_object_id = {
-        let ra_cfg = std::path::Path::new(&ra_cfg);
-        let file_size = std::fs::metadata(ra_cfg)?.len() as i64;
-        let hash = StorageHandler::get_file_hash(ra_cfg)?;
-        if let Some(obj) = Object::get_by_hash(&mut conn, &hash).await? {
-            obj.object_id
-        } else {
-            let file_uuid = Uuid::new_v4();
-            let file_info = StorageHandler::write_file_to_uuid_folder(
-                &storage_root,
-                4,
-                file_uuid,
-                "retroarch.cfg",
-                ra_cfg,
-            )
-            .await?;
-            info!(
-                "Wrote file {} to {}",
-                file_info.dest_filename, file_info.dest_path
-            );
-            let file_record = GFile {
-                file_id: file_uuid,
-                file_hash: file_info.file_hash,
-                file_filename: file_info.source_filename,
-                file_source_path: file_info.source_path,
-                file_dest_path: file_info.dest_path,
-                file_size,
-                created_on,
-            };
-            GFile::insert(&mut conn, file_record).await?;
-            let object_id = Uuid::new_v4();
-            let object = Object {
-                object_id,
-                file_id: file_uuid,
-                object_description: Some("RetroArch Config".to_string()),
-                created_on,
-            };
-            Object::insert(&mut conn, object).await?;
-            object_id
-        }
-    };
+    let ra_cfg_object_id = insert_file_object(
+        &mut conn,
+        &storage_root,
+        std::path::Path::new(&ra_cfg),
+        "retroarch.cfg",
+        Some("base retroarch config".to_string()),
+        String::new(),
+    )
+    .await?;
     let rdb_path_c = CString::new(rdb)?;
     unsafe {
         let db: *mut RetroDB = libretrodb_new();
@@ -161,6 +173,7 @@ async fn main() -> Result<(), IngestError> {
             if !entry.file_type().is_file() {
                 continue;
             }
+            // handle single ROMs differently from m3u, skip chd/cue/bin
             let path = entry.path();
             let hash = {
                 use md5::Digest;
@@ -211,46 +224,25 @@ async fn main() -> Result<(), IngestError> {
                     derived_from_instance: None,
                     derived_from_state: None,
                 };
-                let file_uuid = Uuid::new_v4();
-                let file_info = StorageHandler::write_file_to_uuid_folder(
+                let object_id = insert_file_object(
+                    &mut conn,
                     &storage_root,
-                    4,
-                    file_uuid,
-                    &file_name,
                     path,
-                )
-                .await?;
-                info!(
-                    "Wrote file {} to {}",
-                    file_info.dest_filename, file_info.dest_path
-                );
-                let file_size = std::fs::metadata(path)?.len() as i64;
-                let file_record = GFile {
-                    file_id: file_uuid,
-                    file_hash: hash_str,
-                    file_filename: file_name,
-                    file_source_path: entry
+                    &file_name,
+                    rval.map_get("description"),
+                    entry
                         .path()
                         .strip_prefix(&roms)
                         .map_err(|_e| IngestError::File())?
+                        .parent()
+                        .ok_or(|_e| IngestError::File())?
                         .to_string_lossy()
                         .to_string(),
-                    file_dest_path: file_info.dest_path,
-                    file_size,
-                    created_on,
-                };
-                let object_id = Uuid::new_v4();
-                let object = Object {
-                    object_id,
-                    file_id: file_uuid,
-                    object_description: rval.map_get("description"),
-                    created_on,
-                };
+                )
+                .await?;
                 Work::insert(&mut conn, work).await?;
                 Environment::insert(&mut conn, env).await?;
                 Instance::insert(&mut conn, instance).await?;
-                GFile::insert(&mut conn, file_record).await?;
-                Object::insert(&mut conn, object).await?;
                 Object::link_object_to_instance(
                     &mut conn,
                     object_id,

@@ -26,6 +26,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
+  let source_path = content.file_source_path!.replace(content.file_filename!, "");
   const use_gamepad_overlay = embed_options.controls == ControllerOverlayMode.On || ((embed_options.controls??ControllerOverlayMode.Auto) == ControllerOverlayMode.Auto && mobileAndTabletCheck());
   if (entryState) {
     retro_args.push("-e");
@@ -45,7 +46,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
     retro_args.push("--appendconfig");
     retro_args.push("/home/web_user/content/retroarch.cfg");
   }
-  retro_args.push("/home/web_user/content/" + content.file_source_path! + "/" + content.file_filename!);
+  retro_args.push("/home/web_user/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
 
   ui_state = new UI(
