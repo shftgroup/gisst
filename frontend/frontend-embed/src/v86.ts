@@ -38,7 +38,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   console.log("v86 loaded");
   for (const obj of manifest) {
     if (obj.object_role == "content") {
-      const obj_path = "storage/"+obj.file_dest_path+"/"+obj.file_hash+"-"+obj.file_filename;
+      const obj_path = "storage/"+obj.file_dest_path;
       const idx = obj.object_role_index.toString();
       nested_replace(environment.environment_config as StringIndexable, "$CONTENT"+idx, obj_path);
       if (obj.object_role_index == 0) {
@@ -49,12 +49,12 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   let entry_state:string|null = null;
   if (start.type == "state") {
     const data = (start as StateStart).data;
-    entry_state = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
+    entry_state = "storage/"+data.file_dest_path;
   }
   let movie:string|null = null;
   if (start.type == "replay") {
     const data = (start as ReplayStart).data;
-    movie = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
+    movie = "storage/"+data.file_dest_path;
   }
 
   const v86 = new EmbedV86({

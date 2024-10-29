@@ -159,7 +159,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
         fetchfs.mkdirp(RA, source_path);
         const file_prom = fetchfs.fetchFile(
             RA,
-            "/storage/" + file.file_dest_path + "/" + file.file_hash + "-" + file.file_filename,
+            "/storage/" + file.file_dest_path,
             source_path + "/" + file.file_filename);
         proms.push(file_prom);
       }
@@ -167,7 +167,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
         const data = (start as StateStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
+        console.log(data, "/storage/"+data.file_dest_path,"/home/web_user/content/entry_state");
         if(!data.screenshot_id) {
           console.error("No screenshot for entry state");
           entryScreenshot = Promise.resolve({screenshot_id:"", screenshot_data:""});
@@ -175,13 +175,13 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           entryScreenshot = db.getRecordById("screenshot", data.screenshot_id);
           proms.push(entryScreenshot);
         }
-        proms.push(fetchfs.fetchFile(RA,"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state"));
+        proms.push(fetchfs.fetchFile(RA,"/storage/"+data.file_dest_path,"/home/web_user/content/entry_state"));
       }
       if (movie) {
         // Cast: This one is definitely a replaystart because the type is state
         const data = (start as ReplayStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
-        proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1"));
+        console.log(data, "/storage/"+data.file_dest_path,"/home/web_user/content/replay.replay1");
+        proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path,"/home/web_user/content/replay.replay1"));
       }
       proms.push(fetchfs.fetchFile(RA, "/assets/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg"));
       Promise.all(proms).then(function () {

@@ -11,7 +11,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
   for (const obj of manifest) {
     if (obj.object_role == "content") {
-      const obj_path = "storage/"+obj.file_dest_path+"/"+obj.file_hash+"-"+obj.file_filename;
+      const obj_path = "storage/"+obj.file_dest_path;
       const idx = obj.object_role_index.toString();
       nested_replace(environment.environment_config, "$CONTENT"+idx, obj_path);
       if (obj.object_role_index == 0) {
@@ -23,7 +23,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   let entry_screenshot:string|null = null;
   if (start.type == "state") {
     const data = (start as StateStart).data;
-    entry_state = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
+    entry_state = "storage/"+data.file_dest_path;
     if(!data.screenshot_id) {
       console.error("No screenshot for entry state");
       entry_screenshot = "";
@@ -35,7 +35,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   let movie:string|null = null;
   if (start.type == "replay") {
     const data = (start as ReplayStart).data;
-    movie = "storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename;
+    movie = "storage/"+data.file_dest_path;
   }
 
   const state_to_replay:Array<number|null> = [];

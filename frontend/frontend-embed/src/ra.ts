@@ -44,21 +44,21 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         fetchfs.mkdirp(module, source_path);
         const file_prom = fetchfs.fetchFile(
             module,
-            gisst_root + "/storage/" + file.file_dest_path + "/" + file.file_hash + "-" + file.file_filename,
+            gisst_root + "/storage/" + file.file_dest_path,
             source_path + "/" + file.file_filename);
         proms.push(file_prom);
       }
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
         const data = (start as StateStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
-        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state"));
+        console.log(data, "/storage/"+data.file_dest_path,"/home/web_user/content/entry_state");
+        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path,"/home/web_user/content/entry_state"));
       }
       if (movie) {
         // Cast: This one is definitely a replaystart because the type is state
         const data = (start as ReplayStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
-        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1"));
+        console.log(data, "/storage/"+data.file_dest_path,"/home/web_user/content/replay.replay1");
+        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path,"/home/web_user/content/replay.replay1"));
       }
       proms.push(fetchfs.registerFetchFS(module,{"retroarch_web_base.cfg":null}, gisst_root+"/assets", "/home/web_user/retroarch/"));
       fetchfs.mkdirp(module,saves_dir);

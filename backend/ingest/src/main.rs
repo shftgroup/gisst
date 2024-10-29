@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 
 use anyhow::Result;
 use clap::Parser;
@@ -68,22 +68,43 @@ pub enum IngestError {
 }
 
 async fn insert_file_object(
-    conn: &mut PGConnection,
+    conn: &mut sqlx::PgConnection,
     storage_root: &str,
-    path: &Path,
-    file_name: &str,
+    path: &std::path::Path,
     object_description: Option<String>,
     file_source_path: String,
 ) -> Result<Uuid, IngestError> {
     let created_on = chrono::Utc::now();
     let file_size = std::fs::metadata(path)?.len() as i64;
     let hash = StorageHandler::get_file_hash(path)?;
-    if let Some(obj) = Object::get_by_hash(conn, &hash).await? {
-        obj.object_id
+    if let Some(file_info) = GFile::get_by_hash(conn, &hash).await? {
+        info!("adding duplicate file record for {path:?}");
+        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let file_id = Uuid::new_v4();
+        let file_record = GFile {
+            file_id,
+            file_hash: file_info.file_hash,
+            file_filename: file_name,
+            file_source_path,
+            file_dest_path: file_info.file_dest_path,
+            file_size: file_info.file_size,
+            created_on,
+        };
+        GFile::insert(conn, file_record).await?;
+        let object_id = Uuid::new_v4();
+        let object = Object {
+            object_id,
+            file_id,
+            object_description,
+            created_on,
+        };
+        Object::insert(conn, object).await?;
+        Ok(object_id)
     } else {
+        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
         let file_uuid = Uuid::new_v4();
         let file_info =
-            StorageHandler::write_file_to_uuid_folder(&storage_root, 4, file_uuid, file_name, path)
+            StorageHandler::write_file_to_uuid_folder(storage_root, 4, file_uuid, &file_name, path)
                 .await?;
         info!(
             "Wrote file {} to {}",
@@ -107,7 +128,7 @@ async fn insert_file_object(
             created_on,
         };
         Object::insert(conn, object).await?;
-        object_id
+        Ok(object_id)
     }
 }
 
@@ -133,16 +154,15 @@ async fn main() -> Result<(), IngestError> {
     info!("DB connection successful.");
     let storage_root = gisst_storage_root_path.to_string();
     info!("Storage root is set to: {}", &storage_root);
-    let created_on = chrono::Utc::now();
     let ra_cfg_object_id = insert_file_object(
         &mut conn,
         &storage_root,
         std::path::Path::new(&ra_cfg),
-        "retroarch.cfg",
         Some("base retroarch config".to_string()),
         String::new(),
     )
     .await?;
+    let roms = std::path::Path::new(&roms);
     let rdb_path_c = CString::new(rdb)?;
     unsafe {
         let db: *mut RetroDB = libretrodb_new();
@@ -168,103 +188,74 @@ async fn main() -> Result<(), IngestError> {
             error!("Couldn't create md5 index");
             return Err(IngestError::RDB());
         }
-        for entry in walkdir::WalkDir::new(&roms) {
+        for entry in walkdir::WalkDir::new(roms) {
             let entry = entry?;
             if !entry.file_type().is_file() {
                 continue;
             }
-            // handle single ROMs differently from m3u, skip chd/cue/bin
-            let path = entry.path();
-            let hash = {
-                use md5::Digest;
-                let mut hasher = md5::Md5::new();
-                let mut file = std::fs::File::open(path)?;
-                std::io::copy(&mut file, &mut hasher)?;
-                hasher.finalize()
-            };
-            let hash_str = format!("{:x}", hash);
-            if GFile::get_by_hash(&mut conn, &hash_str).await?.is_some() {
-                info!("{:?}:{hash_str} already in DB, skip", entry.path());
+            let ext = entry
+                .path()
+                .extension()
+                .map(std::ffi::OsStr::to_string_lossy)
+                .unwrap_or(std::borrow::Cow::default());
+            if ext == "chd" || ext == "cue" || ext == "bin" || ext == "iso" {
                 continue;
             }
-
-            let file_name = entry.file_name().to_string_lossy().to_string();
-            let key_bytes = hash.as_ptr();
-            info!("{:?}: {}: {hash_str}", entry.path(), hash.len());
-            if libretrodb_find_entry(db, md5_idx.as_ptr(), key_bytes, &mut rval) == 0 {
-                info!("FOUND IT\n{}", rval);
-                // TODO: merge entries from result on libretrodb_query_compile(db, "{\"rom_name\":nom}", strlen query exp, error) cursor
-                let work = Work {
-                    work_id: Uuid::new_v4(),
-                    work_name: rval.map_get("name").unwrap_or_else(|| file_name.clone()),
-                    work_version: rval
-                        .map_get("rom_name")
-                        .unwrap_or_else(|| file_name.clone()),
-                    work_platform: platform.clone(),
-                    // TODO this should use the real cataloguing data
-                    created_on,
-                };
-                let env = Environment {
-                    environment_id: Uuid::new_v4(),
-                    environment_name: work.work_name.clone(),
-                    environment_framework: Framework::RetroArch,
-                    environment_core_name: core_name.clone(),
-                    environment_core_version: core_version.clone(),
-                    environment_derived_from: None,
-                    environment_config: None,
-                    created_on,
-                };
-                let instance_id = Uuid::new_v4();
-                let instance = Instance {
-                    instance_id,
-                    work_id: work.work_id,
-                    environment_id: env.environment_id,
-                    instance_config: None,
-                    created_on,
-                    derived_from_instance: None,
-                    derived_from_state: None,
-                };
-                let object_id = insert_file_object(
-                    &mut conn,
-                    &storage_root,
-                    path,
-                    &file_name,
-                    rval.map_get("description"),
-                    entry
-                        .path()
-                        .strip_prefix(&roms)
-                        .map_err(|_e| IngestError::File())?
-                        .parent()
-                        .ok_or(|_e| IngestError::File())?
-                        .to_string_lossy()
-                        .to_string(),
-                )
-                .await?;
-                Work::insert(&mut conn, work).await?;
-                Environment::insert(&mut conn, env).await?;
-                Instance::insert(&mut conn, instance).await?;
-                Object::link_object_to_instance(
-                    &mut conn,
-                    object_id,
-                    instance_id,
-                    ObjectRole::Content,
-                    // TODO: this is where we can do PSX disk image order and stuff
-                    0,
-                )
-                .await?;
-                Object::link_object_to_instance(
-                    &mut conn,
-                    ra_cfg_object_id,
-                    instance_id,
-                    ObjectRole::Config,
-                    0,
-                )
-                .await?;
-
-                rmsgpack_dom_value_free(&mut rval);
+            if ext == "m3u" {
+                for file in files_of_playlist(roms, entry.path())? {
+                    if let FindResult::InRDB =
+                        find_entry(&mut conn, db, &md5_idx, &file, &mut rval).await?
+                    {
+                        let file_name = entry.file_name().to_string_lossy().to_string();
+                        let instance_id = create_metadata_records(
+                            &mut conn,
+                            &file_name,
+                            &rval,
+                            &platform,
+                            &core_name,
+                            &core_version,
+                        )
+                        .await?;
+                        create_playlist_instance_objects(
+                            &mut conn,
+                            &storage_root,
+                            roms,
+                            ra_cfg_object_id,
+                            instance_id,
+                            entry.path(),
+                            rval.map_get("description"),
+                        )
+                        .await?;
+                        rmsgpack_dom_value_free(&mut rval);
+                        break;
+                    }
+                }
             } else {
-                warn!("md5 not found");
-                continue;
+                if let FindResult::InRDB =
+                    find_entry(&mut conn, db, &md5_idx, entry.path(), &mut rval).await?
+                {
+                    let file_name = entry.file_name().to_string_lossy().to_string();
+                    let instance_id = create_metadata_records(
+                        &mut conn,
+                        &file_name,
+                        &rval,
+                        &platform,
+                        &core_name,
+                        &core_version,
+                    )
+                    .await?;
+                    create_single_file_instance_objects(
+                        &mut conn,
+                        &storage_root,
+                        roms,
+                        ra_cfg_object_id,
+                        instance_id,
+                        entry.path(),
+                        rval.map_get("description"),
+                    )
+                    .await?;
+                    rmsgpack_dom_value_free(&mut rval);
+                }
             }
         }
         libretrodb_cursor_free(cursor);
@@ -284,4 +275,177 @@ fn char_to_num(c: u8) -> u8 {
     } else {
         (c - b'A') + 10
     }
+}
+
+enum FindResult {
+    AlreadyHave,
+    NotInRDB,
+    InRDB,
+}
+
+async fn find_entry(
+    conn: &mut sqlx::PgConnection,
+    db: *mut RetroDB,
+    index: &CStr,
+    path: &std::path::Path,
+    rval: &mut RVal,
+) -> Result<FindResult, IngestError> {
+    let hash = {
+        use md5::Digest;
+        let mut hasher = md5::Md5::new();
+        let mut file = std::fs::File::open(path)?;
+        std::io::copy(&mut file, &mut hasher)?;
+        hasher.finalize()
+    };
+    let hash_str = format!("{:x}", hash);
+    if GFile::get_by_hash(conn, &hash_str).await?.is_some() {
+        info!("{:?}:{hash_str} already in DB, skip", path);
+        return Ok(FindResult::AlreadyHave);
+    }
+
+    let key_bytes = hash.as_ptr();
+    info!("{:?}: {}: {hash_str}", path, hash.len());
+    if unsafe { libretrodb_find_entry(db, index.as_ptr(), key_bytes, rval) == 0 } {
+        info!("metadata found\n{}", rval);
+        Ok(FindResult::InRDB)
+    } else {
+        warn!("md5 not found");
+        Ok(FindResult::NotInRDB)
+    }
+}
+
+async fn create_metadata_records(
+    conn: &mut sqlx::PgConnection,
+    file_name: &str,
+    rval: &RVal,
+    platform: &str,
+    core_name: &str,
+    core_version: &str,
+) -> Result<Uuid, IngestError> {
+    // TODO: merge entries from result on libretrodb_query_compile(db, "{\"rom_name\":nom}", strlen query exp, error) cursor
+    let created_on = chrono::Utc::now();
+    let work = Work {
+        work_id: Uuid::new_v4(),
+        work_name: rval
+            .map_get("name")
+            .unwrap_or_else(|| file_name.to_string()),
+        work_version: rval
+            .map_get("rom_name")
+            .unwrap_or_else(|| file_name.to_string()),
+        work_platform: platform.to_string(),
+        // TODO this should use the real cataloguing data
+        created_on,
+    };
+    let env = Environment {
+        environment_id: Uuid::new_v4(),
+        environment_name: work.work_name.clone(),
+        environment_framework: Framework::RetroArch,
+        environment_core_name: core_name.to_string(),
+        environment_core_version: core_version.to_string(),
+        environment_derived_from: None,
+        environment_config: None,
+        created_on,
+    };
+    let instance_id = Uuid::new_v4();
+    let instance = Instance {
+        instance_id,
+        work_id: work.work_id,
+        environment_id: env.environment_id,
+        instance_config: None,
+        created_on,
+        derived_from_instance: None,
+        derived_from_state: None,
+    };
+    Work::insert(conn, work).await?;
+    Environment::insert(conn, env).await?;
+    Instance::insert(conn, instance).await?;
+    Ok(instance_id)
+}
+
+async fn create_single_file_instance_objects(
+    conn: &mut sqlx::PgConnection,
+    storage_root: &str,
+    roms: &std::path::Path,
+    ra_cfg_object_id: Uuid,
+    instance_id: Uuid,
+    path: &std::path::Path,
+    desc: Option<String>,
+) -> Result<(), IngestError> {
+    let object_id = insert_file_object(
+        conn,
+        &storage_root,
+        path,
+        desc,
+        path.strip_prefix(&roms)
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+    )
+    .await?;
+    Object::link_object_to_instance(conn, object_id, instance_id, ObjectRole::Content, 0).await?;
+    Object::link_object_to_instance(conn, ra_cfg_object_id, instance_id, ObjectRole::Config, 0)
+        .await?;
+    Ok(())
+}
+
+async fn create_playlist_instance_objects(
+    conn: &mut sqlx::PgConnection,
+    storage_root: &str,
+    roms: &std::path::Path,
+    ra_cfg_object_id: Uuid,
+    instance_id: Uuid,
+    path: &std::path::Path,
+    desc: Option<String>,
+) -> Result<(), IngestError> {
+    let src_path = path
+        .strip_prefix(roms)
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+    let playlist_id =
+        insert_file_object(conn, storage_root, path, desc.clone(), src_path.clone()).await?;
+    Object::link_object_to_instance(conn, playlist_id, instance_id, ObjectRole::Content, 0).await?;
+    Object::link_object_to_instance(conn, ra_cfg_object_id, instance_id, ObjectRole::Config, 0)
+        .await?;
+    let mut c_idx = 1;
+    for file in files_of_playlist(roms, path)? {
+        let file_id =
+            insert_file_object(conn, storage_root, &file, desc.clone(), src_path.clone()).await?;
+        info!("linking {file_id} with {instance_id}");
+        Object::link_object_to_instance(conn, file_id, instance_id, ObjectRole::Content, c_idx)
+            .await?;
+        c_idx += 1;
+    }
+    Ok(())
+}
+
+fn files_of_playlist(
+    roms: &std::path::Path,
+    path: &std::path::Path,
+) -> Result<impl IntoIterator<Item = std::path::PathBuf>, IngestError> {
+    let mut out = Vec::with_capacity(8);
+    let cue_file_re = regex::Regex::new("^FILE \"(.*)\"").unwrap();
+    for file in std::fs::read_to_string(path)?.lines() {
+        info!("Reading playlist line {file}");
+        let file_path = roms.join(std::path::Path::new(file));
+        out.push(file_path.clone());
+        if file.ends_with(".cue") {
+            for cue_line in std::fs::read_to_string(file_path)?.lines() {
+                info!("Reading cue line {cue_line}");
+                if let Some(captures) = cue_file_re.captures(cue_line) {
+                    let track = &captures[1];
+                    let track_path = roms.join(std::path::Path::new(track));
+                    info!("track is {track}");
+                    out.push(track_path.clone());
+                }
+            }
+        } else {
+            // it was e.g. a chd file with combined tracks
+        }
+    }
+    Ok(out.into_iter())
 }

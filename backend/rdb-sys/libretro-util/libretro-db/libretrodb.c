@@ -508,7 +508,8 @@ int libretrodb_create_index(libretrodb_t *db,
       if (bintree_insert(tree, tree->root, buff) != 0)
       {
          rmsgpack_dom_value_print(field);
-         goto clean;
+         rmsgpack_dom_value_free(&item);
+         continue;
       }
       item_count++;
       buff     = NULL;
