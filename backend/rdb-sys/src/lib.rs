@@ -46,8 +46,8 @@ pub struct RMap {
 
 #[repr(C)]
 pub struct RPair {
-    pub key: RVal,
-    pub val: RVal,
+    pub key: ManuallyDrop<RVal>,
+    pub val: ManuallyDrop<RVal>,
 }
 
 #[repr(C)]
@@ -159,8 +159,8 @@ impl std::fmt::Display for RVal {
                 write!(f, "{{")?;
                 let map = unsafe { &self.value.map };
                 for idx in 0..map.len {
-                    let pair = unsafe { map.buf.add(idx as usize).read() };
-                    write!(f, "{}: {}, ", pair.key, pair.val)?;
+                    let pair = unsafe { ManuallyDrop::new(map.buf.add(idx as usize).read()) };
+                    write!(f, "{}: {}, ", &*pair.key, &*pair.val)?;
                 }
                 write!(f, "}}")
             }
@@ -168,8 +168,8 @@ impl std::fmt::Display for RVal {
                 write!(f, "[")?;
                 let arr = unsafe { &self.value.arr };
                 for idx in 0..arr.len {
-                    let val = unsafe { arr.buf.add(idx as usize).read() };
-                    write!(f, "{}, ", val)?;
+                    let val = unsafe { ManuallyDrop::new(arr.buf.add(idx as usize).read()) };
+                    write!(f, "{}, ", &*val)?;
                 }
                 write!(f, "]")
             }
@@ -182,6 +182,7 @@ impl RVal {
         K: Into<RVal>,
         V: for<'a> TryFrom<&'a RVal>,
     {
+        // This one makes a copy so it can be safely dropped
         let key: RVal = key.into();
         self.map_get_rval(&key)
     }
@@ -196,11 +197,12 @@ impl RVal {
         if ret.is_null() {
             return None;
         }
-        Some(
-            unsafe { &ret.read() }
+        Some({
+            let ret: ManuallyDrop<RVal> = std::mem::ManuallyDrop::new(unsafe { ret.read() });
+            (&*ret)
                 .try_into()
-                .unwrap_or_else(|_e| panic!("Invalid type conversion from rval")),
-        )
+                .unwrap_or_else(|_e| panic!("Invalid type conversion from rval"))
+        })
     }
 }
 

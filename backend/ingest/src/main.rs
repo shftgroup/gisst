@@ -1,5 +1,3 @@
-use std::ffi::{CStr, CString};
-
 use anyhow::Result;
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
@@ -45,6 +43,12 @@ struct Args {
 
     #[clap(long)]
     pub core_version: String,
+
+    #[clap(long = "dep")]
+    pub deps: Vec<String>,
+
+    #[clap(long = "dep-path")]
+    pub dep_paths: Vec<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -65,6 +69,13 @@ pub enum IngestError {
     RDB(),
     #[error("file metadata error")]
     File(),
+    #[error("file insertion error")]
+    InsertFile(),
+}
+
+enum Duplicate {
+    ReuseObject,
+    ReuseData,
 }
 
 async fn insert_file_object(
@@ -73,33 +84,45 @@ async fn insert_file_object(
     path: &std::path::Path,
     object_description: Option<String>,
     file_source_path: String,
+    duplicate: Duplicate,
 ) -> Result<Uuid, IngestError> {
     let created_on = chrono::Utc::now();
     let file_size = std::fs::metadata(path)?.len() as i64;
     let hash = StorageHandler::get_file_hash(path)?;
     if let Some(file_info) = GFile::get_by_hash(conn, &hash).await? {
-        info!("adding duplicate file record for {path:?}");
-        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
-        let file_id = Uuid::new_v4();
-        let file_record = GFile {
-            file_id,
-            file_hash: file_info.file_hash,
-            file_filename: file_name,
-            file_source_path,
-            file_dest_path: file_info.file_dest_path,
-            file_size: file_info.file_size,
-            created_on,
+        let object_id = match duplicate {
+            Duplicate::ReuseData => {
+                info!("adding duplicate file record for {path:?}");
+                let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+                let file_id = Uuid::new_v4();
+                let file_record = GFile {
+                    file_id,
+                    file_hash: file_info.file_hash,
+                    file_filename: file_name,
+                    file_source_path,
+                    file_dest_path: file_info.file_dest_path,
+                    file_size: file_info.file_size,
+                    created_on,
+                };
+                GFile::insert(conn, file_record).await?;
+                let object_id = Uuid::new_v4();
+                let object = Object {
+                    object_id,
+                    file_id,
+                    object_description,
+                    created_on,
+                };
+                Object::insert(conn, object).await?;
+                Some(object_id)
+            }
+            Duplicate::ReuseObject => {
+                info!("skipping duplicate record for {path:?}, reusing object");
+                Object::get_by_hash(conn, &file_info.file_hash)
+                    .await?
+                    .map(|o| o.object_id)
+            }
         };
-        GFile::insert(conn, file_record).await?;
-        let object_id = Uuid::new_v4();
-        let object = Object {
-            object_id,
-            file_id,
-            object_description,
-            created_on,
-        };
-        Object::insert(conn, object).await?;
-        Ok(object_id)
+        object_id.ok_or(IngestError::InsertFile())
     } else {
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
         let file_uuid = Uuid::new_v4();
@@ -144,6 +167,8 @@ async fn main() -> Result<(), IngestError> {
         platform,
         gisst_storage_root_path,
         verbose,
+        deps,
+        dep_paths,
     } = Args::parse();
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
@@ -160,8 +185,26 @@ async fn main() -> Result<(), IngestError> {
         std::path::Path::new(&ra_cfg),
         Some("base retroarch config".to_string()),
         String::new(),
+        Duplicate::ReuseObject,
     )
     .await?;
+    let mut dep_ids = Vec::with_capacity(deps.len());
+    for (i, dep) in deps.iter().enumerate() {
+        let dep = std::path::Path::new(dep);
+        let file_name = dep.file_name().unwrap().to_string_lossy().to_string();
+        let dep_path = dep_paths.get(i).unwrap_or(&file_name);
+        let dep_id = insert_file_object(
+            &mut conn,
+            &storage_root,
+            dep,
+            Some(dep_path.clone()),
+            dep_path.clone(),
+            Duplicate::ReuseObject,
+        )
+        .await?;
+        dep_ids.push(dep_id);
+    }
+    let dep_ids = dep_ids;
     let db = RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?;
     let roms = std::path::Path::new(&roms);
 
@@ -191,11 +234,11 @@ async fn main() -> Result<(), IngestError> {
                         &core_version,
                     )
                     .await?;
+                    link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
                     create_playlist_instance_objects(
                         &mut conn,
                         &storage_root,
                         roms,
-                        ra_cfg_object_id,
                         instance_id,
                         entry.path(),
                         rval.map_get("description"),
@@ -204,29 +247,27 @@ async fn main() -> Result<(), IngestError> {
                     break;
                 }
             }
-        } else {
-            if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, entry.path()).await? {
-                let file_name = entry.file_name().to_string_lossy().to_string();
-                let instance_id = create_metadata_records(
-                    &mut conn,
-                    &file_name,
-                    &rval,
-                    &platform,
-                    &core_name,
-                    &core_version,
-                )
-                .await?;
-                create_single_file_instance_objects(
-                    &mut conn,
-                    &storage_root,
-                    roms,
-                    ra_cfg_object_id,
-                    instance_id,
-                    entry.path(),
-                    rval.map_get("description"),
-                )
-                .await?;
-            }
+        } else if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, entry.path()).await? {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let instance_id = create_metadata_records(
+                &mut conn,
+                &file_name,
+                &rval,
+                &platform,
+                &core_name,
+                &core_version,
+            )
+            .await?;
+            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+            create_single_file_instance_objects(
+                &mut conn,
+                &storage_root,
+                roms,
+                instance_id,
+                entry.path(),
+                rval.map_get("description"),
+            )
+            .await?;
         }
     }
     Ok(())
@@ -332,7 +373,6 @@ async fn create_single_file_instance_objects(
     conn: &mut sqlx::PgConnection,
     storage_root: &str,
     roms: &std::path::Path,
-    ra_cfg_object_id: Uuid,
     instance_id: Uuid,
     path: &std::path::Path,
     desc: Option<String>,
@@ -348,11 +388,10 @@ async fn create_single_file_instance_objects(
             .unwrap()
             .to_string_lossy()
             .to_string(),
+        Duplicate::ReuseData,
     )
     .await?;
     Object::link_object_to_instance(conn, object_id, instance_id, ObjectRole::Content, 0).await?;
-    Object::link_object_to_instance(conn, ra_cfg_object_id, instance_id, ObjectRole::Config, 0)
-        .await?;
     Ok(())
 }
 
@@ -360,7 +399,6 @@ async fn create_playlist_instance_objects(
     conn: &mut sqlx::PgConnection,
     storage_root: &str,
     roms: &std::path::Path,
-    ra_cfg_object_id: Uuid,
     instance_id: Uuid,
     path: &std::path::Path,
     desc: Option<String>,
@@ -372,19 +410,45 @@ async fn create_playlist_instance_objects(
         .unwrap()
         .to_string_lossy()
         .to_string();
-    let playlist_id =
-        insert_file_object(conn, storage_root, path, desc.clone(), src_path.clone()).await?;
+    let playlist_id = insert_file_object(
+        conn,
+        storage_root,
+        path,
+        desc.clone(),
+        src_path.clone(),
+        Duplicate::ReuseData,
+    )
+    .await?;
     Object::link_object_to_instance(conn, playlist_id, instance_id, ObjectRole::Content, 0).await?;
-    Object::link_object_to_instance(conn, ra_cfg_object_id, instance_id, ObjectRole::Config, 0)
-        .await?;
     let mut c_idx = 1;
     for file in files_of_playlist(roms, path)? {
-        let file_id =
-            insert_file_object(conn, storage_root, &file, desc.clone(), src_path.clone()).await?;
+        let file_id = insert_file_object(
+            conn,
+            storage_root,
+            &file,
+            desc.clone(),
+            src_path.clone(),
+            Duplicate::ReuseData,
+        )
+        .await?;
         info!("linking {file_id} with {instance_id}");
         Object::link_object_to_instance(conn, file_id, instance_id, ObjectRole::Content, c_idx)
             .await?;
         c_idx += 1;
+    }
+    Ok(())
+}
+
+async fn link_deps(
+    conn: &mut sqlx::PgConnection,
+    ra_cfg_object_id: Uuid,
+    deps: &[Uuid],
+    instance_id: Uuid,
+) -> Result<(), IngestError> {
+    Object::link_object_to_instance(conn, ra_cfg_object_id, instance_id, ObjectRole::Config, 0)
+        .await?;
+    for (i, dep) in deps.iter().enumerate() {
+        Object::link_object_to_instance(conn, *dep, instance_id, ObjectRole::Dependency, i).await?;
     }
     Ok(())
 }
