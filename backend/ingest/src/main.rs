@@ -162,78 +162,25 @@ async fn main() -> Result<(), IngestError> {
         String::new(),
     )
     .await?;
+    let db = RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?;
     let roms = std::path::Path::new(&roms);
-    let rdb_path_c = CString::new(rdb)?;
-    unsafe {
-        let db: *mut RetroDB = libretrodb_new();
-        if db.is_null() {
-            return Err(IngestError::RDB());
+
+    for entry in walkdir::WalkDir::new(roms) {
+        let entry = entry?;
+        if !entry.file_type().is_file() {
+            continue;
         }
-        let cursor: *mut RetroCursor = libretrodb_cursor_new();
-        if cursor.is_null() {
-            return Err(IngestError::RDB());
+        let ext = entry
+            .path()
+            .extension()
+            .map(std::ffi::OsStr::to_string_lossy)
+            .unwrap_or(std::borrow::Cow::default());
+        if ext == "chd" || ext == "cue" || ext == "bin" || ext == "iso" {
+            continue;
         }
-        let mut rval: RVal = RVal {
-            tag: RType::Null,
-            value: RValInner { int_: 0 },
-        };
-        info!("opening DB");
-        if libretrodb_open(rdb_path_c.as_ptr(), db) != 0 {
-            error!("Not opened {rdb_path_c:?}");
-            return Err(IngestError::RDB());
-        }
-        info!("Opened DB");
-        let md5_idx = CString::new("md5")?;
-        if libretrodb_create_index(db, md5_idx.as_ptr(), md5_idx.as_ptr()) == -1 {
-            error!("Couldn't create md5 index");
-            return Err(IngestError::RDB());
-        }
-        for entry in walkdir::WalkDir::new(roms) {
-            let entry = entry?;
-            if !entry.file_type().is_file() {
-                continue;
-            }
-            let ext = entry
-                .path()
-                .extension()
-                .map(std::ffi::OsStr::to_string_lossy)
-                .unwrap_or(std::borrow::Cow::default());
-            if ext == "chd" || ext == "cue" || ext == "bin" || ext == "iso" {
-                continue;
-            }
-            if ext == "m3u" {
-                for file in files_of_playlist(roms, entry.path())? {
-                    if let FindResult::InRDB =
-                        find_entry(&mut conn, db, &md5_idx, &file, &mut rval).await?
-                    {
-                        let file_name = entry.file_name().to_string_lossy().to_string();
-                        let instance_id = create_metadata_records(
-                            &mut conn,
-                            &file_name,
-                            &rval,
-                            &platform,
-                            &core_name,
-                            &core_version,
-                        )
-                        .await?;
-                        create_playlist_instance_objects(
-                            &mut conn,
-                            &storage_root,
-                            roms,
-                            ra_cfg_object_id,
-                            instance_id,
-                            entry.path(),
-                            rval.map_get("description"),
-                        )
-                        .await?;
-                        rmsgpack_dom_value_free(&mut rval);
-                        break;
-                    }
-                }
-            } else {
-                if let FindResult::InRDB =
-                    find_entry(&mut conn, db, &md5_idx, entry.path(), &mut rval).await?
-                {
+        if ext == "m3u" {
+            for file in files_of_playlist(roms, entry.path())? {
+                if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, &file).await? {
                     let file_name = entry.file_name().to_string_lossy().to_string();
                     let instance_id = create_metadata_records(
                         &mut conn,
@@ -244,7 +191,7 @@ async fn main() -> Result<(), IngestError> {
                         &core_version,
                     )
                     .await?;
-                    create_single_file_instance_objects(
+                    create_playlist_instance_objects(
                         &mut conn,
                         &storage_root,
                         roms,
@@ -254,13 +201,33 @@ async fn main() -> Result<(), IngestError> {
                         rval.map_get("description"),
                     )
                     .await?;
-                    rmsgpack_dom_value_free(&mut rval);
+                    break;
                 }
             }
+        } else {
+            if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, entry.path()).await? {
+                let file_name = entry.file_name().to_string_lossy().to_string();
+                let instance_id = create_metadata_records(
+                    &mut conn,
+                    &file_name,
+                    &rval,
+                    &platform,
+                    &core_name,
+                    &core_version,
+                )
+                .await?;
+                create_single_file_instance_objects(
+                    &mut conn,
+                    &storage_root,
+                    roms,
+                    ra_cfg_object_id,
+                    instance_id,
+                    entry.path(),
+                    rval.map_get("description"),
+                )
+                .await?;
+            }
         }
-        libretrodb_cursor_free(cursor);
-        libretrodb_close(db);
-        libretrodb_free(db);
     }
     Ok(())
 }
@@ -280,15 +247,13 @@ fn char_to_num(c: u8) -> u8 {
 enum FindResult {
     AlreadyHave,
     NotInRDB,
-    InRDB,
+    InRDB(RVal),
 }
 
 async fn find_entry(
     conn: &mut sqlx::PgConnection,
-    db: *mut RetroDB,
-    index: &CStr,
+    db: &RDB,
     path: &std::path::Path,
-    rval: &mut RVal,
 ) -> Result<FindResult, IngestError> {
     let hash = {
         use md5::Digest;
@@ -304,20 +269,10 @@ async fn find_entry(
     }
 
     info!("{:?}: {}: {hash_str}", path, hash.len());
-    if unsafe { librdb_find_entry(db, "md5", &hash, rval) } {
+
+    if let Some(rval) = db.find_entry::<&str, &[u8]>("md5", &hash) {
         info!("metadata found\n{} for {:?}", rval, path);
-        // let found_hash = {
-        //     use md5::Digest;
-        //     let mut hasher = md5::Md5::new();
-        //     let mut file = std::fs::File::open(path.parent().unwrap().join(std::path::Path::new(
-        //         rval.map_get::<&str, &str>("rom_name").unwrap(),
-        //     )))?;
-        //     std::io::copy(&mut file, &mut hasher)?;
-        //     hasher.finalize()
-        // };
-        // let found_hash_str = format!("{:x}", found_hash);
-        // assert_eq!(found_hash_str, hash_str);
-        Ok(FindResult::InRDB)
+        Ok(FindResult::InRDB(rval))
     } else {
         warn!("md5 not found");
         Ok(FindResult::NotInRDB)
