@@ -303,10 +303,20 @@ async fn find_entry(
         return Ok(FindResult::AlreadyHave);
     }
 
-    let key_bytes = hash.as_ptr();
     info!("{:?}: {}: {hash_str}", path, hash.len());
-    if unsafe { libretrodb_find_entry(db, index.as_ptr(), key_bytes, rval) == 0 } {
-        info!("metadata found\n{}", rval);
+    if unsafe { librdb_find_entry(db, "md5", &hash, rval) } {
+        info!("metadata found\n{} for {:?}", rval, path);
+        // let found_hash = {
+        //     use md5::Digest;
+        //     let mut hasher = md5::Md5::new();
+        //     let mut file = std::fs::File::open(path.parent().unwrap().join(std::path::Path::new(
+        //         rval.map_get::<&str, &str>("rom_name").unwrap(),
+        //     )))?;
+        //     std::io::copy(&mut file, &mut hasher)?;
+        //     hasher.finalize()
+        // };
+        // let found_hash_str = format!("{:x}", found_hash);
+        // assert_eq!(found_hash_str, hash_str);
         Ok(FindResult::InRDB)
     } else {
         warn!("md5 not found");
@@ -336,6 +346,7 @@ async fn create_metadata_records(
         // TODO this should use the real cataloguing data
         created_on,
     };
+    info!("creating work {} with file {file_name}", work.work_name);
     let env = Environment {
         environment_id: Uuid::new_v4(),
         environment_name: work.work_name.clone(),
@@ -373,7 +384,7 @@ async fn create_single_file_instance_objects(
 ) -> Result<(), IngestError> {
     let object_id = insert_file_object(
         conn,
-        &storage_root,
+        storage_root,
         path,
         desc,
         path.strip_prefix(&roms)

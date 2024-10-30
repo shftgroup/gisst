@@ -507,6 +507,9 @@ int libretrodb_create_index(libretrodb_t *db,
       /* Value is not unique? */
       if (bintree_insert(tree, tree->root, buff) != 0)
       {
+         /* item_count++; */
+         item_loc = filestream_tell(cur.fd);
+         buff = NULL;
          rmsgpack_dom_value_print(field);
          rmsgpack_dom_value_free(&item);
          continue;

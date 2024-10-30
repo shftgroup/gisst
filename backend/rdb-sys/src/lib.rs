@@ -239,3 +239,40 @@ impl TryFrom<&RVal> for &str {
         std::str::from_utf8(slc).map_err(|_| ())
     }
 }
+
+impl TryFrom<&RVal> for &[u8] {
+    type Error = ();
+
+    fn try_from(value: &RVal) -> Result<Self, Self::Error> {
+        if value.tag != RType::Binary {
+            return Err(());
+        }
+        Ok(unsafe {
+            std::slice::from_raw_parts(
+                value.value.bin_.buf as *const u8,
+                value.value.bin_.len as usize,
+            )
+        })
+    }
+}
+
+pub unsafe fn librdb_find_entry(db: *mut RetroDB, key: &str, val: &[u8], rval: &mut RVal) -> bool {
+    let cursor = unsafe {
+        let cursor = libretrodb_cursor_new();
+        if libretrodb_cursor_open(db, cursor, std::ptr::null()) != 0 {
+            return false;
+        }
+        cursor
+    };
+    while (libretrodb_cursor_read_item(cursor, rval) == 0) {
+        /* Field not found in item? */
+        if rval
+            .map_get::<&str, &[u8]>(key)
+            .map(|v| v == val)
+            .unwrap_or(false)
+        {
+            return true;
+        }
+    }
+    false
+}
