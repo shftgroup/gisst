@@ -51,6 +51,9 @@ struct Args {
 
     #[clap(long = "dep-path")]
     pub dep_paths: Vec<String>,
+
+    #[clap(short = 'f', long = "force")]
+    pub allow_unmatched: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -172,6 +175,7 @@ async fn main() -> Result<(), IngestError> {
         verbose,
         deps,
         dep_paths,
+        allow_unmatched,
     } = Args::parse();
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
@@ -230,7 +234,16 @@ async fn main() -> Result<(), IngestError> {
                 .map(std::ffi::OsStr::to_string_lossy)
                 .unwrap_or_default()
                 .into_owned();
-            if ext == "chd" || ext == "cue" || ext == "bin" || ext == "iso" {
+            let stem = path
+                .file_stem()
+                .map(std::ffi::OsStr::to_string_lossy)
+                .unwrap_or_default()
+                .into_owned();
+            if matches!(
+                ext.as_str(),
+                "chd" | "cue" | "bin" | "iso" | "srm" | "7z" | "zip"
+            ) {
+                // Skip this one
                 return Ok(());
             }
             let dep_ids = dep_ids.clone();
@@ -240,13 +253,75 @@ async fn main() -> Result<(), IngestError> {
             let core_name = core_name.to_owned();
             let core_version = core_version.to_owned();
             let storage_root = storage_root.to_owned();
+
             let pool = Arc::clone(&pool);
             handle.block_on(async move {
                 let mut conn = pool.acquire().await?;
                 if ext == "m3u" {
+                    let mut found = false;
                     for file in files_of_playlist(&roms, &path)? {
-                        if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, &file).await? {
-                            let instance_id = create_metadata_records(
+                        match find_entry(&mut conn, &db, &file).await? {
+                            FindResult::AlreadyHave => {
+                                found = true;
+                                break;
+                            }
+                            FindResult::NotInRDB => {
+                                continue;
+                            }
+                            FindResult::InRDB(rval) => {
+                                let instance_id = create_metadata_records_from_rval(
+                                    &mut conn,
+                                    &file_name,
+                                    &rval,
+                                    &platform,
+                                    &core_name,
+                                    &core_version,
+                                )
+                                .await?;
+                                link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id)
+                                    .await?;
+                                create_playlist_instance_objects(
+                                    &mut conn,
+                                    &storage_root,
+                                    &roms,
+                                    instance_id,
+                                    &path,
+                                    rval.map_get("description"),
+                                )
+                                .await?;
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if !found && allow_unmatched {
+                        let instance_id = create_metadata_records(
+                            &mut conn,
+                            &file_name,
+                            &stem,
+                            &file_name,
+                            &platform,
+                            &core_name,
+                            &core_version,
+                        )
+                        .await?;
+                        link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                        create_playlist_instance_objects(
+                            &mut conn,
+                            &storage_root,
+                            &roms,
+                            instance_id,
+                            &path,
+                            Some(stem.to_string()),
+                        )
+                        .await?;
+                    }
+
+                    Ok(())
+                } else {
+                    match find_entry(&mut conn, &db, &path).await? {
+                        FindResult::InRDB(rval) => {
+                            let instance_id = create_metadata_records_from_rval(
                                 &mut conn,
                                 &file_name,
                                 &rval,
@@ -256,7 +331,7 @@ async fn main() -> Result<(), IngestError> {
                             )
                             .await?;
                             link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
-                            create_playlist_instance_objects(
+                            create_single_file_instance_objects(
                                 &mut conn,
                                 &storage_root,
                                 &roms,
@@ -264,33 +339,32 @@ async fn main() -> Result<(), IngestError> {
                                 &path,
                                 rval.map_get("description"),
                             )
-                            .await?;
-                            break;
+                            .await
                         }
+                        FindResult::NotInRDB if allow_unmatched => {
+                            let instance_id = create_metadata_records(
+                                &mut conn,
+                                &file_name,
+                                &stem,
+                                &file_name,
+                                &platform,
+                                &core_name,
+                                &core_version,
+                            )
+                            .await?;
+                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            create_single_file_instance_objects(
+                                &mut conn,
+                                &storage_root,
+                                &roms,
+                                instance_id,
+                                &path,
+                                Some(stem.to_string()),
+                            )
+                            .await
+                        }
+                        _ => Ok(()),
                     }
-                    Ok(())
-                } else if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, &path).await? {
-                    let instance_id = create_metadata_records(
-                        &mut conn,
-                        &file_name,
-                        &rval,
-                        &platform,
-                        &core_name,
-                        &core_version,
-                    )
-                    .await?;
-                    link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
-                    create_single_file_instance_objects(
-                        &mut conn,
-                        &storage_root,
-                        &roms,
-                        instance_id,
-                        &path,
-                        rval.map_get("description"),
-                    )
-                    .await
-                } else {
-                    Ok(())
                 }
             })
         })
@@ -345,10 +419,34 @@ async fn find_entry(
     }
 }
 
-async fn create_metadata_records(
+async fn create_metadata_records_from_rval(
     conn: &mut sqlx::PgConnection,
     file_name: &str,
     rval: &RVal,
+    platform: &str,
+    core_name: &str,
+    core_version: &str,
+) -> Result<Uuid, IngestError> {
+    create_metadata_records(
+        conn,
+        file_name,
+        &rval
+            .map_get("name")
+            .unwrap_or_else(|| file_name.to_string()),
+        &rval
+            .map_get("rom_name")
+            .unwrap_or_else(|| file_name.to_string()),
+        platform,
+        core_name,
+        core_version,
+    )
+    .await
+}
+async fn create_metadata_records(
+    conn: &mut sqlx::PgConnection,
+    file_name: &str,
+    work_name: &str,
+    rom_name: &str,
     platform: &str,
     core_name: &str,
     core_version: &str,
@@ -357,12 +455,8 @@ async fn create_metadata_records(
     let created_on = chrono::Utc::now();
     let work = Work {
         work_id: Uuid::new_v4(),
-        work_name: rval
-            .map_get("name")
-            .unwrap_or_else(|| file_name.to_string()),
-        work_version: rval
-            .map_get("rom_name")
-            .unwrap_or_else(|| file_name.to_string()),
+        work_name: work_name.to_string(),
+        work_version: rom_name.to_string(),
         work_platform: platform.to_string(),
         // TODO this should use the real cataloguing data
         created_on,
