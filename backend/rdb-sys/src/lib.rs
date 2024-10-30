@@ -286,7 +286,8 @@ pub enum RDBError {
 }
 
 pub struct RDB(*mut RetroDB);
-
+unsafe impl Send for RDB {}
+unsafe impl Sync for RDB {}
 impl RDB {
     pub fn open(path: &std::path::Path) -> Result<Self, RDBError> {
         let path = path.as_os_str();

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
@@ -126,6 +128,7 @@ async fn insert_file_object(
     } else {
         let file_name = path.file_name().unwrap().to_string_lossy().to_string();
         let file_uuid = Uuid::new_v4();
+        info!("Do write file {file_name}");
         let file_info =
             StorageHandler::write_file_to_uuid_folder(storage_root, 4, file_uuid, &file_name, path)
                 .await?;
@@ -174,13 +177,13 @@ async fn main() -> Result<(), IngestError> {
         .filter_level(verbose.log_level_filter())
         .init();
     info!("Connecting to database: {}", gisst_cli_db_url.to_string());
-    let pool: PgPool = get_db_by_url(gisst_cli_db_url.to_string()).await?;
-    let mut conn = pool.acquire().await?;
+    let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.to_string()).await?);
     info!("DB connection successful.");
     let storage_root = gisst_storage_root_path.to_string();
     info!("Storage root is set to: {}", &storage_root);
+    let mut base_conn = pool.acquire().await?;
     let ra_cfg_object_id = insert_file_object(
-        &mut conn,
+        &mut base_conn,
         &storage_root,
         std::path::Path::new(&ra_cfg),
         Some("base retroarch config".to_string()),
@@ -194,7 +197,7 @@ async fn main() -> Result<(), IngestError> {
         let file_name = dep.file_name().unwrap().to_string_lossy().to_string();
         let dep_path = dep_paths.get(i).unwrap_or(&file_name);
         let dep_id = insert_file_object(
-            &mut conn,
+            &mut base_conn,
             &storage_root,
             dep,
             Some(dep_path.clone()),
@@ -204,27 +207,69 @@ async fn main() -> Result<(), IngestError> {
         .await?;
         dep_ids.push(dep_id);
     }
-    let dep_ids = dep_ids;
-    let db = RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?;
-    let roms = std::path::Path::new(&roms);
+    drop(base_conn);
+    let db = Arc::new(RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?);
+    let roms = Arc::new(std::path::PathBuf::from(roms));
+    let files: Vec<_> = walkdir::WalkDir::new(&*roms)
+        .into_iter()
+        .map(|e| e.unwrap())
+        .collect();
 
-    for entry in walkdir::WalkDir::new(roms) {
-        let entry = entry?;
-        if !entry.file_type().is_file() {
-            continue;
-        }
-        let ext = entry
-            .path()
-            .extension()
-            .map(std::ffi::OsStr::to_string_lossy)
-            .unwrap_or(std::borrow::Cow::default());
-        if ext == "chd" || ext == "cue" || ext == "bin" || ext == "iso" {
-            continue;
-        }
-        if ext == "m3u" {
-            for file in files_of_playlist(roms, entry.path())? {
-                if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, &file).await? {
-                    let file_name = entry.file_name().to_string_lossy().to_string();
+    use rayon::prelude::*;
+    let handle = tokio::runtime::Handle::current();
+    let result: Result<_, _> = files
+        .par_iter()
+        .map(|entry| {
+            if !entry.file_type().is_file() {
+                return Ok(());
+            }
+            let path = entry.path().to_owned();
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let ext = path
+                .extension()
+                .map(std::ffi::OsStr::to_string_lossy)
+                .unwrap_or_default()
+                .into_owned();
+            if ext == "chd" || ext == "cue" || ext == "bin" || ext == "iso" {
+                return Ok(());
+            }
+            let dep_ids = dep_ids.clone();
+            let db = Arc::clone(&db);
+            let roms = Arc::clone(&roms);
+            let platform = platform.to_owned();
+            let core_name = core_name.to_owned();
+            let core_version = core_version.to_owned();
+            let storage_root = storage_root.to_owned();
+            let pool = Arc::clone(&pool);
+            handle.block_on(async move {
+                let mut conn = pool.acquire().await?;
+                if ext == "m3u" {
+                    for file in files_of_playlist(&roms, &path)? {
+                        if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, &file).await? {
+                            let instance_id = create_metadata_records(
+                                &mut conn,
+                                &file_name,
+                                &rval,
+                                &platform,
+                                &core_name,
+                                &core_version,
+                            )
+                            .await?;
+                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            create_playlist_instance_objects(
+                                &mut conn,
+                                &storage_root,
+                                &roms,
+                                instance_id,
+                                &path,
+                                rval.map_get("description"),
+                            )
+                            .await?;
+                            break;
+                        }
+                    }
+                    Ok(())
+                } else if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, &path).await? {
                     let instance_id = create_metadata_records(
                         &mut conn,
                         &file_name,
@@ -235,42 +280,22 @@ async fn main() -> Result<(), IngestError> {
                     )
                     .await?;
                     link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
-                    create_playlist_instance_objects(
+                    create_single_file_instance_objects(
                         &mut conn,
                         &storage_root,
-                        roms,
+                        &roms,
                         instance_id,
-                        entry.path(),
+                        &path,
                         rval.map_get("description"),
                     )
-                    .await?;
-                    break;
+                    .await
+                } else {
+                    Ok(())
                 }
-            }
-        } else if let FindResult::InRDB(rval) = find_entry(&mut conn, &db, entry.path()).await? {
-            let file_name = entry.file_name().to_string_lossy().to_string();
-            let instance_id = create_metadata_records(
-                &mut conn,
-                &file_name,
-                &rval,
-                &platform,
-                &core_name,
-                &core_version,
-            )
-            .await?;
-            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
-            create_single_file_instance_objects(
-                &mut conn,
-                &storage_root,
-                roms,
-                instance_id,
-                entry.path(),
-                rval.map_get("description"),
-            )
-            .await?;
-        }
-    }
-    Ok(())
+            })
+        })
+        .collect();
+    result
 }
 
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {
@@ -382,7 +407,7 @@ async fn create_single_file_instance_objects(
         storage_root,
         path,
         desc,
-        path.strip_prefix(&roms)
+        path.strip_prefix(roms)
             .unwrap()
             .parent()
             .unwrap()
@@ -460,16 +485,13 @@ fn files_of_playlist(
     let mut out = Vec::with_capacity(8);
     let cue_file_re = regex::Regex::new("^FILE \"(.*)\"").unwrap();
     for file in std::fs::read_to_string(path)?.lines() {
-        info!("Reading playlist line {file}");
         let file_path = roms.join(std::path::Path::new(file));
         out.push(file_path.clone());
         if file.ends_with(".cue") {
             for cue_line in std::fs::read_to_string(file_path)?.lines() {
-                info!("Reading cue line {cue_line}");
                 if let Some(captures) = cue_file_re.captures(cue_line) {
                     let track = &captures[1];
                     let track_path = roms.join(std::path::Path::new(track));
-                    info!("track is {track}");
                     out.push(track_path.clone());
                 }
             }
