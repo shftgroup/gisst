@@ -26,7 +26,10 @@ addEventListener("load", () =>
         download_file: (category:"save"|"state"|"replay", file_name:string) => console.log("Save file",category,file_name),
           upload_file: (category:"save"|"state"|"replay", file_name:string, metadata:Metadata) => {
             console.log("Upload file", category, file_name, metadata);
-            return new Promise((resolve, reject) => {metadata ? resolve(metadata): reject("metadata is null")})
+            return new Promise((resolve, reject) => {
+              if (metadata) { resolve(metadata); }
+              else { reject("metadata is null"); }
+            });
           },
         checkpoints_of: (_replay:number) => {return []},
         evt_to_html: (evt:string) => {

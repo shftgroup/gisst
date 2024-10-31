@@ -45,6 +45,11 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   let is_muted = false;
   const EvtNames:string[] = ["keyboard-code", "mouse-click", "mouse-delta", "mouse-absolute", "mouse-wheel"];
   let evtlog_idx = 0;
+  function fill_evtlog(fromidx:number, toidx:number) {
+    if (v86.active_replay === null) { return; }
+    const replay = v86.replays[v86.active_replay];
+    ui_state.evtlog_append(replay.events.slice(fromidx,toidx).map((evt) => {return {t:evt.when,evt}}))
+  }
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
@@ -215,10 +220,5 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       ui_state.evtlog_set_playhead(replay.current_time());
     }
   }, 250);
-  function fill_evtlog(fromidx:number, toidx:number) {
-    if (v86.active_replay === null) { return; }
-    const replay = v86.replays[v86.active_replay];
-    ui_state.evtlog_append(replay.events.slice(fromidx,toidx).map((evt) => {return {t:evt.when,evt}}))
-  }
   container.addEventListener("click", () => { v86.emulator.lock_mouse(); } )
 }
