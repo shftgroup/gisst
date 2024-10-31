@@ -1,13 +1,13 @@
 import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
-import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
+import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink, EmbedOptions} from './types.d';
 import * as tus from 'tus-js-client';
 let ui_state:UI;
 let db:GISSTDBConnector;
 
 
-export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
+export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, _embed_options:EmbedOptions) {
   db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
   for (const obj of manifest) {
     if (obj.object_role == "content") {

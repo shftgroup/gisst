@@ -1,9 +1,9 @@
 import './style.css';
 import * as ra from './ra';
 import * as v86 from './v86';
-import {EmuControls} from './types';
+import {EmuControls,EmbedOptions,ControllerOverlayMode} from './types.d';
 import imgUrl from './canvas.svg';
-export async function embed(gisst:string, container:HTMLDivElement) {
+export async function embed(gisst:string, container:HTMLDivElement, options?:EmbedOptions) {
   container.classList.add("gisst-embed-webplayer-container");
   const canvas = document.createElement("canvas");
   canvas.tabIndex = 1; // make canvas focusable
@@ -45,9 +45,9 @@ export async function embed(gisst:string, container:HTMLDivElement) {
   const kind = config.environment.environment_framework;
   let emu:EmuControls;
   if(kind == "v86") {
-    emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.start, config.manifest, container);
+    emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.start, config.manifest, container, options ?? {controls:ControllerOverlayMode.Auto});
   } else {
-    emu = await ra.init(gisst_http_proto+"://"+gisst_root, config.environment.environment_core_name, config.start, config.manifest, container);
+    emu = await ra.init(gisst_http_proto+"://"+gisst_root, config.environment.environment_core_name, config.start, config.manifest, container, options ?? {controls:ControllerOverlayMode.Auto});
   }
   container.appendChild(mute_a);
   container.appendChild(halt_a);

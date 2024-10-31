@@ -1,6 +1,6 @@
 import {nested_replace,StringIndexable} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
-import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls} from './types';
+import {EmbedOptions,Environment, ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls} from './types.d';
 
 
 let v86_loading = false;
@@ -26,7 +26,7 @@ function load_v86(gisst_root:string) : Promise<void> {
   });
 }
 
-export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement):Promise<EmuControls> {
+export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement, _options:EmbedOptions):Promise<EmuControls> {
   if(!v86_loaded) {
     console.log("Loading v86");
     await load_v86(gisst_root);

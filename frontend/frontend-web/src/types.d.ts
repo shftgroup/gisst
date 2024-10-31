@@ -1,5 +1,15 @@
 import {GISSTModels} from 'gisst-player';
 
+export interface EmbedOptions {
+  controls: ControllerOverlayMode
+}
+
+export enum ControllerOverlayMode {
+  Off="off",
+  On="on",
+  Auto="auto"
+}
+
 export interface Environment {
   created_on:string,
   environment_config:object,
