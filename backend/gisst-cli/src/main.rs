@@ -11,13 +11,9 @@ use args::{
 };
 use clap::Parser;
 use gisst::{
-    model_enums::Framework,
-    models::{ObjectRole, Screenshot, StateLink},
-};
-use gisst::{
     models::{
-        Creator, DBHashable, DBModel, Environment, Image, Instance, Object, ObjectLink, Replay,
-        Save, State, Work,
+        Creator, DBHashable, DBModel, Environment, Image, Instance, Object, ObjectRole, Replay,
+        Save, Screenshot, State, Work,
     },
     storage::StorageHandler,
 };
@@ -153,154 +149,10 @@ async fn clone_v86_machine(
     depth: u8,
 ) -> Result<Uuid, GISSTCliError> {
     let mut conn = db.acquire().await?;
-    let instance = Instance::get_by_id(&mut conn, instance_id)
-        .await?
-        .ok_or(GISSTCliError::RecordNotFound(instance_id))?;
-
-    let env = Environment::get_by_id(&mut conn, instance.environment_id)
-        .await?
-        .ok_or(GISSTCliError::RecordNotFound(instance.environment_id))?;
-    if env.environment_framework != Framework::V86 {
-        return Err(GISSTCliError::InvalidRecordType(
-            "Can only clone v86 instances".to_string(),
-        ));
-    }
-    let state = StateLink::get_by_id(&mut conn, state_id)
-        .await?
-        .ok_or(GISSTCliError::RecordNotFound(state_id))?;
-    if state.instance_id != instance_id {
-        return Err(GISSTCliError::InvalidRecordType(
-            "Can only clone state belonging to the given instance".to_string(),
-        ));
-    }
-    let state_file_path = format!(
-        "{storage_root}/{}/{}-{}",
-        state.file_dest_path, state.file_hash, state.file_filename
-    );
-    let objects = ObjectLink::get_all_for_instance_id(&mut conn, instance_id).await?;
-    // This unwrap is safe since we know it's a v86 framework environment
-    let mut env_json = env.environment_config.unwrap().to_string();
-    for obj in objects.iter() {
-        let file_path = format!(
-            "{storage_root}/{}/{}-{}",
-            obj.file_dest_path, obj.file_hash, obj.file_filename
-        );
-        match obj.object_role {
-            ObjectRole::Content => {
-                let idx = obj.object_role_index;
-                env_json = env_json.replace(&format!("$CONTENT{idx}"), &file_path);
-                if idx == 0 {
-                    env_json = env_json.replace("$CONTENT\"", &format!("{file_path}\""));
-                }
-            }
-            ObjectRole::Dependency => { /* nop */ }
-            ObjectRole::Config => { /*nop*/ }
-        }
-    }
-    env_json = env_json.replace("seabios.bin", "web-dist/v86/bios/seabios.bin");
-    env_json = env_json.replace("vgabios.bin", "web-dist/v86/bios/vgabios.bin");
-    use std::process::Command;
-    println!("Input {env_json}\n{state_file_path}");
-    let output = Command::new("node")
-        .arg("v86dump/index.js")
-        .arg(env_json)
-        .arg(state_file_path)
-        .output()?;
-    let err = String::from_utf8(output.stderr).expect("stderr not utf8");
-    println!("{err}");
-    let output = String::from_utf8(output.stdout).expect("disk image names not utf-8");
-    println!("Output {output}");
-    // create the new instance
-    let mut instance = instance;
-    instance.created_on = chrono::Utc::now();
-    instance.derived_from_instance = Some(instance.instance_id);
-    instance.derived_from_state = Some(state_id);
-    instance.instance_id = Uuid::new_v4();
-    let new_id = instance.instance_id;
-    let mut temp_folder = None;
-    Instance::insert(&mut conn, instance)
-        .await
-        .map_err(GISSTCliError::NewModel)?;
-    // add the requisite objects and link them
-    // TODO: the ? inside of this loop should get caught and I should delete the outFGSFDS/ folder either way after.
-    let mut content_index = 0;
-    for line in output.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        let (drive, diskpath) = line.split_at(
-            line.find(':')
-                .unwrap_or_else(|| panic!("Invalid output from v86dump:{line}"))
-                + 1,
-        );
-        temp_folder = Some(Path::new(diskpath).parent().unwrap());
-        println!("Linking {drive}{diskpath} as CONTENT{content_index}");
-        let file_name = Path::new(diskpath)
-            .to_path_buf()
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
-        let file_size = std::fs::metadata(diskpath)?.len() as i64;
-        let mut file_record = gisst::models::File {
-            file_id: Uuid::new_v4(),
-            file_hash: StorageHandler::get_file_hash(diskpath)?,
-            file_filename: file_name.clone(),
-            file_source_path: String::new(),
-            file_dest_path: Default::default(),
-            file_size,
-            created_on: chrono::Utc::now(),
-        };
-        let object = Object {
-            object_id: Uuid::new_v4(),
-            file_id: file_record.file_id,
-            object_description: Some(file_name),
-            created_on: chrono::Utc::now(),
-        };
-        let file_info = StorageHandler::write_file_to_uuid_folder(
-            &storage_root,
-            depth,
-            file_record.file_id,
-            &file_record.file_filename,
-            diskpath,
-        )
-        .await?;
-        println!(
-            "Wrote file {} to {}",
-            file_info.dest_filename, file_info.dest_path
-        );
-        let obj_uuid = object.object_id;
-        let file_uuid = file_record.file_id;
-        file_record.file_dest_path = file_info.dest_path;
-        let file_insert = gisst::models::File::insert(&mut conn, file_record).await;
-        let obj_insert = Object::insert(&mut conn, object).await;
-        if file_insert.as_ref().and(obj_insert.as_ref()).is_ok() {
-            Object::link_object_to_instance(
-                &mut conn,
-                obj_uuid,
-                new_id,
-                ObjectRole::Content,
-                content_index,
-            )
+    let uuid =
+        gisst::v86clone::clone_v86_machine(&mut conn, instance_id, state_id, &storage_root, depth)
             .await?;
-            content_index += 1;
-        } else {
-            println!(
-                "Could not insert either file or object:\nf:{file_insert:?}\no:{obj_insert:?}"
-            );
-            StorageHandler::delete_file_with_uuid(
-                &storage_root,
-                depth,
-                file_uuid,
-                &file_info.dest_filename,
-            )
-            .await?;
-        }
-    }
-    if let Some(temp) = temp_folder {
-        std::fs::remove_dir_all(temp)?;
-    }
-    Ok(new_id)
+    Ok(uuid)
 }
 
 async fn link_record(
