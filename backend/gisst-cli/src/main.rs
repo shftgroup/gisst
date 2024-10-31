@@ -195,16 +195,17 @@ async fn create_object(
         role_index,
         file,
         force_uuid,
+        cwd,
         ..
     }: CreateObject,
     db: PgPool,
     storage_path: String,
 ) -> Result<(), GISSTCliError> {
     let mut valid_paths: Vec<PathBuf> = Vec::new();
-
+    let cwd = cwd.unwrap_or(String::new());
+    let cwd = Path::new(&cwd);
     for path in file {
-        let p = Path::new(&path);
-
+        let p = cwd.join(Path::new(&path));
         if p.exists() {
             if p.is_dir() {
                 if !recursive {
@@ -235,7 +236,7 @@ async fn create_object(
     let mut conn = db.acquire().await?;
 
     for path in &valid_paths {
-        let mut source_path = PathBuf::from(path);
+        let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(path));
         source_path.pop();
         let file_size = std::fs::metadata(path)?.len() as i64;
         let mut file_record = gisst::models::File {

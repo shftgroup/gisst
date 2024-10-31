@@ -1,0 +1,109 @@
+clrmamepro (
+	name "Sony PlayStation - BIOS"
+	description "Sony PlayStation - BIOS (TOSEC-v2006-05-05)"
+	category "Sony PlayStation - BIOS"
+	version 2006-05-05
+	author incog - [idoru]
+)
+
+game (
+	name "Sony PSone SCPH-101 v4.5 (2000-05-25)(Sony)(US)"
+	description "Sony PSone SCPH-101 v4.5 (2000-05-25)(Sony)(US)"
+	rom ( name "Sony PSone SCPH-101 v4.5 (2000-05-25)(Sony)(US).bin" size 524288 crc 171bdcec md5 6e3735ff4c7dc899ee98981385f6f3d0 )
+)
+
+game (
+	name "Sony PlayStation SCPH-1000 (1994)(Sony)(Jp)"
+	description "Sony PlayStation SCPH-1000 (1994)(Sony)(Jp)"
+	rom ( name "Sony PlayStation SCPH-1000 (1994)(Sony)(Jp).bin" size 524288 crc 3b601fc8 md5 239665b1a3dade1b5a52c06338011044 )
+)
+
+game (
+	name "Sony PlayStation SCPH-1001 - DTLH-3000 v2.2 (1995-12-04)(Sony)(US)"
+	description "Sony PlayStation SCPH-1001 - DTLH-3000 v2.2 (1995-12-04)(Sony)(US)"
+	rom ( name "Sony PlayStation SCPH-1001 - DTLH-3000 v2.2 (1995-12-04)(Sony)(US).bin" size 524288 crc 37157331 md5 924e392ed05558ffdb115408c263dccf )
+)
+
+game (
+	name "Sony PlayStation SCPH-1002 v2.0 (1995-05-10)(Sony)(Eu)"
+	description "Sony PlayStation SCPH-1002 v2.0 (1995-05-10)(Sony)(Eu)"
+	rom ( name "Sony PlayStation SCPH-1002 v2.0 (1995-05-10)(Sony)(Eu).bin" size 524288 crc 9bb87c4b md5 54847e693405ffeb0359c6287434cbef )
+)
+
+game (
+	name "Sony PlayStation SCPH-1002 - DTLH-3002 v2.2 (1995-12-04)(Sony)(Eu)"
+	description "Sony PlayStation SCPH-1002 - DTLH-3002 v2.2 (1995-12-04)(Sony)(Eu)"
+	rom ( name "Sony PlayStation SCPH-1002 - DTLH-3002 v2.2 (1995-12-04)(Sony)(Eu).bin" size 524288 crc 1e26792f md5 e2110b8a2b97a8e0b857a45d32f7e187 )
+)
+
+game (
+	name "Sony PlayStation SCPH-3000 v1.1 (1995-01-22)(Sony)(Jp)"
+	description "Sony PlayStation SCPH-3000 v1.1 (1995-01-22)(Sony)(Jp)"
+	rom ( name "Sony PlayStation SCPH-3000 v1.1 (1995-01-22)(Sony)(Jp).bin" size 524288 crc 3539def6 md5 849515939161e62f6b866f6853006780 )
+)
+
+game (
+	name "Sony PlayStation SCPH-3500 v2.1 (1995-07-17)(Sony)(Jp)"
+	description "Sony PlayStation SCPH-3500 v2.1 (1995-07-17)(Sony)(Jp)"
+	rom ( name "Sony PlayStation SCPH-3500 v2.1 (1995-07-17)(Sony)(Jp).bin" size 524288 crc bc190209 md5 cba733ceeff5aef5c32254f1d617fa62 )
+)
+
+game (
+	name "Sony PlayStation SCPH-5000 v2.2 (1995-12-04)(Sony)(Jp)"
+	description "Sony PlayStation SCPH-5000 v2.2 (1995-12-04)(Sony)(Jp)"
+	rom ( name "Sony PlayStation SCPH-5000 v2.2 (1995-12-04)(Sony)(Jp).bin" size 524288 crc 24fc7e17 md5 57a06303dfa9cf9351222dfcbb4a29d9 )
+)
+
+game (
+	name "Sony PlayStation SCPH-5000 v2.2 (1995-12-04)(Sony)(Jp)[b]"
+	description "Sony PlayStation SCPH-5000 v2.2 (1995-12-04)(Sony)(Jp)[b]"
+	rom ( name "Sony PlayStation SCPH-5000 v2.2 (1995-12-04)(Sony)(Jp)[b].bin" size 524288 crc 8c93a399 md5 eb201d2d98251a598af467d4347bb62f )
+)
+
+game (
+	name "Sony PlayStation SCPH-5000 v2.2 (1995-12-04)(Sony)(Jp)[h]"
+	description "Sony PlayStation SCPH-5000 v2.2 (1995-12-04)(Sony)(Jp)[h]"
+	rom ( name "Sony PlayStation SCPH-5000 v2.2 (1995-12-04)(Sony)(Jp)[h].bin" size 526083 crc 826ac185 md5 1eefa9775e3ac04000a4f81c922d96dc )
+)
+
+game (
+	name "Sony PlayStation SCPH-5500 v3.0 (1996-09-09)(Sony)(Jp)"
+	description "Sony PlayStation SCPH-5500 v3.0 (1996-09-09)(Sony)(Jp)"
+	rom ( name "Sony PlayStation SCPH-5500 v3.0 (1996-09-09)(Sony)(Jp).bin" size 524288 crc ff3eeb8c md5 8dd7d5296a650fac7319bce665a6a53c )
+)
+
+game (
+	name "Sony PlayStation SCPH-5502 - SCPH-5552 v3.0 (1997-01-06)(Sony)(Eu)"
+	description "Sony PlayStation SCPH-5502 - SCPH-5552 v3.0 (1997-01-06)(Sony)(Eu)"
+	rom ( name "Sony PlayStation SCPH-5502 - SCPH-5552 v3.0 (1997-01-06)(Sony)(Eu).bin" size 524288 crc d786f0b9 md5 32736f17079d0b2b7024407c39bd3050 )
+)
+
+game (
+	name "Sony PlayStation SCPH-5502 - SCPH-5552 v3.0 (1997-01-06)(Sony)(Eu)[b]"
+	description "Sony PlayStation SCPH-5502 - SCPH-5552 v3.0 (1997-01-06)(Sony)(Eu)[b]"
+	rom ( name "Sony PlayStation SCPH-5502 - SCPH-5552 v3.0 (1997-01-06)(Sony)(Eu)[b].bin" size 524288 crc 4d9e7c86 md5 e56ec1b027e2fe8a49217d9678f7f6bb )
+)
+
+game (
+	name "Sony PlayStation SCPH-7000 v4.0 (1997-08-18)(Sony)(Jp)"
+	description "Sony PlayStation SCPH-7000 v4.0 (1997-08-18)(Sony)(Jp)"
+	rom ( name "Sony PlayStation SCPH-7000 v4.0 (1997-08-18)(Sony)(Jp).bin" size 524288 crc ec541cd0 md5 8e4c14f567745eff2f0408c8129f72a6 )
+)
+
+game (
+	name "Sony PlayStation SCPH-7001 v4.1 (1997-12-16)(Sony)(US)"
+	description "Sony PlayStation SCPH-7001 v4.1 (1997-12-16)(Sony)(US)"
+	rom ( name "Sony PlayStation SCPH-7001 v4.1 (1997-12-16)(Sony)(US).bin" size 524288 crc 502224b6 md5 1e68c231d0896b7eadcad1d7d8e76129 )
+)
+
+game (
+	name "Sony PlayStation SCPH-7003 v3.0 (1996-11-18)(Sony)(US)"
+	description "Sony PlayStation SCPH-7003 v3.0 (1996-11-18)(Sony)(US)"
+	rom ( name "Sony PlayStation SCPH-7003 v3.0 (1996-11-18)(Sony)(US).bin" size 524288 crc 8d8cb7e4 md5 490f666e1afb15b7362b406ed1cea246 )
+)
+
+game (
+	name "Sony PlayStation SCPH-7502 v4.1 (1997-12-16)(Sony)(Eu)"
+	description "Sony PlayStation SCPH-7502 v4.1 (1997-12-16)(Sony)(Eu)"
+	rom ( name "Sony PlayStation SCPH-7502 v4.1 (1997-12-16)(Sony)(Eu).bin" size 524288 crc 318178bf md5 b9d9a0286c33dc6b7237bb13cd46fdee )
+)

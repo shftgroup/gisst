@@ -38,6 +38,7 @@ pub enum Platform {
     SNES,
     N64,
     DOS,
+    PSX,
 }
 
 impl FromStr for Platform {
@@ -49,6 +50,7 @@ impl FromStr for Platform {
             "Nintendo Entertainment System" => Ok(Platform::NES),
             "Super Nintendo Entertainment System" => Ok(Platform::SNES),
             "Nintendo 64" => Ok(Platform::N64),
+            "Sony Playstation" => Ok(Platform::PSX),
             _ => Err("Attempting to convert Platform that does not exist"),
         }
     }
