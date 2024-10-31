@@ -3,7 +3,9 @@ import {LibretroModule} from './libretro_adapter';
 
 type FileContents = null|Index;
 
-export interface Index extends Record<string, FileContents> {}
+export interface Index {
+  [loc: string]: FileContents;
+}
 
 function min(n:number,m:number) : number {
   if (n <= m) { return n; }

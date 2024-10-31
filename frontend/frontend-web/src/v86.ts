@@ -1,9 +1,9 @@
 import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
-import {EmbedV86,StateInfo} from 'embedv86';
+import {EmbedV86,StateInfo,ReplayEvent} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink, EmbedOptions} from './types.d';
 import * as tus from 'tus-js-client';
-let ui_state:UI;
+let ui_state:UI<ReplayEvent>;
 let db:GISSTDBConnector;
 
 
@@ -18,7 +18,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
         nested_replace(environment.environment_config, "$CONTENT", obj_path);
       }
     }
-  }
+  } 
   let entry_state:string|null = null;
   let entry_screenshot:string|null = null;
   if (start.type == "state") {
@@ -43,9 +43,21 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   /* eslint prefer-const: ["error", { ignoreReadBeforeAssign: true }], no-use-before-define: "error" */
   let v86:EmbedV86;
   let is_muted = false;
+  const EvtNames:string[] = ["keyboard-code", "mouse-click", "mouse-delta", "mouse-absolute", "mouse-wheel"];
+  let evtlog_idx = 0;
+  function fill_evtlog(fromidx:number, toidx:number) {
+    if (v86.active_replay === null) { return; }
+    const replay = v86.replays[v86.active_replay];
+    ui_state.evtlog_append(replay.events.slice(fromidx,toidx).map((evt) => {return {t:evt.when,evt}}))
+  }
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
+      "evt_to_html": (evt) => {
+        const elt = document.createElement("span");
+        elt.innerText = `${EvtNames[evt.code]} ${evt.value}`;
+        return elt;
+      },
       "toggle_mute": () => {
         is_muted = !is_muted;
         v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined);
@@ -66,12 +78,25 @@ export async function init(environment:Environment, start:ColdStart | StateStart
         v86.save_state()
       },
       "start_replay":() => {
-        v86.record_replay()
+        // clear evt log and fill and update playhead
+        v86.record_replay().then(() => {
+          ui_state.evtlog_clear();
+          ui_state.evtlog_set_playhead(0);
+          evtlog_idx = 0;
+        });
       },
       "stop_and_save_replay":() => {
         v86.stop_replay()
       },
-      "play_replay":(n:number) => v86.play_replay_slot(n),
+      "play_replay":(n:number) => {
+        // clear evt log and fill and update playhead
+        v86.play_replay_slot(n).then(() => {
+          ui_state.evtlog_clear();
+          ui_state.evtlog_set_playhead(0);
+          evtlog_idx = 0;
+          fill_evtlog(0,v86.replays[v86.active_replay!].events.length);
+        });
+      },
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
         v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
       },
@@ -183,7 +208,16 @@ export async function init(environment:Environment, start:ColdStart | StateStart
     if(v86.active_replay === null) {
       ui_state.setReplayMode(UIReplayMode.Inactive);
     } else {
-      ui_state.setReplayMode(v86.replays[v86.active_replay].mode as UIReplayMode);
+      const replay = v86.replays[v86.active_replay];
+      const mode = replay.mode as UIReplayMode;
+      ui_state.setReplayMode(mode);
+      // if recording, append since last index and update playhead to t
+      if (mode == UIReplayMode.Record) {
+        fill_evtlog(evtlog_idx, replay.events.length);
+        evtlog_idx = replay.events.length;
+      }
+      // console.log("ph",replay.current_time(),ui_state.evtlog_playhead,ui_state.evtlog_playhead_eltidx);
+      ui_state.evtlog_set_playhead(replay.current_time());
     }
   }, 250);
   container.addEventListener("click", () => { v86.emulator.lock_mouse(); } )

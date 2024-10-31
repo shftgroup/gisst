@@ -15,7 +15,7 @@ const saves_dir = "/home/web_user/retroarch/userdata/saves";
 const retro_args = ["-v"];
 
 let RA:LibretroModule;
-let ui_state:UI;
+let ui_state:UI<string>;
 let db:GISSTDBConnector;
 
 export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
@@ -50,7 +50,12 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
 
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
-      {
+    {
+      "evt_to_html": (evt:string) => {
+        const elt = document.createElement("span");
+        elt.innerText=evt;
+        return elt;
+      },
         "toggle_mute": () => send_message("MUTE"),
         "load_state": (num: number) => load_state_slot(num),
         "save_state": () => save_state(),
