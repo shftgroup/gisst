@@ -155,12 +155,13 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       proms.push(fetchfs.fetchZip(RA,"/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
 
       for(const file of manifest) {
-        const source_path = "/home/web_user/content/" + file.file_source_path;
-        fetchfs.mkdirp(RA, source_path);
+        let download_source_path = "/home/web_user/content/" + file.file_source_path;
+        download_source_path = download_source_path.replace(file.file_filename!, "");
+        fetchfs.mkdirp(RA, download_source_path);
         const file_prom = fetchfs.fetchFile(
             RA,
             "/storage/" + file.file_dest_path,
-            source_path + "/" + file.file_filename);
+          download_source_path + "/" + file.file_filename);
         proms.push(file_prom);
       }
       let entryScreenshot:Promise<GISSTModels.DBRecord> | null = null;

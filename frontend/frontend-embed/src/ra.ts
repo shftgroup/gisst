@@ -40,12 +40,13 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
       proms.push(fetchfs.fetchZip(module,gisst_root+"/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
 
       for(const file of manifest) {
-        const source_path = "/home/web_user/content/" + file.file_source_path!;
-        fetchfs.mkdirp(module, source_path);
+        let dl_source_path = "/home/web_user/content/" + file.file_source_path!;
+        dl_source_path = dl_source_path.replace(file.file_filename!, "");
+        fetchfs.mkdirp(module, dl_source_path);
         const file_prom = fetchfs.fetchFile(
             module,
             gisst_root + "/storage/" + file.file_dest_path,
-            source_path + "/" + file.file_filename);
+            dl_source_path + "/" + file.file_filename);
         proms.push(file_prom);
       }
       if (entryState) {
