@@ -24,3 +24,5 @@ gisst = { path = "../gisst" }
 rdb-sys = { path = "../rdb-sys" }
 chrono = { version = "0.4.28", features = ["clock"]}
 md-5                    = "0.10"
+regex = "1.11.1"
+rayon = "1.10.0"

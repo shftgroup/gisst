@@ -174,7 +174,7 @@ pub struct CreateObject {
     #[arg(long)]
     pub role: gisst::models::ObjectRole,
 
-    /// Object role index for instance link. For retroarch, this is typically 0 for all content; for v86, 0=fda, 1=fdb, 2=hda, 3=hdb, 4=cdrom.  Other roles ignore the index currently so please use 0.
+    /// Object role index for instance link. For retroarch, this is typically 0 for all content; for v86, 0=fda, 1=fdb, 2=hda, 3=hdb, 4=cdrom.
     #[arg(long)]
     pub role_index: usize,
 
@@ -188,6 +188,10 @@ pub struct CreateObject {
 
     /// Paths of file(s) to create in the database, directories will be ignored unless -r/--recursive flag is enabled
     pub file: Vec<String>,
+
+    /// Search for files in this directory, useful if you don't want deeply nested file_source_paths.
+    #[arg(long)]
+    pub cwd: Option<String>,
 }
 
 #[derive(Debug, Args)]

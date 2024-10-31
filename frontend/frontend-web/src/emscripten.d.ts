@@ -7,14 +7,9 @@
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // TypeScript Version: 2.2
 
-/** Other WebAssembly declarations, for compatibility with older versions of Typescript */
-declare namespace WebAssembly {
-    interface Module {}
-}
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare namespace Emscripten {
-    interface FileSystemType {}
+    type FileSystemType = object;
     type EnvironmentType = 'WEB' | 'NODE' | 'SHELL' | 'WORKER';
 
     type JSType = 'number' | 'string' | 'array' | 'boolean';
@@ -123,9 +118,9 @@ interface Lookup {
   node: FSNode;
 }
 
-interface FSStream {}
-interface FSNode {}
-interface ErrnoError {}
+type FSStream = object;
+type FSNode = object;
+type ErrnoError = object;
 
 interface Analyze {
   isRoot: boolean,

@@ -191,6 +191,7 @@ impl StorageHandler {
         filename: &str,
         file_path: impl AsRef<Path>,
     ) -> Result<FileInformation, StorageError> {
+        // TODO dedupe if the hash is present somewhere in here?
         let file_path = file_path.as_ref();
         let mut path =
             Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
@@ -212,13 +213,15 @@ impl StorageHandler {
         Self::gzip_file(&path, File::open(file_path).await?).await?;
 
         path.pop();
-
         Ok(FileInformation {
             source_filename: filename.to_string(),
-            // add trailing "/" to file_source_path
             source_path: filename.to_string(),
+            dest_path: path
+                .strip_prefix(root_path)?
+                .join(&save_filename)
+                .to_string_lossy()
+                .to_string(),
             dest_filename: save_filename,
-            dest_path: path.strip_prefix(root_path)?.to_string_lossy().to_string(),
             file_hash: hash_string.to_string(),
         })
     }
