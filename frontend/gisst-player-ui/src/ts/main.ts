@@ -438,7 +438,9 @@ export class UI<Evt> {
   }
   evtlog_set_playhead(t:number) {
     const old_ph_idx=this.evtlog_playhead_eltidx;
-    this.evtlog_elt.children[this.evtlog_playhead_eltidx].classList.remove("playhead");
+    if (old_ph_idx < this.evtlog_elt.childElementCount) {
+      this.evtlog_elt.children[old_ph_idx].classList.remove("playhead");
+    }
     let lo=0;
     let hi=this.evtlog.length;
     if (this.evtlog_playhead <= t) {
@@ -448,16 +450,18 @@ export class UI<Evt> {
     }
     let i;
     for (i = lo; i < hi; i++) {
-      if (this.evtlog[i].t <= t && (this.evtlog.length==(i+1) || this.evtlog[i+1].t > t)) {
+      if (this.evtlog[i].t > t || (this.evtlog.length==(i+1) || this.evtlog[i+1].t > t)) {
         break;
       }
     }
     this.evtlog_playhead_eltidx = i;
     this.evtlog_playhead=t;
-    const new_ph = this.evtlog_elt.children[this.evtlog_playhead_eltidx];
-    new_ph.classList.add("playhead");
-    if (old_ph_idx != this.evtlog_playhead_eltidx) {
-      new_ph.scrollIntoView();
+    if (this.evtlog_playhead_eltidx < this.evtlog_elt.childElementCount) {
+      const new_ph = this.evtlog_elt.children[this.evtlog_playhead_eltidx];
+      new_ph.classList.add("playhead");
+      if (old_ph_idx != this.evtlog_playhead_eltidx) {
+        new_ph.scrollIntoView();
+      }
     }
   }
   evtlog_clear() {
