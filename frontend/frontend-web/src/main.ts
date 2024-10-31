@@ -1,14 +1,15 @@
 import 'gisst-player/style.css';
 import * as ra from './ra';
 import * as v86 from './v86';
+import {ControllerOverlayMode} from './types.d';
 
 window.onload = async function() {
   const config = JSON.parse(document.getElementById("config")!.textContent!);
   const kind = config.environment.environment_framework;
   if(kind == "v86") {
-    await v86.init(config.environment, config.start, config.manifest, config.boot_into_record);
+    await v86.init(config.environment, config.start, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
   } else {
-    await ra.init(config.environment.environment_core_name, config.start, config.manifest, config.boot_into_record);
+    await ra.init(config.environment.environment_core_name, config.start, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
   }
   const container = <HTMLCanvasElement>document.getElementById("canvas_div")!;
   const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
@@ -46,14 +47,14 @@ function touchHandler(event:TouchEvent)
     switch(event.type)
     {
         case "touchstart": type = "mousedown"; break;
-        case "touchmove":  type = "mousemove"; break;        
+        case "touchmove":  type = "mousemove"; break;
         case "touchend":   type = "mouseup";   break;
         default:           return;
     }
     const simulatedEvent = document.createEvent("MouseEvent");
-    simulatedEvent.initMouseEvent(type, true, true, window, 1, 
-                                  first.screenX, first.screenY, 
-                                  first.clientX, first.clientY, false, 
+    simulatedEvent.initMouseEvent(type, true, true, window, 1,
+                                  first.screenX, first.screenY,
+                                  first.clientX, first.clientY, false,
                                   false, false, false, 0/*left*/, null);
     first.target.dispatchEvent(simulatedEvent);
     event.preventDefault();

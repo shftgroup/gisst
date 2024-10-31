@@ -2,7 +2,7 @@ import * as fetchfs from './fetchfs';
 import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
-import {ColdStart, StateStart, ReplayStart, ObjectLink} from './types';
+import {ColdStart, StateStart, ReplayStart, ObjectLink, EmbedOptions, ControllerOverlayMode} from './types.d';
 import * as tus from "tus-js-client";
 import {LibretroModule, loadRetroArch} from './libretro_adapter';
 const FS_CHECK_INTERVAL = 1000;
@@ -18,7 +18,7 @@ let RA:LibretroModule;
 let ui_state:UI;
 let db:GISSTDBConnector;
 
-export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean) {
+export function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
   db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
 
   const content = manifest.find((o) => o.object_role=="content" && o.object_role_index == 0)!;
@@ -26,8 +26,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
-  // TODO add "overlay=on|off|autodetect" option
-  const use_gamepad_overlay = mobileAndTabletCheck();
+  const use_gamepad_overlay = embed_options.controls == ControllerOverlayMode.On || ((embed_options.controls??ControllerOverlayMode.Auto) == ControllerOverlayMode.Auto && mobileAndTabletCheck());
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
@@ -294,7 +293,7 @@ async function play_replay_slot(n:number) {
     return;
   }
   current_replay = {mode:ReplayMode.Playback,id:num_str,finished:false};
-  ui_state.setReplayMode(ReplayMode.Playback);
+  ui_state.setReplayMode(UIReplayMode.Playback);
 }
 enum BSVFlags {
   START_RECORDING    = (1 << 0),

@@ -1,8 +1,8 @@
 import * as fetchfs from './fetchfs';
-import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls} from './types';
+import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls, EmbedOptions, ControllerOverlayMode} from './types.d';
 import {loadRetroArch,LibretroModule} from './libretro_adapter';
 
-export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement):Promise<EmuControls> {
+export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement, embed_options:EmbedOptions):Promise<EmuControls> {
   const state_dir = "/home/web_user/retroarch/userdata/states";
   const saves_dir = "/home/web_user/retroarch/userdata/saves";
   const retro_args = ["-v"];
@@ -11,8 +11,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
-  // TODO add "overlay=on|off|autodetect" option
-  const use_gamepad_overlay = mobileAndTabletCheck();
+  const use_gamepad_overlay = embed_options.controls == ControllerOverlayMode.On || ((embed_options.controls??ControllerOverlayMode.Auto) == ControllerOverlayMode.Auto && mobileAndTabletCheck());
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
