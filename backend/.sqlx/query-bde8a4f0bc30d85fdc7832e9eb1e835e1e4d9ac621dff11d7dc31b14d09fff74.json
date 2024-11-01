@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT creator_id,\n            creator_username,\n            creator_full_name,\n            created_on\n            FROM creator\n            ORDER BY created_on DESC\n            LIMIT $1",
+  "query": "SELECT creator_id,\n            creator_username,\n            creator_full_name,\n            created_on\n            FROM creator\n            WHERE POSITION($1 in creator_username) > 0 OR POSITION($1 in creator_full_name) > 0\n            ORDER BY $2 ASC\n            LIMIT $3\n            OFFSET $4",
   "describe": {
     "columns": [
       {
@@ -26,6 +26,9 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
+        "Int8",
         "Int8"
       ]
     },
@@ -36,5 +39,5 @@
       false
     ]
   },
-  "hash": "390e7998895c5e895992c166f19ebf2434e566aa35715e6ba153d6511a3ec74a"
+  "hash": "bde8a4f0bc30d85fdc7832e9eb1e835e1e4d9ac621dff11d7dc31b14d09fff74"
 }

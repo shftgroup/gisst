@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT instance_id, environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state\n            FROM instance\n            ORDER BY created_on DESC\n            LIMIT $1\n            ",
+  "query": "SELECT instance_id, environment_id, work_id, instance_config, instance.created_on, derived_from_instance, derived_from_state\n            FROM instance\n            JOIN work USING(work_id)\n            WHERE POSITION($1 in work.work_name) > 0\n            ORDER BY $2 ASC\n            LIMIT $3\n            OFFSET $4\n            ",
   "describe": {
     "columns": [
       {
@@ -41,6 +41,9 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
+        "Int8",
         "Int8"
       ]
     },
@@ -54,5 +57,5 @@
       true
     ]
   },
-  "hash": "87898a92bd9cadfcb3f6a67c5ab8d43fe88320bb3e888481975f9581e512a031"
+  "hash": "b1bc79e3ccacf191d73a0bc3fd00feaf921682ca0b8dcdf4eab74878f5f98176"
 }

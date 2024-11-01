@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id, work_name, work_version, work_platform, created_on, work_derived_from FROM work ORDER BY created_on DESC LIMIT $1",
+  "query": "SELECT work_id, work_name, work_version, work_platform, created_on, work_derived_from\n               FROM work\n               WHERE POSITION($1 in work_name) > 0\n               ORDER BY $2 ASC\n               LIMIT $3\n               OFFSET $4\n            ",
   "describe": {
     "columns": [
       {
@@ -36,6 +36,9 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
+        "Int8",
         "Int8"
       ]
     },
@@ -48,5 +51,5 @@
       true
     ]
   },
-  "hash": "fdd87ecfb8dd9ce599bdd2fc6cb35d4fef701ca8ef6b577e5a990531bfeb4e23"
+  "hash": "04dbf002f090e6ab32db39930fa944dca87a322394fb9014e5ad65eb3c9085ea"
 }

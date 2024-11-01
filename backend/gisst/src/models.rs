@@ -34,7 +34,7 @@ pub trait DBModel: Sized {
     fn fields() -> Vec<(String, String)>;
     fn values_to_strings(&self) -> Vec<Option<String>>;
     async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>>;
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>>;
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>>;
     async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError>;
     async fn update(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError>;
     async fn delete_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<PgQueryResult>;
@@ -394,7 +394,7 @@ impl DBModel for Creator {
         .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT creator_id,
@@ -402,9 +402,14 @@ impl DBModel for Creator {
             creator_full_name,
             created_on
             FROM creator
-            ORDER BY created_on DESC
-            LIMIT $1"#,
-            limit
+            WHERE POSITION($1 in creator_username) > 0 OR POSITION($1 in creator_full_name) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4"#,
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("creator_username".to_string()),
+            params.limit,
+            params.offset
         )
         .fetch_all(conn)
         .await
@@ -541,7 +546,7 @@ impl DBModel for File {
         .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT file_id,
@@ -552,9 +557,15 @@ impl DBModel for File {
             file_size,
             created_on
             FROM file
-            ORDER BY created_on DESC
-            LIMIT $1"#,
-            limit
+            WHERE POSITION($1 in file_filename) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4
+            "#,
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("file_filename".to_string()),
+            params.limit,
+            params.offset,
         )
         .fetch_all(conn)
         .await
@@ -654,15 +665,21 @@ impl DBModel for Instance {
         .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT instance_id, environment_id, work_id, instance_config, created_on, derived_from_instance, derived_from_state
+            r#"SELECT instance_id, environment_id, work_id, instance_config, instance.created_on, derived_from_instance, derived_from_state
             FROM instance
-            ORDER BY created_on DESC
-            LIMIT $1
+            JOIN work USING(work_id)
+            WHERE POSITION($1 in work.work_name) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4
             "#,
-            limit
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("instance_id".to_string()),
+            params.limit,
+            params.offset,
         )
         .fetch_all(conn)
         .await
@@ -857,7 +874,7 @@ impl DBModel for Image {
         .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT image_id,
@@ -866,10 +883,15 @@ impl DBModel for Image {
             image_description,
             created_on
             FROM image
-            ORDER BY created_on DESC
-            LIMIT $1
+            WHERE POSITION($1 in image_description) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4
             "#,
-            limit
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("image_id".to_string()),
+            params.limit,
+            params.offset,
         )
         .fetch_all(conn)
         .await
@@ -1047,13 +1069,20 @@ impl DBModel for Environment {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT environment_id, environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on
             FROM environment
-            ORDER BY created_on DESC LIMIT $1"#,
-            limit
+            WHERE POSITION($1 in environment_name) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4
+            "#,
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("environment_name".to_string()),
+            params.limit,
+            params.offset,
         )
             .fetch_all(conn)
             .await
@@ -1194,14 +1223,20 @@ impl DBModel for Object {
         .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT object_id, file_id, object_description, created_on
             FROM object
-            ORDER BY created_on DESC LIMIT $1
+            WHERE POSITION($1 in object_description) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4
             "#,
-            limit
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("object_id".to_string()),
+            params.limit,
+            params.offset,
         )
         .fetch_all(conn)
         .await
@@ -1342,7 +1377,7 @@ impl DBModel for Replay {
         .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT replay_id,
@@ -1353,9 +1388,16 @@ impl DBModel for Replay {
             file_id,
             replay_forked_from,
             created_on
-            FROM replay ORDER BY created_on DESC LIMIT $1
+            FROM replay
+            WHERE POSITION($1 in replay_name) > 0 OR POSITION($1 in replay_description) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4
             "#,
-            limit
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("replay_id".to_string()),
+            params.limit,
+            params.offset,
         )
         .fetch_all(conn)
         .await
@@ -1522,7 +1564,7 @@ impl DBModel for Save {
         .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT
@@ -1533,8 +1575,16 @@ impl DBModel for Save {
             file_id,
             creator_id,
             created_on
-            FROM save ORDER BY created_on DESC LIMIT $1"#,
-            limit
+            FROM save
+            WHERE POSITION($1 in save_short_desc) > 0 OR POSITION($1 in save_description) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4
+            "#,
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("save_id".to_string()),
+            params.limit,
+            params.offset,
         )
         .fetch_all(conn)
         .await
@@ -1712,7 +1762,7 @@ impl DBModel for State {
         .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT state_id,
@@ -1727,9 +1777,16 @@ impl DBModel for State {
             state_replay_index,
             state_derived_from,
             created_on
-            FROM state ORDER BY created_on DESC LIMIT $1
+            FROM state
+            WHERE POSITION($1 in state_name) > 0 OR POSITION($1 in state_description) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4
             "#,
-            limit
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("state_id".to_string()),
+            params.limit,
+            params.offset,
         )
         .fetch_all(conn)
         .await
@@ -1927,14 +1984,23 @@ impl DBModel for Work {
             .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform, created_on, work_derived_from FROM work ORDER BY created_on DESC LIMIT $1"#,
-            limit
+            r#"SELECT work_id, work_name, work_version, work_platform, created_on, work_derived_from
+               FROM work
+               WHERE POSITION($1 in work_name) > 0
+               ORDER BY $2 ASC
+               LIMIT $3
+               OFFSET $4
+            "#,
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("work_name".to_string()),
+            params.limit,
+            params.offset,
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 
     async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, RecordSQLError> {
@@ -2051,11 +2117,17 @@ impl DBModel for Screenshot {
         .await
     }
 
-    async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
+    async fn get_all(conn: &mut PgConnection, params: GetQueryParams) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT screenshot_id, screenshot_data FROM screenshot LIMIT $1"#,
-            limit
+            r#"SELECT screenshot_id, screenshot_data
+               FROM screenshot
+               ORDER BY screenshot_id
+               LIMIT $1
+               OFFSET $2
+            "#,
+            params.limit,
+            params.offset,
         )
         .fetch_all(conn)
         .await
@@ -2115,6 +2187,41 @@ pub fn default_uuid() -> Uuid {
 
 fn utc_datetime_now() -> DateTime<Utc> {
     Utc::now()
+}
+
+#[derive(Debug, Serialize)]
+pub struct InstanceWork {
+    pub work_id: Uuid,
+    pub work_name: String,
+    pub work_version: String,
+    pub work_platform: String,
+    pub instance_id: Uuid,
+}
+
+impl InstanceWork {
+    pub async fn get_all(
+        conn: &mut sqlx::PgConnection,
+        params: GetQueryParams,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"
+            SELECT work.work_id, work.work_name, work.work_version, work.work_platform, instance.instance_id
+            FROM work
+            JOIN instance USING(work_id)
+            WHERE POSITION($1 in work.work_name) > 0
+            ORDER BY $2 ASC
+            LIMIT $3
+            OFFSET $4
+            "#,
+            params.contains.unwrap_or("".to_string()),
+            params.order_by.unwrap_or("work.work_name".to_string()),
+            params.limit,
+            params.offset,
+        )
+        .fetch_all(conn)
+        .await
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -2335,4 +2442,12 @@ pub async fn insert_file_object(
 pub enum Duplicate {
     ReuseObject,
     ReuseData,
+}
+
+#[derive(Deserialize)]
+pub struct GetQueryParams {
+    pub offset: Option<i64>,
+    pub limit: Option<i64>,
+    pub order_by: Option<String>,
+    pub contains: Option<String>,
 }

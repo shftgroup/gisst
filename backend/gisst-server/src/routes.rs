@@ -11,8 +11,8 @@ use axum::{
 };
 use axum_login::RequireAuthorizationLayer;
 use gisst::models::{
-    Creator, DBHashable, DBModel, Environment, File, Image, Instance, Object, Replay, Save, State,
-    Work,
+    Creator, DBHashable, DBModel, Environment, File, GetQueryParams, Image, Instance, InstanceWork,
+    Object, Replay, Save, State, Work,
 };
 use gisst::models::{CreatorReplayInfo, CreatorStateInfo, FileRecordFlatten};
 use gisst::{error::ErrorTable, models::ObjectLink};
@@ -218,17 +218,13 @@ async fn get_single_screenshot(
 }
 
 // ENVIRONMENT method handlers
-#[derive(Deserialize)]
-struct GetQueryParams {
-    limit: Option<i64>,
-}
 
 async fn get_environments(
     app_state: Extension<ServerState>,
     Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Environment>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Ok(environments) = Environment::get_all(&mut conn, params.limit).await {
+    if let Ok(environments) = Environment::get_all(&mut conn, params).await {
         Ok(environments.into())
     } else {
         Ok(Json(vec![]))
@@ -276,7 +272,7 @@ async fn get_images(
     Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Image>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Ok(images) = Image::get_all(&mut conn, params.limit).await {
+    if let Ok(images) = Image::get_all(&mut conn, params).await {
         Ok(images.into())
     } else {
         Ok(Json(vec![]))
@@ -325,12 +321,6 @@ async fn delete_image(
 }
 // INSTANCE method handlers
 
-#[derive(Serialize)]
-struct GetAllInstanceResult {
-    instance: Instance,
-    work: Work,
-}
-
 async fn get_instances(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -338,7 +328,7 @@ async fn get_instances(
     auth: AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let instances: Vec<Instance> = Instance::get_all(&mut conn, params.limit).await?;
+    let instances: Vec<InstanceWork> = InstanceWork::get_all(&mut conn, params).await?;
     let accept: Option<String> = parse_header(&headers, "Accept");
     let user = auth
         .current_user
@@ -348,18 +338,8 @@ async fn get_instances(
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             let instance_listing = app_state.templates.get_template("instance_listing.html")?;
-            let mut instance_results: Vec<GetAllInstanceResult> = Vec::new();
-            for inst in instances {
-                instance_results.push(GetAllInstanceResult {
-                    instance: Instance {
-                        instance_config: inst.instance_config.clone(),
-                        ..inst
-                    },
-                    work: Work::get_by_id(&mut conn, inst.work_id).await?.unwrap(),
-                })
-            }
             Html(instance_listing.render(context!(
-                    instances => instance_results,
+                    instances => instances,
                     user => user,
             ))?)
             .into_response()
@@ -532,7 +512,7 @@ async fn get_objects(
     Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Object>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Ok(objects) = Object::get_all(&mut conn, params.limit).await {
+    if let Ok(objects) = Object::get_all(&mut conn, params).await {
         Ok(objects.into())
     } else {
         Ok(Json(vec![]))
@@ -684,7 +664,7 @@ async fn get_replays(
     Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Replay>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Ok(replays) = Replay::get_all(&mut conn, params.limit).await {
+    if let Ok(replays) = Replay::get_all(&mut conn, params).await {
         Ok(replays.into())
     } else {
         Ok(Json(vec![]))
@@ -765,7 +745,7 @@ async fn get_saves(
     Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Save>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Ok(saves) = Save::get_all(&mut conn, params.limit).await {
+    if let Ok(saves) = Save::get_all(&mut conn, params).await {
         Ok(saves.into())
     } else {
         Ok(Json(vec![]))
@@ -819,7 +799,7 @@ async fn get_states(
     Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<State>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Ok(states) = State::get_all(&mut conn, params.limit).await {
+    if let Ok(states) = State::get_all(&mut conn, params).await {
         Ok(states.into())
     } else {
         Ok(Json(vec![]))
@@ -911,7 +891,7 @@ async fn get_works(
     Query(params): Query<GetQueryParams>,
 ) -> Result<Json<Vec<Work>>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    if let Ok(works) = Work::get_all(&mut conn, params.limit).await {
+    if let Ok(works) = Work::get_all(&mut conn, params).await {
         Ok(works.into())
     } else {
         Ok(Json(vec![]))
