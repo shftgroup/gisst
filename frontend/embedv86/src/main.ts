@@ -3,7 +3,7 @@ export interface StateInfo {
   name:string;
   thumbnail:string;
 }
-export {ReplayMode} from './v86replay';
+export {ReplayMode,Evt,ReplayEvent} from './v86replay';
 export interface EmbedV86Config {
   wasm_root:string;
   bios_root:string;
@@ -218,7 +218,6 @@ export class EmbedV86 {
     this.emulator.emulator_bus.register("keyboard-code", (k:number) => this.replay_log(Evt.KeyCode,k));
     this.emulator.emulator_bus.register("mouse-click", (v:[boolean,boolean,boolean]) => this.replay_log(Evt.MouseClick,v));
     this.emulator.emulator_bus.register("mouse-delta", (delta:[number,number]) => this.replay_log(Evt.MouseDelta,delta));
-    this.emulator.emulator_bus.register("mouse-absolute", (pos:[number,number,number,number]) => this.replay_log(Evt.MouseAbsolute,pos));
     this.emulator.emulator_bus.register("mouse-wheel", (delta:[number,number]) => this.replay_log(Evt.MouseWheel, delta));
     this.emulator.bus.register("emulator-ticked", () => this.replay_tick());
     return new Promise(resolve => {

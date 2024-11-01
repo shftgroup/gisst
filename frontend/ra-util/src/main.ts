@@ -27,7 +27,7 @@ export function replay_of_state(raw_bytes:Uint8Array):ReplayInfo|null {
   const magic = new Uint8Array(data, 0, 7);
   if(!magic.every((x,j) => x == RASTATE_MAGIC.charCodeAt(j)) || raw_bytes[7] != 1) {
     console.log(Array.from(magic).map((x) => String.fromCharCode(x)), raw_bytes[7]);
-    throw "Not an RASTATE1 format file";
+    throw new Error("Not an RASTATE1 format file");
   }
   let i = 8;
   while(i < data.byteLength) {

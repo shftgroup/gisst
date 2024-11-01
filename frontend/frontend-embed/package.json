@@ -19,10 +19,10 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^6.2.1",
-    "@typescript-eslint/parser": "^6.2.1",
+    "@typescript-eslint/eslint-plugin": "^8.12.2",
+    "@typescript-eslint/parser": "^8.12.2",
     "coffeescript": "^2.7.0",
-    "eslint": "^8.46.0",
+    "eslint": "^9.13.0",
     "rollup-plugin-sourcemaps": "0.6.3",
     "typescript": "^4.9.5",
     "vite": "^4.1.0",

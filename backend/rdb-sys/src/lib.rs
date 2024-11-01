@@ -46,8 +46,8 @@ pub struct RMap {
 
 #[repr(C)]
 pub struct RPair {
-    pub key: RVal,
-    pub val: RVal,
+    pub key: ManuallyDrop<RVal>,
+    pub val: ManuallyDrop<RVal>,
 }
 
 #[repr(C)]
@@ -65,6 +65,23 @@ pub union RValInner {
 pub struct RVal {
     pub value: RValInner,
     pub tag: RType,
+}
+
+impl Default for RVal {
+    fn default() -> Self {
+        Self {
+            tag: RType::Null,
+            value: RValInner { int_: 0 },
+        }
+    }
+}
+
+impl Drop for RVal {
+    fn drop(&mut self) {
+        unsafe {
+            rmsgpack_dom_value_free(self);
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -142,8 +159,8 @@ impl std::fmt::Display for RVal {
                 write!(f, "{{")?;
                 let map = unsafe { &self.value.map };
                 for idx in 0..map.len {
-                    let pair = unsafe { map.buf.add(idx as usize).read() };
-                    write!(f, "{}: {}, ", pair.key, pair.val)?;
+                    let pair = unsafe { ManuallyDrop::new(map.buf.add(idx as usize).read()) };
+                    write!(f, "{}: {}, ", &*pair.key, &*pair.val)?;
                 }
                 write!(f, "}}")
             }
@@ -151,8 +168,8 @@ impl std::fmt::Display for RVal {
                 write!(f, "[")?;
                 let arr = unsafe { &self.value.arr };
                 for idx in 0..arr.len {
-                    let val = unsafe { arr.buf.add(idx as usize).read() };
-                    write!(f, "{}, ", val)?;
+                    let val = unsafe { ManuallyDrop::new(arr.buf.add(idx as usize).read()) };
+                    write!(f, "{}, ", &*val)?;
                 }
                 write!(f, "]")
             }
@@ -165,20 +182,27 @@ impl RVal {
         K: Into<RVal>,
         V: for<'a> TryFrom<&'a RVal>,
     {
+        // This one makes a copy so it can be safely dropped
+        let key: RVal = key.into();
+        self.map_get_rval(&key)
+    }
+    pub fn map_get_rval<V>(&self, key: &RVal) -> Option<V>
+    where
+        V: for<'a> TryFrom<&'a RVal>,
+    {
         if self.tag != RType::Map {
             return None;
         }
-        let mut key: RVal = key.into();
-        let ret = unsafe { rmsgpack_dom_value_map_value(self, &key) };
-        unsafe { rmsgpack_dom_value_free(&mut key) };
+        let ret = unsafe { rmsgpack_dom_value_map_value(self, key) };
         if ret.is_null() {
             return None;
         }
-        Some(
-            unsafe { &ret.read() }
+        Some({
+            let ret: ManuallyDrop<RVal> = std::mem::ManuallyDrop::new(unsafe { ret.read() });
+            (&*ret)
                 .try_into()
-                .unwrap_or_else(|_e| panic!("Invalid type conversion from rval")),
-        )
+                .unwrap_or_else(|_e| panic!("Invalid type conversion from rval"))
+        })
     }
 }
 
@@ -237,5 +261,97 @@ impl TryFrom<&RVal> for &str {
             )
         };
         std::str::from_utf8(slc).map_err(|_| ())
+    }
+}
+
+impl TryFrom<&RVal> for &[u8] {
+    type Error = ();
+
+    fn try_from(value: &RVal) -> Result<Self, Self::Error> {
+        if value.tag != RType::Binary {
+            return Err(());
+        }
+        Ok(unsafe {
+            std::slice::from_raw_parts(
+                value.value.bin_.buf as *const u8,
+                value.value.bin_.len as usize,
+            )
+        })
+    }
+}
+
+pub enum RDBError {
+    IO,
+    Path,
+}
+
+pub struct RDB(*mut RetroDB);
+unsafe impl Send for RDB {}
+unsafe impl Sync for RDB {}
+impl RDB {
+    pub fn open(path: &std::path::Path) -> Result<Self, RDBError> {
+        let path = path.as_os_str();
+        let path = std::ffi::CString::new(path.as_encoded_bytes()).map_err(|_| RDBError::Path)?;
+        let db: *mut RetroDB = unsafe { libretrodb_new() };
+        if unsafe { libretrodb_open(path.as_ptr(), db) == 0 } {
+            Ok(Self(db))
+        } else {
+            Err(RDBError::IO)
+        }
+    }
+    pub fn open_cursor(&self) -> Option<Cursor> {
+        unsafe {
+            let cursor = libretrodb_cursor_new();
+            if libretrodb_cursor_open(self.0, cursor, std::ptr::null()) != 0 {
+                return None;
+            }
+            Some(Cursor(cursor))
+        }
+    }
+    pub fn find_entry<K, V>(&self, key: K, val: V) -> Option<RVal>
+    where
+        K: Into<RVal>,
+        V: for<'a> TryFrom<&'a RVal> + std::cmp::PartialEq,
+    {
+        let mut cursor = self.open_cursor()?;
+        let key: RVal = key.into();
+        while let Some(rval) = cursor.next() {
+            if rval
+                .map_get_rval::<V>(&key)
+                .map(|v| v == val)
+                .unwrap_or(false)
+            {
+                return Some(rval);
+            }
+        }
+        None
+    }
+}
+impl Drop for RDB {
+    fn drop(&mut self) {
+        unsafe {
+            libretrodb_close(self.0);
+            libretrodb_free(self.0);
+        }
+    }
+}
+
+pub struct Cursor(*mut RetroCursor);
+impl Cursor {
+    fn next(&mut self) -> Option<RVal> {
+        let mut rval = RVal::default();
+        if unsafe { libretrodb_cursor_read_item(self.0, &mut rval) == 0 } {
+            Some(rval)
+        } else {
+            None
+        }
+    }
+}
+impl Drop for Cursor {
+    fn drop(&mut self) {
+        unsafe {
+            libretrodb_cursor_close(self.0);
+            libretrodb_cursor_free(self.0);
+        }
     }
 }

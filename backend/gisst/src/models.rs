@@ -211,6 +211,7 @@ pub struct Work {
     pub work_platform: String,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub work_derived_from: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1919,7 +1920,7 @@ impl DBModel for Work {
     async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_id = $1"#,
+            r#"SELECT work_id, work_name, work_version, work_platform, created_on, work_derived_from FROM work WHERE work_id = $1"#,
             id
         )
             .fetch_optional(conn)
@@ -1929,7 +1930,7 @@ impl DBModel for Work {
     async fn get_all(conn: &mut PgConnection, limit: Option<i64>) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform, created_on FROM work ORDER BY created_on DESC LIMIT $1"#,
+            r#"SELECT work_id, work_name, work_version, work_platform, created_on, work_derived_from FROM work ORDER BY created_on DESC LIMIT $1"#,
             limit
         )
             .fetch_all(conn)
@@ -1942,15 +1943,16 @@ impl DBModel for Work {
         sqlx::query_as!(
             Work,
             r#"INSERT INTO work (
-            work_id, work_name, work_version, work_platform, created_on )
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING work_id, work_name, work_version, work_platform, created_on
+            work_id, work_name, work_version, work_platform, created_on, work_derived_from )
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING work_id, work_name, work_version, work_platform, created_on, work_derived_from
             "#,
             work.work_id,
             work.work_name,
             work.work_version,
             work.work_platform,
             work.created_on,
+            work.work_derived_from
         )
         .fetch_one(conn)
         .await
@@ -1965,15 +1967,16 @@ impl DBModel for Work {
         sqlx::query_as!(
             Work,
             r#"UPDATE work SET
-            (work_name, work_version, work_platform, created_on) =
-            ($1, $2, $3, $4)
-            WHERE work_id = $5
-            RETURNING work_id, work_name, work_version, work_platform, created_on"#,
+            (work_name, work_version, work_platform, created_on, work_derived_from) =
+            ($1, $2, $3, $4, $5)
+            WHERE work_id = $6
+            RETURNING work_id, work_name, work_version, work_platform, created_on, work_derived_from"#,
             work.work_name,
             work.work_version,
             work.work_platform,
             work.created_on,
-            work.work_id,
+            work.work_derived_from,
+            work.work_id
         )
         .fetch_one(conn)
         .await
@@ -1995,7 +1998,7 @@ impl Work {
     pub async fn get_by_name(conn: &mut PgConnection, name: &str) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_name = $1"#,
+            r#"SELECT work_id, work_name, work_version, work_platform, created_on, work_derived_from FROM work WHERE work_name = $1"#,
             name
         )
             .fetch_all(conn)
@@ -2008,7 +2011,7 @@ impl Work {
     ) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_platform = $1"#,
+            r#"SELECT work_id, work_name, work_version, work_platform, created_on, work_derived_from FROM work WHERE work_platform = $1"#,
             platform
         )
             .fetch_all(conn)
@@ -2237,4 +2240,99 @@ impl StateLink {
         .fetch_optional(conn)
         .await
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn insert_file_object(
+    conn: &mut sqlx::PgConnection,
+    storage_root: &str,
+    depth: u8,
+    path: &std::path::Path,
+    filename_override: Option<String>,
+    object_description: Option<String>,
+    file_source_path: String,
+    duplicate: Duplicate,
+) -> Result<Uuid, crate::error::InsertFileError> {
+    use crate::error::InsertFileError;
+    use crate::storage::StorageHandler;
+    use tracing::info;
+    let file_name = filename_override
+        .unwrap_or_else(|| path.file_name().unwrap().to_string_lossy().to_string());
+    let created_on = chrono::Utc::now();
+    let file_size = std::fs::metadata(path)?.len() as i64;
+    let hash = StorageHandler::get_file_hash(path)?;
+    if let Some(file_info) = File::get_by_hash(conn, &hash).await? {
+        let object_id = match duplicate {
+            Duplicate::ReuseData => {
+                info!("adding duplicate file record for {path:?}");
+                let file_id = Uuid::new_v4();
+                let file_record = File {
+                    file_id,
+                    file_hash: file_info.file_hash,
+                    file_filename: file_name,
+                    file_source_path,
+                    file_dest_path: file_info.file_dest_path,
+                    file_size: file_info.file_size,
+                    created_on,
+                };
+                File::insert(conn, file_record).await?;
+                let object_id = Uuid::new_v4();
+                let object = Object {
+                    object_id,
+                    file_id,
+                    object_description,
+                    created_on,
+                };
+                Object::insert(conn, object).await?;
+                Some(object_id)
+            }
+            Duplicate::ReuseObject => {
+                info!("skipping duplicate record for {path:?}, reusing object");
+                Object::get_by_hash(conn, &file_info.file_hash)
+                    .await?
+                    .map(|o| o.object_id)
+            }
+        };
+        object_id.ok_or(InsertFileError::ObjectMissing(hash))
+    } else {
+        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let file_uuid = Uuid::new_v4();
+        info!("Do write file {file_name}");
+        let file_info = StorageHandler::write_file_to_uuid_folder(
+            storage_root,
+            depth,
+            file_uuid,
+            &file_name,
+            path,
+        )
+        .await?;
+        info!(
+            "Wrote file {} to {}",
+            file_info.dest_filename, file_info.dest_path
+        );
+        let file_record = File {
+            file_id: file_uuid,
+            file_hash: file_info.file_hash,
+            file_filename: file_info.source_filename,
+            file_source_path,
+            file_dest_path: file_info.dest_path,
+            file_size,
+            created_on,
+        };
+        File::insert(conn, file_record).await?;
+        let object_id = Uuid::new_v4();
+        let object = Object {
+            object_id,
+            file_id: file_uuid,
+            object_description,
+            created_on,
+        };
+        Object::insert(conn, object).await?;
+        Ok(object_id)
+    }
+}
+
+pub enum Duplicate {
+    ReuseObject,
+    ReuseData,
 }
