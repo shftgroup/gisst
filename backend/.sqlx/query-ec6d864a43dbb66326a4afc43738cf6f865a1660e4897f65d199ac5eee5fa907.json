@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_platform = $1",
+  "query": "INSERT INTO work (\n            work_id, work_name, work_version, work_platform, created_on, work_derived_from )\n            VALUES ($1, $2, $3, $4, $5, $6)\n            RETURNING work_id, work_name, work_version, work_platform, created_on, work_derived_from\n            ",
   "describe": {
     "columns": [
       {
@@ -27,11 +27,21 @@
         "ordinal": 4,
         "name": "created_on",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "work_derived_from",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Uuid"
       ]
     },
     "nullable": [
@@ -39,8 +49,9 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "895356354ae97451b97f4da3ccc99ae90f6fdd01091c5537e82f246b9d837cd8"
+  "hash": "ec6d864a43dbb66326a4afc43738cf6f865a1660e4897f65d199ac5eee5fa907"
 }

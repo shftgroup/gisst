@@ -144,3 +144,17 @@ pub enum V86CloneError {
     #[error("incomplete clone for {0}")]
     IncompleteClone(Uuid),
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum InsertFileError {
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
+    #[error("Invalid or missing duplicated object for file hash {0}")]
+    ObjectMissing(String),
+    #[error("database error")]
+    Sql(#[from] sqlx::Error),
+    #[error("record error")]
+    Record(#[from] RecordSQLError),
+    #[error("storage error")]
+    Storage(#[from] crate::error::StorageError),
+}

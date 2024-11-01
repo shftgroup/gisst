@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id, work_name, work_version, work_platform, created_on FROM work WHERE work_id = $1",
+  "query": "SELECT work_id, work_name, work_version, work_platform, created_on, work_derived_from FROM work WHERE work_platform = $1",
   "describe": {
     "columns": [
       {
@@ -27,11 +27,16 @@
         "ordinal": 4,
         "name": "created_on",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "work_derived_from",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Text"
       ]
     },
     "nullable": [
@@ -39,8 +44,9 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "966e65d1c5a8bc763a00dd1110ccc483de0b44bf1281e9a4e17782e2f2188229"
+  "hash": "2b8bfc32db03021f04205163e388dd653cd87d36ba02b268a9cfca3e2bb55aa6"
 }

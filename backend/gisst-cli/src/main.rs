@@ -7,13 +7,13 @@ use anyhow::Result;
 use args::{
     BaseSubcommand, Commands, CreateCreator, CreateEnvironment, CreateImage, CreateInstance,
     CreateObject, CreateReplay, CreateSave, CreateState, CreateWork, DeleteRecord, GISSTCli,
-    GISSTCliError,
+    GISSTCliError, PatchData,
 };
 use clap::Parser;
 use gisst::{
     models::{
-        Creator, DBHashable, DBModel, Environment, Image, Instance, Object, ObjectRole, Replay,
-        Save, Screenshot, State, Work,
+        insert_file_object, Creator, DBHashable, DBModel, Environment, Image, Instance, Object,
+        ObjectRole, Replay, Save, Screenshot, State, Work,
     },
     storage::StorageHandler,
 };
@@ -137,6 +137,13 @@ async fn main() -> Result<(), GISSTCliError> {
         } => {
             clone_v86_machine(db, instance, state, storage_root, depth).await?;
         }
+        Commands::AddPatch {
+            instance,
+            data,
+            depth,
+        } => {
+            add_patched_instance(db, instance, data, storage_root, depth).await?;
+        }
     }
     Ok(())
 }
@@ -153,6 +160,89 @@ async fn clone_v86_machine(
         gisst::v86clone::clone_v86_machine(&mut conn, instance_id, state_id, &storage_root, depth)
             .await?;
     Ok(uuid)
+}
+
+/// Returns the new work and instance created for this hack
+async fn add_patched_instance(
+    db: PgPool,
+    instance_id: Uuid,
+    patch_file: String,
+    storage_root: String,
+    depth: u8,
+) -> Result<(Uuid, Uuid), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    let inst = Instance::get_by_id(&mut conn, instance_id)
+        .await?
+        .ok_or(GISSTCliError::RecordNotFound(instance_id))?;
+    let work = Work::get_by_id(&mut conn, inst.work_id)
+        .await?
+        .ok_or(GISSTCliError::RecordNotFound(inst.work_id))?;
+    let derived_inst_id = Uuid::new_v4();
+    let derived_work_id = Uuid::new_v4();
+    let now = chrono::Utc::now();
+    let data: PatchData = {
+        let json_data = fs::read_to_string(&patch_file).map_err(GISSTCliError::Io)?;
+        serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?
+    };
+    let new_inst = Instance {
+        instance_id: derived_inst_id,
+        work_id: derived_work_id,
+        derived_from_instance: Some(instance_id),
+        created_on: now,
+        ..inst
+    };
+    let new_work = Work {
+        work_id: derived_work_id,
+        work_derived_from: Some(inst.work_id),
+        created_on: now,
+        work_version: data.version,
+        work_name: data.name,
+        work_platform: work.work_platform,
+    };
+    Work::insert(&mut conn, new_work).await?;
+    Instance::insert(&mut conn, new_inst).await?;
+    let patch_root = Path::new(&patch_file).parent().unwrap_or(Path::new(""));
+    for link in gisst::models::ObjectLink::get_all_for_instance_id(&mut conn, instance_id).await? {
+        if link.object_role == ObjectRole::Content
+            && data
+                .files
+                .get(link.object_role_index as usize)
+                .map(String::as_str)
+                .unwrap_or("")
+                != ""
+        {
+            let patch = Path::new(&data.files[link.object_role_index as usize]);
+            let object_id = insert_file_object(
+                &mut conn,
+                &storage_root,
+                depth,
+                &patch_root.join(patch),
+                Some(link.file_filename),
+                None,
+                link.file_source_path,
+                gisst::models::Duplicate::ReuseData,
+            )
+            .await?;
+            Object::link_object_to_instance(
+                &mut conn,
+                object_id,
+                derived_inst_id,
+                ObjectRole::Content,
+                link.object_role_index as usize,
+            )
+            .await?;
+        } else {
+            Object::link_object_to_instance(
+                &mut conn,
+                link.object_id,
+                derived_inst_id,
+                link.object_role,
+                link.object_role_index as usize,
+            )
+            .await?;
+        }
+    }
+    Ok((derived_work_id, derived_inst_id))
 }
 
 async fn link_record(

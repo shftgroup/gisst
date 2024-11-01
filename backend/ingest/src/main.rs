@@ -5,14 +5,18 @@ use clap::Parser;
 use clap_verbosity_flag::Verbosity;
 use gisst::{
     model_enums::Framework,
-    models::{DBHashable, DBModel, Environment, File as GFile, Instance, Object, ObjectRole, Work},
-    storage::StorageHandler,
+    models::{
+        insert_file_object, DBHashable, DBModel, Duplicate, Environment, File as GFile, Instance,
+        Object, ObjectRole, Work,
+    },
 };
 use log::{error, info, warn};
 use rdb_sys::*;
 use sqlx::pool::PoolOptions;
 use sqlx::PgPool;
 use uuid::Uuid;
+
+const DEPTH: u8 = 4;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -75,90 +79,7 @@ pub enum IngestError {
     #[error("file metadata error")]
     File(),
     #[error("file insertion error")]
-    InsertFile(),
-}
-
-enum Duplicate {
-    ReuseObject,
-    ReuseData,
-}
-
-async fn insert_file_object(
-    conn: &mut sqlx::PgConnection,
-    storage_root: &str,
-    path: &std::path::Path,
-    object_description: Option<String>,
-    file_source_path: String,
-    duplicate: Duplicate,
-) -> Result<Uuid, IngestError> {
-    let created_on = chrono::Utc::now();
-    let file_size = std::fs::metadata(path)?.len() as i64;
-    let hash = StorageHandler::get_file_hash(path)?;
-    if let Some(file_info) = GFile::get_by_hash(conn, &hash).await? {
-        let object_id = match duplicate {
-            Duplicate::ReuseData => {
-                info!("adding duplicate file record for {path:?}");
-                let file_name = path.file_name().unwrap().to_string_lossy().to_string();
-                let file_id = Uuid::new_v4();
-                let file_record = GFile {
-                    file_id,
-                    file_hash: file_info.file_hash,
-                    file_filename: file_name,
-                    file_source_path,
-                    file_dest_path: file_info.file_dest_path,
-                    file_size: file_info.file_size,
-                    created_on,
-                };
-                GFile::insert(conn, file_record).await?;
-                let object_id = Uuid::new_v4();
-                let object = Object {
-                    object_id,
-                    file_id,
-                    object_description,
-                    created_on,
-                };
-                Object::insert(conn, object).await?;
-                Some(object_id)
-            }
-            Duplicate::ReuseObject => {
-                info!("skipping duplicate record for {path:?}, reusing object");
-                Object::get_by_hash(conn, &file_info.file_hash)
-                    .await?
-                    .map(|o| o.object_id)
-            }
-        };
-        object_id.ok_or(IngestError::InsertFile())
-    } else {
-        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
-        let file_uuid = Uuid::new_v4();
-        info!("Do write file {file_name}");
-        let file_info =
-            StorageHandler::write_file_to_uuid_folder(storage_root, 4, file_uuid, &file_name, path)
-                .await?;
-        info!(
-            "Wrote file {} to {}",
-            file_info.dest_filename, file_info.dest_path
-        );
-        let file_record = GFile {
-            file_id: file_uuid,
-            file_hash: file_info.file_hash,
-            file_filename: file_info.source_filename,
-            file_source_path,
-            file_dest_path: file_info.dest_path,
-            file_size,
-            created_on,
-        };
-        GFile::insert(conn, file_record).await?;
-        let object_id = Uuid::new_v4();
-        let object = Object {
-            object_id,
-            file_id: file_uuid,
-            object_description,
-            created_on,
-        };
-        Object::insert(conn, object).await?;
-        Ok(object_id)
-    }
+    InsertFile(#[from] gisst::error::InsertFileError),
 }
 
 #[tokio::main]
@@ -189,7 +110,9 @@ async fn main() -> Result<(), IngestError> {
     let ra_cfg_object_id = insert_file_object(
         &mut base_conn,
         &storage_root,
+        DEPTH,
         std::path::Path::new(&ra_cfg),
+        Some("retroarch.cfg".to_string()),
         Some("base retroarch config".to_string()),
         String::new(),
         Duplicate::ReuseObject,
@@ -203,7 +126,9 @@ async fn main() -> Result<(), IngestError> {
         let dep_id = insert_file_object(
             &mut base_conn,
             &storage_root,
+            DEPTH,
             dep,
+            None,
             Some(dep_path.clone()),
             dep_path.clone(),
             Duplicate::ReuseObject,
@@ -460,6 +385,7 @@ async fn create_metadata_records(
         work_platform: platform.to_string(),
         // TODO this should use the real cataloguing data
         created_on,
+        work_derived_from: None,
     };
     info!("creating work {} with file {file_name}", work.work_name);
     let env = Environment {
@@ -499,7 +425,9 @@ async fn create_single_file_instance_objects(
     let object_id = insert_file_object(
         conn,
         storage_root,
+        DEPTH,
         path,
+        None,
         desc,
         path.strip_prefix(roms)
             .unwrap()
@@ -532,7 +460,9 @@ async fn create_playlist_instance_objects(
     let playlist_id = insert_file_object(
         conn,
         storage_root,
+        DEPTH,
         path,
+        None,
         desc.clone(),
         src_path.clone(),
         Duplicate::ReuseData,
@@ -544,7 +474,9 @@ async fn create_playlist_instance_objects(
         let file_id = insert_file_object(
             conn,
             storage_root,
+            DEPTH,
             &file,
+            None,
             desc.clone(),
             src_path.clone(),
             Duplicate::ReuseData,

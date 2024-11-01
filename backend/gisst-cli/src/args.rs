@@ -44,6 +44,8 @@ pub enum GISSTCliError {
     InvalidRecordType(String),
     #[error("v86 clone error")]
     V86CloneError(#[from] gisst::error::V86CloneError),
+    #[error("insert file error")]
+    InsertFileError(#[from] gisst::error::InsertFileError),
 }
 
 #[derive(Debug, Parser)]
@@ -137,6 +139,16 @@ pub enum Commands {
     CloneV86 {
         instance: Uuid,
         state: Uuid,
+        #[arg(default_value_t = 4)]
+        depth: u8,
+    },
+
+    /// Derives a new work and instance for a romhack or other patched instance, using the existing objects plus some patches
+    AddPatch {
+        /// The instance to clone and patch along with its work
+        instance: Uuid,
+        /// A JSON file containing PatchData for the new work
+        data: String,
         #[arg(default_value_t = 4)]
         depth: u8,
     },
@@ -431,3 +443,10 @@ pub struct CreateScreenshot {
 pub struct UpdateScreenshot {}
 #[derive(Debug, Args)]
 pub struct ExportScreenshot {}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct PatchData {
+    pub version: String,
+    pub name: String,
+    pub files: Vec<String>,
+}
