@@ -338,30 +338,6 @@ impl Creator {
         .await
     }
 
-    pub async fn get_all(
-        conn: &mut PgConnection,
-        params: GetQueryParams,
-    ) -> sqlx::Result<Vec<Self>> {
-        sqlx::query_as!(
-            Self,
-            r#"SELECT creator_id,
-            creator_username,
-            creator_full_name,
-            created_on
-            FROM creator
-            WHERE POSITION($1 in creator_username) > 0 OR POSITION($1 in creator_full_name) > 0
-            ORDER BY $2 ASC
-            LIMIT $3
-            OFFSET $4"#,
-            params.contains.unwrap_or("".to_string()),
-            params.order_by.unwrap_or("creator_username".to_string()),
-            params.limit,
-            params.offset
-        )
-        .fetch_all(conn)
-        .await
-    }
-
     pub async fn insert(conn: &mut PgConnection, model: Creator) -> Result<Self, RecordSQLError> {
         sqlx::query_as!(
             Self,
@@ -1153,26 +1129,43 @@ pub struct InstanceWork {
 impl InstanceWork {
     pub async fn get_all(
         conn: &mut sqlx::PgConnection,
-        params: GetQueryParams,
+        containing: Option<String>,
+        platform: Option<String>,
+        start_from: usize,
+        limit: usize,
     ) -> sqlx::Result<Vec<Self>> {
-        sqlx::query_as!(
+        if let Some(platform) = platform {
+            sqlx::query_as!(
             Self,
             r#"
-            SELECT work.work_id, work.work_name, work.work_version, work.work_platform, instance.instance_id
-            FROM work
-            JOIN instance USING(work_id)
-            WHERE POSITION($1 in work.work_name) > 0
-            ORDER BY $2 ASC
-            LIMIT $3
-            OFFSET $4
+            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!"
+            FROM instanceWork
+            WHERE row_num >= $1 AND f_unaccent(work_name) ILIKE ('%' || f_unaccent($2) || '%') AND work_platform ILIKE ('%' || f_unaccent($3) || '%')
+            ORDER BY row_num ASC
+            LIMIT $4
             "#,
-            params.contains.unwrap_or("".to_string()),
-            params.order_by.unwrap_or("work.work_name".to_string()),
-            params.limit,
-            params.offset,
-        )
-        .fetch_all(conn)
+            start_from as i64,
+            containing.unwrap_or("".to_string()),
+            platform,
+            limit as i64
+        )        .fetch_all(conn)
         .await
+        } else {
+            sqlx::query_as!(
+            Self,
+            r#"
+            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!"
+            FROM instanceWork
+            WHERE row_num >= $1 AND f_unaccent(work_name) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY row_num ASC
+            LIMIT $3
+            "#,
+            start_from as i64,
+            containing.unwrap_or("".to_string()),
+            limit as i64
+        )                    .fetch_all(conn)
+        .await
+        }
     }
 }
 
@@ -1394,12 +1387,4 @@ pub async fn insert_file_object(
 pub enum Duplicate {
     ReuseObject,
     ReuseData,
-}
-
-#[derive(Deserialize)]
-pub struct GetQueryParams {
-    pub offset: Option<i64>,
-    pub limit: Option<i64>,
-    pub order_by: Option<String>,
-    pub contains: Option<String>,
 }

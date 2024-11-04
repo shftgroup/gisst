@@ -10,8 +10,7 @@ use axum::{
 };
 use axum_login::RequireAuthorizationLayer;
 use gisst::models::{
-    Creator, Environment, File, GetQueryParams, Instance, InstanceWork, Object, Replay, Save,
-    State, Work,
+    Creator, Environment, File, Instance, InstanceWork, Object, Replay, Save, State, Work,
 };
 use gisst::models::{CreatorReplayInfo, CreatorStateInfo, FileRecordFlatten};
 use gisst::{error::ErrorTable, models::ObjectLink};
@@ -168,6 +167,13 @@ async fn get_single_screenshot(
 
 // INSTANCE method handlers
 
+#[derive(Deserialize)]
+struct GetQueryParams {
+    offset: Option<usize>,
+    limit: Option<usize>,
+    contains: Option<String>,
+    platform: Option<String>,
+}
 async fn get_instances(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -175,7 +181,14 @@ async fn get_instances(
     auth: AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let instances: Vec<InstanceWork> = InstanceWork::get_all(&mut conn, params).await?;
+    let instances: Vec<InstanceWork> = InstanceWork::get_all(
+        &mut conn,
+        params.contains,
+        params.platform,
+        params.offset.unwrap_or(0),
+        params.limit.unwrap_or(100),
+    )
+    .await?;
     let accept: Option<String> = parse_header(&headers, "Accept");
     let user = auth
         .current_user
