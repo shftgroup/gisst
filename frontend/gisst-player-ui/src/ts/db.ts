@@ -32,23 +32,6 @@ export class GISSTDBConnector {
         })
     }
 
-    async getRecords(record_type: string, limit: number): Promise<GetRecordsResponse> {
-        return fetch(
-            `${this.repo_url}/${record_type}s/` + new URLSearchParams({limit: limit.toString()}),
-            {
-                method: 'GET',
-                headers: {
-                    Accept: 'application/json'
-                },
-            }
-        ).then(response => {
-            if(!response.ok) {
-                throw new Error(response.statusText)
-            }
-            return response.json() as Promise<GetRecordsResponse>
-        })
-    }
-
     async uploadRecord(record: DBRecord, record_type: string): Promise<DBRecord> {
         return fetch(
             `${this.repo_url}/${record_type}s/create`,

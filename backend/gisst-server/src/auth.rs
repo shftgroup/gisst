@@ -7,30 +7,30 @@ use axum::{
     response::{IntoResponse, Redirect},
     Extension,
 };
-use gisst::models::{Creator, DBModel};
+use gisst::models::Creator;
 
 use uuid::Uuid;
 
-use axum_login::axum_sessions::extractors::{ReadableSession};
+use axum_login::axum_sessions::extractors::ReadableSession;
 use axum_login::{secrecy::SecretVec, AuthUser, UserStore};
 use chrono::Utc;
 use sqlx::{PgConnection, PgPool};
 
 use crate::error::GISSTError;
 use crate::server::ServerState;
+#[cfg(not(feature = "dummy_auth"))]
+use oauth2::Scope;
 use oauth2::{
     basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
     ClientSecret, CsrfToken, RedirectUrl, TokenResponse, TokenUrl,
 };
-#[cfg(not(feature="dummy_auth"))]
-use oauth2::Scope;
 
-#[cfg(not(feature="dummy_auth"))]
+#[cfg(not(feature = "dummy_auth"))]
 use axum_login::axum_sessions::extractors::WritableSession;
 
-use serde::Deserialize;
-use tracing::{debug,info,warn};
 use crate::error::GISSTError::{AuthTokenResponseError, AuthUserNotPermittedError};
+use serde::Deserialize;
+use tracing::{debug, info, warn};
 
 // User attributes based on OpenID specification for "userinfo"
 #[derive(Debug, Default, Clone, sqlx::FromRow)]
@@ -238,8 +238,8 @@ pub async fn oauth_callback_handler(
 
     if let Some(email) = profile.email.as_ref() {
         debug!("Comparing {email} ");
-        if state.user_whitelist.binary_search(email).is_err(){
-            return Err(AuthUserNotPermittedError)
+        if state.user_whitelist.binary_search(email).is_err() {
+            return Err(AuthUserNotPermittedError);
         }
     }
 
@@ -281,12 +281,16 @@ async fn auth_get_user(
                 creator_username: profile
                     .email
                     .as_ref()
-                    .ok_or(GISSTError::AuthMissingProfileInfoError { field: "email".to_string() })?
+                    .ok_or(GISSTError::AuthMissingProfileInfoError {
+                        field: "email".to_string(),
+                    })?
                     .clone(),
                 creator_full_name: profile
                     .given_name
                     .as_ref()
-                    .ok_or(GISSTError::AuthMissingProfileInfoError { field: "given_name".to_string() })?
+                    .ok_or(GISSTError::AuthMissingProfileInfoError {
+                        field: "given_name".to_string(),
+                    })?
                     .clone(),
                 created_on: Utc::now(),
             },
@@ -339,7 +343,9 @@ pub async fn login_handler(
 ) -> Result<impl IntoResponse, GISSTError> {
     let dummy = OpenIDUserInfo::test_user();
     let user = auth_get_user(state.pool, &dummy, "verysecret").await?;
-    auth.login(&user).await.map_err(GISSTError::AuthUserSerdeLoginError)?;
+    auth.login(&user)
+        .await
+        .map_err(GISSTError::AuthUserSerdeLoginError)?;
     debug!("Logged in the user: {user:?}");
     Ok(Redirect::to("/instances"))
 }

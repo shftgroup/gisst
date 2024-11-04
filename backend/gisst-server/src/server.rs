@@ -1,15 +1,13 @@
 use crate::error::GISSTError;
-use gisst::models::{
-    DBModel, Environment, Instance, ObjectLink, ReplayLink, Save, StateLink, Work,
-};
+use gisst::models::{Environment, Instance, ObjectLink, ReplayLink, Save, StateLink, Work};
 use std::collections::HashMap;
 use tower::ServiceBuilder;
 
 use crate::{
     auth, db,
     routes::{
-        creator_router, environment_router, image_router, instance_router, object_router,
-        replay_router, save_router, state_router, work_router,
+        creator_router, instance_router, object_router, replay_router, save_router, state_router,
+        work_router,
     },
     serverconfig::ServerConfig,
     tus::{tus_creation, tus_head, tus_patch},
@@ -138,9 +136,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/logout", get(auth::logout_handler))
         //.route("/debug/tus_test", get(get_upload_form))
         .nest("/creators", creator_router())
-        .nest("/environments", environment_router())
         .nest("/instances", instance_router())
-        .nest("/images", image_router())
         .nest("/replays", replay_router())
         .nest("/saves", save_router())
         .nest("/screenshots", screenshot_router())

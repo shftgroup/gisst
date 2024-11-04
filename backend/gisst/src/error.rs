@@ -27,9 +27,7 @@ impl fmt::Display for ErrorAction {
 pub enum ErrorTable {
     Creator,
     Environment,
-    EnvironmentImage,
     File,
-    Image,
     Instance,
     InstanceObject,
     Object,
@@ -46,9 +44,7 @@ impl fmt::Display for ErrorTable {
         let s = match self {
             ErrorTable::Creator => "creator",
             ErrorTable::Environment => "environment",
-            ErrorTable::EnvironmentImage => "environment_image",
             ErrorTable::File => "file",
-            ErrorTable::Image => "image",
             ErrorTable::Instance => "instance",
             ErrorTable::InstanceObject => "instance_object",
             ErrorTable::Object => "object",

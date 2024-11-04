@@ -6,8 +6,8 @@ use clap_verbosity_flag::Verbosity;
 use gisst::{
     model_enums::Framework,
     models::{
-        insert_file_object, DBHashable, DBModel, Duplicate, Environment, File as GFile, Instance,
-        Object, ObjectRole, Work,
+        insert_file_object, Duplicate, Environment, File as GFile, Instance, Object, ObjectRole,
+        Work,
     },
 };
 use log::{error, info, warn};

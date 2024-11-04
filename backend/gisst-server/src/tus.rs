@@ -5,7 +5,7 @@ use crate::{
 
 use crate::error::GISSTError;
 use bytes::Bytes;
-use gisst::models::{DBModel, File as GFile};
+use gisst::models::File as GFile;
 use uuid::Uuid;
 
 use axum::{
