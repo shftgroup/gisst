@@ -2,9 +2,6 @@ import * as tus from 'tus-js-client'
 import * as SparkMD5 from 'spark-md5'
 import {DBRecord} from "./models";
 
-type GetRecordsResponse = {
-    records: DBRecord[]
-}
 export class GISSTDBConnector {
 
     repo_url: string;
