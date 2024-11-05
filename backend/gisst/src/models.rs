@@ -26,12 +26,6 @@ where
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct FileRecordFlatten<T> {
-    record: T,
-    file_record: File,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Creator {
     pub creator_id: Uuid,
@@ -401,16 +395,6 @@ impl File {
         .fetch_optional(conn)
         .await
     }
-
-    pub async fn flatten_file(
-        _conn: &mut PgConnection,
-        record: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        Ok(FileRecordFlatten {
-            record: record.clone(),
-            file_record: record,
-        })
-    }
 }
 
 impl File {
@@ -522,8 +506,12 @@ impl Instance {
     pub async fn get_all_states(
         conn: &mut PgConnection,
         instance_id: Uuid,
+        contains: Option<String>,
+        offset: usize,
+        limit: usize,
     ) -> sqlx::Result<Vec<State>> {
-        sqlx::query_as!(
+        if let Some(contains) = contains {
+            sqlx::query_as!(
             State,
             r#"SELECT state_id,
             instance_id,
@@ -537,18 +525,51 @@ impl Instance {
             state_replay_index,
             state_derived_from,
             created_on
-            FROM state WHERE instance_id = $1"#,
-            instance_id
+            FROM state
+            WHERE instance_id = $1 AND f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
+            OFFSET $3
+            LIMIT $4"#,
+            instance_id, contains, offset as i64, limit as i64
         )
         .fetch_all(conn)
-        .await
+                .await
+        } else {
+            sqlx::query_as!(
+                State,
+                r#"SELECT state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            FROM state
+            WHERE instance_id = $1
+            OFFSET $2
+            LIMIT $3"#,
+                instance_id,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+        }
     }
 
     pub async fn get_all_replays(
         conn: &mut PgConnection,
         instance_id: Uuid,
+        contains: Option<String>,
+        offset: usize,
+        limit: usize,
     ) -> sqlx::Result<Vec<Replay>> {
-        sqlx::query_as!(
+        if let Some(contains) = contains {
+            sqlx::query_as!(
             Replay,
             r#"SELECT replay_id,
             replay_name,
@@ -558,32 +579,36 @@ impl Instance {
             file_id,
             replay_forked_from,
             created_on
-            FROM replay WHERE instance_id = $1"#,
-            instance_id
+            FROM replay
+            WHERE instance_id = $1 AND f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
+            OFFSET $3
+            LIMIT $4"#,
+            instance_id, contains, offset as i64, limit as i64
         )
         .fetch_all(conn)
         .await
-    }
-
-    pub async fn get_all_saves(
-        conn: &mut PgConnection,
-        instance_id: Uuid,
-    ) -> sqlx::Result<Vec<Save>> {
-        sqlx::query_as!(
-            Save,
-            r#"SELECT
-            save_id,
+        } else {
+            sqlx::query_as!(
+                Replay,
+                r#"SELECT replay_id,
+            replay_name,
+            replay_description,
             instance_id,
-            save_short_desc,
-            save_description,
-            file_id,
             creator_id,
+            file_id,
+            replay_forked_from,
             created_on
-            FROM save WHERE instance_id = $1"#,
-            instance_id
-        )
-        .fetch_all(conn)
-        .await
+            FROM replay
+            WHERE instance_id = $1
+            OFFSET $2
+            LIMIT $3"#,
+                instance_id,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+        }
     }
 }
 
@@ -641,17 +666,6 @@ impl Object {
         )
         .fetch_optional(conn)
         .await
-    }
-
-    pub async fn flatten_file(
-        conn: &mut PgConnection,
-        model: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
-        Ok(FileRecordFlatten {
-            record: model,
-            file_record,
-        })
     }
 }
 
@@ -791,19 +805,6 @@ impl Replay {
     }
 }
 
-impl Replay {
-    pub async fn flatten_file(
-        conn: &mut PgConnection,
-        model: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
-        Ok(FileRecordFlatten {
-            record: model,
-            file_record,
-        })
-    }
-}
-
 impl Save {
     pub async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
@@ -882,17 +883,6 @@ impl Save {
         )
         .fetch_optional(conn)
         .await
-    }
-
-    pub async fn flatten_file(
-        conn: &mut PgConnection,
-        model: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
-        Ok(FileRecordFlatten {
-            record: model,
-            file_record,
-        })
     }
 }
 
@@ -1000,17 +990,6 @@ impl State {
         )
         .fetch_optional(conn)
         .await
-    }
-
-    pub async fn flatten_file(
-        conn: &mut PgConnection,
-        model: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
-        Ok(FileRecordFlatten {
-            record: model,
-            file_record,
-        })
     }
 }
 

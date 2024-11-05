@@ -32,7 +32,18 @@
         </div>
     </div>
     <div class="row">
-        <h1>States</h1>
+      <h1>States</h1>
+      <form method="get" action="">
+        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="state_contains" {% if state_contains %}value="{{state_contains}}"{% endif %}/>
+        <input type="submit" value="Search"/>
+        </form>
+      {% if state_page_num > 0 %}
+      <a class="results-prev" href="?state_page_num={{state_page_num-1}}{% if state_contains %}&state_contains={{state_contains|urlencode}}{% endif %}&state_limit={{state_limit}}">Prev</a>
+      {% endif %}
+      {% if state_has_more %}
+      <a class="results-prev" href="?state_page_num={{state_page_num+1}}{% if state_contains %}&state_contains={{state_contains|urlencode}}{% endif %}&state_limit={{state_limit}}">Next</a>
+      {% endif %}
+
         <table class="table">
             <tr>
                 <th scope="col">Name</th>
@@ -40,10 +51,10 @@
             </tr>
             {% for state in instance.states %}
                 <tr>
-                    <td>{{ state.record.state_name}}</td>
-                    <td>{{ state.record.state_description}}</td>
+                    <td>{{ state.state_name}}</td>
+                    <td>{{ state.state_description}}</td>
                     <td>
-                        <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}?state={{ state.record.state_id }}" target="_blank">
+                        <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}?state={{ state.state_id }}" target="_blank">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
                                 <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
                             </svg>
@@ -51,7 +62,7 @@
                         </a>
                     </td>
                     <td>
-                        <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}?state={{ state.record.state_id }}&?boot_into_record=true" target="_blank">
+                        <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}?state={{ state.state_id }}&?boot_into_record=true" target="_blank">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-record" viewBox="0 0 16 16">
                                 <path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0 1A5 5 0 1 0 8 3a5 5 0 0 0 0 10z"/>
                             </svg>
@@ -60,7 +71,7 @@
                     </td>
                     {% if instance.environment.environment_framework == "v86" %}
                     <td>
-                        <a class="btn btn-primary" href="/instances/{{ instance.info.instance_id }}/clone?state={{ state.record.state_id }}" target="_blank">
+                        <a class="btn btn-primary" href="clone?state={{ state.state_id }}" target="_blank">
                             Clone
                         </a>
                     </td>
@@ -71,6 +82,16 @@
     </div>
     <div class="row">
         <h1>Performances</h1>
+      <form method="get" action="">
+        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="replay_contains" {% if replay_contains %}value="{{replay_contains}}"{% endif %}/>
+        <input type="submit" value="Search"/>
+        </form>
+      {% if replay_page_num > 0 %}
+      <a class="results-prev" href="?replay_page_num={{replay_page_num-1}}{% if replay_contains %}&replay_contains={{replay_contains|urlencode}}{% endif %}&replay_limit={{replay_limit}}">Prev</a>
+      {% endif %}
+      {% if replay_has_more %}
+      <a class="results-prev" href="?replay_page_num={{replay_page_num+1}}{% if replay_contains %}&replay_contains={{replay_contains|urlencode}}{% endif %}&replay_limit={{replay_limit}}">Next</a>
+      {% endif %}
         <table class="table">
             <tr>
                 <th scope="col">Name</th>
@@ -78,10 +99,10 @@
             </tr>
             {% for replay in instance.replays %}
                 <tr>
-                    <td>{{ replay.record.replay_name}}</td>
-                    <td>{{ replay.record.replay_description}}</td>
+                    <td>{{ replay.replay_name}}</td>
+                    <td>{{ replay.replay_description}}</td>
                     <td>
-                        <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}?replay={{ replay.record.replay_id }}" target="_blank">
+                        <a class="btn btn-primary" href="/play/{{ instance.info.instance_id }}?replay={{ replay.replay_id }}" target="_blank">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
                                 <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
                             </svg>
