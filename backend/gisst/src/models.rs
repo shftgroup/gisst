@@ -206,8 +206,12 @@ impl Creator {
     pub async fn get_all_state_info(
         conn: &mut PgConnection,
         id: Uuid,
+        contains: Option<String>,
+        offset: usize,
+        limit: usize,
     ) -> sqlx::Result<Vec<CreatorStateInfo>> {
-        sqlx::query_as!(
+        if let Some(contains) = contains {
+            sqlx::query_as!(
             CreatorStateInfo,
             r#"SELECT
             work_id,
@@ -222,22 +226,75 @@ impl Creator {
             instance_id
             FROM work JOIN instance USING (work_id)
             JOIN state USING (instance_id)
-            WHERE state.creator_id = $1
-            "#,
-            id
+            WHERE state.creator_id = $1 AND f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
+            OFFSET $3
+            LIMIT $4"#, 
+            id, contains, offset as i64, limit as i64
         )
         .fetch_all(conn)
-        .await
+                .await
+        } else {
+            sqlx::query_as!(
+                CreatorStateInfo,
+                r#"SELECT
+            work_id,
+            work_name,
+            work_version,
+            work_platform,
+            state_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            file_id,
+            instance_id
+            FROM work JOIN instance USING (work_id)
+            JOIN state USING (instance_id)
+            WHERE state.creator_id = $1
+            OFFSET $2
+            LIMIT $3"#,
+                id,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+        }
     }
 
     // Join to allow for all creator home page information in one query
     pub async fn get_all_replay_info(
         conn: &mut PgConnection,
         id: Uuid,
+        contains: Option<String>,
+        offset: usize,
+        limit: usize,
     ) -> sqlx::Result<Vec<CreatorReplayInfo>> {
-        sqlx::query_as!(
-            CreatorReplayInfo,
-            r#"SELECT
+        if let Some(contains) = contains {
+            sqlx::query_as!(
+                CreatorReplayInfo,
+                r#"SELECT
+            work_id,
+            work_name,
+            work_version,
+            work_platform,
+            replay_id,
+            replay_name,
+            replay_description,
+            file_id,
+            instance_id
+            FROM work JOIN instance USING (work_id)
+            JOIN replay USING (instance_id)
+            WHERE replay.creator_id = $1 AND f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
+            OFFSET $3
+            LIMIT $4"#,
+            id, contains, offset as i64, limit as i64
+            )
+            .fetch_all(conn)
+            .await
+        } else {
+            sqlx::query_as!(
+                CreatorReplayInfo,
+                r#"SELECT
             work_id,
             work_name,
             work_version,
@@ -250,51 +307,15 @@ impl Creator {
             FROM work JOIN instance USING (work_id)
             JOIN replay USING (instance_id)
             WHERE replay.creator_id = $1
-            "#,
-            id
-        )
-        .fetch_all(conn)
-        .await
-    }
-
-    pub async fn get_all_states(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<State>> {
-        sqlx::query_as!(
-            State,
-            r#"SELECT state_id,
-            instance_id,
-            is_checkpoint,
-            file_id,
-            state_name,
-            state_description,
-            screenshot_id,
-            replay_id,
-            creator_id,
-            state_replay_index,
-            state_derived_from,
-            created_on
-            FROM state WHERE creator_id = $1"#,
-            id
-        )
-        .fetch_all(conn)
-        .await
-    }
-
-    pub async fn get_all_replays(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<Replay>> {
-        sqlx::query_as!(
-            Replay,
-            r#"SELECT replay_id,
-            replay_name,
-            replay_description,
-            instance_id,
-            creator_id,
-            file_id,
-            replay_forked_from,
-            created_on
-            FROM replay WHERE creator_id = $1"#,
-            id
-        )
-        .fetch_all(conn)
-        .await
+            OFFSET $2
+            LIMIT $3"#,
+                id,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+        }
     }
 }
 
