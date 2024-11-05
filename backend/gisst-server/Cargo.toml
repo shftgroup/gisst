@@ -22,7 +22,7 @@ futures = "0.3.28"
 log = "0.4.17"
 md5 = "0.7.0"
 sqlx = { version = "0.7.1", features = ["runtime-tokio-rustls", "postgres", "uuid", "time", "json", "chrono"] }
-minijinja = {version= "1.0.9", features=["builtins", "macros", "json", "loader"]}
+minijinja = {version= "1.0.9", features=["builtins", "macros", "json", "loader", "urlencode"]}
 secrecy = { version = "0.8.0", features = ["serde"] }
 serde = { version = "1.0.159", features = ["derive"] }
 serde_json = { version = "1.0.96", features = ["raw_value"] }

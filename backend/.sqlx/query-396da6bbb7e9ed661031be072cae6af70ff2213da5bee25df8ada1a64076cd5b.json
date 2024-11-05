@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT work_id as \"work_id!\", work_name as \"work_name!\", work_version as \"work_version!\", work_platform as \"work_platform!\", instance_id as \"instance_id!\"\n            FROM instanceWork\n            WHERE row_num >= $1 AND f_unaccent(work_name) ILIKE ('%' || f_unaccent($2) || '%')\n            ORDER BY row_num ASC\n            LIMIT $3\n            ",
+  "query": "\n            SELECT work_id as \"work_id!\", work_name as \"work_name!\", work_version as \"work_version!\", work_platform as \"work_platform!\", instance_id as \"instance_id!\", row_num as \"row_num!\"\n            FROM instanceWork\n            WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%')\n            ORDER BY row_num ASC\n            OFFSET $2\n            LIMIT $3\n            ",
   "describe": {
     "columns": [
       {
@@ -27,12 +27,17 @@
         "ordinal": 4,
         "name": "instance_id!",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "row_num!",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
       "Left": [
-        "Int8",
         "Text",
+        "Int8",
         "Int8"
       ]
     },
@@ -41,8 +46,9 @@
       true,
       true,
       true,
+      true,
       true
     ]
   },
-  "hash": "361d013b30d999e672d28cbaff0d1193521e466325389d583a9d70ed03984d48"
+  "hash": "396da6bbb7e9ed661031be072cae6af70ff2213da5bee25df8ada1a64076cd5b"
 }

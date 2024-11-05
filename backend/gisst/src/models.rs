@@ -1124,6 +1124,7 @@ pub struct InstanceWork {
     pub work_version: String,
     pub work_platform: String,
     pub instance_id: Uuid,
+    pub row_num: i64,
 }
 
 impl InstanceWork {
@@ -1134,37 +1135,66 @@ impl InstanceWork {
         start_from: usize,
         limit: usize,
     ) -> sqlx::Result<Vec<Self>> {
-        if let Some(platform) = platform {
-            sqlx::query_as!(
+        match (containing,platform) {
+            (None, None) => sqlx::query_as!(
             Self,
             r#"
-            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!"
+            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!", row_num as "row_num!"
             FROM instanceWork
-            WHERE row_num >= $1 AND f_unaccent(work_name) ILIKE ('%' || f_unaccent($2) || '%') AND work_platform ILIKE ('%' || f_unaccent($3) || '%')
+            WHERE row_num >= $1
             ORDER BY row_num ASC
-            LIMIT $4
+            LIMIT $2
             "#,
             start_from as i64,
-            containing.unwrap_or("".to_string()),
-            platform,
             limit as i64
-        )        .fetch_all(conn)
-        .await
-        } else {
-            sqlx::query_as!(
+        ).fetch_all(conn)
+        .await,
+            (None, Some(plat)) => sqlx::query_as!(
             Self,
             r#"
-            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!"
+            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!", row_num as "row_num!"
             FROM instanceWork
-            WHERE row_num >= $1 AND f_unaccent(work_name) ILIKE ('%' || f_unaccent($2) || '%')
+            WHERE work_platform ILIKE ('%' || $1 || '%')
             ORDER BY row_num ASC
+            OFFSET $2
             LIMIT $3
             "#,
-            start_from as i64,
-            containing.unwrap_or("".to_string()),
-            limit as i64
-        )                    .fetch_all(conn)
-        .await
+                plat,
+                start_from as i64,
+                limit as i64
+        ).fetch_all(conn)
+        .await,
+            (Some(contains), None) => sqlx::query_as!(
+            Self,
+            r#"
+            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!", row_num as "row_num!"
+            FROM instanceWork
+            WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%')
+            ORDER BY row_num ASC
+            OFFSET $2
+            LIMIT $3
+            "#,
+                contains,
+                start_from as i64,
+                limit as i64
+        ).fetch_all(conn)
+        .await,
+            (Some(contains), Some(plat)) => sqlx::query_as!(
+            Self,
+            r#"
+            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!", row_num as "row_num!"
+            FROM instanceWork
+            WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%') AND work_platform ILIKE ('%' || $2 || '%')
+            ORDER BY row_num ASC
+            OFFSET $3
+            LIMIT $4
+            "#,
+                contains,
+                plat,
+                start_from as i64,
+                limit as i64
+        ).fetch_all(conn)
+        .await,
         }
     }
 }

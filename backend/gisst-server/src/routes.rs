@@ -169,7 +169,7 @@ async fn get_single_screenshot(
 
 #[derive(Deserialize)]
 struct GetQueryParams {
-    offset: Option<usize>,
+    page_num: Option<usize>,
     limit: Option<usize>,
     contains: Option<String>,
     platform: Option<String>,
@@ -181,12 +181,15 @@ async fn get_instances(
     auth: AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
+    let page_num = params.page_num.unwrap_or(0);
+    let limit = params.limit.unwrap_or(100).min(100);
+    let offset = page_num * limit;
     let instances: Vec<InstanceWork> = InstanceWork::get_all(
         &mut conn,
-        params.contains,
-        params.platform,
-        params.offset.unwrap_or(0),
-        params.limit.unwrap_or(100),
+        params.contains.clone(),
+        params.platform.clone(),
+        offset,
+        limit,
     )
     .await?;
     let accept: Option<String> = parse_header(&headers, "Accept");
@@ -199,8 +202,13 @@ async fn get_instances(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             let instance_listing = app_state.templates.get_template("instance_listing.html")?;
             Html(instance_listing.render(context!(
-                    instances => instances,
-                    user => user,
+                has_more => instances.len() >= limit,
+                instances => instances,
+                user => user,
+                page_num => page_num,
+                limit => limit,
+                contains => params.contains,
+                platform => params.platform,
             ))?)
             .into_response()
         } else if accept
