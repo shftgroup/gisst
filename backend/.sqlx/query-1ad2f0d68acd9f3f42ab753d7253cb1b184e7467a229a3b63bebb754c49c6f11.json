@@ -1,0 +1,79 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            work_id,\n            work_name,\n            work_version,\n            work_platform,\n            state_id,\n            state_name,\n            state_description,\n            screenshot_id,\n            file_id,\n            instance_id\n            FROM work JOIN instance USING (work_id)\n            JOIN state USING (instance_id)\n            WHERE state.creator_id = $1 AND f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')\n            ORDER BY state.created_on DESC\n            OFFSET $3\n            LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "work_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "work_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "work_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "work_platform",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "state_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "state_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "state_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "screenshot_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1ad2f0d68acd9f3f42ab753d7253cb1b184e7467a229a3b63bebb754c49c6f11"
+}

@@ -272,6 +272,7 @@ struct StateReplayPageQueryParams {
     replay_page_num: Option<usize>,
     replay_limit: Option<usize>,
     replay_contains: Option<String>,
+    creator_id: Option<Uuid>,
 }
 async fn get_all_for_instance(
     app_state: Extension<ServerState>,
@@ -296,6 +297,7 @@ async fn get_all_for_instance(
         let states = Instance::get_all_states(
             &mut conn,
             instance.instance_id,
+            params.creator_id,
             params.state_contains.clone(),
             state_offset,
             state_limit,
@@ -308,6 +310,7 @@ async fn get_all_for_instance(
         let replays = Instance::get_all_replays(
             &mut conn,
             instance.instance_id,
+            params.creator_id,
             params.replay_contains.clone(),
             replay_offset,
             replay_limit,
@@ -352,7 +355,7 @@ async fn get_all_for_instance(
                     replay_page_num => replay_page_num,
                     replay_limit => replay_limit,
                     replay_contains => params.replay_contains,
-
+                    creator_id => params.creator_id,
                     instance => full_instance,
                     user => user,
 

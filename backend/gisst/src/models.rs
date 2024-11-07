@@ -530,36 +530,14 @@ impl Instance {
     pub async fn get_all_states(
         conn: &mut PgConnection,
         instance_id: Uuid,
+        for_user: Option<Uuid>,
         contains: Option<String>,
         offset: usize,
         limit: usize,
     ) -> sqlx::Result<Vec<State>> {
-        if let Some(contains) = contains {
-            sqlx::query_as!(
-            State,
-            r#"SELECT state_id,
-            instance_id,
-            is_checkpoint,
-            file_id,
-            state_name,
-            state_description,
-            screenshot_id,
-            replay_id,
-            creator_id,
-            state_replay_index,
-            state_derived_from,
-            created_on
-            FROM state
-            WHERE instance_id = $1 AND f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
-            ORDER BY state.created_on DESC
-            OFFSET $3
-            LIMIT $4"#,
-            instance_id, contains, offset as i64, limit as i64
-        )
-        .fetch_all(conn)
-                .await
-        } else {
-            sqlx::query_as!(
+        match (contains, for_user) {
+            (None, None) => {
+                sqlx::query_as!(
                 State,
                 r#"SELECT state_id,
             instance_id,
@@ -584,38 +562,99 @@ impl Instance {
             )
             .fetch_all(conn)
             .await
+            },
+            (None, Some(user)) => {
+                sqlx::query_as!(
+                State,
+                r#"SELECT state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            FROM state
+            WHERE instance_id = $1 AND creator_id = $2
+            ORDER BY state.created_on DESC
+            OFFSET $3
+            LIMIT $4"#,
+                    instance_id,
+                    user,
+                    offset as i64,
+                    limit as i64
+            )
+            .fetch_all(conn)
+            .await
+            },
+            (Some(contains), None) => {
+                sqlx::query_as!(
+            State,
+            r#"SELECT state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            FROM state
+            WHERE instance_id = $1 AND f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY state.created_on DESC
+            OFFSET $3
+            LIMIT $4"#,
+            instance_id, contains, offset as i64, limit as i64
+        )
+        .fetch_all(conn)
+                .await
+            }
+            (Some(contains), Some(user)) => {
+                sqlx::query_as!(
+            State,
+            r#"SELECT state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            FROM state
+            WHERE instance_id = $1 AND creator_id = $2 AND f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($3) || '%')
+            ORDER BY state.created_on DESC
+            OFFSET $4
+            LIMIT $5"#,
+            instance_id, user, contains, offset as i64, limit as i64
+        )
+        .fetch_all(conn)
+                .await
+            }
         }
     }
 
     pub async fn get_all_replays(
         conn: &mut PgConnection,
         instance_id: Uuid,
+        for_user: Option<Uuid>,
         contains: Option<String>,
         offset: usize,
         limit: usize,
     ) -> sqlx::Result<Vec<Replay>> {
-        if let Some(contains) = contains {
-            sqlx::query_as!(
-            Replay,
-            r#"SELECT replay_id,
-            replay_name,
-            replay_description,
-            instance_id,
-            creator_id,
-            file_id,
-            replay_forked_from,
-            created_on
-            FROM replay
-            WHERE instance_id = $1 AND f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
-            ORDER BY created_on DESC
-            OFFSET $3
-            LIMIT $4"#,
-            instance_id, contains, offset as i64, limit as i64
-        )
-        .fetch_all(conn)
-        .await
-        } else {
-            sqlx::query_as!(
+        match (contains, for_user) {
+            (None, None) => {
+                sqlx::query_as!(
                 Replay,
                 r#"SELECT replay_id,
             replay_name,
@@ -636,6 +675,73 @@ impl Instance {
             )
             .fetch_all(conn)
             .await
+            }
+            (None, Some(user)) => {
+                sqlx::query_as!(
+                Replay,
+                r#"SELECT replay_id,
+            replay_name,
+            replay_description,
+            instance_id,
+            creator_id,
+            file_id,
+            replay_forked_from,
+            created_on
+            FROM replay
+            WHERE instance_id = $1 AND creator_id = $2
+            ORDER BY created_on DESC
+            OFFSET $3
+            LIMIT $4"#,
+                    instance_id,
+                    user,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+            }
+            (Some(contains), None) => {
+                sqlx::query_as!(
+            Replay,
+            r#"SELECT replay_id,
+            replay_name,
+            replay_description,
+            instance_id,
+            creator_id,
+            file_id,
+            replay_forked_from,
+            created_on
+            FROM replay
+            WHERE instance_id = $1 AND f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY created_on DESC
+            OFFSET $3
+            LIMIT $4"#,
+            instance_id, contains, offset as i64, limit as i64
+        )
+        .fetch_all(conn)
+        .await
+            }
+            (Some(contains), Some(user)) => {
+                sqlx::query_as!(
+            Replay,
+            r#"SELECT replay_id,
+            replay_name,
+            replay_description,
+            instance_id,
+            creator_id,
+            file_id,
+            replay_forked_from,
+            created_on
+            FROM replay
+            WHERE instance_id = $1 AND creator_id = $2 AND f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%')
+            ORDER BY created_on DESC
+            OFFSET $4
+            LIMIT $5"#,
+            instance_id, user, contains, offset as i64, limit as i64
+        )
+        .fetch_all(conn)
+        .await
+            }
         }
     }
 }
