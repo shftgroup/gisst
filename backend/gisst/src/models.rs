@@ -227,6 +227,7 @@ impl Creator {
             FROM work JOIN instance USING (work_id)
             JOIN state USING (instance_id)
             WHERE state.creator_id = $1 AND f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY state.created_on DESC
             OFFSET $3
             LIMIT $4"#, 
             id, contains, offset as i64, limit as i64
@@ -250,6 +251,7 @@ impl Creator {
             FROM work JOIN instance USING (work_id)
             JOIN state USING (instance_id)
             WHERE state.creator_id = $1
+            ORDER BY state.created_on DESC
             OFFSET $2
             LIMIT $3"#,
                 id,
@@ -285,6 +287,7 @@ impl Creator {
             FROM work JOIN instance USING (work_id)
             JOIN replay USING (instance_id)
             WHERE replay.creator_id = $1 AND f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY replay.created_on DESC
             OFFSET $3
             LIMIT $4"#,
             id, contains, offset as i64, limit as i64
@@ -548,6 +551,7 @@ impl Instance {
             created_on
             FROM state
             WHERE instance_id = $1 AND f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY state.created_on DESC
             OFFSET $3
             LIMIT $4"#,
             instance_id, contains, offset as i64, limit as i64
@@ -571,6 +575,7 @@ impl Instance {
             created_on
             FROM state
             WHERE instance_id = $1
+            ORDER BY state.created_on DESC
             OFFSET $2
             LIMIT $3"#,
                 instance_id,
@@ -602,6 +607,7 @@ impl Instance {
             created_on
             FROM replay
             WHERE instance_id = $1 AND f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY created_on DESC
             OFFSET $3
             LIMIT $4"#,
             instance_id, contains, offset as i64, limit as i64
@@ -621,6 +627,7 @@ impl Instance {
             created_on
             FROM replay
             WHERE instance_id = $1
+            ORDER BY created_on DESC
             OFFSET $2
             LIMIT $3"#,
                 instance_id,
