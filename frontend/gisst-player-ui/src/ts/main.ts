@@ -201,10 +201,16 @@ export class UI<Evt> {
       const metadata = this.metadata_by_name["st__"+state_file];
       if(metadata.editing) { this.toggleEditState(state_file); }
       if(!metadata.editing && !metadata.stored_on_server){
-        this.control.upload_file("state", state_file, metadata)
+        if((metadata.record as State).state_id != NEVER_UPLOADED_ID) {
+          (metadata.record as State).state_derived_from = (metadata.record as State).state_id;
+          (metadata.record as State).state_id = NEVER_UPLOADED_ID;
+        }
+        if((metadata.record as State).file_id == NEVER_UPLOADED_ID) {
+          this.control.upload_file("state", state_file, metadata)
             .then((md:Metadata) =>{
               this.completeUpload("st__"+state_file, md);
             });
+        }
       }
     });
 
@@ -232,7 +238,7 @@ export class UI<Evt> {
         created_on: metadata?.created_on || new Date()
       },
       screenshot: state_thumbnail,
-      stored_on_server: metadata !== undefined,
+      stored_on_server: false,
       editing: false,
       group_key
     }
@@ -264,28 +270,38 @@ export class UI<Evt> {
     li.querySelector(".replay-list-item-upload-button")!.addEventListener("click", () => {
       const metadata = this.metadata_by_name["rp__"+replay_file];
       if(metadata.editing) { this.toggleEditReplay(replay_file); }
-      this.control.upload_file("replay", replay_file, metadata)
-          .then((md:Metadata) => {
-            this.completeUpload("rp__"+replay_file, md);
-            for (const state_file of this.control.checkpoints_of(replay_num)) {
-              const smetadata = this.metadata_by_name["st__"+state_file];
-              const srec = smetadata.record as State;
-              srec.replay_id = (md.record as Replay).replay_id;
-              srec.is_checkpoint = true;
-              if(srec.state_id != NEVER_UPLOADED_ID) {
-                srec.state_derived_from = srec.state_id;
-                srec.state_id = NEVER_UPLOADED_ID;
-              }
-              srec.creator_id = (md.record as Replay).creator_id;
-              srec.created_on = (md.record as Replay).created_on;
-              if(smetadata.editing) { this.toggleEditState(state_file); }
-              this.control.upload_file("state", state_file, smetadata)
-                .then((smd:Metadata) =>{
-                  this.completeUpload("st__"+state_file, smd);
-                })
-
-            }
-          });
+      if((metadata.record as Replay).replay_id != NEVER_UPLOADED_ID) {
+        (metadata.record as Replay).replay_derived_from = (metadata.record as Replay).replay_id;
+        (metadata.record as Replay).replay_id = NEVER_UPLOADED_ID;
+      }
+      const finalize_md = (md:Metadata) => {
+        this.completeUpload("rp__"+replay_file, md);
+        for (const state_file of this.control.checkpoints_of(replay_num)) {
+          const smetadata = this.metadata_by_name["st__"+state_file];
+          const srec = smetadata.record as State;
+          srec.replay_id = (md.record as Replay).replay_id;
+          srec.is_checkpoint = true;
+          if(srec.state_id != NEVER_UPLOADED_ID) {
+            srec.state_derived_from = srec.state_id;
+            srec.state_id = NEVER_UPLOADED_ID;
+          }
+          srec.creator_id = (md.record as Replay).creator_id;
+          srec.created_on = (md.record as Replay).created_on;
+          if(smetadata.editing) { this.toggleEditState(state_file); }
+          if(srec.file_id != NEVER_UPLOADED_ID) {
+            this.control.upload_file("state", state_file, smetadata)
+              .then((smd:Metadata) =>{
+                this.completeUpload("st__"+state_file, smd);
+              });
+          }
+        }
+      };
+      if((metadata.record as Replay).file_id == NEVER_UPLOADED_ID) {
+        this.control.upload_file("replay", replay_file, metadata)
+          .then(finalize_md);
+      } else {
+        finalize_md(metadata);
+      }
     });
 
     li.querySelector(".replay-list-item-edit-button")!.addEventListener("click", () => {
@@ -303,7 +319,7 @@ export class UI<Evt> {
         file_id: metadata?.file_id || NEVER_UPLOADED_ID,
         created_on: metadata?.created_on || new Date()
       },
-      stored_on_server: metadata !== undefined,
+      stored_on_server: false,
       editing: false,
       screenshot: "",
       group_key,
@@ -312,10 +328,6 @@ export class UI<Evt> {
     this.replay_elt.appendChild(li);
     this.entries_by_name["rp__"+replay_file] = document.getElementById(valid_for_css(replay_file))!;
     this.metadata_by_name["rp__"+replay_file] = replay_metadata;
-    if(replay_metadata.stored_on_server){
-      this.entries_by_name["rp__"+replay_file].querySelector(".bi-cloud-upload")!.classList.add("hidden");
-      this.entries_by_name["rp__"+replay_file].querySelector(".bi-cloud-arrow-up-fill")!.classList.remove("hidden");
-    }
   }
   clear() {
     for(const lit in this.entries_by_name) {
