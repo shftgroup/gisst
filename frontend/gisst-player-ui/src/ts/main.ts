@@ -9,7 +9,8 @@ import {
   ReplayFileLink,
   StateFileLink,
   canEdit,
-  InputLogEvent
+  InputLogEvent,
+  NEVER_UPLOADED_ID
 } from "./models";
 
 import '../scss/styles.scss'
@@ -18,8 +19,6 @@ import * as bootstrap from 'bootstrap'
 
 import templates from "../html/templates.html?raw"
 import {UITemplateConst, UIIDConst } from "./template_consts"
-
-const NEVER_UPLOADED_ID = "DECAFBADDECAFBADDECAFBADDECAFBAD";
 
 export enum ReplayMode {
   Inactive=0,
@@ -205,12 +204,10 @@ export class UI<Evt> {
           (metadata.record as State).state_derived_from = (metadata.record as State).state_id;
           (metadata.record as State).state_id = NEVER_UPLOADED_ID;
         }
-        if((metadata.record as State).file_id == NEVER_UPLOADED_ID) {
-          this.control.upload_file("state", state_file, metadata)
-            .then((md:Metadata) =>{
-              this.completeUpload("st__"+state_file, md);
-            });
-        }
+        this.control.upload_file("state", state_file, metadata)
+          .then((md:Metadata) =>{
+            this.completeUpload("st__"+state_file, md);
+          });
       }
     });
 
@@ -274,7 +271,8 @@ export class UI<Evt> {
         (metadata.record as Replay).replay_derived_from = (metadata.record as Replay).replay_id;
         (metadata.record as Replay).replay_id = NEVER_UPLOADED_ID;
       }
-      const finalize_md = (md:Metadata) => {
+      this.control.upload_file("replay", replay_file, metadata)
+        .then((md:Metadata) => {
         this.completeUpload("rp__"+replay_file, md);
         for (const state_file of this.control.checkpoints_of(replay_num)) {
           const smetadata = this.metadata_by_name["st__"+state_file];
@@ -288,20 +286,12 @@ export class UI<Evt> {
           srec.creator_id = (md.record as Replay).creator_id;
           srec.created_on = (md.record as Replay).created_on;
           if(smetadata.editing) { this.toggleEditState(state_file); }
-          if(srec.file_id != NEVER_UPLOADED_ID) {
-            this.control.upload_file("state", state_file, smetadata)
-              .then((smd:Metadata) =>{
-                this.completeUpload("st__"+state_file, smd);
-              });
-          }
+          this.control.upload_file("state", state_file, smetadata)
+            .then((smd:Metadata) =>{
+              this.completeUpload("st__"+state_file, smd);
+            });
         }
-      };
-      if((metadata.record as Replay).file_id == NEVER_UPLOADED_ID) {
-        this.control.upload_file("replay", replay_file, metadata)
-          .then(finalize_md);
-      } else {
-        finalize_md(metadata);
-      }
+      });
     });
 
     li.querySelector(".replay-list-item-edit-button")!.addEventListener("click", () => {

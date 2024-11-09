@@ -1,6 +1,6 @@
 import * as tus from 'tus-js-client'
 import * as SparkMD5 from 'spark-md5'
-import {DBRecord} from "./models";
+import {DBRecord, NEVER_UPLOADED_ID} from "./models";
 
 export class GISSTDBConnector {
 
@@ -49,11 +49,15 @@ export class GISSTDBConnector {
         })
     }
 
-    async uploadFile(file:File,
+    async uploadFile(file:File, file_id:string,
                      errorCallback: (error:Error) => void,
                      progressCallback: (percentage: number) => void,
-                     successCallback: (upload: tus.Upload) => void
+                     successCallback: (file_uuid:string) => void
     ) {
+        if (file_id != NEVER_UPLOADED_ID) {
+          successCallback(file_id);
+          return;
+        }
         const upload = new tus.Upload(file, {
             endpoint: `${this.repo_url}/resources`,
             retryDelays: [0, 3000, 5000, 10000, 20000],
@@ -72,8 +76,10 @@ export class GISSTDBConnector {
                 progressCallback(parseFloat(percentage));
             },
             onSuccess: function () {
-                console.log('Upload %s to %s', file.name, upload.url)
-                successCallback(upload);
+              console.log('Upload %s to %s', file.name, upload.url)
+              const url_parts = upload.url!.split('/');
+              const uuid_string = url_parts[url_parts.length - 1];
+              successCallback(uuid_string);
             },
         })
 
