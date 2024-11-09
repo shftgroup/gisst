@@ -3,7 +3,6 @@ import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gis
 import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink, EmbedOptions, ControllerOverlayMode} from './types.d';
-import * as tus from "tus-js-client";
 import {LibretroModule, loadRetroArch} from './libretro_adapter';
 const FS_CHECK_INTERVAL = 1000;
 // one auto state per 5 minutes feels reasonable
@@ -104,12 +103,10 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
             }
             const data = RA.FS.readFile(path + "/" + file_name);
 
-            db.uploadFile(new File([data], file_name),
+            db.uploadFile(new File([data], file_name), metadata.record.file_id,
                 (error:Error) => { reject(console.error("ran error callback", error.message))},
                 (_percentage: number) => {},
-                (upload: tus.Upload) => {
-                  const url_parts = upload.url!.split('/');
-                  const uuid_string = url_parts[url_parts.length - 1];
+                (uuid_string: string) => {
                   metadata.record.file_id = uuid_string;
                   if (category === "state"){
                     db.uploadRecord({screenshot_data: metadata.screenshot}, "screenshot")

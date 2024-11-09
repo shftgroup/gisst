@@ -242,13 +242,15 @@ pub async fn tus_creation(
     let new_uuid = Uuid::new_v4();
     let filename = metadata.get("filename").unwrap();
     let hash = metadata.get("hash").unwrap();
+    let dest_filename = StorageHandler::get_dest_filename(hash, filename);
     let file_info = FileInformation {
         source_filename: filename.to_string(),
-        source_path: "".to_string(),
-        dest_filename: StorageHandler::get_dest_filename(hash, filename),
+        source_path: filename.to_string(),
         dest_path: StorageHandler::split_uuid_to_path_buf(new_uuid, app_state.folder_depth)
+            .join(dest_filename.clone())
             .to_string_lossy()
             .to_string(),
+        dest_filename,
         file_hash: hash.to_string(),
     };
 
