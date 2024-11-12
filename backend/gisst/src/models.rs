@@ -1490,7 +1490,6 @@ pub async fn insert_file_object(
         };
         object_id.ok_or(InsertFileError::ObjectMissing(hash))
     } else {
-        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
         let file_uuid = Uuid::new_v4();
         info!("Do write file {file_name}");
         let file_info = StorageHandler::write_file_to_uuid_folder(
