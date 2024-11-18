@@ -144,7 +144,6 @@ export class Replay {
       }
       case ReplayMode.Playback: {
         // What is earlier: next checkpoint or next event?
-        /* eslint-disable no-constant-condition */
         while(true) {
           const event_t = (this.index < this.events.length) ? this.events[this.index].when : Number.MAX_SAFE_INTEGER;
           const checkpoint_t = (this.checkpoint_index < this.checkpoints.length) ? this.checkpoints[this.checkpoint_index].when : Number.MAX_SAFE_INTEGER;
@@ -414,7 +413,7 @@ export class Replay {
     return r;
   }
 }
-class ReplayEvent {
+export class ReplayEvent {
   when:number;
   code:Evt;
   value:object|number;

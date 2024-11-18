@@ -3,7 +3,7 @@ export interface StateInfo {
     name: string;
     thumbnail: string;
 }
-export { ReplayMode } from './v86replay';
+export { ReplayMode, Evt, ReplayEvent } from './v86replay';
 export interface EmbedV86Config {
     wasm_root: string;
     bios_root: string;
