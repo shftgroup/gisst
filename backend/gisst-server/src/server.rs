@@ -19,7 +19,7 @@ use axum::{
     http::HeaderMap,
     response::{Html, IntoResponse},
     routing::method_routing::{get, patch, post},
-    Extension, Router, Server,
+    Extension, Router,
 };
 
 use axum_login::{AuthLayer, RequireAuthorizationLayer};
@@ -190,10 +190,33 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         config.http.listen_port,
     );
 
-    Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .expect("could not launch GISST HTTP server on port 3000");
+    if config.http.dev_ssl {
+        // use axum_server::tls_rustls::RustlsConfig;
+        // let tlsconfig = RustlsConfig::from_pem_file(
+        //     config
+        //         .http
+        //         .dev_cert
+        //         .expect("In dev SSL mode, must supply cert in config"),
+        //     config
+        //         .http
+        //         .dev_key
+        //         .expect("In dev SSL mode, must supply key in config"),
+        // )
+        // .await
+        // .unwrap();
+
+        // let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+        // println!("listening on {}", addr);
+        // axum::Server::bind_rustls(addr, tlsconfig)
+        //     .serve(app.into_make_service())
+        //     .await
+        //     .unwrap();
+    } else {
+        axum::Server::bind(&addr)
+            .serve(app.into_make_service())
+            .await
+            .expect("could not launch GISST HTTP server on port 3000");
+    }
 
     Ok(())
 }

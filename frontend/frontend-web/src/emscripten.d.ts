@@ -93,7 +93,7 @@ interface EmscriptenModule {
     _malloc(size: number): number;
     _free(ptr: number): void;
 
-  FS:FS
+  FS:FS;
 }
 
 /**
@@ -261,6 +261,7 @@ declare interface FS {
 }
 
 declare let MEMFS: Emscripten.FileSystemType;
+declare let WASMFS: Emscripten.FileSystemType;
 declare let NODEFS: Emscripten.FileSystemType;
 declare let IDBFS: Emscripten.FileSystemType;
 

@@ -1,8 +1,9 @@
 import checker from 'vite-plugin-checker';
 import sourcemaps from 'rollup-plugin-sourcemaps';
-
+import mkcert from 'vite-plugin-mkcert';
 export default {
   plugins: [
+    mkcert(),
     checker({
       // e.g. use TypeScript check
       typescript: true,
@@ -23,13 +24,10 @@ export default {
     headers:{
       "Cross-Origin-Embedder-Policy":"require-corp",
       "Cross-Origin-Resource-Policy":"cross-origin",
-      "Cross-Origin-Opener-Policy":"cross-origin"
+      "Cross-Origin-Opener-Policy":"same-origin"
     },
     proxy: {
       "/storage": "http://localhost:3000/",
-      "/v86": "http://localhost:3000/",
-      "/assets": "http://localhost:3000/",
-      "/cores": "http://localhost:3000/"
     }
   }
 }

@@ -17,17 +17,19 @@ window.onload = async function() {
     const w = canv.width;
     const h = canv.height;
     if (w == 0 || h == 0) { return; }
-    const aspect = w/h;
-    const target_w = container.offsetWidth;
-    const target_h = target_w / aspect;
-    if (w != target_w) {
-      if (kind == "v86") {
-        canv.style.width = `${target_w}px`;
-        canv.style.height = `${target_h}px`; // h/w * w = h
-      } else {
-        canv.width = target_w;
-        canv.height = target_h;
-      }
+    let target_w = container.offsetWidth;
+    let target_h;
+    if (kind == "v86") {
+      const aspect = w / h;
+      target_h = target_w / aspect;
+    } else {
+      target_h = container.offsetHeight;
+    }
+    const new_w = `${target_w}px`;
+    const new_h = `${target_h}px`;
+    if (canv.style.width != new_w || canv.style.height != new_h) {
+      canv.style.width = new_w;
+      canv.style.height = new_h;
     }
   })
   ro.observe(canv);

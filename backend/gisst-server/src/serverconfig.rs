@@ -154,6 +154,12 @@ pub struct HttpConfig {
 
     #[serde(default = "default_base_url")]
     pub base_url: String,
+
+    pub dev_cert: Option<String>,
+    pub dev_key: Option<String>,
+
+    #[serde(default)]
+    pub dev_ssl: bool,
 }
 
 // Not sure if all of this is redundant, it appears so
@@ -175,6 +181,9 @@ impl Default for HttpConfig {
             listen_address: default_listen_address(),
             listen_port: default_port(),
             base_url: default_base_url(),
+            dev_key: None,
+            dev_cert: None,
+            dev_ssl: false,
         }
     }
 }

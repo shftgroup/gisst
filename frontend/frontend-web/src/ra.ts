@@ -190,7 +190,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
             "gambatte": "gameboy",
             "vba_next": "gba",
             "fceumm": "nes",
-            "snes9x": "snes"
+            "snes9x": "snes",
           };
           let overlay = "retropad";
           if (core in overlays) {

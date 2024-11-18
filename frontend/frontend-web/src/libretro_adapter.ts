@@ -3,7 +3,7 @@
 export interface LibretroModule extends EmscriptenModule, LibretroModuleDef {
   canvas:HTMLCanvasElement;
   callMain(args:string[]): void;
-  resumeMainLoop(): void;
+  // resumeMainLoop(): void;
 }
 interface LibretroModuleDef {
   startRetroArch(canvas:HTMLCanvasElement, args:string[], initialized_cb:() => void):void;
@@ -21,6 +21,18 @@ interface LibretroModuleDef {
 }
 
 const cores:Record<string,(mod:LibretroModuleDef) => Promise<LibretroModule>> = {};
+
+/**
+ * This is a patched version of the native `import` method that works with vite bundling.
+ * Allows you to import a javascript file from the public directory.
+ */
+function importStatic(modulePath:string) {
+  if (import.meta.env.DEV) {
+    return import(/* @vite-ignore */ `${modulePath}?${Date.now()}`);
+  } else {
+    return import(/* @vite-ignore */ modulePath);
+  }
+}
 
 export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:LibretroModule) => void) {
     /**
@@ -65,7 +77,6 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
             canvas.addEventListener("click", () => canvas.focus());
             me.canvas = canvas;
             me.callMain(retro_args);
-            me.resumeMainLoop();
             initialized_cb();
             canvas.focus();
         },
@@ -145,7 +156,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
     if (core in cores) {
         instantiate(cores[core]);
     } else {
-        import(/* @vite-ignore */ gisst_root+'/cores/'+core+'_libretro.js').then(fac => {
+        importStatic(/* @vite-ignore */ '/cores/'+core+'_libretro.js').then(fac => {
             cores[core] = fac.default;
             instantiate(cores[core]);
         }).catch(err => { console.error("Couldn't instantiate module", err); throw err; });
