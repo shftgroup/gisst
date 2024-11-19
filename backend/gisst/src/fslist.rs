@@ -145,10 +145,7 @@ fn get_lst_mut<'a>(
 }
 
 pub fn file_to_path(storage_root: &str, file: &crate::models::File) -> std::path::PathBuf {
-    std::path::PathBuf::from(&format!(
-        "{storage_root}/{}/{}-{}",
-        file.file_dest_path, file.file_hash, file.file_filename
-    ))
+    std::path::PathBuf::from(&format!("{storage_root}/{}", file.file_dest_path))
 }
 
 pub fn get_file_at_path(

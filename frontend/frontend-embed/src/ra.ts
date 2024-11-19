@@ -11,6 +11,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
+  const source_path = content.file_source_path!.replace(content.file_filename!, "");
   const use_gamepad_overlay = embed_options.controls == ControllerOverlayMode.On || ((embed_options.controls??ControllerOverlayMode.Auto) == ControllerOverlayMode.Auto && mobileAndTabletCheck());
   if (entryState) {
     retro_args.push("-e");
@@ -27,7 +28,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     retro_args.push("--appendconfig");
     retro_args.push("/home/web_user/content/retroarch.cfg");
   }
-  retro_args.push("/home/web_user/content/" + content.file_source_path! + "/" + content.file_filename!);
+  retro_args.push("/home/web_user/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
   return new Promise((res) => {
     loadRetroArch(gisst_root, core,
@@ -39,25 +40,26 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
       proms.push(fetchfs.fetchZip(module,gisst_root+"/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
 
       for(const file of manifest) {
-        const source_path = "/home/web_user/content/" + file.file_source_path!;
-        fetchfs.mkdirp(module, source_path);
+        let dl_source_path = "/home/web_user/content/" + file.file_source_path!;
+        dl_source_path = dl_source_path.replace(file.file_filename!, "");
+        fetchfs.mkdirp(module, dl_source_path);
         const file_prom = fetchfs.fetchFile(
             module,
-            gisst_root + "/storage/" + file.file_dest_path + "/" + file.file_hash + "-" + file.file_filename,
-            source_path + "/" + file.file_filename);
+            gisst_root + "/storage/" + file.file_dest_path,
+            dl_source_path + "/" + file.file_filename);
         proms.push(file_prom);
       }
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
         const data = (start as StateStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
-        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state"));
+        console.log(data, "/storage/"+data.file_dest_path,"/home/web_user/content/entry_state");
+        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path,"/home/web_user/content/entry_state"));
       }
       if (movie) {
         // Cast: This one is definitely a replaystart because the type is state
         const data = (start as ReplayStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
-        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1"));
+        console.log(data, "/storage/"+data.file_dest_path,"/home/web_user/content/replay.replay1");
+        proms.push(fetchfs.fetchFile(module,gisst_root+"/storage/"+data.file_dest_path,"/home/web_user/content/replay.replay1"));
       }
       proms.push(fetchfs.registerFetchFS(module,{"retroarch_web_base.cfg":null}, gisst_root+"/assets", "/home/web_user/retroarch/"));
       fetchfs.mkdirp(module,saves_dir);

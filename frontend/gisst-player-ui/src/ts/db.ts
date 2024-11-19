@@ -2,9 +2,6 @@ import * as tus from 'tus-js-client'
 import * as SparkMD5 from 'spark-md5'
 import {DBRecord} from "./models";
 
-type GetRecordsResponse = {
-    records: DBRecord[]
-}
 export class GISSTDBConnector {
 
     repo_url: string;
@@ -29,23 +26,6 @@ export class GISSTDBConnector {
                 throw new Error(response.statusText)
             }
             return response.json() as Promise<DBRecord>
-        })
-    }
-
-    async getRecords(record_type: string, limit: number): Promise<GetRecordsResponse> {
-        return fetch(
-            `${this.repo_url}/${record_type}s/` + new URLSearchParams({limit: limit.toString()}),
-            {
-                method: 'GET',
-                headers: {
-                    Accept: 'application/json'
-                },
-            }
-        ).then(response => {
-            if(!response.ok) {
-                throw new Error(response.statusText)
-            }
-            return response.json() as Promise<GetRecordsResponse>
         })
     }
 

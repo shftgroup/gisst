@@ -35,7 +35,6 @@ impl ServerConfig {
     }
 }
 
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct EnvConfig {
     // Default directive is the fallback default for tracing if `rust_log` does not parse
@@ -48,10 +47,10 @@ pub struct EnvConfig {
 
 impl Default for EnvConfig {
     fn default() -> Self {
-       Self {
-           default_directive: "gisst_server=debug".to_string(),
-           rust_log: "warn,gisst_server=debug,gisst=debug".to_string(),
-       }
+        Self {
+            default_directive: "gisst_server=debug".to_string(),
+            rust_log: "warn,gisst_server=debug,gisst=debug".to_string(),
+        }
     }
 }
 

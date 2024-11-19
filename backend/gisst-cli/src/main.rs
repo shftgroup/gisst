@@ -5,19 +5,18 @@ use crate::args::CreateScreenshot;
 use crate::cliconfig::CLIConfig;
 use anyhow::Result;
 use args::{
-    BaseSubcommand, Commands, CreateCreator, CreateEnvironment, CreateImage, CreateInstance,
-    CreateObject, CreateReplay, CreateSave, CreateState, CreateWork, DeleteRecord, GISSTCli,
-    GISSTCliError,
+    BaseSubcommand, Commands, CreateCreator, CreateEnvironment, CreateInstance, CreateObject,
+    CreateReplay, CreateSave, CreateState, CreateWork, GISSTCli, GISSTCliError, PatchData,
 };
 use clap::Parser;
 use gisst::{
     models::{
-        Creator, DBHashable, DBModel, Environment, Image, Instance, Object, ObjectRole, Replay,
-        Save, Screenshot, State, Work,
+        insert_file_object, Creator, Environment, Instance, Object, ObjectRole, Replay, Screenshot,
+        State, Work,
     },
     storage::StorageHandler,
 };
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use sqlx::pool::PoolOptions;
 use sqlx::types::chrono;
 use sqlx::PgPool;
@@ -62,73 +61,30 @@ async fn main() -> Result<(), GISSTCliError> {
         } => link_record(&record_type, source_uuid, target_uuid, db, role, role_index).await?,
         Commands::Object(object) => match object.command {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => {
-                delete_file_record::<Object>(delete, db, storage_root).await?
-            }
-            BaseSubcommand::Export(_export) => (),
         },
         Commands::Creator(creator) => match creator.command {
             BaseSubcommand::Create(create) => create_creator(create, db).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_record::<Creator>(delete, db).await?,
-            BaseSubcommand::Export(_export) => (),
         },
         Commands::Environment(environment) => match environment.command {
             BaseSubcommand::Create(create) => create_environment(create, db).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_record::<Environment>(delete, db).await?,
-            BaseSubcommand::Export(_export) => (),
-        },
-        Commands::Image(image) => match image.command {
-            BaseSubcommand::Create(create) => create_image(create, db, storage_root).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => {
-                delete_file_record::<Image>(delete, db, storage_root).await?
-            }
-            BaseSubcommand::Export(_export) => (),
         },
         Commands::Instance(instance) => match instance.command {
             BaseSubcommand::Create(create) => create_instance(create, db).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_record::<Instance>(delete, db).await?,
-            BaseSubcommand::Export(_export) => (),
         },
         Commands::Work(work) => match work.command {
             BaseSubcommand::Create(create) => create_work(create, db).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_record::<Work>(delete, db).await?,
-            BaseSubcommand::Export(_export) => (),
         },
         Commands::State(state) => match state.command {
             BaseSubcommand::Create(create) => create_state(create, db, storage_root).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => {
-                delete_file_record::<State>(delete, db, storage_root).await?
-            }
-            BaseSubcommand::Export(_export) => (),
         },
         Commands::Save(save) => match save.command {
             BaseSubcommand::Create(create) => create_save(create, db).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => {
-                delete_file_record::<Save>(delete, db, storage_root).await?
-            }
-            BaseSubcommand::Export(_export) => (),
         },
         Commands::Replay(replay) => match replay.command {
             BaseSubcommand::Create(create) => create_replay(create, db, storage_root).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => {
-                delete_file_record::<Replay>(delete, db, storage_root).await?
-            }
-            BaseSubcommand::Export(_export) => (),
         },
         Commands::Screenshot(screenshot) => match screenshot.command {
             BaseSubcommand::Create(create) => create_screenshot(create, db).await?,
-            BaseSubcommand::Update(_update) => (),
-            BaseSubcommand::Delete(delete) => delete_record::<Screenshot>(delete, db).await?,
-            BaseSubcommand::Export(_export) => (),
         },
         Commands::CloneV86 {
             instance,
@@ -136,6 +92,13 @@ async fn main() -> Result<(), GISSTCliError> {
             depth,
         } => {
             clone_v86_machine(db, instance, state, storage_root, depth).await?;
+        }
+        Commands::AddPatch {
+            instance,
+            data,
+            depth,
+        } => {
+            add_patched_instance(db, instance, data, storage_root, depth).await?;
         }
     }
     Ok(())
@@ -153,6 +116,89 @@ async fn clone_v86_machine(
         gisst::v86clone::clone_v86_machine(&mut conn, instance_id, state_id, &storage_root, depth)
             .await?;
     Ok(uuid)
+}
+
+/// Returns the new work and instance created for this hack
+async fn add_patched_instance(
+    db: PgPool,
+    instance_id: Uuid,
+    patch_file: String,
+    storage_root: String,
+    depth: u8,
+) -> Result<(Uuid, Uuid), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    let inst = Instance::get_by_id(&mut conn, instance_id)
+        .await?
+        .ok_or(GISSTCliError::RecordNotFound(instance_id))?;
+    let work = Work::get_by_id(&mut conn, inst.work_id)
+        .await?
+        .ok_or(GISSTCliError::RecordNotFound(inst.work_id))?;
+    let derived_inst_id = Uuid::new_v4();
+    let derived_work_id = Uuid::new_v4();
+    let now = chrono::Utc::now();
+    let data: PatchData = {
+        let json_data = fs::read_to_string(&patch_file).map_err(GISSTCliError::Io)?;
+        serde_json::from_str(&json_data).map_err(GISSTCliError::JsonParse)?
+    };
+    let new_inst = Instance {
+        instance_id: derived_inst_id,
+        work_id: derived_work_id,
+        derived_from_instance: Some(instance_id),
+        created_on: now,
+        ..inst
+    };
+    let new_work = Work {
+        work_id: derived_work_id,
+        work_derived_from: Some(inst.work_id),
+        created_on: now,
+        work_version: data.version,
+        work_name: data.name,
+        work_platform: work.work_platform,
+    };
+    Work::insert(&mut conn, new_work).await?;
+    Instance::insert(&mut conn, new_inst).await?;
+    let patch_root = Path::new(&patch_file).parent().unwrap_or(Path::new(""));
+    for link in gisst::models::ObjectLink::get_all_for_instance_id(&mut conn, instance_id).await? {
+        if link.object_role == ObjectRole::Content
+            && data
+                .files
+                .get(link.object_role_index as usize)
+                .map(String::as_str)
+                .unwrap_or("")
+                != ""
+        {
+            let patch = Path::new(&data.files[link.object_role_index as usize]);
+            let object_id = insert_file_object(
+                &mut conn,
+                &storage_root,
+                depth,
+                &patch_root.join(patch),
+                Some(link.file_filename),
+                None,
+                link.file_source_path,
+                gisst::models::Duplicate::ReuseData,
+            )
+            .await?;
+            Object::link_object_to_instance(
+                &mut conn,
+                object_id,
+                derived_inst_id,
+                ObjectRole::Content,
+                link.object_role_index as usize,
+            )
+            .await?;
+        } else {
+            Object::link_object_to_instance(
+                &mut conn,
+                link.object_id,
+                derived_inst_id,
+                link.object_role,
+                link.object_role_index as usize,
+            )
+            .await?;
+        }
+    }
+    Ok((derived_work_id, derived_inst_id))
 }
 
 async fn link_record(
@@ -195,16 +241,17 @@ async fn create_object(
         role_index,
         file,
         force_uuid,
+        cwd,
         ..
     }: CreateObject,
     db: PgPool,
     storage_path: String,
 ) -> Result<(), GISSTCliError> {
     let mut valid_paths: Vec<PathBuf> = Vec::new();
-
+    let cwd = cwd.unwrap_or(String::new());
+    let cwd = Path::new(&cwd);
     for path in file {
-        let p = Path::new(&path);
-
+        let p = cwd.join(Path::new(&path));
         if p.exists() {
             if p.is_dir() {
                 if !recursive {
@@ -235,7 +282,7 @@ async fn create_object(
     let mut conn = db.acquire().await?;
 
     for path in &valid_paths {
-        let mut source_path = PathBuf::from(path);
+        let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(path));
         source_path.pop();
         let file_size = std::fs::metadata(path)?.len() as i64;
         let mut file_record = gisst::models::File {
@@ -342,79 +389,6 @@ async fn create_object(
 
     Ok(())
 }
-
-#[allow(dead_code)]
-async fn delete_record<T: DBModel>(d: DeleteRecord, db: PgPool) -> Result<(), GISSTCliError> {
-    let mut conn = db.acquire().await?;
-    T::delete_by_id(&mut conn, d.id)
-        .await
-        .map_err(GISSTCliError::Sql)?;
-    info!("Deleted record with uuid {}", d.id);
-    Ok(())
-}
-
-async fn delete_file_record<T: DBModel + DBHashable>(
-    d: DeleteRecord,
-    db: PgPool,
-    storage_path: String,
-) -> Result<(), GISSTCliError> {
-    let mut conn = db.acquire().await?;
-    let model = T::get_by_id(&mut conn, d.id)
-        .await?
-        .ok_or(GISSTCliError::RecordNotFound(d.id))?;
-    let linked_file_record = gisst::models::File::get_by_id(&mut conn, *model.file_id())
-        .await?
-        .ok_or(GISSTCliError::RecordNotFound(*model.file_id()))?;
-
-    T::delete_by_id(&mut conn, d.id)
-        .await
-        .map_err(GISSTCliError::Sql)?;
-    info!("Deleted record with uuid {}", d.id);
-
-    gisst::models::File::delete_by_id(&mut conn, linked_file_record.file_id)
-        .await
-        .map_err(GISSTCliError::Sql)?;
-
-    info!("Deleted file record with uuid {}", d.id);
-
-    debug!(
-        "File path depth is set to {}",
-        StorageHandler::get_folder_depth_from_path(
-            Path::new(&linked_file_record.file_dest_path),
-            None
-        )
-    );
-
-    StorageHandler::delete_file_with_uuid(
-        &storage_path,
-        StorageHandler::get_folder_depth_from_path(
-            Path::new(&linked_file_record.file_dest_path),
-            None,
-        ),
-        linked_file_record.file_id,
-        &StorageHandler::get_dest_filename(
-            &linked_file_record.file_hash,
-            &linked_file_record.file_filename,
-        ),
-    )
-    .await
-    .map_err(GISSTCliError::Io)?;
-
-    info!(
-        "Deleted file at path:{}",
-        Path::new(&linked_file_record.file_dest_path)
-            .join(Path::new(&StorageHandler::get_dest_filename(
-                &linked_file_record.file_hash,
-                &linked_file_record.file_filename
-            )))
-            .to_string_lossy()
-    );
-    Ok(())
-}
-
-// async fn update_object(_u: &UpdateObject, _db: PgPool) -> Result<(), GISSTCliError> {
-//     Ok(())
-// }
 
 async fn create_instance(
     CreateInstance {
@@ -580,135 +554,6 @@ async fn create_work(
             "Please provide JSON to parse for creating a work record.".to_string(),
         )),
     }
-}
-
-async fn create_image(
-    CreateImage {
-        ignore_description: ignore,
-        depth,
-        link,
-        file,
-        force_uuid,
-        ..
-    }: CreateImage,
-    db: PgPool,
-    storage_path: String,
-) -> Result<(), GISSTCliError> {
-    let mut valid_paths: Vec<PathBuf> = Vec::new();
-
-    for path in file {
-        let p = Path::new(&path);
-
-        if p.exists() {
-            valid_paths.push(p.to_path_buf());
-        } else {
-            error!("File not found: {}", &p.to_string_lossy());
-            return Err(GISSTCliError::CreateImage(format!(
-                "File not found: {}",
-                &p.to_string_lossy()
-            )));
-        }
-    }
-
-    let mut conn = db.acquire().await?;
-
-    for path in &valid_paths {
-        let mut source_path = PathBuf::from(path);
-        source_path.pop();
-        let file_size = std::fs::metadata(path)?.len() as i64;
-        let mut file_record = gisst::models::File {
-            file_id: Uuid::new_v4(),
-            file_hash: StorageHandler::get_file_hash(path)?,
-            file_filename: path
-                .to_path_buf()
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .to_string(),
-            file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
-            file_dest_path: Default::default(),
-            file_size,
-            created_on: chrono::Utc::now(),
-        };
-        let mut image = Image {
-            image_id: Uuid::new_v4(),
-            file_id: file_record.file_id,
-            image_description: Some(path.to_path_buf().to_string_lossy().to_string()),
-            image_config: None,
-            created_on: chrono::Utc::now(),
-        };
-
-        // DEBUG ONLY!! Need to find a more elegant solution
-        if valid_paths.len() == 1 {
-            image.image_id = force_uuid;
-        }
-
-        if let Some(found_hash) = Image::get_by_hash(&mut conn, &file_record.file_hash).await? {
-            let found_file = gisst::models::File::get_by_id(&mut conn, found_hash.file_id)
-                .await?
-                .unwrap();
-            warn!(
-                "Found image {}:{} with matching hash value {} to image {}:{}",
-                found_hash.image_id,
-                found_file.file_filename,
-                found_file.file_hash,
-                image.image_id,
-                file_record.file_filename,
-            );
-        }
-
-        if !ignore {
-            let mut description = Default::default();
-            println!(
-                "Please enter an image description for file: {}",
-                &path.to_string_lossy()
-            );
-            io::stdin().read_line(&mut description).ok();
-            image.image_description = Some(description.trim().to_string());
-        }
-
-        match StorageHandler::write_file_to_uuid_folder(
-            &storage_path,
-            depth,
-            file_record.file_id,
-            &file_record.file_filename,
-            path,
-        )
-        .await
-        {
-            Ok(file_info) => {
-                info!(
-                    "Wrote file {} to {}",
-                    file_info.dest_filename, file_info.dest_path
-                );
-                let image_uuid = image.image_id;
-                let file_uuid = file_record.file_id;
-                file_record.file_dest_path = file_info.dest_path;
-
-                if gisst::models::File::insert(&mut conn, file_record)
-                    .await
-                    .is_ok()
-                    && Image::insert(&mut conn, image).await.is_ok()
-                {
-                    if let Some(link) = link {
-                        Image::link_image_to_environment(&mut conn, image_uuid, link).await?;
-                    }
-                } else {
-                    StorageHandler::delete_file_with_uuid(
-                        &storage_path,
-                        depth,
-                        file_uuid,
-                        &file_info.dest_filename,
-                    )
-                    .await?;
-                }
-            }
-            Err(e) => {
-                error!("Error writing image file to database, aborting...\n{e}");
-            }
-        }
-    }
-    Ok(())
 }
 
 async fn create_replay(

@@ -26,6 +26,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
+  const source_path = content.file_source_path!.replace(content.file_filename!, "");
   const use_gamepad_overlay = embed_options.controls == ControllerOverlayMode.On || ((embed_options.controls??ControllerOverlayMode.Auto) == ControllerOverlayMode.Auto && mobileAndTabletCheck());
   if (entryState) {
     retro_args.push("-e");
@@ -45,7 +46,7 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
     retro_args.push("--appendconfig");
     retro_args.push("/home/web_user/content/retroarch.cfg");
   }
-  retro_args.push("/home/web_user/content/" + content.file_source_path! + "/" + content.file_filename!);
+  retro_args.push("/home/web_user/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
 
   ui_state = new UI(
@@ -154,19 +155,20 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
       proms.push(fetchfs.fetchZip(RA,"/assets/frontend/bundle.zip","/home/web_user/retroarch/"));
 
       for(const file of manifest) {
-        const source_path = "/home/web_user/content/" + file.file_source_path;
-        fetchfs.mkdirp(RA, source_path);
+        let download_source_path = "/home/web_user/content/" + file.file_source_path;
+        download_source_path = download_source_path.replace(file.file_filename!, "");
+        fetchfs.mkdirp(RA, download_source_path);
         const file_prom = fetchfs.fetchFile(
             RA,
-            "/storage/" + file.file_dest_path + "/" + file.file_hash + "-" + file.file_filename,
-            source_path + "/" + file.file_filename);
+            "/storage/" + file.file_dest_path,
+          download_source_path + "/" + file.file_filename);
         proms.push(file_prom);
       }
       let entryScreenshot:Promise<GISSTModels.DBRecord> | null = null;
       if (entryState) {
         // Cast: This one is definitely a statestart because the type is state
         const data = (start as StateStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state");
+        console.log(data, "/storage/"+data.file_dest_path,"/home/web_user/content/entry_state");
         if(!data.screenshot_id) {
           console.error("No screenshot for entry state");
           entryScreenshot = Promise.resolve({screenshot_id:"", screenshot_data:""});
@@ -174,13 +176,13 @@ export function init(core:string, start:ColdStart | StateStart | ReplayStart, ma
           entryScreenshot = db.getRecordById("screenshot", data.screenshot_id);
           proms.push(entryScreenshot);
         }
-        proms.push(fetchfs.fetchFile(RA,"/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/entry_state"));
+        proms.push(fetchfs.fetchFile(RA,"/storage/"+data.file_dest_path,"/home/web_user/content/entry_state"));
       }
       if (movie) {
         // Cast: This one is definitely a replaystart because the type is state
         const data = (start as ReplayStart).data;
-        console.log(data, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1");
-        proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path+"/"+data.file_hash+"-"+data.file_filename,"/home/web_user/content/replay.replay1"));
+        console.log(data, "/storage/"+data.file_dest_path,"/home/web_user/content/replay.replay1");
+        proms.push(fetchfs.fetchFile(RA, "/storage/"+data.file_dest_path,"/home/web_user/content/replay.replay1"));
       }
       proms.push(fetchfs.fetchFile(RA, "/assets/retroarch_web_base.cfg", "/home/web_user/retroarch/userdata/retroarch.cfg"));
       Promise.all(proms).then(function () {

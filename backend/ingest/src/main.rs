@@ -1,18 +1,22 @@
-use std::ffi::CString;
+use std::sync::Arc;
 
 use anyhow::Result;
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
 use gisst::{
     model_enums::Framework,
-    models::{DBHashable, DBModel, Environment, File as GFile, Instance, Object, ObjectRole, Work},
-    storage::StorageHandler,
+    models::{
+        insert_file_object, Duplicate, Environment, File as GFile, Instance, Object, ObjectRole,
+        Work,
+    },
 };
 use log::{error, info, warn};
 use rdb_sys::*;
 use sqlx::pool::PoolOptions;
 use sqlx::PgPool;
 use uuid::Uuid;
+
+const DEPTH: u8 = 4;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -45,6 +49,15 @@ struct Args {
 
     #[clap(long)]
     pub core_version: String,
+
+    #[clap(long = "dep")]
+    pub deps: Vec<String>,
+
+    #[clap(long = "dep-path")]
+    pub dep_paths: Vec<String>,
+
+    #[clap(short = 'f', long = "force")]
+    pub allow_unmatched: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -65,6 +78,8 @@ pub enum IngestError {
     RDB(),
     #[error("file metadata error")]
     File(),
+    #[error("file insertion error")]
+    InsertFile(#[from] gisst::error::InsertFileError),
 }
 
 #[tokio::main]
@@ -79,207 +94,207 @@ async fn main() -> Result<(), IngestError> {
         platform,
         gisst_storage_root_path,
         verbose,
+        deps,
+        dep_paths,
+        allow_unmatched,
     } = Args::parse();
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
         .init();
     info!("Connecting to database: {}", gisst_cli_db_url.to_string());
-    let pool: PgPool = get_db_by_url(gisst_cli_db_url.to_string()).await?;
-    let mut conn = pool.acquire().await?;
+    let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.to_string()).await?);
     info!("DB connection successful.");
     let storage_root = gisst_storage_root_path.to_string();
     info!("Storage root is set to: {}", &storage_root);
-    let created_on = chrono::Utc::now();
-    let ra_cfg_object_id = {
-        let ra_cfg = std::path::Path::new(&ra_cfg);
-        let file_size = std::fs::metadata(ra_cfg)?.len() as i64;
-        let hash = StorageHandler::get_file_hash(ra_cfg)?;
-        if let Some(obj) = Object::get_by_hash(&mut conn, &hash).await? {
-            obj.object_id
-        } else {
-            let file_uuid = Uuid::new_v4();
-            let file_info = StorageHandler::write_file_to_uuid_folder(
-                &storage_root,
-                4,
-                file_uuid,
-                "retroarch.cfg",
-                ra_cfg,
-            )
-            .await?;
-            info!(
-                "Wrote file {} to {}",
-                file_info.dest_filename, file_info.dest_path
-            );
-            let file_record = GFile {
-                file_id: file_uuid,
-                file_hash: file_info.file_hash,
-                file_filename: file_info.source_filename,
-                file_source_path: file_info.source_path,
-                file_dest_path: file_info.dest_path,
-                file_size,
-                created_on,
-            };
-            GFile::insert(&mut conn, file_record).await?;
-            let object_id = Uuid::new_v4();
-            let object = Object {
-                object_id,
-                file_id: file_uuid,
-                object_description: Some("RetroArch Config".to_string()),
-                created_on,
-            };
-            Object::insert(&mut conn, object).await?;
-            object_id
-        }
-    };
-    let rdb_path_c = CString::new(rdb)?;
-    unsafe {
-        let db: *mut RetroDB = libretrodb_new();
-        if db.is_null() {
-            return Err(IngestError::RDB());
-        }
-        let cursor: *mut RetroCursor = libretrodb_cursor_new();
-        if cursor.is_null() {
-            return Err(IngestError::RDB());
-        }
-        let mut rval: RVal = RVal {
-            tag: RType::Null,
-            value: RValInner { int_: 0 },
-        };
-        info!("opening DB");
-        if libretrodb_open(rdb_path_c.as_ptr(), db) != 0 {
-            error!("Not opened {rdb_path_c:?}");
-            return Err(IngestError::RDB());
-        }
-        info!("Opened DB");
-        let md5_idx = CString::new("md5")?;
-        if libretrodb_create_index(db, md5_idx.as_ptr(), md5_idx.as_ptr()) == -1 {
-            error!("Couldn't create md5 index");
-            return Err(IngestError::RDB());
-        }
-        for entry in walkdir::WalkDir::new(&roms) {
-            let entry = entry?;
-            if !entry.file_type().is_file() {
-                continue;
-            }
-            let path = entry.path();
-            let hash = {
-                use md5::Digest;
-                let mut hasher = md5::Md5::new();
-                let mut file = std::fs::File::open(path)?;
-                std::io::copy(&mut file, &mut hasher)?;
-                hasher.finalize()
-            };
-            let hash_str = format!("{:x}", hash);
-            if GFile::get_by_hash(&mut conn, &hash_str).await?.is_some() {
-                info!("{:?}:{hash_str} already in DB, skip", entry.path());
-                continue;
-            }
-
-            let file_name = entry.file_name().to_string_lossy().to_string();
-            let key_bytes = hash.as_ptr();
-            info!("{:?}: {}: {hash_str}", entry.path(), hash.len());
-            if libretrodb_find_entry(db, md5_idx.as_ptr(), key_bytes, &mut rval) == 0 {
-                info!("FOUND IT\n{}", rval);
-                // TODO: merge entries from result on libretrodb_query_compile(db, "{\"rom_name\":nom}", strlen query exp, error) cursor
-                let work = Work {
-                    work_id: Uuid::new_v4(),
-                    work_name: rval.map_get("name").unwrap_or_else(|| file_name.clone()),
-                    work_version: rval
-                        .map_get("rom_name")
-                        .unwrap_or_else(|| file_name.clone()),
-                    work_platform: platform.clone(),
-                    // TODO this should use the real cataloguing data
-                    created_on,
-                };
-                let env = Environment {
-                    environment_id: Uuid::new_v4(),
-                    environment_name: work.work_name.clone(),
-                    environment_framework: Framework::RetroArch,
-                    environment_core_name: core_name.clone(),
-                    environment_core_version: core_version.clone(),
-                    environment_derived_from: None,
-                    environment_config: None,
-                    created_on,
-                };
-                let instance_id = Uuid::new_v4();
-                let instance = Instance {
-                    instance_id,
-                    work_id: work.work_id,
-                    environment_id: env.environment_id,
-                    instance_config: None,
-                    created_on,
-                    derived_from_instance: None,
-                    derived_from_state: None,
-                };
-                let file_uuid = Uuid::new_v4();
-                let file_info = StorageHandler::write_file_to_uuid_folder(
-                    &storage_root,
-                    4,
-                    file_uuid,
-                    &file_name,
-                    path,
-                )
-                .await?;
-                info!(
-                    "Wrote file {} to {}",
-                    file_info.dest_filename, file_info.dest_path
-                );
-                let file_size = std::fs::metadata(path)?.len() as i64;
-                let file_record = GFile {
-                    file_id: file_uuid,
-                    file_hash: hash_str,
-                    file_filename: file_name,
-                    file_source_path: entry
-                        .path()
-                        .strip_prefix(&roms)
-                        .map_err(|_e| IngestError::File())?
-                        .to_string_lossy()
-                        .to_string(),
-                    file_dest_path: file_info.dest_path,
-                    file_size,
-                    created_on,
-                };
-                let object_id = Uuid::new_v4();
-                let object = Object {
-                    object_id,
-                    file_id: file_uuid,
-                    object_description: rval.map_get("description"),
-                    created_on,
-                };
-                Work::insert(&mut conn, work).await?;
-                Environment::insert(&mut conn, env).await?;
-                Instance::insert(&mut conn, instance).await?;
-                GFile::insert(&mut conn, file_record).await?;
-                Object::insert(&mut conn, object).await?;
-                Object::link_object_to_instance(
-                    &mut conn,
-                    object_id,
-                    instance_id,
-                    ObjectRole::Content,
-                    // TODO: this is where we can do PSX disk image order and stuff
-                    0,
-                )
-                .await?;
-                Object::link_object_to_instance(
-                    &mut conn,
-                    ra_cfg_object_id,
-                    instance_id,
-                    ObjectRole::Config,
-                    0,
-                )
-                .await?;
-
-                rmsgpack_dom_value_free(&mut rval);
-            } else {
-                warn!("md5 not found");
-                continue;
-            }
-        }
-        libretrodb_cursor_free(cursor);
-        libretrodb_close(db);
-        libretrodb_free(db);
+    let mut base_conn = pool.acquire().await?;
+    let ra_cfg_object_id = insert_file_object(
+        &mut base_conn,
+        &storage_root,
+        DEPTH,
+        std::path::Path::new(&ra_cfg),
+        Some("retroarch.cfg".to_string()),
+        Some("base retroarch config".to_string()),
+        String::new(),
+        Duplicate::ReuseObject,
+    )
+    .await?;
+    let mut dep_ids = Vec::with_capacity(deps.len());
+    for (i, dep) in deps.iter().enumerate() {
+        let dep = std::path::Path::new(dep);
+        let file_name = dep.file_name().unwrap().to_string_lossy().to_string();
+        let dep_path = dep_paths.get(i).unwrap_or(&file_name);
+        let dep_id = insert_file_object(
+            &mut base_conn,
+            &storage_root,
+            DEPTH,
+            dep,
+            None,
+            Some(dep_path.clone()),
+            dep_path.clone(),
+            Duplicate::ReuseObject,
+        )
+        .await?;
+        dep_ids.push(dep_id);
     }
-    Ok(())
+    drop(base_conn);
+    let db = Arc::new(RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?);
+    let roms = Arc::new(std::path::PathBuf::from(roms));
+    let files: Vec<_> = walkdir::WalkDir::new(&*roms)
+        .into_iter()
+        .map(|e| e.unwrap())
+        .collect();
+
+    use rayon::prelude::*;
+    let handle = tokio::runtime::Handle::current();
+    let result: Result<_, _> = files
+        .par_iter()
+        .map(|entry| {
+            if !entry.file_type().is_file() {
+                return Ok(());
+            }
+            let path = entry.path().to_owned();
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let ext = path
+                .extension()
+                .map(std::ffi::OsStr::to_string_lossy)
+                .unwrap_or_default()
+                .into_owned();
+            let stem = path
+                .file_stem()
+                .map(std::ffi::OsStr::to_string_lossy)
+                .unwrap_or_default()
+                .into_owned();
+            if matches!(
+                ext.as_str(),
+                "chd" | "cue" | "bin" | "iso" | "srm" | "7z" | "zip"
+            ) {
+                // Skip this one
+                return Ok(());
+            }
+            let dep_ids = dep_ids.clone();
+            let db = Arc::clone(&db);
+            let roms = Arc::clone(&roms);
+            let platform = platform.to_owned();
+            let core_name = core_name.to_owned();
+            let core_version = core_version.to_owned();
+            let storage_root = storage_root.to_owned();
+
+            let pool = Arc::clone(&pool);
+            handle.block_on(async move {
+                let mut conn = pool.acquire().await?;
+                if ext == "m3u" {
+                    let mut found = false;
+                    for file in files_of_playlist(&roms, &path)? {
+                        match find_entry(&mut conn, &db, &file).await? {
+                            FindResult::AlreadyHave => {
+                                found = true;
+                                break;
+                            }
+                            FindResult::NotInRDB => {
+                                continue;
+                            }
+                            FindResult::InRDB(rval) => {
+                                let instance_id = create_metadata_records_from_rval(
+                                    &mut conn,
+                                    &file_name,
+                                    &rval,
+                                    &platform,
+                                    &core_name,
+                                    &core_version,
+                                )
+                                .await?;
+                                link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id)
+                                    .await?;
+                                create_playlist_instance_objects(
+                                    &mut conn,
+                                    &storage_root,
+                                    &roms,
+                                    instance_id,
+                                    &path,
+                                    rval.map_get("description"),
+                                )
+                                .await?;
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if !found && allow_unmatched {
+                        let instance_id = create_metadata_records(
+                            &mut conn,
+                            &file_name,
+                            &stem,
+                            &file_name,
+                            &platform,
+                            &core_name,
+                            &core_version,
+                        )
+                        .await?;
+                        link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                        create_playlist_instance_objects(
+                            &mut conn,
+                            &storage_root,
+                            &roms,
+                            instance_id,
+                            &path,
+                            Some(stem.to_string()),
+                        )
+                        .await?;
+                    }
+
+                    Ok(())
+                } else {
+                    match find_entry(&mut conn, &db, &path).await? {
+                        FindResult::InRDB(rval) => {
+                            let instance_id = create_metadata_records_from_rval(
+                                &mut conn,
+                                &file_name,
+                                &rval,
+                                &platform,
+                                &core_name,
+                                &core_version,
+                            )
+                            .await?;
+                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            create_single_file_instance_objects(
+                                &mut conn,
+                                &storage_root,
+                                &roms,
+                                instance_id,
+                                &path,
+                                rval.map_get("description"),
+                            )
+                            .await
+                        }
+                        FindResult::NotInRDB if allow_unmatched => {
+                            let instance_id = create_metadata_records(
+                                &mut conn,
+                                &file_name,
+                                &stem,
+                                &file_name,
+                                &platform,
+                                &core_name,
+                                &core_version,
+                            )
+                            .await?;
+                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            create_single_file_instance_objects(
+                                &mut conn,
+                                &storage_root,
+                                &roms,
+                                instance_id,
+                                &path,
+                                Some(stem.to_string()),
+                            )
+                            .await
+                        }
+                        _ => Ok(()),
+                    }
+                }
+            })
+        })
+        .collect();
+    result
 }
 
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {
@@ -292,4 +307,223 @@ fn char_to_num(c: u8) -> u8 {
     } else {
         (c - b'A') + 10
     }
+}
+
+enum FindResult {
+    AlreadyHave,
+    NotInRDB,
+    InRDB(RVal),
+}
+
+async fn find_entry(
+    conn: &mut sqlx::PgConnection,
+    db: &RDB,
+    path: &std::path::Path,
+) -> Result<FindResult, IngestError> {
+    let hash = {
+        use md5::Digest;
+        let mut hasher = md5::Md5::new();
+        let mut file = std::fs::File::open(path)?;
+        std::io::copy(&mut file, &mut hasher)?;
+        hasher.finalize()
+    };
+    let hash_str = format!("{:x}", hash);
+    if GFile::get_by_hash(conn, &hash_str).await?.is_some() {
+        info!("{:?}:{hash_str} already in DB, skip", path);
+        return Ok(FindResult::AlreadyHave);
+    }
+
+    info!("{:?}: {}: {hash_str}", path, hash.len());
+
+    if let Some(rval) = db.find_entry::<&str, &[u8]>("md5", &hash) {
+        info!("metadata found\n{} for {:?}", rval, path);
+        Ok(FindResult::InRDB(rval))
+    } else {
+        warn!("md5 not found");
+        Ok(FindResult::NotInRDB)
+    }
+}
+
+async fn create_metadata_records_from_rval(
+    conn: &mut sqlx::PgConnection,
+    file_name: &str,
+    rval: &RVal,
+    platform: &str,
+    core_name: &str,
+    core_version: &str,
+) -> Result<Uuid, IngestError> {
+    create_metadata_records(
+        conn,
+        file_name,
+        &rval
+            .map_get("name")
+            .unwrap_or_else(|| file_name.to_string()),
+        &rval
+            .map_get("rom_name")
+            .unwrap_or_else(|| file_name.to_string()),
+        platform,
+        core_name,
+        core_version,
+    )
+    .await
+}
+async fn create_metadata_records(
+    conn: &mut sqlx::PgConnection,
+    file_name: &str,
+    work_name: &str,
+    rom_name: &str,
+    platform: &str,
+    core_name: &str,
+    core_version: &str,
+) -> Result<Uuid, IngestError> {
+    // TODO: merge entries from result on libretrodb_query_compile(db, "{\"rom_name\":nom}", strlen query exp, error) cursor
+    let created_on = chrono::Utc::now();
+    let work = Work {
+        work_id: Uuid::new_v4(),
+        work_name: work_name.to_string(),
+        work_version: rom_name.to_string(),
+        work_platform: platform.to_string(),
+        // TODO this should use the real cataloguing data
+        created_on,
+        work_derived_from: None,
+    };
+    info!("creating work {} with file {file_name}", work.work_name);
+    let env = Environment {
+        environment_id: Uuid::new_v4(),
+        environment_name: work.work_name.clone(),
+        environment_framework: Framework::RetroArch,
+        environment_core_name: core_name.to_string(),
+        environment_core_version: core_version.to_string(),
+        environment_derived_from: None,
+        environment_config: None,
+        created_on,
+    };
+    let instance_id = Uuid::new_v4();
+    let instance = Instance {
+        instance_id,
+        work_id: work.work_id,
+        environment_id: env.environment_id,
+        instance_config: None,
+        created_on,
+        derived_from_instance: None,
+        derived_from_state: None,
+    };
+    Work::insert(conn, work).await?;
+    Environment::insert(conn, env).await?;
+    Instance::insert(conn, instance).await?;
+    Ok(instance_id)
+}
+
+async fn create_single_file_instance_objects(
+    conn: &mut sqlx::PgConnection,
+    storage_root: &str,
+    roms: &std::path::Path,
+    instance_id: Uuid,
+    path: &std::path::Path,
+    desc: Option<String>,
+) -> Result<(), IngestError> {
+    let object_id = insert_file_object(
+        conn,
+        storage_root,
+        DEPTH,
+        path,
+        None,
+        desc,
+        path.strip_prefix(roms)
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+        Duplicate::ReuseData,
+    )
+    .await?;
+    Object::link_object_to_instance(conn, object_id, instance_id, ObjectRole::Content, 0).await?;
+    Ok(())
+}
+
+async fn create_playlist_instance_objects(
+    conn: &mut sqlx::PgConnection,
+    storage_root: &str,
+    roms: &std::path::Path,
+    instance_id: Uuid,
+    path: &std::path::Path,
+    desc: Option<String>,
+) -> Result<(), IngestError> {
+    let src_path = path
+        .strip_prefix(roms)
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+    let playlist_id = insert_file_object(
+        conn,
+        storage_root,
+        DEPTH,
+        path,
+        None,
+        desc.clone(),
+        src_path.clone(),
+        Duplicate::ReuseData,
+    )
+    .await?;
+    Object::link_object_to_instance(conn, playlist_id, instance_id, ObjectRole::Content, 0).await?;
+    let mut c_idx = 1;
+    for file in files_of_playlist(roms, path)? {
+        let file_id = insert_file_object(
+            conn,
+            storage_root,
+            DEPTH,
+            &file,
+            None,
+            desc.clone(),
+            src_path.clone(),
+            Duplicate::ReuseData,
+        )
+        .await?;
+        info!("linking {file_id} with {instance_id}");
+        Object::link_object_to_instance(conn, file_id, instance_id, ObjectRole::Content, c_idx)
+            .await?;
+        c_idx += 1;
+    }
+    Ok(())
+}
+
+async fn link_deps(
+    conn: &mut sqlx::PgConnection,
+    ra_cfg_object_id: Uuid,
+    deps: &[Uuid],
+    instance_id: Uuid,
+) -> Result<(), IngestError> {
+    Object::link_object_to_instance(conn, ra_cfg_object_id, instance_id, ObjectRole::Config, 0)
+        .await?;
+    for (i, dep) in deps.iter().enumerate() {
+        Object::link_object_to_instance(conn, *dep, instance_id, ObjectRole::Dependency, i).await?;
+    }
+    Ok(())
+}
+
+fn files_of_playlist(
+    roms: &std::path::Path,
+    path: &std::path::Path,
+) -> Result<impl IntoIterator<Item = std::path::PathBuf>, IngestError> {
+    let mut out = Vec::with_capacity(8);
+    let cue_file_re = regex::Regex::new("^FILE \"(.*)\"").unwrap();
+    for file in std::fs::read_to_string(path)?.lines() {
+        let file_path = roms.join(std::path::Path::new(file));
+        out.push(file_path.clone());
+        if file.ends_with(".cue") {
+            for cue_line in std::fs::read_to_string(file_path)?.lines() {
+                if let Some(captures) = cue_file_re.captures(cue_line) {
+                    let track = &captures[1];
+                    let track_path = roms.join(std::path::Path::new(track));
+                    out.push(track_path.clone());
+                }
+            }
+        } else {
+            // it was e.g. a chd file with combined tracks
+        }
+    }
+    Ok(out.into_iter())
 }

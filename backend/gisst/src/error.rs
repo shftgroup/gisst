@@ -27,9 +27,7 @@ impl fmt::Display for ErrorAction {
 pub enum ErrorTable {
     Creator,
     Environment,
-    EnvironmentImage,
     File,
-    Image,
     Instance,
     InstanceObject,
     Object,
@@ -46,9 +44,7 @@ impl fmt::Display for ErrorTable {
         let s = match self {
             ErrorTable::Creator => "creator",
             ErrorTable::Environment => "environment",
-            ErrorTable::EnvironmentImage => "environment_image",
             ErrorTable::File => "file",
-            ErrorTable::Image => "image",
             ErrorTable::Instance => "instance",
             ErrorTable::InstanceObject => "instance_object",
             ErrorTable::Object => "object",
@@ -143,4 +139,18 @@ pub enum V86CloneError {
     IO(#[from] std::io::Error),
     #[error("incomplete clone for {0}")]
     IncompleteClone(Uuid),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum InsertFileError {
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
+    #[error("Invalid or missing duplicated object for file hash {0}")]
+    ObjectMissing(String),
+    #[error("database error")]
+    Sql(#[from] sqlx::Error),
+    #[error("record error")]
+    Record(#[from] RecordSQLError),
+    #[error("storage error")]
+    Storage(#[from] crate::error::StorageError),
 }

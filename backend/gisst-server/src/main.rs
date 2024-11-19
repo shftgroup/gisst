@@ -1,3 +1,4 @@
+mod auth;
 mod db;
 mod error;
 mod routes;
@@ -6,7 +7,6 @@ mod server;
 mod serverconfig;
 mod tus;
 mod utils;
-mod auth;
 
 use anyhow::Result;
 use tracing_subscriber::EnvFilter;
@@ -16,7 +16,10 @@ async fn main() -> Result<()> {
     let path = std::env::current_dir()?;
     let config = serverconfig::ServerConfig::new()?;
 
-    let default_tracing_directive = config.env.default_directive.clone()
+    let default_tracing_directive = config
+        .env
+        .default_directive
+        .clone()
         .parse()
         .expect("default tracing directive has to be valid");
     let filter = EnvFilter::builder()
