@@ -1,14 +1,14 @@
-use crate::auth::AuthContext;
+use crate::auth::AuthBackend;
 use crate::server::LoggedInUserInfo;
 use crate::{auth, error::GISSTError, server::ServerState, utils::parse_header};
 use axum::{
     extract::{Json, Path, Query},
-    headers::HeaderMap,
+    http::header::HeaderMap,
     response::{Html, IntoResponse},
     routing::{get, post},
     Extension, Router,
 };
-use axum_login::RequireAuthorizationLayer;
+use axum_login::login_required;
 use gisst::models::{
     Creator, Environment, File, Instance, InstanceWork, Object, Replay, Save, State, Work,
 };
@@ -28,7 +28,7 @@ pub fn creator_router() -> Router {
 pub fn screenshot_router() -> Router {
     Router::new()
         .route("/:id", get(get_single_screenshot))
-        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_screenshot))
 }
 
@@ -36,7 +36,7 @@ pub fn instance_router() -> Router {
     Router::new()
         .route("/", get(get_instances))
         .route("/:id", get(get_all_for_instance))
-        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/:id/clone", get(clone_v86_instance))
 }
 
@@ -49,20 +49,20 @@ pub fn object_router() -> Router {
 pub fn replay_router() -> Router {
     Router::new()
         .route("/:id", get(get_single_replay))
-        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_replay))
 }
 pub fn save_router() -> Router {
     Router::new()
         .route("/:id", get(get_single_save))
-        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_save))
 }
 
 pub fn state_router() -> Router {
     Router::new()
         .route("/:id", get(get_single_state))
-        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
+        .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_state))
 }
 
@@ -84,7 +84,7 @@ async fn get_single_creator(
     headers: HeaderMap,
     Path(id): Path<Uuid>,
     params: Query<StateReplayPageQueryParams>,
-    auth: auth::AuthContext,
+    auth: axum_login::AuthSession<auth::AuthBackend>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(creator) = Creator::get_by_id(&mut conn, id).await? {
@@ -118,10 +118,7 @@ async fn get_single_creator(
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
-        let user = auth
-            .current_user
-            .as_ref()
-            .map(LoggedInUserInfo::generate_from_user);
+        let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
@@ -147,12 +144,12 @@ async fn get_single_creator(
             {
                 Json(creator_results).into_response()
             } else {
-                Err(GISSTError::MimeTypeError)?
+                Err(GISSTError::MimeType)?
             })
             .into_response(),
         )
     } else {
-        Err(GISSTError::RecordMissingError {
+        Err(GISSTError::RecordMissing {
             table: ErrorTable::Creator,
             uuid: id,
         })
@@ -208,7 +205,7 @@ async fn get_instances(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Query(params): Query<InstanceListQueryParams>,
-    auth: AuthContext,
+    auth: axum_login::AuthSession<auth::AuthBackend>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     let page_num = params.page_num.unwrap_or(0);
@@ -223,10 +220,7 @@ async fn get_instances(
     )
     .await?;
     let accept: Option<String> = parse_header(&headers, "Accept");
-    let user = auth
-        .current_user
-        .as_ref()
-        .map(LoggedInUserInfo::generate_from_user);
+    let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
 
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
@@ -247,7 +241,7 @@ async fn get_instances(
         {
             Json(instances).into_response()
         } else {
-            Err(GISSTError::MimeTypeError)?
+            Err(GISSTError::MimeType)?
         })
         .into_response(),
     )
@@ -279,7 +273,7 @@ async fn get_all_for_instance(
     headers: HeaderMap,
     Path(id): Path<Uuid>,
     params: Query<StateReplayPageQueryParams>,
-    auth: auth::AuthContext,
+    auth: axum_login::AuthSession<auth::AuthBackend>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
@@ -287,7 +281,7 @@ async fn get_all_for_instance(
         tracing::info!("{params:?}");
         let environment = Environment::get_by_id(&mut conn, instance.environment_id)
             .await?
-            .ok_or(GISSTError::RecordMissingError {
+            .ok_or(GISSTError::RecordMissing {
                 table: ErrorTable::Environment,
                 uuid: instance.environment_id,
             })?;
@@ -336,10 +330,7 @@ async fn get_all_for_instance(
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
-        let user = auth
-            .current_user
-            .as_ref()
-            .map(LoggedInUserInfo::generate_from_user);
+        let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
@@ -367,12 +358,12 @@ async fn get_all_for_instance(
             {
                 Json(full_instance).into_response()
             } else {
-                Err(GISSTError::MimeTypeError)?
+                Err(GISSTError::MimeType)?
             })
             .into_response(),
         )
     } else {
-        Err(GISSTError::RecordMissingError {
+        Err(GISSTError::RecordMissing {
             table: ErrorTable::Instance,
             uuid: id,
         })
@@ -387,11 +378,11 @@ struct CloneParams {
 async fn clone_v86_instance(
     app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
-    _auth: auth::AuthContext,
+    _auth: axum_login::AuthSession<auth::AuthBackend>,
     Query(params): Query<CloneParams>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let state_id = params.state.ok_or(GISSTError::StateRequiredError)?;
+    let state_id = params.state.ok_or(GISSTError::StateRequired)?;
     let storage_path = &app_state.root_storage_path;
     let storage_depth = app_state.folder_depth;
     let new_instance =
@@ -406,22 +397,23 @@ async fn get_single_object(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
-    _auth: auth::AuthContext,
+    _auth: axum_login::AuthSession<auth::AuthBackend>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
 
     let object = Object::get_by_id(&mut conn, id)
         .await?
-        .ok_or(GISSTError::RecordMissingError {
+        .ok_or(GISSTError::RecordMissing {
             table: ErrorTable::Object,
             uuid: id,
         })?;
-    let file = File::get_by_id(&mut conn, object.file_id).await?.ok_or(
-        GISSTError::RecordMissingError {
-            table: ErrorTable::File,
-            uuid: object.file_id,
-        },
-    )?;
+    let file =
+        File::get_by_id(&mut conn, object.file_id)
+            .await?
+            .ok_or(GISSTError::RecordMissing {
+                table: ErrorTable::File,
+                uuid: object.file_id,
+            })?;
 
     let accept: Option<String> = parse_header(&headers, "Accept");
 
@@ -449,7 +441,7 @@ async fn get_single_object(
         {
             Json(object).into_response()
         } else {
-            Err(GISSTError::MimeTypeError)?
+            Err(GISSTError::MimeType)?
         })
         .into_response(),
     )
@@ -459,7 +451,7 @@ async fn get_subobject(
     app_state: Extension<ServerState>,
     _headers: HeaderMap,
     Path((id, subpath)): Path<(Uuid, String)>,
-    _auth: auth::AuthContext,
+    _auth: axum_login::AuthSession<auth::AuthBackend>,
 ) -> Result<axum::response::Response, GISSTError> {
     use gisst::fslist::*;
 
@@ -467,16 +459,17 @@ async fn get_subobject(
 
     let object = Object::get_by_id(&mut conn, id)
         .await?
-        .ok_or(GISSTError::RecordMissingError {
+        .ok_or(GISSTError::RecordMissing {
             table: ErrorTable::Object,
             uuid: id,
         })?;
-    let file = File::get_by_id(&mut conn, object.file_id).await?.ok_or(
-        GISSTError::RecordMissingError {
-            table: ErrorTable::File,
-            uuid: object.file_id,
-        },
-    )?;
+    let file =
+        File::get_by_id(&mut conn, object.file_id)
+            .await?
+            .ok_or(GISSTError::RecordMissing {
+                table: ErrorTable::File,
+                uuid: object.file_id,
+            })?;
     let path = file_to_path(&app_state.root_storage_path, &file);
     let (mime, data) = {
         let subpath = subpath.clone();
@@ -485,7 +478,7 @@ async fn get_subobject(
                 get_file_at_path(std::fs::File::open(path)?, std::path::Path::new(&subpath))
                     .map_err(GISSTError::from)
             } else {
-                Err(GISSTError::SubobjectError(format!("{id}:{subpath}")))
+                Err(GISSTError::Subobject(format!("{id}:{subpath}")))
             }
         })
         .await??
@@ -498,7 +491,7 @@ async fn get_subobject(
                 "attachment; filename=\"{}\"",
                 std::path::Path::new(&subpath)
                     .file_name()
-                    .ok_or(GISSTError::SubobjectError(
+                    .ok_or(GISSTError::Subobject(
                         "can't download empty thing".to_string()
                     ))?
                     .to_string_lossy()
@@ -529,7 +522,7 @@ pub struct CreateReplay {
 
 async fn create_replay(
     app_state: Extension<ServerState>,
-    auth: AuthContext,
+    auth: axum_login::AuthSession<auth::AuthBackend>,
     Json(replay): Json<CreateReplay>,
 ) -> Result<Json<Replay>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -544,8 +537,8 @@ async fn create_replay(
                     replay_description: replay.replay_description,
                     instance_id: replay.instance_id,
                     creator_id: auth
-                        .current_user
-                        .ok_or(GISSTError::AuthUserNotAuthenticatedError)?
+                        .user
+                        .ok_or(GISSTError::AuthUserNotAuthenticated)?
                         .creator_id,
                     replay_forked_from: replay.replay_forked_from,
                     file_id: replay.file_id,
@@ -555,7 +548,7 @@ async fn create_replay(
             .await?,
         ))
     } else {
-        Err(GISSTError::RecordMissingError {
+        Err(GISSTError::RecordMissing {
             table: ErrorTable::File,
             uuid: replay.file_id,
         })?
@@ -580,7 +573,7 @@ async fn create_save(
     if File::get_by_id(&mut conn, save.file_id).await?.is_some() {
         Ok(Json(Save::insert(&mut conn, save).await?))
     } else {
-        Err(GISSTError::RecordMissingError {
+        Err(GISSTError::RecordMissing {
             table: ErrorTable::File,
             uuid: save.file_id,
         })?
@@ -612,7 +605,7 @@ pub struct CreateState {
 #[axum::debug_handler]
 async fn create_state(
     app_state: Extension<ServerState>,
-    auth: AuthContext,
+    auth: axum_login::AuthSession<crate::auth::AuthBackend>,
     Json(state): Json<CreateState>,
 ) -> Result<Json<State>, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -632,8 +625,8 @@ async fn create_state(
                     screenshot_id: state.screenshot_id,
                     replay_id: state.replay_id,
                     creator_id: auth
-                        .current_user
-                        .ok_or(GISSTError::AuthUserNotAuthenticatedError)?
+                        .user
+                        .ok_or(GISSTError::AuthUserNotAuthenticated)?
                         .creator_id,
                     state_replay_index: state.state_replay_index,
                     state_derived_from: state.state_derived_from,
@@ -643,7 +636,7 @@ async fn create_state(
             .await?,
         ))
     } else {
-        Err(GISSTError::RecordMissingError {
+        Err(GISSTError::RecordMissing {
             table: ErrorTable::File,
             uuid: state.file_id,
         })?

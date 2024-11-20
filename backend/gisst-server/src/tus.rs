@@ -10,8 +10,7 @@ use uuid::Uuid;
 
 use axum::{
     extract::Path,
-    headers::HeaderMap,
-    http::StatusCode,
+    http::{header::HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Extension,
 };
@@ -91,7 +90,7 @@ pub async fn tus_patch(
 
     // Check that file upload exists
     if app_state.pending_uploads.read().unwrap().get(&id).is_none() {
-        return Err(GISSTError::FileNotFoundError);
+        return Err(GISSTError::FileNotFound);
     }
 
     let mut pu_offset = app_state

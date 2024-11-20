@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT\n            id,\n            sub,\n            creator_id,\n            password_hash,\n            name,\n            given_name,\n            family_name,\n            preferred_username,\n            email,\n            picture\n            FROM users WHERE id = $1",
+  "query": "SELECT * FROM users WHERE iss = $1 AND sub = $2",
   "describe": {
     "columns": [
       {
@@ -52,25 +52,32 @@
         "ordinal": 9,
         "name": "picture",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "iss",
+        "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Int4"
+        "Text",
+        "Text"
       ]
     },
     "nullable": [
       false,
-      true,
       false,
       false,
+      false,
       true,
       true,
       true,
       true,
       true,
-      true
+      true,
+      false
     ]
   },
-  "hash": "334d6ae9bb6d9eba62f09d7d39901b70426cff3e7854e3277a42f7524b34b6bc"
+  "hash": "fb91f0ad32a265ebd9532a4b86ed74d3c811ac927568c379c4e3d11dd59d87b7"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO users (sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)\n            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)\n            RETURNING\n            id,\n            sub,\n            creator_id,\n            password_hash,\n            name,\n            given_name,\n            family_name,\n            preferred_username,\n            email,\n            picture\n            ",
+  "query": "INSERT INTO users (iss, sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)\n            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)\n            ON CONFLICT(iss,sub) DO UPDATE SET PASSWORD_HASH=excluded.password_hash\n            RETURNING\n            id,\n            iss,\n            sub,\n            creator_id,\n            password_hash,\n            name,\n            given_name,\n            family_name,\n            preferred_username,\n            email,\n            picture\n            ",
   "describe": {
     "columns": [
       {
@@ -10,52 +10,58 @@
       },
       {
         "ordinal": 1,
-        "name": "sub",
+        "name": "iss",
         "type_info": "Text"
       },
       {
         "ordinal": 2,
+        "name": "sub",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
         "name": "creator_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "password_hash",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "given_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "family_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "preferred_username",
         "type_info": "Text"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "email",
         "type_info": "Text"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "picture",
         "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
         "Text",
         "Uuid",
         "Text",
@@ -69,7 +75,8 @@
     },
     "nullable": [
       false,
-      true,
+      false,
+      false,
       false,
       false,
       true,
@@ -80,5 +87,5 @@
       true
     ]
   },
-  "hash": "ba918a423fab8216b62c3cde591a97db406ace739ced40fe4c21a0804bbdc9f0"
+  "hash": "ebfa92f305c83e6ca42f7bcb8d9e161c457e018736be5fa70e0bbdefbc4ee0d5"
 }

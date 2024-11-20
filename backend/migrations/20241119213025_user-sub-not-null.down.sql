@@ -1,0 +1,4 @@
+-- Add down migration script here
+ALTER TABLE IF EXISTS users ALTER COLUMN sub DROP NOT NULL;
+ALTER TABLE IF EXISTS users DROP CONSTRAINT no_duplicate_sub;
+ALTER TABLE IF EXISTS users DROP COLUMN iss;

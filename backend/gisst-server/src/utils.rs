@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use axum::headers::HeaderMap;
+use axum::http::header::HeaderMap;
 
 use base64::{engine::general_purpose, Engine};
 

@@ -1,6 +1,5 @@
 // Most of this is based on https://github.com/maxcountryman/axum-login/blob/main/examples/oauth/src/main.rs
 // We want to use Google Auth and hopefully OrcID OpenID
-
 use async_trait::async_trait;
 use axum::{
     extract::Query,
@@ -11,32 +10,30 @@ use gisst::models::Creator;
 
 use uuid::Uuid;
 
-use axum_login::axum_sessions::extractors::ReadableSession;
-use axum_login::{secrecy::SecretVec, AuthUser, UserStore};
+use axum_login::AuthUser;
 use chrono::Utc;
 use sqlx::{PgConnection, PgPool};
 
-use crate::error::GISSTError;
-use crate::server::ServerState;
-#[cfg(not(feature = "dummy_auth"))]
-use oauth2::Scope;
+use crate::{error::GISSTError, server::ServerState};
 use oauth2::{
-    basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
-    ClientSecret, CsrfToken, RedirectUrl, TokenResponse, TokenUrl,
+    basic::BasicClient, AuthUrl, ClientId, ClientSecret, CsrfToken, IntrospectionUrl, RedirectUrl,
+    TokenUrl,
 };
-
 #[cfg(not(feature = "dummy_auth"))]
-use axum_login::axum_sessions::extractors::WritableSession;
+use oauth2::{reqwest::async_http_client, AuthorizationCode, TokenResponse};
 
-use crate::error::GISSTError::{AuthTokenResponseError, AuthUserNotPermittedError};
 use serde::Deserialize;
 use tracing::{debug, info, warn};
+
+pub const CSRF_STATE_KEY: &str = "auth.csrf_token";
+pub const NEXT_URL_KEY: &str = "auth.next_url";
 
 // User attributes based on OpenID specification for "userinfo"
 #[derive(Debug, Default, Clone, sqlx::FromRow)]
 pub struct User {
     id: i32,
-    sub: Option<String>, //OpenID (currently google specific)
+    iss: String, //OpenID issuer
+    sub: String, //OpenID (currently google specific)
     pub creator_id: Uuid,
     password_hash: String,
     pub name: Option<String>,               //OpenID
@@ -51,7 +48,7 @@ pub struct User {
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, sqlx::FromRow, Clone)]
 pub struct OpenIDUserInfo {
-    sub: Option<String>,                //OpenID
+    sub: String,                        //OpenID
     name: Option<String>,               //OpenID
     given_name: Option<String>,         //OpenID
     family_name: Option<String>,        //OpenID
@@ -64,7 +61,7 @@ pub struct OpenIDUserInfo {
 impl OpenIDUserInfo {
     fn test_user() -> Self {
         Self {
-            sub: Some("test sub".to_string()),
+            sub: "test sub".to_string(),
             name: Some("test name".to_string()),
             given_name: Some("givenname".to_string()),
             family_name: Some("familyname".to_string()),
@@ -75,46 +72,28 @@ impl OpenIDUserInfo {
     }
 }
 
-impl AuthUser<i32, Role> for User {
-    fn get_id(&self) -> i32 {
+impl AuthUser for User {
+    type Id = i32;
+
+    fn id(&self) -> Self::Id {
         self.id
     }
 
-    fn get_password_hash(&self) -> SecretVec<u8> {
-        SecretVec::new(self.password_hash.clone().into())
+    fn session_auth_hash(&self) -> &[u8] {
+        self.password_hash.as_bytes()
     }
 }
 
 impl User {
-    #[allow(dead_code)]
-    async fn get_by_id(conn: &mut PgConnection, id: i32) -> sqlx::Result<Option<Self>> {
+    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, sqlx::Error> {
         sqlx::query_as!(
             Self,
-            r#"SELECT
-            id,
-            sub,
-            creator_id,
-            password_hash,
-            name,
-            given_name,
-            family_name,
-            preferred_username,
-            email,
-            picture
-            FROM users WHERE id = $1"#,
-            id
-        )
-        .fetch_optional(conn)
-        .await
-    }
-
-    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, GISSTError> {
-        sqlx::query_as!(
-            Self,
-            r#"INSERT INTO users (sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            r#"INSERT INTO users (iss, sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT(iss,sub) DO UPDATE SET PASSWORD_HASH=excluded.password_hash
             RETURNING
             id,
+            iss,
             sub,
             creator_id,
             password_hash,
@@ -125,6 +104,7 @@ impl User {
             email,
             picture
             "#,
+            model.iss,
             model.sub,
             model.creator_id,
             model.password_hash,
@@ -137,54 +117,27 @@ impl User {
         )
             .fetch_one(conn)
             .await
-            .map_err( GISSTError::SqlError )
     }
 
-    async fn update(conn: &mut PgConnection, model: &User) -> Result<Self, GISSTError> {
-        sqlx::query_as!(
-            Self,
+    async fn update_token(
+        conn: &mut PgConnection,
+        user_iss: &str,
+        user_sub: &str,
+        token: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
             r#"
-            UPDATE users SET
-            sub = $1,
-            creator_id = $2,
-            password_hash = $3,
-            name = $4,
-            given_name = $5,
-            family_name = $6,
-            preferred_username = $7,
-            email = $8,
-            picture = $9
-            WHERE id = $10
-            RETURNING
-            id,
-            sub,
-            creator_id,
-            password_hash,
-            name,
-            given_name,
-            family_name,
-            preferred_username,
-            email,
-            picture
+            UPDATE users SET password_hash=$1 WHERE iss=$2 AND sub=$3
             "#,
-            model.sub,
-            model.creator_id,
-            model.password_hash,
-            model.name,
-            model.given_name,
-            model.family_name,
-            model.preferred_username,
-            model.email,
-            model.picture,
-            model.id
+            token,
+            user_iss,
+            user_sub,
         )
-        .fetch_one(conn)
+        .execute(conn)
         .await
-        .map_err(GISSTError::SqlError)
+        .map(|_| ())
     }
 }
-
-pub type AuthContext = axum_login::extractors::AuthContext<i32, User, PostgresStore, Role>;
 
 #[derive(Debug, Deserialize)]
 pub struct AuthRequest {
@@ -193,168 +146,90 @@ pub struct AuthRequest {
 }
 
 pub async fn oauth_callback_handler(
-    mut auth: AuthContext,
+    mut auth: axum_login::AuthSession<AuthBackend>,
     Query(query): Query<AuthRequest>,
-    Extension(state): Extension<ServerState>,
-    session: ReadableSession,
-) -> impl IntoResponse {
-    debug!("Running oauth callback {query:?}");
+    session: axum_login::tower_sessions::Session,
+    server_state: Extension<ServerState>,
+) -> Result<Redirect, GISSTError> {
+    debug!("Running oauth callback {query:?}, {:?}", auth.user);
     // Compare the csrf state in the callback with the state generated before the
     // request
-    let original_csrf_state: CsrfToken = session.get("csrf_state").unwrap();
+    let original_csrf_state: CsrfToken = session
+        .get(CSRF_STATE_KEY)
+        .await?
+        .ok_or(crate::error::AuthError::CsrfMissing)?;
     let query_csrf_state = query.state.secret();
     let csrf_state_equal = original_csrf_state.secret() == query_csrf_state;
-
-    drop(session);
-
     if !csrf_state_equal {
         warn!("csrf state is invalid, cannot login",);
-
         // Return to some error
         return Ok(Redirect::to("/instances"));
     }
-
-    debug!("Getting oauth token");
-    // Get an auth token
-    let token = state
-        .oauth_client
-        .exchange_code(AuthorizationCode::new(query.code))
-        .request_async(async_http_client)
-        .await
-        .map_err(|_| AuthTokenResponseError)?;
-
-    // Get OpenID provider userinfo from token
-    let profile = match reqwest::Client::new()
-        .get("https://openidconnect.googleapis.com/v1/userinfo")
-        .bearer_auth(token.access_token().secret().to_owned())
-        .send()
-        .await
-    {
-        Ok(res) => res,
-        Err(e) => return Err(GISSTError::ReqwestError(e)),
+    let creds = Credentials {
+        code: query.code,
+        old_state: original_csrf_state,
+        new_state: query.state,
     };
-
-    let profile: OpenIDUserInfo = profile.json::<OpenIDUserInfo>().await.unwrap();
-
-    if let Some(email) = profile.email.as_ref() {
-        debug!("Comparing {email} ");
-        if state.user_whitelist.binary_search(email).is_err() {
-            return Err(AuthUserNotPermittedError);
-        }
-    }
-
-    debug!("Getting db connection");
-
-    let user = auth_get_user(state.pool, &profile, token.access_token().secret()).await?;
+    let user = auth.authenticate(creds).await?.unwrap(); // Always is Some() for this backend if no error
     auth.login(&user).await?;
-    info!("Logged in the user: {user:?}");
-    Ok(Redirect::to("/instances"))
+    if let Ok(Some(next)) = session.remove::<String>(NEXT_URL_KEY).await {
+        debug!("success {:?}, redirect to {next}", auth.user);
+        if next.starts_with(&server_state.base_url) {
+            Ok(Redirect::to(&next))
+        } else {
+            Ok(Redirect::to("/instances"))
+        }
+    } else {
+        debug!("success {:?}, redirect to instances", auth.user);
+        Ok(Redirect::to("/instances"))
+    }
 }
 
-async fn auth_get_user(
-    pool: PgPool,
-    profile: &OpenIDUserInfo,
-    secret: &str,
-) -> Result<User, GISSTError> {
-    let mut conn = pool.acquire().await?;
-    if let Some(user) = sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", profile.email)
-        .fetch_optional(&mut *conn)
-        .await?
-    {
-        debug!("Found user: {user:?} updating.");
-        let user = User::update(
-            &mut conn,
-            &User {
-                password_hash: secret.to_owned(),
-                ..user
-            },
-        )
-        .await?;
-        debug!("Got user {user:?}. Logging in.");
-        Ok(user)
-    } else {
-        info!("New user login, creating creator and user records.");
-        let creator = Creator::insert(
-            &mut conn,
-            Creator {
-                creator_id: Uuid::new_v4(),
-                creator_username: profile
-                    .email
-                    .as_ref()
-                    .ok_or(GISSTError::AuthMissingProfileInfoError {
-                        field: "email".to_string(),
-                    })?
-                    .clone(),
-                creator_full_name: profile
-                    .given_name
-                    .as_ref()
-                    .ok_or(GISSTError::AuthMissingProfileInfoError {
-                        field: "given_name".to_string(),
-                    })?
-                    .clone(),
-                created_on: Utc::now(),
-            },
-        )
-        .await?;
-        debug!("Creator record created: {creator:?}.");
-        let user = User::insert(
-            &mut conn,
-            &User {
-                id: 0, // will be ignored on insert since insert id is serial auto-increment
-                sub: profile.sub.clone(),
-                creator_id: creator.creator_id,
-                password_hash: secret.to_owned(),
-                name: profile.name.clone(),
-                given_name: profile.given_name.clone(),
-                family_name: profile.family_name.clone(),
-                preferred_username: profile.preferred_username.clone(),
-                email: profile.email.clone(),
-                picture: profile.picture.clone(),
-            },
-        )
-        .await?;
-
-        debug!("User record created: {user:?}.");
-        info!("Logging in.;");
-        Ok(user)
-    }
+#[derive(Debug, Deserialize)]
+pub struct NextUrl {
+    next: Option<String>,
 }
 
 #[cfg(not(feature = "dummy_auth"))]
 pub async fn login_handler(
-    Extension(state): Extension<ServerState>,
-    mut session: WritableSession,
-) -> impl IntoResponse {
-    let (auth_url, csrf_state) = state
-        .oauth_client
-        .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new("openid profile email".to_string()))
-        .url();
-
-    session.insert("csrf_state", csrf_state).unwrap();
-
-    Redirect::to(auth_url.as_ref())
+    auth_session: axum_login::AuthSession<AuthBackend>,
+    Query(next): Query<NextUrl>,
+    session: axum_login::tower_sessions::Session,
+) -> Result<impl IntoResponse, GISSTError> {
+    debug!("Running login {:?}", auth_session.user);
+    let (auth_url, csrf_state) = auth_session.backend.authorize_url();
+    session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
+    session.insert(NEXT_URL_KEY, next.next).await?;
+    Ok(Redirect::to(auth_url.as_str()).into_response())
 }
-
 #[cfg(feature = "dummy_auth")]
 pub async fn login_handler(
-    mut auth: AuthContext,
-    Extension(state): Extension<ServerState>,
+    mut auth_session: axum_login::AuthSession<AuthBackend>,
+    Query(next): Query<NextUrl>,
+    session: axum_login::tower_sessions::Session,
 ) -> Result<impl IntoResponse, GISSTError> {
-    let dummy = OpenIDUserInfo::test_user();
-    let user = auth_get_user(state.pool, &dummy, "verysecret").await?;
-    auth.login(&user)
-        .await
-        .map_err(GISSTError::AuthUserSerdeLoginError)?;
-    debug!("Logged in the user: {user:?}");
-    Ok(Redirect::to("/instances"))
+    let (_, csrf_state) = auth_session.backend.authorize_url();
+    session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
+    session.insert(NEXT_URL_KEY, next.next).await?;
+    let creds = Credentials {
+        code: "verysecret".to_string(),
+        old_state: csrf_state.clone(),
+        new_state: csrf_state,
+    };
+    let user = auth_session.authenticate(creds).await?.unwrap(); // Always is Some() for this backend if no error
+    auth_session.login(&user).await?;
+    if let Ok(Some(next)) = session.remove::<String>(NEXT_URL_KEY).await {
+        Ok(Redirect::to(&next))
+    } else {
+        Ok(Redirect::to("/instances"))
+    }
 }
 
-pub async fn logout_handler(mut auth: AuthContext) -> impl IntoResponse {
-    let c_user = &auth.current_user.clone().unwrap();
-    debug!("Logging out user: {c_user:?}");
-    auth.logout().await;
-    Redirect::to("/instances")
+pub async fn logout_handler(
+    mut auth: axum_login::AuthSession<AuthBackend>,
+) -> Result<impl IntoResponse, GISSTError> {
+    auth.logout().await?;
+    Ok(Redirect::to("/").into_response())
 }
 
 pub fn build_oauth_client(
@@ -368,6 +243,9 @@ pub fn build_oauth_client(
         .expect("Invalid authorization endpoint URL");
     let token_url = TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".to_string())
         .expect("Invalid token endpoint URL");
+    let introspect_url =
+        IntrospectionUrl::new("https://www.googleapis.com/oauth2/v3/tokeninfo".to_string())
+            .expect("Invalid token introspection endpoint URL");
 
     BasicClient::new(
         ClientId::new(client_id.to_string()),
@@ -376,34 +254,161 @@ pub fn build_oauth_client(
         Some(token_url),
     )
     .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap())
+    .set_introspection_uri(introspect_url)
 }
 
-#[allow(dead_code)]
-#[derive(PartialOrd, PartialEq, Clone)]
-pub enum Role {
-    User,
+#[derive(Clone)]
+pub struct Credentials {
+    pub code: String,
+    pub old_state: CsrfToken,
+    pub new_state: CsrfToken,
 }
-
-#[derive(Debug, Clone)]
-pub struct PostgresStore {
+#[derive(Clone)]
+pub struct AuthBackend {
     pool: PgPool,
+    client: BasicClient,
+    #[allow(dead_code)]
+    email_whitelist: Vec<String>,
 }
-
-impl PostgresStore {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+impl AuthBackend {
+    pub fn new(pool: PgPool, client: BasicClient, email_whitelist: Vec<String>) -> Self {
+        Self {
+            pool,
+            client,
+            email_whitelist,
+        }
+    }
+    pub fn authorize_url(&self) -> (oauth2::url::Url, CsrfToken) {
+        self.client
+            .authorize_url(CsrfToken::new_random)
+            .add_scope(oauth2::Scope::new("openid profile email".to_string()))
+            .url()
     }
 }
 
 #[async_trait]
-impl UserStore<i32, Role> for PostgresStore {
+impl axum_login::AuthnBackend for AuthBackend {
     type User = User;
+    type Credentials = Credentials;
+    type Error = crate::error::AuthError;
 
-    type Error = sqlx::error::Error;
-
-    async fn load_user(&self, user_id: &i32) -> Result<Option<Self::User>, Self::Error> {
+    async fn authenticate(
+        &self,
+        Credentials {
+            code,
+            old_state,
+            new_state,
+        }: Self::Credentials,
+    ) -> Result<Option<Self::User>, Self::Error> {
+        use crate::error::AuthError;
+        if old_state.secret() != new_state.secret() {
+            return Err(AuthError::CsrfMissing);
+        }
         let mut connection = self.pool.acquire().await?;
+        #[cfg(not(feature = "dummy_auth"))]
+        let (profile, token) = {
+            let token = self
+                .client
+                .exchange_code(AuthorizationCode::new(code))
+                .request_async(async_http_client)
+                .await?;
+            let user_info = reqwest::Client::new()
+                .get("https://openidconnect.googleapis.com/v1/userinfo")
+                .header(axum::http::header::USER_AGENT.as_str(), "gisst-login")
+                .bearer_auth(token.access_token().secret().to_owned())
+                .send()
+                .await?;
+            let profile: OpenIDUserInfo = user_info.json::<OpenIDUserInfo>().await.unwrap();
+            if !profile
+                .email
+                .as_ref()
+                .is_some_and(|email| self.email_whitelist.contains(email))
+            {
+                return Err(AuthError::UserNotPermitted);
+            }
+            (profile, token.access_token().clone())
+        };
+        #[cfg(feature = "dummy_auth")]
+        let (profile, token) = {
+            if code != "verysecret" {
+                return Err(AuthError::UserNotPermitted);
+            }
+            (
+                OpenIDUserInfo::test_user(),
+                oauth2::AccessToken::new("verysecret".to_string()),
+            )
+        };
+        let mut conn = self.pool.acquire().await?;
+        let user = match sqlx::query_as!(
+            Self::User,
+            "SELECT * FROM users WHERE iss = $1 AND sub = $2",
+            "https://accounts.google.com",
+            profile.sub,
+        )
+        .fetch_optional(&mut *connection)
+        .await?
+        {
+            Some(mut user) => {
+                info!("refresh token to {:?}", token.secret());
+                User::update_token(&mut conn, &user.iss, &user.sub, token.secret()).await?;
+                user.password_hash = token.secret().clone();
+                Some(user)
+            }
+            None => {
+                info!("New user login, creating creator and user records.");
+                let creator = Creator::insert(
+                    &mut conn,
+                    Creator {
+                        creator_id: Uuid::new_v4(),
+                        creator_username: profile
+                            .email
+                            .as_ref()
+                            .ok_or(AuthError::MissingProfileInfo {
+                                field: "email".to_string(),
+                            })?
+                            .clone(),
+                        creator_full_name: profile
+                            .given_name
+                            .as_ref()
+                            .ok_or(AuthError::MissingProfileInfo {
+                                field: "given_name".to_string(),
+                            })?
+                            .clone(),
+                        created_on: Utc::now(),
+                    },
+                )
+                .await?;
+                debug!("Creator record created: {creator:?}.");
+                let user = User::insert(
+                    &mut conn,
+                    &User {
+                        id: 0, // will be ignored on insert since insert id is serial auto-increment
+                        iss: "https://accounts.google.com".to_string(),
+                        sub: profile.sub.clone(),
+                        creator_id: creator.creator_id,
+                        password_hash: token.secret().to_owned(),
+                        name: profile.name.clone(),
+                        given_name: profile.given_name.clone(),
+                        family_name: profile.family_name.clone(),
+                        preferred_username: profile.preferred_username.clone(),
+                        email: profile.email.clone(),
+                        picture: profile.picture.clone(),
+                    },
+                )
+                .await?;
 
+                debug!("User record created: {user:?}.");
+                Some(user)
+            }
+        };
+        Ok(user)
+    }
+
+    async fn get_user(
+        &self,
+        user_id: &axum_login::UserId<Self>,
+    ) -> Result<Option<Self::User>, Self::Error> {
+        let mut connection = self.pool.acquire().await?;
         let user: Option<User> =
             sqlx::query_as!(Self::User, "SELECT * FROM users WHERE id = $1", &user_id)
                 .fetch_optional(&mut *connection)

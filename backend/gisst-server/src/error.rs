@@ -14,53 +14,52 @@ use uuid::Uuid;
 #[derive(thiserror::Error)]
 pub enum GISSTError {
     #[error("database error")]
-    SqlError(#[from] sqlx::Error),
+    Sql(#[from] sqlx::Error),
     #[error("storage error")]
-    StorageError(#[from] gisst::error::StorageError),
+    Storage(#[from] gisst::error::StorageError),
     #[error("file not found")]
-    FileNotFoundError,
+    FileNotFound,
     #[error("IO error")]
     IO(#[from] std::io::Error),
     #[error("error with record SQL manipulation")]
-    RecordManipulationError(#[from] gisst::error::RecordSQLError),
+    RecordManipulation(#[from] gisst::error::RecordSQLError),
     #[error("{} record with uuid {} is missing", .table, .uuid)]
-    RecordMissingError { table: ErrorTable, uuid: Uuid },
+    RecordMissing { table: ErrorTable, uuid: Uuid },
     #[error("path prefix error")]
-    PathPrefixError(#[from] std::path::StripPrefixError),
+    PathPrefix(#[from] std::path::StripPrefixError),
     #[error("tokio task error")]
-    JoinError(#[from] tokio::task::JoinError),
+    Join(#[from] tokio::task::JoinError),
     #[error("reqwest error")]
-    ReqwestError(#[from] reqwest::Error),
+    Reqwest(#[from] reqwest::Error),
     #[error("error rendering minijinja template")]
-    MiniJinjaError(#[from] minijinja::Error),
+    MiniJinja(#[from] minijinja::Error),
     #[error("user login error")]
-    AuthUserSerdeLoginError(#[from] serde_json::Error),
-    #[error("missing user auth profile information: {}", .field)]
-    AuthMissingProfileInfoError { field: String },
+    AuthUserSerdeLogin(#[from] serde_json::Error),
+    #[error("session error")]
+    AuthSession(#[from] axum_login::tower_sessions::session::Error),
+    #[error("auth backend error")]
+    AuthBackend(#[from] AuthError),
+    #[error("auth system error")]
+    AuthBackendSystem(#[from] axum_login::Error<crate::auth::AuthBackend>),
     #[error("incorrect mimetype for request")]
-    MimeTypeError,
+    MimeType,
     #[error("user not logged in")]
-    AuthUserNotAuthenticatedError,
-    #[error("user not permitted to access this resource")]
-    AuthUserNotPermittedError,
-    #[error("token response error")]
-    AuthTokenResponseError,
+    AuthUserNotAuthenticated,
     #[error("error linking uuid: {} to {} reference", .table, .uuid)]
-    RecordLinkingError { table: ErrorTable, uuid: Uuid },
+    RecordLinking { table: ErrorTable, uuid: Uuid },
     #[error("multipart request error")]
-    MultipartError(#[from] MultipartError),
+    Multipart(#[from] MultipartError),
     #[error("filesystem listing error")]
-    FSListError(#[from] gisst::error::FSListError),
+    FSList(#[from] gisst::error::FSListError),
     #[error("subobject access error")]
-    SubobjectError(String),
+    Subobject(String),
     #[error("state required for clone command")]
-    StateRequiredError,
+    StateRequired,
     #[error("clone execution error")]
-    V86CloneError(#[from] gisst::error::V86CloneError),
+    V86Clone(#[from] gisst::error::V86CloneError),
     #[error("this should not be reachable!")]
     Unreachable,
 }
-
 impl Debug for GISSTError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self)?;
@@ -95,64 +94,51 @@ impl IntoResponse for GISSTError {
         }
         let error_template = env.get_template("error.html").unwrap();
         let (status, message) = match self {
-            GISSTError::SqlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database error"),
+            GISSTError::Sql(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database error"),
             GISSTError::IO(_) => (StatusCode::INTERNAL_SERVER_ERROR, "IO error"),
-            GISSTError::StorageError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
-            GISSTError::RecordManipulationError(_) => (
+            GISSTError::Storage(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
+            GISSTError::RecordManipulation(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "record manipulation error",
             ),
-            GISSTError::RecordLinkingError { .. } => {
+            GISSTError::RecordLinking { .. } => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "record creation error")
             }
-            GISSTError::RecordMissingError { .. } => {
+            GISSTError::RecordMissing { .. } => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "record update error")
             }
-            GISSTError::PathPrefixError(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "file creation error")
-            }
-            GISSTError::JoinError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "tokio task error"),
-            GISSTError::FileNotFoundError => (StatusCode::NOT_FOUND, "file not found"),
-            GISSTError::ReqwestError(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "oauth reqwest error")
-            }
-            GISSTError::AuthUserSerdeLoginError(_) => {
+            GISSTError::PathPrefix(_) => (StatusCode::INTERNAL_SERVER_ERROR, "file creation error"),
+            GISSTError::Join(_) => (StatusCode::INTERNAL_SERVER_ERROR, "tokio task error"),
+            GISSTError::FileNotFound => (StatusCode::NOT_FOUND, "file not found"),
+            GISSTError::Reqwest(_) => (StatusCode::INTERNAL_SERVER_ERROR, "oauth reqwest error"),
+            GISSTError::AuthUserSerdeLogin(_) => (StatusCode::INTERNAL_SERVER_ERROR, "auth error"),
+            GISSTError::AuthUserNotAuthenticated => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "auth error")
             }
-            GISSTError::AuthMissingProfileInfoError { .. } => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "auth error, missing profile field",
-            ),
-            GISSTError::AuthUserNotAuthenticatedError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "auth error")
-            }
-            GISSTError::AuthUserNotPermittedError => {
-                (StatusCode::FORBIDDEN, "user not permitted error")
-            }
-            GISSTError::AuthTokenResponseError => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "oauth token response error",
-            ),
-            GISSTError::MiniJinjaError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "minijinja error"),
-            GISSTError::MimeTypeError => (
+            GISSTError::MiniJinja(_) => (StatusCode::INTERNAL_SERVER_ERROR, "minijinja error"),
+            GISSTError::MimeType => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "incompatible mimetype for request",
             ),
-            GISSTError::MultipartError(_) => {
+            GISSTError::Multipart(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "multipart request error")
             }
-            GISSTError::FSListError(_) => (
+            GISSTError::FSList(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "filesystem listing error",
             ),
-            GISSTError::SubobjectError(_) => {
+            GISSTError::Subobject(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "subobject access error")
             }
-            GISSTError::StateRequiredError => {
-                (StatusCode::BAD_REQUEST, "need a state to make a clone")
-            }
-            GISSTError::V86CloneError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "v86 clone failed"),
+            GISSTError::StateRequired => (StatusCode::BAD_REQUEST, "need a state to make a clone"),
+            GISSTError::V86Clone(_) => (StatusCode::INTERNAL_SERVER_ERROR, "v86 clone failed"),
             GISSTError::Unreachable => (StatusCode::INTERNAL_SERVER_ERROR, "uh oh error"),
+            GISSTError::AuthSession(_) => (StatusCode::INTERNAL_SERVER_ERROR, "auth session error"),
+            GISSTError::AuthBackend(_) => (StatusCode::INTERNAL_SERVER_ERROR, "auth backend error"),
+            GISSTError::AuthBackendSystem(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "auth backend internal system error",
+            ),
         };
 
         let body = Html(
@@ -162,5 +148,38 @@ impl IntoResponse for GISSTError {
         );
 
         (status, body).into_response()
+    }
+}
+
+#[derive(thiserror::Error)]
+pub enum AuthError {
+    #[error("database error")]
+    Sql(#[from] sqlx::Error),
+    #[error("csrf error")]
+    CsrfMissing,
+    #[error("user not allowed to access resource")]
+    UserNotPermitted,
+    #[error("token request error")]
+    TokenRequest(
+        #[from]
+        oauth2::RequestTokenError<
+            oauth2::reqwest::Error<reqwest::Error>,
+            oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>,
+        >,
+    ),
+    #[error("reqwest error")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("missing user auth profile information: {}", .field)]
+    MissingProfileInfo { field: String },
+    #[error("error with record SQL manipulation")]
+    RecordManipulation(#[from] gisst::error::RecordSQLError),
+}
+impl Debug for AuthError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self)?;
+        if let Some(source) = self.source() {
+            writeln!(f, "Caused by:\n\t{}", source)?;
+        }
+        Ok(())
     }
 }

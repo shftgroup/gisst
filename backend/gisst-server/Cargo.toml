@@ -11,8 +11,9 @@ fatfs_logging=["gisst/fatfs_logging"]
 [dependencies]
 anyhow = "1.0.70"
 async-trait = "0.1.68"
-axum = { version = "0.6.12", features = ["multipart", "headers", "macros", "original-uri"] }
-axum-macros = "0.3.8"
+axum = { version = "0.7.9", features = ["multipart", "macros"] }
+axum-server = { version = "0.7.1", features = ["tls-rustls"] }
+axum-macros = "0.4.2"
 base64 = "0.21.2"
 bytes = { version = "1.4.0", features = ["serde"] }
 config = {  version = "0.13.3", features = ["toml"], default-features = false }
@@ -30,14 +31,14 @@ thiserror = "1.0.40"
 time = { version = "0.3.21", features = ["serde", "parsing"] }
 tokio = { version = "1.27.0", features = ["full"] }
 tower = {version="0.4.13",features=["util"]}
-tower-http = { version = "0.4.0", features = ["fs", "trace", "cors"] }
+tower-http = { version = "0.6.2", features = ["fs", "trace", "cors"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"]}
 uuid = { version = "1.8", features = ["serde", "v4"] }
 gisst = { path = "../gisst" }
 serde_with = {version = "3.3.0", features = ["base64"]}
 chrono = { version = "0.4.28", features = ["clock"]}
-axum-login = { version = "0.6.0" } #features = ["sqlx", "postgres"]}
+axum-login = { version = "0.16.0" } #features = ["sqlx", "postgres"]}
 oauth2 = "4.4.2"
 reqwest = {version="0.11.20", features=["json"]}
 rand = { version = "0.8.5", features = ["min_const_gen"]}

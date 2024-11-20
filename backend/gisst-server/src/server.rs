@@ -22,20 +22,18 @@ use axum::{
     Extension, Router,
 };
 
-use axum_login::{AuthLayer, RequireAuthorizationLayer};
-
-use crate::auth::{AuthContext, User};
+use crate::auth::{AuthBackend, User};
 use crate::routes::screenshot_router;
 use crate::utils::parse_header;
 use axum::extract::OriginalUri;
-use axum_login::axum_sessions::async_session::MemoryStore;
-use axum_login::axum_sessions::{SameSite, SessionLayer};
+use axum_login::{
+    login_required,
+    tower_sessions::{cookie::SameSite, MemoryStore, SessionManagerLayer},
+};
 use chrono::{DateTime, Local};
 use gisst::error::ErrorTable;
 use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::context;
-use oauth2::basic::BasicClient;
-use rand::Rng;
 use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
@@ -56,8 +54,6 @@ pub struct ServerState {
     pub base_url: String,
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: minijinja::Environment<'static>,
-    pub oauth_client: BasicClient,
-    pub user_whitelist: Vec<String>,
 }
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
@@ -85,27 +81,27 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         base_url: config.http.base_url.clone(),
         pending_uploads: Default::default(),
         templates: template_environment,
-        user_whitelist: user_whitelist_sorted,
-        oauth_client: auth::build_oauth_client(
-            &config.http.base_url,
-            config.auth.google_client_id.expose_secret(),
-            config.auth.google_client_secret.expose_secret(),
-        ),
     };
 
-    let secret = rand::thread_rng().gen::<[u8; 64]>();
     let user_pool = PgPoolOptions::new()
         .connect(config.database.database_url.expose_secret())
         .await
         .unwrap();
 
-    let user_store = auth::PostgresStore::new(user_pool.clone());
-    let auth_layer: AuthLayer<auth::PostgresStore, i32, auth::User, auth::Role> =
-        AuthLayer::new(user_store, &secret);
-    let session_store = MemoryStore::new();
-    let session_layer = SessionLayer::new(session_store, &secret)
-        .with_secure(false)
-        .with_same_site_policy(SameSite::Lax);
+    let user_store = auth::AuthBackend::new(
+        user_pool.clone(),
+        auth::build_oauth_client(
+            &config.http.base_url,
+            config.auth.google_client_id.expose_secret(),
+            config.auth.google_client_secret.expose_secret(),
+        ),
+        user_whitelist_sorted,
+    );
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_same_site(SameSite::Lax)
+        .with_name("gisst.sid");
+    let auth_layer = axum_login::AuthManagerLayerBuilder::new(user_store, session_layer).build();
 
     let builder = ServiceBuilder::new()
         .layer(
@@ -129,12 +125,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/resources/:id", patch(tus_patch).head(tus_head))
         .route("/resources", post(tus_creation))
         .nest("/objects", object_router())
-        .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login_or_redirect(Arc::new("/login".into()), None))
-        .route("/data/:instance_id", get(get_data))
-        .route("/login", get(auth::login_handler))
-        .route("/auth/google/callback", get(auth::oauth_callback_handler))
         .route("/logout", get(auth::logout_handler))
-        //.route("/debug/tus_test", get(get_upload_form))
         .nest("/creators", creator_router())
         .nest("/instances", instance_router())
         .nest("/replays", replay_router())
@@ -142,6 +133,10 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/screenshots", screenshot_router())
         .nest("/states", state_router())
         .nest("/works", work_router())
+        .route_layer(login_required!(AuthBackend, login_url="/login"))
+        .route("/data/:instance_id", get(get_data))
+        .route("/login", get(auth::login_handler))
+        .route("/auth/google/callback", get(auth::oauth_callback_handler))
         .nest_service(
             "/storage",
             builder.clone()
@@ -179,11 +174,10 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         )
         .route("/", get(get_homepage))
         .route("/about", get(get_about))
-        .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33554432))
         .layer(auth_layer)
-        .layer(TraceLayer::new_for_http())
-        .layer(session_layer);
+        .layer(Extension(app_state))
+        .layer(TraceLayer::new_for_http());
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
@@ -191,28 +185,28 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     );
 
     if config.http.dev_ssl {
-        // use axum_server::tls_rustls::RustlsConfig;
-        // let tlsconfig = RustlsConfig::from_pem_file(
-        //     config
-        //         .http
-        //         .dev_cert
-        //         .expect("In dev SSL mode, must supply cert in config"),
-        //     config
-        //         .http
-        //         .dev_key
-        //         .expect("In dev SSL mode, must supply key in config"),
-        // )
-        // .await
-        // .unwrap();
+        use axum_server::tls_rustls::RustlsConfig;
+        let tlsconfig = RustlsConfig::from_pem_file(
+            config
+                .http
+                .dev_cert
+                .as_ref()
+                .expect("In dev SSL mode, must supply cert in config"),
+            config
+                .http
+                .dev_key
+                .as_ref()
+                .expect("In dev SSL mode, must supply key in config"),
+        )
+        .await
+        .unwrap();
 
-        // let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-        // println!("listening on {}", addr);
-        // axum::Server::bind_rustls(addr, tlsconfig)
-        //     .serve(app.into_make_service())
-        //     .await
-        //     .unwrap();
+        axum_server::bind_rustls(addr, tlsconfig)
+            .serve(app.into_make_service())
+            .await
+            .expect("could not launch GISST HTTP server on port 3000");
     } else {
-        axum::Server::bind(&addr)
+        axum_server::bind(addr)
             .serve(app.into_make_service())
             .await
             .expect("could not launch GISST HTTP server on port 3000");
@@ -331,29 +325,29 @@ async fn get_data(
     Query(params): Query<PlayerParams>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let instance =
-        Instance::get_by_id(&mut conn, id)
-            .await?
-            .ok_or(GISSTError::RecordMissingError {
-                table: ErrorTable::Instance,
-                uuid: id,
-            })?;
+    let instance = Instance::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(GISSTError::RecordMissing {
+            table: ErrorTable::Instance,
+            uuid: id,
+        })?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::RecordMissingError {
+        .ok_or(GISSTError::RecordMissing {
             table: ErrorTable::Environment,
             uuid: instance.environment_id,
         })?;
-    let work = Work::get_by_id(&mut conn, instance.work_id).await?.ok_or(
-        GISSTError::RecordMissingError {
-            table: ErrorTable::Work,
-            uuid: instance.work_id,
-        },
-    )?;
+    let work =
+        Work::get_by_id(&mut conn, instance.work_id)
+            .await?
+            .ok_or(GISSTError::RecordMissing {
+                table: ErrorTable::Work,
+                uuid: instance.work_id,
+            })?;
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinkingError {
+                GISSTError::RecordLinking {
                     table: ErrorTable::State,
                     uuid: id,
                 },
@@ -361,7 +355,7 @@ async fn get_data(
         }
         (None, Some(id)) => {
             PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinkingError {
+                GISSTError::RecordLinking {
                     table: ErrorTable::Replay,
                     uuid: id,
                 },
@@ -424,12 +418,17 @@ async fn get_data(
             .is_some_and(|hv| hv.contains("application/json"))
         {
             (
-                [("Access-Control-Allow-Origin", "*")],
+                [
+                    ("Access-Control-Allow-Origin", "*"),
+                    ("Cross-Origin-Opener-Policy", "same-origin"),
+                    ("Cross-Origin-Resource-Policy", "same-origin"),
+                    ("Cross-Origin-Embedder-Policy", "require-corp"),
+                ],
                 axum::Json(embed_data),
             )
                 .into_response()
         } else {
-            Err(GISSTError::MimeTypeError)?
+            Err(GISSTError::MimeType)?
         })
         .into_response(),
     )
@@ -440,33 +439,33 @@ async fn get_player(
     _headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
-    auth: AuthContext,
+    auth: axum_login::AuthSession<crate::auth::AuthBackend>,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
-    let instance =
-        Instance::get_by_id(&mut conn, id)
-            .await?
-            .ok_or(GISSTError::RecordMissingError {
-                table: ErrorTable::Instance,
-                uuid: id,
-            })?;
+    let instance = Instance::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(GISSTError::RecordMissing {
+            table: ErrorTable::Instance,
+            uuid: id,
+        })?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::RecordMissingError {
+        .ok_or(GISSTError::RecordMissing {
             table: ErrorTable::Environment,
             uuid: instance.environment_id,
         })?;
-    let work = Work::get_by_id(&mut conn, instance.work_id).await?.ok_or(
-        GISSTError::RecordMissingError {
-            table: ErrorTable::Work,
-            uuid: instance.work_id,
-        },
-    )?;
-    let user = LoggedInUserInfo::generate_from_user(&auth.current_user.unwrap());
+    let work =
+        Work::get_by_id(&mut conn, instance.work_id)
+            .await?
+            .ok_or(GISSTError::RecordMissing {
+                table: ErrorTable::Work,
+                uuid: instance.work_id,
+            })?;
+    let user = LoggedInUserInfo::generate_from_user(&auth.user.unwrap());
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinkingError {
+                GISSTError::RecordLinking {
                     table: ErrorTable::State,
                     uuid: id,
                 },
@@ -474,7 +473,7 @@ async fn get_player(
         }
         (None, Some(id)) => {
             PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinkingError {
+                GISSTError::RecordLinking {
                     table: ErrorTable::Replay,
                     uuid: id,
                 },
@@ -486,7 +485,12 @@ async fn get_player(
     let manifest =
         dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
     Ok((
-        [("Access-Control-Allow-Origin", "*")],
+        [
+            ("Access-Control-Allow-Origin", "*"),
+            ("Cross-Origin-Opener-Policy", "same-origin"),
+            ("Cross-Origin-Resource-Policy", "same-origin"),
+            ("Cross-Origin-Embedder-Policy", "require-corp"),
+        ],
         Html(
             app_state
                 .templates
