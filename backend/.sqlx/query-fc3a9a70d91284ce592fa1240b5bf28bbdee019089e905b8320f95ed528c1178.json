@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT replay_id,\n            replay_name,\n            replay_description,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            FROM replay WHERE instance_id = $1",
+  "query": "SELECT replay_id,\n            replay_name,\n            replay_description,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            FROM replay\n            WHERE instance_id = $1\n            ORDER BY created_on DESC\n            OFFSET $2\n            LIMIT $3",
   "describe": {
     "columns": [
       {
@@ -46,7 +46,9 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -60,5 +62,5 @@
       false
     ]
   },
-  "hash": "e2b2fbc003e286556cb22ab4909f3413b2970a35fc3af99de62719a94e1e129f"
+  "hash": "fc3a9a70d91284ce592fa1240b5bf28bbdee019089e905b8320f95ed528c1178"
 }

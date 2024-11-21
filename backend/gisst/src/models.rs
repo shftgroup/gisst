@@ -26,12 +26,6 @@ where
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct FileRecordFlatten<T> {
-    record: T,
-    file_record: File,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Creator {
     pub creator_id: Uuid,
@@ -212,8 +206,12 @@ impl Creator {
     pub async fn get_all_state_info(
         conn: &mut PgConnection,
         id: Uuid,
+        contains: Option<String>,
+        offset: usize,
+        limit: usize,
     ) -> sqlx::Result<Vec<CreatorStateInfo>> {
-        sqlx::query_as!(
+        if let Some(contains) = contains {
+            sqlx::query_as!(
             CreatorStateInfo,
             r#"SELECT
             work_id,
@@ -228,22 +226,78 @@ impl Creator {
             instance_id
             FROM work JOIN instance USING (work_id)
             JOIN state USING (instance_id)
-            WHERE state.creator_id = $1
-            "#,
-            id
+            WHERE state.creator_id = $1 AND f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY state.created_on DESC
+            OFFSET $3
+            LIMIT $4"#, 
+            id, contains, offset as i64, limit as i64
         )
         .fetch_all(conn)
-        .await
+                .await
+        } else {
+            sqlx::query_as!(
+                CreatorStateInfo,
+                r#"SELECT
+            work_id,
+            work_name,
+            work_version,
+            work_platform,
+            state_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            file_id,
+            instance_id
+            FROM work JOIN instance USING (work_id)
+            JOIN state USING (instance_id)
+            WHERE state.creator_id = $1
+            ORDER BY state.created_on DESC
+            OFFSET $2
+            LIMIT $3"#,
+                id,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+        }
     }
 
     // Join to allow for all creator home page information in one query
     pub async fn get_all_replay_info(
         conn: &mut PgConnection,
         id: Uuid,
+        contains: Option<String>,
+        offset: usize,
+        limit: usize,
     ) -> sqlx::Result<Vec<CreatorReplayInfo>> {
-        sqlx::query_as!(
-            CreatorReplayInfo,
-            r#"SELECT
+        if let Some(contains) = contains {
+            sqlx::query_as!(
+                CreatorReplayInfo,
+                r#"SELECT
+            work_id,
+            work_name,
+            work_version,
+            work_platform,
+            replay_id,
+            replay_name,
+            replay_description,
+            file_id,
+            instance_id
+            FROM work JOIN instance USING (work_id)
+            JOIN replay USING (instance_id)
+            WHERE replay.creator_id = $1 AND f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY replay.created_on DESC
+            OFFSET $3
+            LIMIT $4"#,
+            id, contains, offset as i64, limit as i64
+            )
+            .fetch_all(conn)
+            .await
+        } else {
+            sqlx::query_as!(
+                CreatorReplayInfo,
+                r#"SELECT
             work_id,
             work_name,
             work_version,
@@ -256,51 +310,15 @@ impl Creator {
             FROM work JOIN instance USING (work_id)
             JOIN replay USING (instance_id)
             WHERE replay.creator_id = $1
-            "#,
-            id
-        )
-        .fetch_all(conn)
-        .await
-    }
-
-    pub async fn get_all_states(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<State>> {
-        sqlx::query_as!(
-            State,
-            r#"SELECT state_id,
-            instance_id,
-            is_checkpoint,
-            file_id,
-            state_name,
-            state_description,
-            screenshot_id,
-            replay_id,
-            creator_id,
-            state_replay_index,
-            state_derived_from,
-            created_on
-            FROM state WHERE creator_id = $1"#,
-            id
-        )
-        .fetch_all(conn)
-        .await
-    }
-
-    pub async fn get_all_replays(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Vec<Replay>> {
-        sqlx::query_as!(
-            Replay,
-            r#"SELECT replay_id,
-            replay_name,
-            replay_description,
-            instance_id,
-            creator_id,
-            file_id,
-            replay_forked_from,
-            created_on
-            FROM replay WHERE creator_id = $1"#,
-            id
-        )
-        .fetch_all(conn)
-        .await
+            OFFSET $2
+            LIMIT $3"#,
+                id,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+        }
     }
 }
 
@@ -400,16 +418,6 @@ impl File {
         )
         .fetch_optional(conn)
         .await
-    }
-
-    pub async fn flatten_file(
-        _conn: &mut PgConnection,
-        record: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        Ok(FileRecordFlatten {
-            record: record.clone(),
-            file_record: record,
-        })
     }
 }
 
@@ -522,8 +530,69 @@ impl Instance {
     pub async fn get_all_states(
         conn: &mut PgConnection,
         instance_id: Uuid,
+        for_user: Option<Uuid>,
+        contains: Option<String>,
+        offset: usize,
+        limit: usize,
     ) -> sqlx::Result<Vec<State>> {
-        sqlx::query_as!(
+        match (contains, for_user) {
+            (None, None) => {
+                sqlx::query_as!(
+                State,
+                r#"SELECT state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            FROM state
+            WHERE instance_id = $1
+            ORDER BY state.created_on DESC
+            OFFSET $2
+            LIMIT $3"#,
+                instance_id,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+            },
+            (None, Some(user)) => {
+                sqlx::query_as!(
+                State,
+                r#"SELECT state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            FROM state
+            WHERE instance_id = $1 AND creator_id = $2
+            ORDER BY state.created_on DESC
+            OFFSET $3
+            LIMIT $4"#,
+                    instance_id,
+                    user,
+                    offset as i64,
+                    limit as i64
+            )
+            .fetch_all(conn)
+            .await
+            },
+            (Some(contains), None) => {
+                sqlx::query_as!(
             State,
             r#"SELECT state_id,
             instance_id,
@@ -537,18 +606,102 @@ impl Instance {
             state_replay_index,
             state_derived_from,
             created_on
-            FROM state WHERE instance_id = $1"#,
-            instance_id
+            FROM state
+            WHERE instance_id = $1 AND f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY state.created_on DESC
+            OFFSET $3
+            LIMIT $4"#,
+            instance_id, contains, offset as i64, limit as i64
         )
         .fetch_all(conn)
-        .await
+                .await
+            }
+            (Some(contains), Some(user)) => {
+                sqlx::query_as!(
+            State,
+            r#"SELECT state_id,
+            instance_id,
+            is_checkpoint,
+            file_id,
+            state_name,
+            state_description,
+            screenshot_id,
+            replay_id,
+            creator_id,
+            state_replay_index,
+            state_derived_from,
+            created_on
+            FROM state
+            WHERE instance_id = $1 AND creator_id = $2 AND f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($3) || '%')
+            ORDER BY state.created_on DESC
+            OFFSET $4
+            LIMIT $5"#,
+            instance_id, user, contains, offset as i64, limit as i64
+        )
+        .fetch_all(conn)
+                .await
+            }
+        }
     }
 
     pub async fn get_all_replays(
         conn: &mut PgConnection,
         instance_id: Uuid,
+        for_user: Option<Uuid>,
+        contains: Option<String>,
+        offset: usize,
+        limit: usize,
     ) -> sqlx::Result<Vec<Replay>> {
-        sqlx::query_as!(
+        match (contains, for_user) {
+            (None, None) => {
+                sqlx::query_as!(
+                Replay,
+                r#"SELECT replay_id,
+            replay_name,
+            replay_description,
+            instance_id,
+            creator_id,
+            file_id,
+            replay_forked_from,
+            created_on
+            FROM replay
+            WHERE instance_id = $1
+            ORDER BY created_on DESC
+            OFFSET $2
+            LIMIT $3"#,
+                instance_id,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+            }
+            (None, Some(user)) => {
+                sqlx::query_as!(
+                Replay,
+                r#"SELECT replay_id,
+            replay_name,
+            replay_description,
+            instance_id,
+            creator_id,
+            file_id,
+            replay_forked_from,
+            created_on
+            FROM replay
+            WHERE instance_id = $1 AND creator_id = $2
+            ORDER BY created_on DESC
+            OFFSET $3
+            LIMIT $4"#,
+                    instance_id,
+                    user,
+                offset as i64,
+                limit as i64
+            )
+            .fetch_all(conn)
+            .await
+            }
+            (Some(contains), None) => {
+                sqlx::query_as!(
             Replay,
             r#"SELECT replay_id,
             replay_name,
@@ -558,32 +711,38 @@ impl Instance {
             file_id,
             replay_forked_from,
             created_on
-            FROM replay WHERE instance_id = $1"#,
-            instance_id
+            FROM replay
+            WHERE instance_id = $1 AND f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
+            ORDER BY created_on DESC
+            OFFSET $3
+            LIMIT $4"#,
+            instance_id, contains, offset as i64, limit as i64
         )
         .fetch_all(conn)
         .await
-    }
-
-    pub async fn get_all_saves(
-        conn: &mut PgConnection,
-        instance_id: Uuid,
-    ) -> sqlx::Result<Vec<Save>> {
-        sqlx::query_as!(
-            Save,
-            r#"SELECT
-            save_id,
+            }
+            (Some(contains), Some(user)) => {
+                sqlx::query_as!(
+            Replay,
+            r#"SELECT replay_id,
+            replay_name,
+            replay_description,
             instance_id,
-            save_short_desc,
-            save_description,
-            file_id,
             creator_id,
+            file_id,
+            replay_forked_from,
             created_on
-            FROM save WHERE instance_id = $1"#,
-            instance_id
+            FROM replay
+            WHERE instance_id = $1 AND creator_id = $2 AND f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%')
+            ORDER BY created_on DESC
+            OFFSET $4
+            LIMIT $5"#,
+            instance_id, user, contains, offset as i64, limit as i64
         )
         .fetch_all(conn)
         .await
+            }
+        }
     }
 }
 
@@ -641,17 +800,6 @@ impl Object {
         )
         .fetch_optional(conn)
         .await
-    }
-
-    pub async fn flatten_file(
-        conn: &mut PgConnection,
-        model: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
-        Ok(FileRecordFlatten {
-            record: model,
-            file_record,
-        })
     }
 }
 
@@ -791,19 +939,6 @@ impl Replay {
     }
 }
 
-impl Replay {
-    pub async fn flatten_file(
-        conn: &mut PgConnection,
-        model: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
-        Ok(FileRecordFlatten {
-            record: model,
-            file_record,
-        })
-    }
-}
-
 impl Save {
     pub async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
@@ -882,17 +1017,6 @@ impl Save {
         )
         .fetch_optional(conn)
         .await
-    }
-
-    pub async fn flatten_file(
-        conn: &mut PgConnection,
-        model: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
-        Ok(FileRecordFlatten {
-            record: model,
-            file_record,
-        })
     }
 }
 
@@ -1000,17 +1124,6 @@ impl State {
         )
         .fetch_optional(conn)
         .await
-    }
-
-    pub async fn flatten_file(
-        conn: &mut PgConnection,
-        model: Self,
-    ) -> Result<FileRecordFlatten<Self>, sqlx::Error> {
-        let file_record = File::get_by_id(conn, model.file_id).await?.unwrap();
-        Ok(FileRecordFlatten {
-            record: model,
-            file_record,
-        })
     }
 }
 

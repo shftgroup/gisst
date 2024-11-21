@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT replay_id,\n            replay_name,\n            replay_description,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            FROM replay WHERE creator_id = $1",
+  "query": "SELECT replay_id,\n            replay_name,\n            replay_description,\n            instance_id,\n            creator_id,\n            file_id,\n            replay_forked_from,\n            created_on\n            FROM replay\n            WHERE instance_id = $1 AND creator_id = $2 AND f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%')\n            ORDER BY created_on DESC\n            OFFSET $4\n            LIMIT $5",
   "describe": {
     "columns": [
       {
@@ -46,7 +46,11 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -60,5 +64,5 @@
       false
     ]
   },
-  "hash": "6ea7eebf4997701121bfda83e1b11b00455f2951041a0861db92f01b8a9408c5"
+  "hash": "44265133bd4071b967837b29479b3f71694af673eb0ecc8746ce394c4b3f4444"
 }

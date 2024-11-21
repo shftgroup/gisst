@@ -12,7 +12,7 @@ use axum_login::RequireAuthorizationLayer;
 use gisst::models::{
     Creator, Environment, File, Instance, InstanceWork, Object, Replay, Save, State, Work,
 };
-use gisst::models::{CreatorReplayInfo, CreatorStateInfo, FileRecordFlatten};
+use gisst::models::{CreatorReplayInfo, CreatorStateInfo};
 use gisst::{error::ErrorTable, models::ObjectLink};
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -35,8 +35,7 @@ pub fn screenshot_router() -> Router {
 pub fn instance_router() -> Router {
     Router::new()
         .route("/", get(get_instances))
-        .route("/:id", get(get_single_instance))
-        .route("/:id/all", get(get_all_for_instance))
+        .route("/:id", get(get_all_for_instance))
         .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login())
         .route("/:id/clone", get(clone_v86_instance))
 }
@@ -84,15 +83,38 @@ async fn get_single_creator(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
+    params: Query<StateReplayPageQueryParams>,
     auth: auth::AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(creator) = Creator::get_by_id(&mut conn, id).await? {
+        let state_page_num = params.state_page_num.unwrap_or(0);
+        let state_limit = params.state_limit.unwrap_or(100).min(100);
+        let state_offset = state_page_num * state_limit;
+        let replay_page_num = params.replay_page_num.unwrap_or(0);
+        let replay_limit = params.replay_limit.unwrap_or(100).min(100);
+        let replay_offset = replay_page_num * replay_limit;
         let creator_results = GetAllCreatorResult {
-            states: Creator::get_all_state_info(&mut conn, creator.creator_id).await?,
-            replays: Creator::get_all_replay_info(&mut conn, creator.creator_id).await?,
+            states: Creator::get_all_state_info(
+                &mut conn,
+                creator.creator_id,
+                params.state_contains.clone(),
+                state_offset,
+                state_limit,
+            )
+            .await?,
+            replays: Creator::get_all_replay_info(
+                &mut conn,
+                creator.creator_id,
+                params.replay_contains.clone(),
+                replay_offset,
+                replay_limit,
+            )
+            .await?,
             creator,
         };
+        let state_has_more = creator_results.states.len() >= state_limit;
+        let replay_has_more = creator_results.replays.len() >= replay_limit;
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
@@ -107,6 +129,14 @@ async fn get_single_creator(
                     .templates
                     .get_template("creator_all_listing.html")?;
                 Html(creator_page.render(context!(
+                    state_has_more => state_has_more,
+                    replay_has_more => replay_has_more,
+                    state_page_num => state_page_num,
+                    state_limit => state_limit,
+                    state_contains => params.state_contains,
+                    replay_page_num => replay_page_num,
+                    replay_limit => replay_limit,
+                    replay_contains => params.replay_contains,
                     creator => creator_results,
                     user => user,
                 ))?)
@@ -168,7 +198,7 @@ async fn get_single_screenshot(
 // INSTANCE method handlers
 
 #[derive(Deserialize)]
-struct GetQueryParams {
+struct InstanceListQueryParams {
     page_num: Option<usize>,
     limit: Option<usize>,
     contains: Option<String>,
@@ -177,7 +207,7 @@ struct GetQueryParams {
 async fn get_instances(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
-    Query(params): Query<GetQueryParams>,
+    Query(params): Query<InstanceListQueryParams>,
     auth: AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -228,58 +258,80 @@ struct FullInstance {
     info: Instance,
     work: Work,
     environment: Environment,
-    states: Vec<FileRecordFlatten<State>>,
-    replays: Vec<FileRecordFlatten<Replay>>,
-    saves: Vec<FileRecordFlatten<Save>>,
+    states: Vec<State>,
+    replays: Vec<Replay>,
+    //saves: Vec<Save>,
     objects: Vec<ObjectLink>,
 }
 
+#[derive(Debug, Deserialize)]
+struct StateReplayPageQueryParams {
+    state_page_num: Option<usize>,
+    state_limit: Option<usize>,
+    state_contains: Option<String>,
+    replay_page_num: Option<usize>,
+    replay_limit: Option<usize>,
+    replay_contains: Option<String>,
+    creator_id: Option<Uuid>,
+}
 async fn get_all_for_instance(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
+    params: Query<StateReplayPageQueryParams>,
     auth: auth::AuthContext,
 ) -> Result<axum::response::Response, GISSTError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
-        // TODO: all this stuff should really come from a join query or whatever.
+        // TODO: at least instance-environment stuff should really come from a join query
+        tracing::info!("{params:?}");
         let environment = Environment::get_by_id(&mut conn, instance.environment_id)
             .await?
             .ok_or(GISSTError::RecordMissingError {
                 table: ErrorTable::Environment,
                 uuid: instance.environment_id,
             })?;
-        let states = Instance::get_all_states(&mut conn, instance.instance_id).await?;
-        let mut flattened_states: Vec<FileRecordFlatten<State>> = vec![];
+        let state_page_num = params.state_page_num.unwrap_or(0);
+        let state_limit = params.state_limit.unwrap_or(100).min(100);
+        let state_offset = state_page_num * state_limit;
+        let states = Instance::get_all_states(
+            &mut conn,
+            instance.instance_id,
+            params.creator_id,
+            params.state_contains.clone(),
+            state_offset,
+            state_limit,
+        )
+        .await?;
 
-        for state in states.iter() {
-            flattened_states.push(State::flatten_file(&mut conn, state.clone()).await?);
-        }
-
-        let replays = Instance::get_all_replays(&mut conn, id).await?;
-        let mut flattened_replays: Vec<FileRecordFlatten<Replay>> = vec![];
-
-        for replay in replays.iter() {
-            flattened_replays.push(Replay::flatten_file(&mut conn, replay.clone()).await?);
-        }
-
-        let saves = Instance::get_all_saves(&mut conn, id).await?;
-        let mut flattened_saves: Vec<FileRecordFlatten<Save>> = vec![];
-
-        for save in saves.iter() {
-            flattened_saves.push(Save::flatten_file(&mut conn, save.clone()).await?);
-        }
+        let replay_page_num = params.replay_page_num.unwrap_or(0);
+        let replay_limit = params.replay_limit.unwrap_or(100).min(100);
+        let replay_offset = replay_page_num * replay_limit;
+        let replays = Instance::get_all_replays(
+            &mut conn,
+            instance.instance_id,
+            params.creator_id,
+            params.replay_contains.clone(),
+            replay_offset,
+            replay_limit,
+        )
+        .await?;
 
         let objects = ObjectLink::get_all_for_instance_id(&mut conn, id).await?;
-
+        let state_has_more = states.len() >= state_limit;
+        let replay_has_more = replays.len() >= replay_limit;
+        tracing::info!(
+            "{} - {state_has_more} - {} - {replay_has_more}",
+            states.len(),
+            replays.len()
+        );
         let full_instance = FullInstance {
             work: Work::get_by_id(&mut conn, instance.work_id).await?.unwrap(),
             info: instance,
             environment,
             objects,
-            states: flattened_states,
-            replays: flattened_replays,
-            saves: flattened_saves,
+            states,
+            replays,
         };
 
         let accept: Option<String> = parse_header(&headers, "Accept");
@@ -295,8 +347,18 @@ async fn get_all_for_instance(
                     .templates
                     .get_template("instance_all_listing.html")?;
                 Html(instance_all_listing.render(context!(
+                    state_has_more => state_has_more,
+                    replay_has_more => replay_has_more,
+                    state_page_num => state_page_num,
+                    state_limit => state_limit,
+                    state_contains => params.state_contains,
+                    replay_page_num => replay_page_num,
+                    replay_limit => replay_limit,
+                    replay_contains => params.replay_contains,
+                    creator_id => params.creator_id,
                     instance => full_instance,
                     user => user,
+
                 ))?)
                 .into_response()
             } else if accept
@@ -335,17 +397,7 @@ async fn clone_v86_instance(
     let new_instance =
         gisst::v86clone::clone_v86_machine(&mut conn, id, state_id, storage_path, storage_depth)
             .await?;
-    Ok(
-        axum::response::Redirect::permanent(&format!("/instances/{new_instance}/all"))
-            .into_response(),
-    )
-}
-async fn get_single_instance(
-    app_state: Extension<ServerState>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<Instance>, GISSTError> {
-    let mut conn = app_state.pool.acquire().await?;
-    Ok(Json(Instance::get_by_id(&mut conn, id).await?.unwrap()))
+    Ok(axum::response::Redirect::permanent(&format!("/instances/{new_instance}")).into_response())
 }
 
 // OBJECT method handlers

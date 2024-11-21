@@ -13,6 +13,16 @@
     </div>
     <div class="row">
         <h2>States</h2>
+      <form method="get" action="">
+        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="state_contains" {% if state_contains %}value="{{state_contains}}"{% endif %}/>
+        <input type="submit" value="Search"/>
+        </form>
+      {% if state_page_num > 0 %}
+      <a class="results-prev" href="?state_page_num={{state_page_num-1}}{% if state_contains %}&state_contains={{state_contains|urlencode}}{% endif %}&state_limit={{state_limit}}">Prev</a>
+      {% endif %}
+      {% if state_has_more %}
+      <a class="results-prev" href="?state_page_num={{state_page_num+1}}{% if state_contains %}&state_contains={{state_contains|urlencode}}{% endif %}&state_limit={{state_limit}}">Next</a>
+      {% endif %}
         <table class="table">
             <thead>
                 <tr>
@@ -54,6 +64,16 @@
     </div>
     <div class="row">
         <h2>Performances</h2>
+      <form method="get" action="">
+        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="replay_contains" {% if replay_contains %}value="{{replay_contains}}"{% endif %}/>
+        <input type="submit" value="Search"/>
+        </form>
+      {% if replay_page_num > 0 %}
+      <a class="results-prev" href="?replay_page_num={{replay_page_num-1}}{% if replay_contains %}&replay_contains={{replay_contains|urlencode}}{% endif %}&replay_limit={{replay_limit}}">Prev</a>
+      {% endif %}
+      {% if replay_has_more %}
+      <a class="results-prev" href="?replay_page_num={{replay_page_num+1}}{% if replay_contains %}&replay_contains={{replay_contains|urlencode}}{% endif %}&replay_limit={{replay_limit}}">Next</a>
+      {% endif %}
         <table class="table">
             <tr>
                 <th scope="col">Work</th>
