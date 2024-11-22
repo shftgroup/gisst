@@ -138,6 +138,11 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
                 }
                 module.FS.init(stdin,stdout,null);
             },
+            function(init_mod:object|undefined) {
+              if(init_mod === undefined) { throw "Must use modularized emscripten"; }
+              const module = <LibretroModule>(init_mod!);
+              loaded_cb(module);
+            }
         ],
         locateFile: function(path, _prefix) {
             return gisst_root+'/cores/'+path;
@@ -148,7 +153,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
         }
     };
     function instantiate(core_factory:(mod:LibretroModuleDef) => Promise<LibretroModule>) {
-        core_factory(module).then(loaded_cb).catch(err => {
+        core_factory(module).catch(err => {
             console.error("Couldn't instantiate module", err);
             throw err;
         });

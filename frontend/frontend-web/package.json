@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/path-browserify": "^1.0.3",
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
     "coffeescript": "^2.7.0",
@@ -22,9 +23,10 @@
     "vite-plugin-mkcert": "^1.17.6"
   },
   "dependencies": {
-    "@zip.js/zip.js": "^2.7.24",
+    "@zip.js/zip.js": "^2.7.53",
     "embedv86": "file:../embedv86",
     "gisst-player": "file:../gisst-player-ui",
+    "path-browserify": "^1.0.1",
     "ra-util": "file:../ra-util"
   }
 }

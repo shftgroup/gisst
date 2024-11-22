@@ -232,6 +232,12 @@ declare interface FS {
         error: null | ((c: number) => any),
     ): void;
 
+    createPath(
+      parent: string,
+      path: string,
+      canRead: boolean,
+      canWrite: boolean
+    );
     createLazyFile(
         parent: string | FSNode,
         name: string,
@@ -241,8 +247,8 @@ declare interface FS {
     ): FSNode;
     createPreloadedFile(
         parent: string | FSNode,
-        name: string,
-        url: string,
+        name?: string,
+        url: string | TypedArray,
         canRead: boolean,
         canWrite: boolean,
         onload?: () => void,
@@ -252,8 +258,8 @@ declare interface FS {
     ): void;
     createDataFile(
         parent: string | FSNode,
-        name: string,
-        data: ArrayBufferView,
+        name?: string,
+        data: TypedArray,
         canRead: boolean,
         canWrite: boolean,
         canOwn: boolean,
@@ -353,9 +359,6 @@ declare function intArrayToString(array: number[]): string;
 declare function writeStringToMemory(str: string, buffer: number, dontAddNull: boolean): void;
 declare function writeArrayToMemory(array: number[], buffer: number): void;
 declare function writeAsciiToMemory(str: string, buffer: number, dontAddNull: boolean): void;
-
-declare function addRunDependency(id: any): void;
-declare function removeRunDependency(id: any): void;
 
 declare function addFunction(func: (...args: any[]) => any, signature?: string): number;
 declare function removeFunction(funcPtr: number): void;
