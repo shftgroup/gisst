@@ -243,7 +243,7 @@ pub async fn tus_creation(
     let filename = metadata.get("filename").unwrap();
     let hash = metadata.get("hash").unwrap();
     let mut dest_path = StorageHandler::split_uuid_to_path_buf(new_uuid, app_state.folder_depth);
-    dest_path.push(StorageHandler::get_dest_filename(&hash, filename.as_str()));
+    dest_path.push(StorageHandler::get_dest_filename(hash, filename.as_str()));
 
     let file_info = FileInformation {
         source_filename: filename.to_string(),
