@@ -2,9 +2,11 @@ import { resolve } from 'path'
 import checker from 'vite-plugin-checker';
 import sourcemaps from 'rollup-plugin-sourcemaps';
 import dts from 'vite-plugin-dts'
+import mkcert from 'vite-plugin-mkcert';
 
 export default {
   plugins: [
+    mkcert(),
     checker({
       // e.g. use TypeScript check
       typescript: true,

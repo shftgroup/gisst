@@ -204,18 +204,14 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
       const lines_enc = enc.encode(ra_cfg_text);
       module.FS.createPath("/", "/home/web_user/retroarch/userdata", true, true);
       module.FS.createDataFile("/home/web_user/retroarch/userdata", "retroarch.cfg", lines_enc, true, true, true);
-      // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
       if (entryState) {
         const data = (start as StateStart).data;
-        // entryScreenshot is already settled from the all() above
-        entryScreenshot!.then((screenshot) => {
-          seen_states[content_base+".state1"] = (screenshot as GISSTModels.Screenshot).screenshot_data;
-          ui_state.newState(content_base+".state1", (screenshot as GISSTModels.Screenshot).screenshot_data, "init", data);
-        });
+        seen_states[content_base+".state1"] = (entryScreenshot as GISSTModels.Screenshot).screenshot_data;
+        ui_state.newState(content_base+".state1", (entryScreenshot as GISSTModels.Screenshot).screenshot_data, "init", data);
       }
       if (replay) {
+        // TODO if movie, it would be very cool to have a screenshot of the movie's init state copied in here
         const data = (start as ReplayStart).data;
-        // TODO it's ugly to read this in again right after downloading it but whatever
         const replayUUID = ra_util.replay_info(new Uint8Array(replay)).id;
         seen_replays[content_base+".replay1"] = replayUUID;
         ui_state.newReplay(content_base+".replay1", "init", data);

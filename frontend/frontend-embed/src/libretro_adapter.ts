@@ -3,7 +3,7 @@
 export interface LibretroModule extends EmscriptenModule, LibretroModuleDef {
   canvas:HTMLCanvasElement;
   callMain(args:string[]): void;
-  resumeMainLoop(): void;
+  // resumeMainLoop(): void;
 }
 interface LibretroModuleDef {
   startRetroArch(canvas:HTMLCanvasElement, args:string[], initialized_cb:() => void):void;
@@ -21,6 +21,18 @@ interface LibretroModuleDef {
 }
 
 const cores:Record<string,(mod:LibretroModuleDef) => Promise<LibretroModule>> = {};
+
+/**
+ * This is a patched version of the native `import` method that works with vite bundling.
+ * Allows you to import a javascript file from the public directory.
+ */
+function importStatic(modulePath:string) {
+  if (import.meta.env.DEV) {
+    return import(/* @vite-ignore */ `${modulePath}?${Date.now()}`);
+  } else {
+    return import(/* @vite-ignore */ modulePath);
+  }
+}
 
 export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:LibretroModule) => void) {
     /**
@@ -64,9 +76,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
             if(!canvas.tabIndex) { canvas.tabIndex = 1; }
             canvas.addEventListener("click", () => canvas.focus());
             me.canvas = canvas;
-            me.arguments = retro_args;
-            me.callMain(me.arguments);
-            me.resumeMainLoop();
+            me.callMain(retro_args);
             initialized_cb();
             canvas.focus();
         },
@@ -75,7 +85,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
         message_queue:[],
         message_out:[],
         message_accum:"",
-          
+
         retroArchSend: function(msg:string) {
             const bytes = this.encoder.encode(msg+"\n");
             this.message_queue.push([bytes,0]);
@@ -128,6 +138,11 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
                 }
                 module.FS.init(stdin,stdout,null);
             },
+            function(init_mod:object|undefined) {
+              if(init_mod === undefined) { throw "Must use modularized emscripten"; }
+              const module = <LibretroModule>(init_mod!);
+              loaded_cb(module);
+            }
         ],
         locateFile: function(path, _prefix) {
             return gisst_root+'/cores/'+path;
@@ -138,7 +153,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
         }
     };
     function instantiate(core_factory:(mod:LibretroModuleDef) => Promise<LibretroModule>) {
-        core_factory(module).then(loaded_cb).catch(err => {
+        core_factory(module).catch(err => {
             console.error("Couldn't instantiate module", err);
             throw err;
         });
@@ -146,7 +161,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
     if (core in cores) {
         instantiate(cores[core]);
     } else {
-        import(/* @vite-ignore */ gisst_root+'/cores/'+core+'_libretro.js').then(fac => {
+        importStatic(/* @vite-ignore */ '/cores/'+core+'_libretro.js').then(fac => {
             cores[core] = fac.default;
             instantiate(cores[core]);
         }).catch(err => { console.error("Couldn't instantiate module", err); throw err; });

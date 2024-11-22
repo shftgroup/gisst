@@ -7,7 +7,6 @@
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // TypeScript Version: 2.2
 
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare namespace Emscripten {
     type FileSystemType = object;
@@ -58,7 +57,7 @@ interface EmscriptenModule {
     getPreloadedPackage(remotePackageName: string, remotePackageSize: number): ArrayBuffer;
     instantiateWasm(
         imports: Emscripten.WebAssemblyImports,
-        successCallback: (module: object) => void,
+        successCallback: (module: WebAssembly.Module) => void,
     ): Emscripten.WebAssemblyExports;
     locateFile(url: string, scriptDirectory: string): string;
     onCustomMessage(event: MessageEvent): void;
@@ -94,7 +93,7 @@ interface EmscriptenModule {
     _malloc(size: number): number;
     _free(ptr: number): void;
 
-  FS:FS
+  FS:FS;
 }
 
 /**
@@ -233,6 +232,12 @@ declare interface FS {
         error: null | ((c: number) => any),
     ): void;
 
+    createPath(
+      parent: string,
+      path: string,
+      canRead: boolean,
+      canWrite: boolean
+    );
     createLazyFile(
         parent: string | FSNode,
         name: string,
@@ -242,8 +247,8 @@ declare interface FS {
     ): FSNode;
     createPreloadedFile(
         parent: string | FSNode,
-        name: string,
-        url: string,
+        name?: string,
+        url: string | TypedArray,
         canRead: boolean,
         canWrite: boolean,
         onload?: () => void,
@@ -253,8 +258,8 @@ declare interface FS {
     ): void;
     createDataFile(
         parent: string | FSNode,
-        name: string,
-        data: ArrayBufferView,
+        name?: string,
+        data: TypedArray,
         canRead: boolean,
         canWrite: boolean,
         canOwn: boolean,
@@ -262,6 +267,7 @@ declare interface FS {
 }
 
 declare let MEMFS: Emscripten.FileSystemType;
+declare let WASMFS: Emscripten.FileSystemType;
 declare let NODEFS: Emscripten.FileSystemType;
 declare let IDBFS: Emscripten.FileSystemType;
 
@@ -353,9 +359,6 @@ declare function intArrayToString(array: number[]): string;
 declare function writeStringToMemory(str: string, buffer: number, dontAddNull: boolean): void;
 declare function writeArrayToMemory(array: number[], buffer: number): void;
 declare function writeAsciiToMemory(str: string, buffer: number, dontAddNull: boolean): void;
-
-declare function addRunDependency(id: any): void;
-declare function removeRunDependency(id: any): void;
 
 declare function addFunction(func: (...args: any[]) => any, signature?: string): number;
 declare function removeFunction(funcPtr: number): void;
