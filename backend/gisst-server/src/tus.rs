@@ -165,8 +165,8 @@ pub async fn tus_patch(
     // Check if upload is complete and clean up
     if pu_offset == pu_length {
         println!(
-            "Got to rename file with the following, temp_path: {}, root_path:{}",
-            &app_state.temp_storage_path, &app_state.root_storage_path,
+            "Got to rename file with the following, temp_path: {}, root_path:{}, file_info: {:?}",
+            &app_state.temp_storage_path, &app_state.root_storage_path, &file_info
         );
         StorageHandler::rename_file_from_temp_to_storage(
             &app_state.root_storage_path,
@@ -241,15 +241,14 @@ pub async fn tus_creation(
     let new_uuid = Uuid::new_v4();
     let filename = metadata.get("filename").unwrap();
     let hash = metadata.get("hash").unwrap();
-    let dest_filename = StorageHandler::get_dest_filename(hash, filename);
+    let mut dest_path = StorageHandler::split_uuid_to_path_buf(new_uuid, app_state.folder_depth);
+    dest_path.push(StorageHandler::get_dest_filename(&hash, filename.as_str()));
+
     let file_info = FileInformation {
         source_filename: filename.to_string(),
-        source_path: filename.to_string(),
-        dest_path: StorageHandler::split_uuid_to_path_buf(new_uuid, app_state.folder_depth)
-            .join(dest_filename.clone())
-            .to_string_lossy()
-            .to_string(),
-        dest_filename,
+        source_path: String::new(),
+        dest_filename: StorageHandler::get_dest_filename(hash, filename),
+        dest_path: dest_path.to_string_lossy().to_string(),
         file_hash: hash.to_string(),
     };
 
