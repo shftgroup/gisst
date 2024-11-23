@@ -414,14 +414,6 @@ async fn get_data(
             let citation_page = app_state
                 .templates
                 .get_template("single_citation_page.html")?;
-            Html(citation_page.render(context! {
-                embed_data => embed_data,
-            })?)
-            .into_response()
-        } else if accept
-            .as_ref()
-            .is_some_and(|hv| hv.contains("application/json"))
-        {
             (
                 [
                     ("Access-Control-Allow-Origin", "*"),
@@ -429,9 +421,16 @@ async fn get_data(
                     ("Cross-Origin-Resource-Policy", "same-origin"),
                     ("Cross-Origin-Embedder-Policy", "require-corp"),
                 ],
-                axum::Json(embed_data),
+                Html(citation_page.render(context! {
+                    embed_data => embed_data,
+                })?),
             )
                 .into_response()
+        } else if accept
+            .as_ref()
+            .is_some_and(|hv| hv.contains("application/json"))
+        {
+            (axum::Json(embed_data),).into_response()
         } else {
             Err(GISSTError::MimeType)?
         })
