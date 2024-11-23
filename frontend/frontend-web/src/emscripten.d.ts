@@ -52,6 +52,7 @@ interface EmscriptenModule {
     logReadFiles: boolean;
     filePackagePrefixURL: string;
     wasmBinary: ArrayBuffer;
+    mainScriptUrlOrBlob: Blob | string;
 
     destroy(object: object): void;
     getPreloadedPackage(remotePackageName: string, remotePackageSize: number): ArrayBuffer;

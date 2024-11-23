@@ -1,6 +1,12 @@
 import checker from 'vite-plugin-checker';
 import sourcemaps from 'rollup-plugin-sourcemaps';
 import mkcert from 'vite-plugin-mkcert';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'os';
+
+const homedir = os.homedir();
+
 export default {
   plugins: [
     mkcert(),
@@ -27,7 +33,16 @@ export default {
       "Cross-Origin-Opener-Policy":"same-origin"
     },
     proxy: {
-      "/storage": "http://localhost:3000/",
+      "/storage": {
+        changeOrigin: false,
+        secure: true,
+        target: {
+          protocol:'https:',
+          host:'localhost',
+          port: 3000,
+          ca: fs.readFileSync(path.join(homedir,'/.vite-plugin-mkcert/rootCA.pem')),
+        },
+      }
     }
   }
 }

@@ -35,12 +35,9 @@ export default {
     headers:{
       "Cross-Origin-Embedder-Policy":"require-corp",
       "Cross-Origin-Resource-Policy":"cross-origin",
-      "Cross-Origin-Opener-Policy":"same-origin"
+      "Cross-Origin-Opener-Policy":"same-origin",
+      "Access-Control-Allow-Origin":"*",
+      "Content-Security-Policy": "script-src 'self' 'unsafe-inline' blob: 'wasm-unsafe-eval' https://localhost:3000/; worker-src 'self' blob: https://localhost:3000/;"
     },
-    proxy: {
-      "/storage": "http://localhost:3000/",
-      "/v86": "http://localhost:3000/",
-      "/assets": "http://localhost:3000/"
-    }
   }
 }

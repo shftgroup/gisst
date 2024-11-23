@@ -10,6 +10,7 @@ interface LibretroModuleDef {
   locateFile(path:string,prefix:string):string;
   retroArchSend(msg:string):void;
   retroArchRecv():string|undefined;
+  mainScriptUrlOrBlob: Blob | string;
   message_queue:[Uint8Array,number][];
   message_out:string[];
   message_accum:string;
@@ -22,17 +23,12 @@ interface LibretroModuleDef {
 
 const cores:Record<string,(mod:LibretroModuleDef) => Promise<LibretroModule>> = {};
 
-/**
- * This is a patched version of the native `import` method that works with vite bundling.
- * Allows you to import a javascript file from the public directory.
- */
-function importStatic(modulePath:string) {
-  if (import.meta.env.DEV) {
-    return import(/* @vite-ignore */ `${modulePath}?${Date.now()}`);
-  } else {
-    return import(/* @vite-ignore */ modulePath);
-  }
+async function downloadScript(src:string) : Promise<Blob> {
+  let resp = await fetch(src);
+  let blob = await resp.blob();
+  return blob;
 }
+
 
 export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:LibretroModule) => void) {
     /**
@@ -70,6 +66,7 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
             e.preventDefault();
         }
     });
+    downloadScript(gisst_root + '/cores/'+core+'_libretro.js').then(scriptBlob => {
     const module:LibretroModuleDef = {
         startRetroArch: function(canvas:HTMLCanvasElement, retro_args:string[], initialized_cb:() => void) {
             const me = <LibretroModule>this;
@@ -150,7 +147,8 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
         postRun: [],
         printErr: function(text:string) {
             console.log(text);
-        }
+        },
+        mainScriptUrlOrBlob: scriptBlob
     };
     function instantiate(core_factory:(mod:LibretroModuleDef) => Promise<LibretroModule>) {
         core_factory(module).catch(err => {
@@ -161,9 +159,10 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
     if (core in cores) {
         instantiate(cores[core]);
     } else {
-        importStatic(/* @vite-ignore */ '/cores/'+core+'_libretro.js').then(fac => {
+      import(/* @vite-ignore */ URL.createObjectURL(scriptBlob)).then(fac => {
             cores[core] = fac.default;
             instantiate(cores[core]);
         }).catch(err => { console.error("Couldn't instantiate module", err); throw err; });
     }
+    });
 }

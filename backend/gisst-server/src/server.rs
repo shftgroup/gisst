@@ -113,9 +113,14 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                     axum::http::header::CONTENT_LENGTH,
                     axum::http::header::RANGE,
                     axum::http::header::CONTENT_RANGE,
+                    "Content-Security-Policy".parse().unwrap(),
+                    "Cross-Origin-Opener-Policy".parse().unwrap(),
+                    "Cross-Origin-Resource-Policy".parse().unwrap(),
+                    "Cross-Origin-Embedder-Policy".parse().unwrap(),
                 ])
-                .allow_methods([axum::http::Method::GET]),
+                .allow_methods([axum::http::Method::GET, axum::http::Method::HEAD]),
         )
+        .layer(axum::middleware::map_response(set_embeddable_headers))
         .layer(HandleErrorLayer::new(handle_error))
         // This map_err is needed to get the types to work out after handleerror and before servedir.
         .map_err(|e| panic!("{:?}", e));
@@ -510,4 +515,25 @@ async fn get_player(
         ),
     )
         .into_response())
+}
+async fn set_embeddable_headers<B>(
+    mut response: axum::response::Response<B>,
+) -> axum::response::Response<B> {
+    let headers = response.headers_mut();
+    let _ = headers.insert("Cross-Origin-Opener-Policy", "same-origin".parse().unwrap());
+    let _ = headers.insert(
+        "Cross-Origin-Resource-Policy",
+        "cross-origin".parse().unwrap(),
+    );
+    let _ = headers.insert(
+        "Cross-Origin-Embedder-Policy",
+        "require-corp".parse().unwrap(),
+    );
+    let _ = headers.insert(
+        "Content-Security-Policy",
+        "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://localhost:3000/; worker-src 'self' blob: https://localhost:3000/;"
+            .parse()
+            .unwrap(),
+    );
+    response
 }

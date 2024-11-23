@@ -3,6 +3,9 @@ import * as ra from './ra';
 import * as v86 from './v86';
 import {EmuControls,EmbedOptions,ControllerOverlayMode} from './types.d';
 import imgUrl from './canvas.svg';
+
+let which_canvas = 0;
+
 export async function embed(gisst:string, container:HTMLDivElement, options?:EmbedOptions) {
   container.classList.add("gisst-embed-webplayer-container");
   const canvas = document.createElement("canvas");
@@ -10,6 +13,7 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
   canvas.classList.add("gisst-embed-webplayer");
   canvas.classList.add("gisst-embed-hidden");
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  canvas.id = "embed_canvas_"+which_canvas;
   const canvas_txt = document.createElement("div");
   canvas_txt.classList.add("gisst-embed-webplayer-textmode");
   canvas_txt.classList.add("gisst-embed-hidden");
@@ -104,14 +108,14 @@ function touchHandler(event:TouchEvent)
     switch(event.type)
     {
         case "touchstart": type = "mousedown"; break;
-        case "touchmove":  type = "mousemove"; break;        
+        case "touchmove":  type = "mousemove"; break;
         case "touchend":   type = "mouseup";   break;
         default:           return;
     }
     const simulatedEvent = document.createEvent("MouseEvent");
-    simulatedEvent.initMouseEvent(type, true, true, window, 1, 
-                                  first.screenX, first.screenY, 
-                                  first.clientX, first.clientY, false, 
+    simulatedEvent.initMouseEvent(type, true, true, window, 1,
+                                  first.screenX, first.screenY,
+                                  first.clientX, first.clientY, false,
                                   false, false, false, 0/*left*/, null);
     first.target.dispatchEvent(simulatedEvent);
     event.preventDefault();

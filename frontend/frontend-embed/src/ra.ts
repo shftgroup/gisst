@@ -30,12 +30,12 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   }
   retro_args.push("/home/web_user/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
-  let fetched_files = await fetchZip("/assets/frontend/bundle.zip");
-  let ra_cfg_text:string = await ((await fetch("/assets/retroarch_web_base.cfg")).text());
+  let fetched_files = await fetchZip(gisst_root+"/assets/frontend/bundle.zip");
+  let ra_cfg_text:string = await ((await fetch(gisst_root+"/assets/retroarch_web_base.cfg")).text());
   let replay:Uint8Array|null = null;
   if(movie) {
     const data = (start as ReplayStart).data;
-    replay = new Uint8Array(await ((await fetch("/storage/"+data.file_dest_path)).arrayBuffer()));
+    replay = new Uint8Array(await ((await fetch(gisst_root+"/storage/"+data.file_dest_path)).arrayBuffer()));
   }
   return new Promise((res) => {
     loadRetroArch(gisst_root, core,
