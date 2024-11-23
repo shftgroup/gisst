@@ -6,7 +6,7 @@ import mkcert from 'vite-plugin-mkcert';
 
 export default {
   plugins: [
-    mkcert(),
+    mkcert({save_path: "../../test-cert/"}),
     checker({
       // e.g. use TypeScript check
       typescript: true,

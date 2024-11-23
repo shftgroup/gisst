@@ -2,14 +2,10 @@ import checker from 'vite-plugin-checker';
 import sourcemaps from 'rollup-plugin-sourcemaps';
 import mkcert from 'vite-plugin-mkcert';
 import fs from 'node:fs';
-import path from 'node:path';
-import os from 'os';
-
-const homedir = os.homedir();
 
 export default {
   plugins: [
-    mkcert(),
+    mkcert({save_path: "../../test-cert/"}),
     checker({
       // e.g. use TypeScript check
       typescript: true,
@@ -40,7 +36,7 @@ export default {
           protocol:'https:',
           host:'localhost',
           port: 3000,
-          ca: fs.readFileSync(path.join(homedir,'/.vite-plugin-mkcert/rootCA.pem')),
+          ca: fs.readFileSync('../../test-cert/rootCA.pem')
         },
       }
     }

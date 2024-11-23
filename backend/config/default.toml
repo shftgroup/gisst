@@ -9,6 +9,10 @@ max_lifetime_seconds = 3600
 [http]
 listen_address = "0.0.0.0"
 listen_port = 3000
+dev_cert = "../test-cert/cert.pem"
+dev_key = "../test-cert/dev.pem"
+dev_ssl = true
+base_url = "https://localhost:3000"
 
 [storage]
 root_folder_path = "./storage"
