@@ -72,7 +72,6 @@ impl StorageHandler {
     pub fn get_dest_file_path(root_path: &str, file_info: &FileInformation) -> PathBuf {
         let mut path = PathBuf::from(root_path);
         path.push(&file_info.dest_path);
-        path.push(&file_info.dest_filename);
         path
     }
 
@@ -119,23 +118,19 @@ impl StorageHandler {
         temp_path: &str,
         file_info: &FileInformation,
     ) -> Result<(), StorageError> {
-        let mut path = Self::get_dest_file_path(root_path, file_info);
+        let path = Self::get_dest_file_path(root_path, file_info);
         debug!("In rename_file, dest_path is {}", path.to_string_lossy());
 
-        path.pop();
-        debug!("In rename_file, dest_path is {}", path.to_string_lossy());
-
-        if !path.is_dir() {
-            create_dir_all(path.as_path()).await?
+        if !path.parent().unwrap().is_dir() {
+            create_dir_all(path.parent().unwrap()).await?;
         }
 
-        let dest_path = Self::get_dest_file_path(root_path, file_info);
-        tokio::fs::rename(Self::get_temp_file_path(temp_path, file_info), &dest_path)
+        tokio::fs::rename(Self::get_temp_file_path(temp_path, file_info), &path)
             .await
             .map_err(StorageError::IO)?;
 
-        let data = tokio::fs::File::open(&dest_path).await?;
-        Self::gzip_file(&dest_path, data).await
+        let data = tokio::fs::File::open(&path).await?;
+        Self::gzip_file(&path, data).await
     }
 
     pub async fn add_bytes_to_file(
