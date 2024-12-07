@@ -119,6 +119,6 @@ fn add_headers(resp: &mut Response) {
 fn is_uncompressed_request<B>(req: &Request<B>) -> bool {
     req.headers()
         .get("X-Accept-Encoding")
-        .map(|xae| xae == "identity")
-        .unwrap_or(false)
+        .is_some_and(|xae| xae == "identity")
+        || req.headers().get("Range").is_some()
 }
