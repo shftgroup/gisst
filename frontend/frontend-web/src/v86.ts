@@ -2,7 +2,6 @@ import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gis
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo,ReplayEvent} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink, EmbedOptions} from './types.d';
-import * as tus from 'tus-js-client';
 let ui_state:UI<ReplayEvent>;
 let db:GISSTDBConnector;
 
@@ -107,12 +106,10 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       "upload_file":(category:"state" | "save" | "replay", file_name:string, metadata:GISSTModels.Metadata) => {
         return new Promise((resolve, reject) => {
           v86.download_file(category, file_name).then(([blob, name]) => {
-            db.uploadFile(new File([blob], name),
+            db.uploadFile(new File([blob], name), metadata.record.file_id, 
               (error:Error) => { reject(error.message)},
               (_percentage:number) => {},
-              (upload:tus.Upload) => {
-                const url_parts = upload.url!.split('/');
-                const uuid_string = url_parts[url_parts.length - 1];
+              (uuid_string:string) => {
                 metadata.record.file_id = uuid_string;
                 if(category == "state"){
                   db.uploadRecord({screenshot_data: metadata.screenshot.split(",")[1]}, "screenshot")

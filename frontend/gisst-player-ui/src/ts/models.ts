@@ -205,3 +205,5 @@ export interface InputLogEvent<T> {
   t: number,
   evt:T
 }
+
+export const NEVER_UPLOADED_ID = "DECAFBADDECAFBADDECAFBADDECAFBAD";
