@@ -57,7 +57,7 @@ pub struct GISSTCli {
     #[command(flatten)]
     pub verbose: Verbosity<InfoLevel>,
 
-    /// GISST_CONFIG_PATH environment variable must be set
+    /// `GISST_CONFIG_PATH` environment variable must be set
     #[clap(env)]
     pub gisst_config_path: String,
 }
@@ -119,13 +119,14 @@ pub enum Commands {
     AddPatch {
         /// The instance to clone and patch along with its work
         instance: Uuid,
-        /// A JSON file containing PatchData for the new work
+        /// A JSON file containing a JSON string that parses as `PatchData` for the new work
         data: String,
         #[arg(default_value_t = 4)]
         depth: u8,
     },
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Args)]
 pub struct CreateObject {
     /// Create objects recursively if input file is directory
@@ -167,7 +168,7 @@ pub struct CreateObject {
     /// Paths of file(s) to create in the database, directories will be ignored unless -r/--recursive flag is enabled
     pub file: Vec<String>,
 
-    /// Search for files in this directory, useful if you don't want deeply nested file_source_paths.
+    /// Search for files in this directory, useful if you don't want deeply nested `file_source_paths`.
     #[arg(long)]
     pub cwd: Option<String>,
 }

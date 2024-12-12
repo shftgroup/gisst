@@ -159,15 +159,16 @@ async fn add_patched_instance(
     Instance::insert(&mut conn, new_inst).await?;
     let patch_root = Path::new(&patch_file).parent().unwrap_or(Path::new(""));
     for link in gisst::models::ObjectLink::get_all_for_instance_id(&mut conn, instance_id).await? {
+        let role_index =
+            u16::try_from(link.object_role_index).map_err(GISSTCliError::InvalidRoleIndex)?;
         if link.object_role == ObjectRole::Content
             && data
                 .files
-                .get(link.object_role_index as usize)
-                .map(String::as_str)
-                .unwrap_or("")
+                .get(role_index as usize)
+                .map_or("", String::as_str)
                 != ""
         {
-            let patch = Path::new(&data.files[link.object_role_index as usize]);
+            let patch = Path::new(&data.files[role_index as usize]);
             let object_id = insert_file_object(
                 &mut conn,
                 &storage_root,
@@ -184,7 +185,7 @@ async fn add_patched_instance(
                 object_id,
                 derived_inst_id,
                 ObjectRole::Content,
-                u16::try_from(link.object_role_index).map_err(GISSTCliError::InvalidRoleIndex)?,
+                role_index,
             )
             .await?;
         } else {
@@ -193,7 +194,7 @@ async fn add_patched_instance(
                 link.object_id,
                 derived_inst_id,
                 link.object_role,
-                u16::try_from(link.object_role_index).map_err(GISSTCliError::InvalidRoleIndex)?,
+                role_index,
             )
             .await?;
         }
@@ -220,12 +221,12 @@ async fn link_record(
             "record type object needs a role index for link".to_string(),
         )),
         _ => Err(GISSTCliError::InvalidRecordType(format!(
-            "{} is not a valid record type",
-            record_type
+            "{record_type} is not a valid record type",
         ))),
     }
 }
 
+#[allow(clippy::too_many_lines)]
 async fn create_object(
     CreateObject {
         recursive,
@@ -263,7 +264,7 @@ async fn create_object(
                     }
                 }
             } else {
-                valid_paths.push(p.to_path_buf());
+                valid_paths.push(p.clone());
             }
         } else {
             error!("File not found: {}", &p.to_string_lossy());
@@ -279,18 +280,19 @@ async fn create_object(
     for path in &valid_paths {
         let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(path));
         source_path.pop();
-        let file_size = std::fs::metadata(path)?.len() as i64;
+        let file_size = i64::try_from(std::fs::metadata(path)?.len())
+            .map_err(|_| GISSTCliError::CreateObject("File too big".to_string()))?;
         let mut file_record = gisst::models::File {
             file_id: Uuid::new_v4(),
             file_hash: StorageHandler::get_file_hash(path)?,
             file_filename: path
-                .to_path_buf()
+                .clone()
                 .file_name()
                 .unwrap()
                 .to_string_lossy()
                 .to_string(),
             file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
-            file_dest_path: Default::default(),
+            file_dest_path: String::new(),
             file_size,
             created_on: chrono::Utc::now(),
         };
@@ -299,7 +301,7 @@ async fn create_object(
             object_id: Uuid::new_v4(),
             file_id: file_record.file_id,
             object_description: Some(
-                path.to_path_buf()
+                path.clone()
                     .file_name()
                     .unwrap()
                     .to_string_lossy()
@@ -328,7 +330,7 @@ async fn create_object(
         }
 
         if !ignore {
-            let mut description = Default::default();
+            let mut description = String::new();
             println!(
                 "Please enter an object description for file: {}",
                 &path.to_string_lossy()
@@ -579,10 +581,10 @@ async fn create_replay(
                 .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
                 .ok()
         })
-        .map(chrono::DateTime::<chrono::Utc>::from)
-        .unwrap_or(chrono::Utc::now());
+        .map_or(chrono::Utc::now(), chrono::DateTime::<chrono::Utc>::from);
     let mut conn = db.acquire().await?;
-    let file_size = std::fs::metadata(file)?.len() as i64;
+    let file_size = i64::try_from(std::fs::metadata(file)?.len())
+        .map_err(|_| GISSTCliError::CreateReplay("file too big".to_string()))?;
     let hash = StorageHandler::get_file_hash(file)?;
     let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut conn, &hash).await? {
         info!("File exists in DB already");
@@ -697,9 +699,9 @@ async fn create_state(
                 .map_err(|e| GISSTCliError::CreateState(e.to_string()))
                 .ok()
         })
-        .map(chrono::DateTime::<chrono::Utc>::from)
-        .unwrap_or(chrono::Utc::now());
-    let file_size = std::fs::metadata(file)?.len() as i64;
+        .map_or(chrono::Utc::now(), chrono::DateTime::<chrono::Utc>::from);
+    let file_size = i64::try_from(std::fs::metadata(file)?.len())
+        .map_err(|_| GISSTCliError::CreateState("File too big".to_string()))?;
     let mut file_record = gisst::models::File {
         file_id: Uuid::new_v4(),
         file_hash: StorageHandler::get_file_hash(file)?,
@@ -710,7 +712,7 @@ async fn create_state(
             .to_string_lossy()
             .to_string(),
         file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
-        file_dest_path: Default::default(),
+        file_dest_path: String::new(),
         file_size,
         created_on,
     };
@@ -776,8 +778,10 @@ async fn create_state(
     }
     Ok(())
 }
-async fn create_save(_c: CreateSave, _db: PgPool) -> Result<(), GISSTCliError> {
-    Ok(())
+
+async fn create_save(_c: CreateSave, db: PgPool) -> Result<(), GISSTCliError> {
+    let _ = db.acquire().await?;
+    todo!();
 }
 
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {

@@ -96,6 +96,5 @@ impl tower::Service<Request<axum::body::Body>> for SelectiveServeDir {
 fn is_uncompressed_request<B>(req: &Request<B>) -> bool {
     req.headers()
         .get("X-Accept-Encoding")
-        .map(|xae| xae == "identity")
-        .unwrap_or(false)
+        .is_some_and(|xae| xae == "identity")
 }
