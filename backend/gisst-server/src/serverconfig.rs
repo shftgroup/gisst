@@ -130,7 +130,7 @@ fn default_folder_depth() -> u8 {
 }
 
 fn default_upload_chunk_size() -> usize {
-    10485760
+    10_485_760
 }
 
 impl Default for StorageConfig {

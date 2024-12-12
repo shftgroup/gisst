@@ -184,7 +184,7 @@ async fn add_patched_instance(
                 object_id,
                 derived_inst_id,
                 ObjectRole::Content,
-                link.object_role_index as usize,
+                u16::try_from(link.object_role_index).map_err(GISSTCliError::InvalidRoleIndex)?,
             )
             .await?;
         } else {
@@ -193,7 +193,7 @@ async fn add_patched_instance(
                 link.object_id,
                 derived_inst_id,
                 link.object_role,
-                link.object_role_index as usize,
+                u16::try_from(link.object_role_index).map_err(GISSTCliError::InvalidRoleIndex)?,
             )
             .await?;
         }
@@ -207,28 +207,23 @@ async fn link_record(
     target_id: Uuid,
     db: PgPool,
     role: Option<ObjectRole>,
-    role_index: Option<usize>,
+    role_index: Option<u16>,
 ) -> Result<(), GISSTCliError> {
-    match record_type {
-        "object" => {
+    match (record_type, role, role_index.or(Some(0))) {
+        ("object", Some(role), Some(role_index)) => {
             let mut conn = db.acquire().await?;
-            Object::link_object_to_instance(
-                &mut conn,
-                source_id,
-                target_id,
-                role.unwrap(),
-                role_index.unwrap_or(0),
-            )
-            .await?;
+            Object::link_object_to_instance(&mut conn, source_id, target_id, role, role_index)
+                .await?;
+            Ok(())
         }
-        _ => {
-            return Err(GISSTCliError::InvalidRecordType(format!(
-                "{} is not a valid record type",
-                record_type
-            )))
-        }
+        ("object", _, _) => Err(GISSTCliError::InvalidRecordType(
+            "record type object needs a role index for link".to_string(),
+        )),
+        _ => Err(GISSTCliError::InvalidRecordType(format!(
+            "{} is not a valid record type",
+            record_type
+        ))),
     }
-    Ok(())
 }
 
 async fn create_object(

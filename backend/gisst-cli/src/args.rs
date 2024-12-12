@@ -29,11 +29,11 @@ pub enum GISSTCliError {
     #[error("database error")]
     Sql(#[from] sqlx::Error),
     #[error("gisst new model error")]
-    NewModel(#[from] gisst::error::RecordSQLError),
+    NewModel(#[from] gisst::error::RecordSQL),
     #[error("json parse error")]
     JsonParse(#[from] serde_json::Error),
     #[error("storage error")]
-    Storage(#[from] gisst::error::StorageError),
+    Storage(#[from] gisst::error::Storage),
     #[error("configuration error")]
     Config(#[from] config::ConfigError),
     #[error("record not found error")]
@@ -41,9 +41,11 @@ pub enum GISSTCliError {
     #[error("invalid link record type")]
     InvalidRecordType(String),
     #[error("v86 clone error")]
-    V86CloneError(#[from] gisst::error::V86CloneError),
+    V86CloneError(#[from] gisst::error::V86Clone),
     #[error("insert file error")]
-    InsertFileError(#[from] gisst::error::InsertFileError),
+    InsertFileError(#[from] gisst::error::InsertFile),
+    #[error("invalid role index {0}")]
+    InvalidRoleIndex(std::num::TryFromIntError),
 }
 
 #[derive(Debug, Parser)]
@@ -83,7 +85,7 @@ pub enum Commands {
         #[arg(long)]
         role: Option<ObjectRole>,
         #[arg(long)]
-        role_index: Option<usize>,
+        role_index: Option<u16>,
     },
 
     /// Manage object records and files
@@ -152,7 +154,7 @@ pub struct CreateObject {
 
     /// Object role index for instance link. For retroarch, this is typically 0 for all content; for v86, 0=fda, 1=fdb, 2=hda, 3=hdb, 4=cdrom.
     #[arg(long)]
-    pub role_index: usize,
+    pub role_index: u16,
 
     /// Folder depth to use for input file to path based off of characters in assigned UUID
     #[arg(short, long, default_value_t = 4)]

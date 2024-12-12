@@ -84,17 +84,11 @@ impl tower::Service<Request<axum::body::Body>> for SelectiveServeDir {
         if is_uncompressed_request(&req) {
             self.iu_ready = false;
             let future = self.inner_uncompressed.call(req);
-            Box::pin(async move {
-                let res = future.await?;
-                Ok(res.into_response())
-            })
+            Box::pin(async move { Ok(future.await?.into_response()) })
         } else {
             self.ic_ready = false;
             let future = self.inner_compressed.call(req);
-            Box::pin(async move {
-                let res = future.await?;
-                Ok(res.into_response())
-            })
+            Box::pin(async move { Ok(future.await?.into_response()) })
         }
     }
 }
