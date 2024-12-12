@@ -28,7 +28,7 @@ impl ServerConfig {
         let env = std::env::var("GISST_ENV").unwrap_or_else(|_| "development".into());
         let builder = Config::builder()
             .add_source(File::with_name("config/default.toml"))
-            .add_source(File::with_name(&format!("config/{}.toml", env)).required(false))
+            .add_source(File::with_name(&format!("config/{env}.toml")).required(false))
             .add_source(File::with_name("config/local.toml").required(false))
             .add_source(Environment::with_prefix("GISST").separator("__"));
         builder.build()?.try_deserialize()

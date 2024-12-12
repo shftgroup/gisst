@@ -146,12 +146,12 @@ impl std::fmt::Display for RVal {
                 write!(f, "b'")?;
                 let slc = unsafe {
                     std::slice::from_raw_parts(
-                        self.value.bin_.buf as *const u8,
+                        self.value.bin_.buf.cast_const(),
                         self.value.bin_.len as usize,
                     )
                 };
-                for chr in slc.iter() {
-                    write!(f, "{:x}", chr)?;
+                for chr in slc {
+                    write!(f, "{chr:x}")?;
                 }
                 write!(f, "'")
             }
@@ -186,6 +186,9 @@ impl RVal {
         let key: RVal = key.into();
         self.map_get_rval(&key)
     }
+    /// # Panics
+    /// If the retrieved value cannot be converted into an `RVal`
+    #[must_use]
     pub fn map_get_rval<V>(&self, key: &RVal) -> Option<V>
     where
         V: for<'a> TryFrom<&'a RVal>,
@@ -208,14 +211,14 @@ impl RVal {
 
 impl From<String> for RVal {
     fn from(s: String) -> RVal {
-        let len = s.len() as u32;
+        let len = u32::try_from(s.len()).unwrap_or(0);
         let s = s.into_boxed_str();
         RVal {
             tag: RType::String,
             value: RValInner {
                 str_: ManuallyDrop::new(RStr {
                     len,
-                    buf: Box::into_raw(s) as *mut i8,
+                    buf: Box::into_raw(s).cast::<i8>(),
                 }),
             },
         }
@@ -243,7 +246,7 @@ impl TryFrom<&RVal> for String {
         };
         std::str::from_utf8(slc)
             .map_err(|_| ())
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
     }
 }
 
@@ -273,7 +276,7 @@ impl TryFrom<&RVal> for &[u8] {
         }
         Ok(unsafe {
             std::slice::from_raw_parts(
-                value.value.bin_.buf as *const u8,
+                value.value.bin_.buf.cast_const(),
                 value.value.bin_.len as usize,
             )
         })
@@ -289,6 +292,10 @@ pub struct RDB(*mut RetroDB);
 unsafe impl Send for RDB {}
 unsafe impl Sync for RDB {}
 impl RDB {
+    /// Opens the database; it will be closed automatically on drop.
+    /// # Errors
+    /// `RDBError::Path` if there is no database at the given path.
+    /// `RDBError::IO` if the database can't be loaded successfully.
     pub fn open(path: &std::path::Path) -> Result<Self, RDBError> {
         let path = path.as_os_str();
         let path = std::ffi::CString::new(path.as_encoded_bytes()).map_err(|_| RDBError::Path)?;
@@ -299,6 +306,7 @@ impl RDB {
             Err(RDBError::IO)
         }
     }
+    #[must_use]
     pub fn open_cursor(&self) -> Option<Cursor> {
         unsafe {
             let cursor = libretrodb_cursor_new();
@@ -308,6 +316,7 @@ impl RDB {
             Some(Cursor(cursor))
         }
     }
+    #[allow(clippy::needless_pass_by_value)]
     pub fn find_entry<K, V>(&self, key: K, val: V) -> Option<RVal>
     where
         K: Into<RVal>,
@@ -316,11 +325,7 @@ impl RDB {
         let mut cursor = self.open_cursor()?;
         let key: RVal = key.into();
         while let Some(rval) = cursor.next() {
-            if rval
-                .map_get_rval::<V>(&key)
-                .map(|v| v == val)
-                .unwrap_or(false)
-            {
+            if rval.map_get_rval::<V>(&key).is_some_and(|v| v == val) {
                 return Some(rval);
             }
         }
