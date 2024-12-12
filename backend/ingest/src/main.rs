@@ -69,9 +69,9 @@ pub enum IngestError {
     #[error("nul error")]
     Nul(#[from] std::ffi::NulError),
     #[error("storage error")]
-    Storage(#[from] gisst::error::StorageError),
+    Storage(#[from] gisst::error::Storage),
     #[error("new record")]
-    NewRecord(#[from] gisst::error::RecordSQLError),
+    NewRecord(#[from] gisst::error::RecordSQL),
     #[error("directory traversal error")]
     Directory(#[from] walkdir::Error),
     #[error("rdb open error")]
@@ -79,7 +79,9 @@ pub enum IngestError {
     #[error("file metadata error")]
     File(),
     #[error("file insertion error")]
-    InsertFile(#[from] gisst::error::InsertFileError),
+    InsertFile(#[from] gisst::error::InsertFile),
+    #[error("Role index too high, must be <= 65535")]
+    RoleTooHigh(usize),
 }
 
 #[tokio::main]
@@ -499,7 +501,14 @@ async fn link_deps(
     Object::link_object_to_instance(conn, ra_cfg_object_id, instance_id, ObjectRole::Config, 0)
         .await?;
     for (i, dep) in deps.iter().enumerate() {
-        Object::link_object_to_instance(conn, *dep, instance_id, ObjectRole::Dependency, i).await?;
+        Object::link_object_to_instance(
+            conn,
+            *dep,
+            instance_id,
+            ObjectRole::Dependency,
+            u16::try_from(i).map_err(|_| IngestError::RoleTooHigh(i))?,
+        )
+        .await?;
     }
     Ok(())
 }
