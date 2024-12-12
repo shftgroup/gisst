@@ -7,14 +7,16 @@ use axum::{
     Extension,
 };
 use gisst::models::Creator;
-
 use uuid::Uuid;
 
 use axum_login::AuthUser;
 use chrono::Utc;
 use sqlx::{PgConnection, PgPool};
 
-use crate::{error::GISSTError, server::ServerState};
+use crate::{
+    error::{AuthError, ServerError},
+    server::ServerState,
+};
 use oauth2::{
     basic::BasicClient, AuthUrl, ClientId, ClientSecret, CsrfToken, IntrospectionUrl, RedirectUrl,
     TokenUrl,
@@ -85,7 +87,7 @@ impl AuthUser for User {
 }
 
 impl User {
-    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, sqlx::Error> {
+    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO users (iss, sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)
@@ -117,6 +119,7 @@ impl User {
         )
             .fetch_one(conn)
             .await
+            .map_err( AuthError::Sql )
     }
 
     async fn update_token(
@@ -124,7 +127,7 @@ impl User {
         user_iss: &str,
         user_sub: &str,
         token: &str,
-    ) -> Result<(), sqlx::Error> {
+    ) -> Result<(), AuthError> {
         sqlx::query!(
             r#"
             UPDATE users SET password_hash=$1 WHERE iss=$2 AND sub=$3
@@ -135,6 +138,7 @@ impl User {
         )
         .execute(conn)
         .await
+        .map_err(AuthError::Sql)
         .map(|_| ())
     }
 }
@@ -150,14 +154,14 @@ pub async fn oauth_callback_handler(
     Query(query): Query<AuthRequest>,
     session: axum_login::tower_sessions::Session,
     server_state: Extension<ServerState>,
-) -> Result<Redirect, GISSTError> {
+) -> Result<Redirect, ServerError> {
     debug!("Running oauth callback {query:?}, {:?}", auth.user);
     // Compare the csrf state in the callback with the state generated before the
     // request
     let original_csrf_state: CsrfToken = session
         .get(CSRF_STATE_KEY)
         .await?
-        .ok_or(crate::error::AuthError::CsrfMissing)?;
+        .ok_or(AuthError::CsrfMissing)?;
     let query_csrf_state = query.state.secret();
     let csrf_state_equal = original_csrf_state.secret() == query_csrf_state;
     if !csrf_state_equal {
@@ -195,7 +199,7 @@ pub async fn login_handler(
     auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
     session: axum_login::tower_sessions::Session,
-) -> Result<impl IntoResponse, GISSTError> {
+) -> Result<impl IntoResponse, ServerError> {
     debug!("Running login {:?}", auth_session.user);
     let (auth_url, csrf_state) = auth_session.backend.authorize_url();
     session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
@@ -207,7 +211,7 @@ pub async fn login_handler(
     mut auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
     session: axum_login::tower_sessions::Session,
-) -> Result<impl IntoResponse, GISSTError> {
+) -> Result<impl IntoResponse, ServerError> {
     let (_, csrf_state) = auth_session.backend.authorize_url();
     session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
     session.insert(NEXT_URL_KEY, next.next).await?;
@@ -227,7 +231,7 @@ pub async fn login_handler(
 
 pub async fn logout_handler(
     mut auth: axum_login::AuthSession<AuthBackend>,
-) -> Result<impl IntoResponse, GISSTError> {
+) -> Result<impl IntoResponse, ServerError> {
     auth.logout().await?;
     Ok(Redirect::to("/").into_response())
 }
@@ -290,7 +294,7 @@ impl AuthBackend {
 impl axum_login::AuthnBackend for AuthBackend {
     type User = User;
     type Credentials = Credentials;
-    type Error = crate::error::AuthError;
+    type Error = AuthError;
 
     async fn authenticate(
         &self,
@@ -300,7 +304,6 @@ impl axum_login::AuthnBackend for AuthBackend {
             new_state,
         }: Self::Credentials,
     ) -> Result<Option<Self::User>, Self::Error> {
-        use crate::error::AuthError;
         if old_state.secret() != new_state.secret() {
             return Err(AuthError::CsrfMissing);
         }

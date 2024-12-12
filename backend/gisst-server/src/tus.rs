@@ -3,7 +3,7 @@ use crate::{
     utils::{check_header, get_metadata, parse_header},
 };
 
-use crate::error::GISSTError;
+use crate::error::ServerError;
 use bytes::Bytes;
 use gisst::models::File as GFile;
 use uuid::Uuid;
@@ -22,7 +22,7 @@ pub async fn tus_head(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
-) -> Result<Response, GISSTError> {
+) -> Result<Response, ServerError> {
     let tus_resumable: Option<String> = parse_header(&headers, "Tus-Resumable");
     if tus_resumable.is_none() || tus_resumable.unwrap() != "1.0.0" {
         return Ok(([("Tus-Version", "1.0.0")], StatusCode::PRECONDITION_FAILED).into_response());
@@ -62,7 +62,7 @@ pub async fn tus_patch(
     headers: HeaderMap,
     Path(id): Path<Uuid>,
     body: Bytes,
-) -> Result<axum::response::Response, GISSTError> {
+) -> Result<axum::response::Response, ServerError> {
     //Check for correct headers
     let check_content_type = |val: &str| val == "application/offset+octet-stream";
     if !check_header(&headers, "Content-Type", check_content_type) {
@@ -90,7 +90,7 @@ pub async fn tus_patch(
 
     // Check that file upload exists
     if app_state.pending_uploads.read().unwrap().get(&id).is_none() {
-        return Err(GISSTError::FileNotFound);
+        return Err(ServerError::FileNotFound);
     }
 
     let mut pu_offset = app_state
@@ -182,7 +182,7 @@ pub async fn tus_patch(
                 file_filename: file_info.source_filename.clone(),
                 file_source_path: file_info.source_path.clone(),
                 file_dest_path: file_info.dest_path.clone(),
-                file_size: pu_length as i64,
+                file_size: i64::try_from(pu_length).map_err(ServerError::UploadTooBig)?,
                 created_on: chrono::Utc::now(),
             },
         )
@@ -200,10 +200,10 @@ pub async fn tus_patch(
         .into_response())
 }
 
-pub async fn tus_creation(
+pub async fn creation(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
-) -> Result<Response, GISSTError> {
+) -> Result<Response, ServerError> {
     // Get file length header information
     // We are not allowing deferred length at this time
     let length: Option<usize> = parse_header(&headers, "Upload-Length");
@@ -224,14 +224,11 @@ pub async fn tus_creation(
     }
 
     let metadata = metadata.unwrap();
-    for key in ["filename", "hash"].iter() {
-        if !metadata.contains_key(*key) {
+    for key in ["filename", "hash"] {
+        if !metadata.contains_key(key) {
             return Ok((
                 StatusCode::BAD_REQUEST,
-                format!(
-                    "Upload-Metadata header must contain a value for '{}' key.",
-                    key
-                ),
+                format!("Upload-Metadata header must contain a value for '{key}' key."),
             )
                 .into_response());
         }
@@ -269,7 +266,7 @@ pub async fn tus_creation(
     Ok((
         [
             ("Tus-Resumable", "1.0.0"),
-            ("Location", &format!("/resources/{}", new_uuid)),
+            ("Location", &format!("/resources/{new_uuid}")),
         ],
         StatusCode::CREATED,
     )

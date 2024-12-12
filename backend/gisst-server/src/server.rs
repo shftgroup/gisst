@@ -1,4 +1,4 @@
-use crate::error::GISSTError;
+use crate::error::ServerError;
 use gisst::models::{Environment, Instance, ObjectLink, ReplayLink, Save, StateLink, Work};
 use std::collections::HashMap;
 use tower::ServiceBuilder;
@@ -10,7 +10,7 @@ use crate::{
         work_router,
     },
     serverconfig::ServerConfig,
-    tus::{tus_creation, tus_head, tus_patch},
+    tus::{creation, tus_head, tus_patch},
 };
 use anyhow::Result;
 use axum::{
@@ -31,7 +31,7 @@ use axum_login::{
     tower_sessions::{cookie::SameSite, MemoryStore, SessionManagerLayer},
 };
 use chrono::{DateTime, Local};
-use gisst::error::ErrorTable;
+use gisst::error::Table;
 use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::context;
 use secrecy::ExposeSecret;
@@ -128,7 +128,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
         .route("/resources/:id", patch(tus_patch).head(tus_head))
-        .route("/resources", post(tus_creation))
+        .route("/resources", post(creation))
         .nest("/objects", object_router())
         .route("/logout", get(auth::logout_handler))
         .nest("/creators", creator_router())
@@ -179,9 +179,9 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         )
         .route("/", get(get_homepage))
         .route("/about", get(get_about))
-        .layer(DefaultBodyLimit::max(33554432))
-        .layer(auth_layer)
         .layer(Extension(app_state))
+        .layer(DefaultBodyLimit::max(33_554_432))
+        .layer(auth_layer)
         .layer(TraceLayer::new_for_http());
 
     let addr = SocketAddr::new(
@@ -301,7 +301,7 @@ struct PlayerParams {
 
 async fn get_about(
     app_state: Extension<ServerState>,
-) -> Result<axum::response::Response, GISSTError> {
+) -> Result<axum::response::Response, ServerError> {
     Ok(Html(
         app_state
             .templates
@@ -312,7 +312,7 @@ async fn get_about(
 }
 async fn get_homepage(
     app_state: Extension<ServerState>,
-) -> Result<axum::response::Response, GISSTError> {
+) -> Result<axum::response::Response, ServerError> {
     Ok(Html(
         app_state
             .templates
@@ -328,46 +328,46 @@ async fn get_data(
     Path(id): Path<Uuid>,
     OriginalUri(uri): OriginalUri,
     Query(params): Query<PlayerParams>,
-) -> Result<axum::response::Response, GISSTError> {
+) -> Result<axum::response::Response, ServerError> {
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
         .await?
-        .ok_or(GISSTError::RecordMissing {
-            table: ErrorTable::Instance,
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Instance,
             uuid: id,
         })?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::RecordMissing {
-            table: ErrorTable::Environment,
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Environment,
             uuid: instance.environment_id,
         })?;
     let work =
         Work::get_by_id(&mut conn, instance.work_id)
             .await?
-            .ok_or(GISSTError::RecordMissing {
-                table: ErrorTable::Work,
+            .ok_or(ServerError::RecordMissing {
+                table: Table::Work,
                 uuid: instance.work_id,
             })?;
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinking {
-                    table: ErrorTable::State,
+                ServerError::RecordLinking {
+                    table: Table::State,
                     uuid: id,
                 },
             )?)
         }
         (None, Some(id)) => {
             PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinking {
-                    table: ErrorTable::Replay,
+                ServerError::RecordLinking {
+                    table: Table::Replay,
                     uuid: id,
                 },
             )?)
         }
         (None, None) => PlayerStartTemplateInfo::Cold,
-        (_, _) => return Err(GISSTError::Unreachable),
+        (_, _) => return Err(ServerError::Unreachable),
     };
     let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     debug!("{manifest:?}");
@@ -432,7 +432,7 @@ async fn get_data(
         {
             (axum::Json(embed_data),).into_response()
         } else {
-            Err(GISSTError::MimeType)?
+            Err(ServerError::MimeType)?
         })
         .into_response(),
     )
@@ -444,47 +444,47 @@ async fn get_player(
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
     auth: axum_login::AuthSession<crate::auth::AuthBackend>,
-) -> Result<axum::response::Response, GISSTError> {
+) -> Result<axum::response::Response, ServerError> {
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
         .await?
-        .ok_or(GISSTError::RecordMissing {
-            table: ErrorTable::Instance,
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Instance,
             uuid: id,
         })?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::RecordMissing {
-            table: ErrorTable::Environment,
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Environment,
             uuid: instance.environment_id,
         })?;
     let work =
         Work::get_by_id(&mut conn, instance.work_id)
             .await?
-            .ok_or(GISSTError::RecordMissing {
-                table: ErrorTable::Work,
+            .ok_or(ServerError::RecordMissing {
+                table: Table::Work,
                 uuid: instance.work_id,
             })?;
     let user = LoggedInUserInfo::generate_from_user(&auth.user.unwrap());
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinking {
-                    table: ErrorTable::State,
+                ServerError::RecordLinking {
+                    table: Table::State,
                     uuid: id,
                 },
             )?)
         }
         (None, Some(id)) => {
             PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinking {
-                    table: ErrorTable::Replay,
+                ServerError::RecordLinking {
+                    table: Table::Replay,
                     uuid: id,
                 },
             )?)
         }
         (None, None) => PlayerStartTemplateInfo::Cold,
-        (_, _) => return Err(GISSTError::Unreachable),
+        (_, _) => return Err(ServerError::Unreachable),
     };
     let manifest =
         dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);

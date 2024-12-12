@@ -1,30 +1,29 @@
-use std::fmt;
-use std::fmt::Formatter;
+use std::fmt::{self, Formatter};
 
 use uuid::Uuid;
 
 #[derive(Debug)]
-pub enum ErrorAction {
+pub enum Action {
     Insert,
     Update,
     Select,
     Delete,
 }
 
-impl fmt::Display for ErrorAction {
+impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
-            ErrorAction::Insert => "insert",
-            ErrorAction::Update => "update",
-            ErrorAction::Select => "select",
-            ErrorAction::Delete => "delete",
+            Action::Insert => "insert",
+            Action::Update => "update",
+            Action::Select => "select",
+            Action::Delete => "delete",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
 #[derive(Debug)]
-pub enum ErrorTable {
+pub enum Table {
     Creator,
     Environment,
     File,
@@ -39,34 +38,34 @@ pub enum ErrorTable {
     Work,
 }
 
-impl fmt::Display for ErrorTable {
+impl fmt::Display for Table {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
-            ErrorTable::Creator => "creator",
-            ErrorTable::Environment => "environment",
-            ErrorTable::File => "file",
-            ErrorTable::Instance => "instance",
-            ErrorTable::InstanceObject => "instance_object",
-            ErrorTable::Object => "object",
-            ErrorTable::Replay => "replay",
-            ErrorTable::Save => "save",
-            ErrorTable::Screenshot => "screenshot",
-            ErrorTable::State => "state",
-            ErrorTable::Users => "users",
-            ErrorTable::Work => "work",
+            Table::Creator => "creator",
+            Table::Environment => "environment",
+            Table::File => "file",
+            Table::Instance => "instance",
+            Table::InstanceObject => "instance_object",
+            Table::Object => "object",
+            Table::Replay => "replay",
+            Table::Save => "save",
+            Table::Screenshot => "screenshot",
+            Table::State => "state",
+            Table::Users => "users",
+            Table::Work => "work",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 #[derive(thiserror::Error, Debug)]
-pub struct RecordSQLError {
-    pub table: ErrorTable,
-    pub action: ErrorAction,
+pub struct RecordSQL {
+    pub table: Table,
+    pub action: Action,
     pub source: sqlx::Error,
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum StorageError {
+pub enum Storage {
     #[error("IO error")]
     IO(#[from] std::io::Error),
     #[error("tokio task error")]
@@ -77,34 +76,36 @@ pub enum StorageError {
     FileNotFoundError,
     #[error("File path not UTF-8")]
     UTF8(#[from] std::string::FromUtf8Error),
+    #[error("path missing parent")]
+    PathTooShallow(std::path::PathBuf),
 }
 
-impl fmt::Display for RecordSQLError {
+impl fmt::Display for RecordSQL {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} failed in table {}", self.table, self.action)
     }
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum FSListError {
+pub enum FSList {
     #[error("IO error")]
     IO(#[from] std::io::Error),
     #[error("mbr error")]
-    MBRError(#[from] mbrman::Error),
+    MBR(#[from] mbrman::Error),
     #[error("fat filesystem IO error")]
-    FATFSError(#[from] fatfs::Error<std::io::Error>),
+    FATFS(#[from] fatfs::Error<std::io::Error>),
     #[error("filesystem error")]
     FATError(String),
     #[error("filetype DB error")]
-    FiletypeDBError,
+    FiletypeDB,
     #[error("subobject path error")]
-    PathError,
+    Path,
     #[error("partition id error")]
-    PartitionIDError(#[from] std::num::ParseIntError),
+    PartitionID(#[from] std::num::ParseIntError),
     #[error("directory zip error")]
-    ZIPError(#[from] zip::result::ZipError),
+    ZIP(#[from] zip::result::ZipError),
     #[error("file identifier error")]
-    FileMIMEError(#[from] magic::cookie::Error),
+    FileMIME(#[from] magic::cookie::Error),
     #[error("fs traversal error: depth limit exceeded")]
     TraversalDepth,
     #[error("fs traversal error: path {0} invalid or not found")]
@@ -114,43 +115,55 @@ pub enum FSListError {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum V86CloneError {
+pub enum V86Clone {
     #[error("instance {0} not found")]
     InstanceNotFound(Uuid),
+    #[error("disk {0} not found")]
+    DiskNotFound(String),
     #[error("enviroment {0} not found")]
     EnvironmentNotFound(Uuid),
+    #[error("enviroment {0} does not have a proper config")]
+    EnvironmentInvalid(Uuid),
     #[error("not a v86 environment")]
     WrongEnvironmentType,
     #[error("state is for different instance")]
     WrongInstanceForState,
     #[error("v86 state {0} not found")]
     StateNotFound(Uuid),
+    #[error("file path not valid UTF-8 {0}")]
+    PathNotUTF8(#[from] std::string::FromUtf8Error),
     #[error("clone script not found")]
     NoCloneScript,
     #[error("storage error")]
-    Storage(#[from] crate::error::StorageError),
+    Storage(#[from] crate::error::Storage),
     #[error("database error")]
     Sql(#[from] sqlx::Error),
     #[error("record error")]
-    Record(#[from] RecordSQLError),
+    Record(#[from] RecordSQL),
     #[error("v86dump error: {0}")]
-    V86DumpError(String),
+    V86Dump(String),
     #[error("IO error")]
     IO(#[from] std::io::Error),
     #[error("incomplete clone for {0}")]
     IncompleteClone(Uuid),
+    #[error("Disk too big to get metadata {0}")]
+    DiskTooBig(std::num::TryFromIntError),
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum InsertFileError {
-    #[error("IO error")]
+pub enum InsertFile {
+    #[error("Invalid path")]
+    Path(std::path::PathBuf),
+    #[error("too big {0}")]
+    TooBig(#[from] std::num::TryFromIntError),
+    #[error("IO error {0}")]
     IO(#[from] std::io::Error),
     #[error("Invalid or missing duplicated object for file hash {0}")]
     ObjectMissing(String),
     #[error("database error")]
     Sql(#[from] sqlx::Error),
     #[error("record error")]
-    Record(#[from] RecordSQLError),
+    Record(#[from] RecordSQL),
     #[error("storage error")]
-    Storage(#[from] crate::error::StorageError),
+    Storage(#[from] crate::error::Storage),
 }

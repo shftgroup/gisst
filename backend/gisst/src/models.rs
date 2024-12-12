@@ -1,3 +1,5 @@
+#![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
+
 use serde::{de, Deserialize, Deserializer, Serialize};
 
 use std::{fmt, str::FromStr};
@@ -9,7 +11,7 @@ use crate::model_enums::Framework;
 use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
 
-use crate::error::{ErrorAction, ErrorTable, RecordSQLError};
+use crate::error::{Action, RecordSQL, Table};
 
 // empty_string_as_none taken from axum docs here: https://github.com/tokio-rs/axum/blob/main/examples/query-params-with-empty-strings/src/main.rs
 /// Serde deserialization decorator to map empty Strings to None,
@@ -207,8 +209,8 @@ impl Creator {
         conn: &mut PgConnection,
         id: Uuid,
         contains: Option<String>,
-        offset: usize,
-        limit: usize,
+        offset: u32,
+        limit: u32,
     ) -> sqlx::Result<Vec<CreatorStateInfo>> {
         if let Some(contains) = contains {
             sqlx::query_as!(
@@ -230,7 +232,7 @@ impl Creator {
             ORDER BY state.created_on DESC
             OFFSET $3
             LIMIT $4"#, 
-            id, contains, offset as i64, limit as i64
+            id, contains, i64::from(offset), i64::from(limit)
         )
         .fetch_all(conn)
                 .await
@@ -255,8 +257,8 @@ impl Creator {
             OFFSET $2
             LIMIT $3"#,
                 id,
-                offset as i64,
-                limit as i64
+                i64::from(offset),
+                i64::from(limit)
             )
             .fetch_all(conn)
             .await
@@ -268,8 +270,8 @@ impl Creator {
         conn: &mut PgConnection,
         id: Uuid,
         contains: Option<String>,
-        offset: usize,
-        limit: usize,
+        offset: u32,
+        limit: u32,
     ) -> sqlx::Result<Vec<CreatorReplayInfo>> {
         if let Some(contains) = contains {
             sqlx::query_as!(
@@ -290,7 +292,7 @@ impl Creator {
             ORDER BY replay.created_on DESC
             OFFSET $3
             LIMIT $4"#,
-            id, contains, offset as i64, limit as i64
+            id, contains, i64::from(offset), i64::from(limit)
             )
             .fetch_all(conn)
             .await
@@ -313,8 +315,8 @@ impl Creator {
             OFFSET $2
             LIMIT $3"#,
                 id,
-                offset as i64,
-                limit as i64
+                i64::from(offset),
+                i64::from(limit)
             )
             .fetch_all(conn)
             .await
@@ -323,24 +325,6 @@ impl Creator {
 }
 
 impl Creator {
-    pub fn fields() -> Vec<(String, String)> {
-        vec![
-            ("creator_id".to_string(), "Uuid".to_string()),
-            ("creator_username".to_string(), "String".to_string()),
-            ("creator_full_name".to_string(), "String".to_string()),
-            ("created_on".to_string(), "DateTime<Utc>".to_string()),
-        ]
-    }
-
-    pub fn values_to_strings(&self) -> Vec<Option<String>> {
-        vec![
-            Some(self.creator_id.to_string()),
-            Some(self.creator_full_name.to_string()),
-            Some(self.creator_username.to_string()),
-            Some(self.created_on.to_string()),
-        ]
-    }
-
     pub async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -356,7 +340,7 @@ impl Creator {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Creator) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, model: Creator) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO creator(creator_id, creator_username, creator_full_name, created_on)
@@ -370,14 +354,14 @@ impl Creator {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError {
-            table: ErrorTable::Creator,
-            action: ErrorAction::Insert,
+        .map_err(|e| RecordSQL {
+            table: Table::Creator,
+            action: Action::Insert,
             source: e,
         })
     }
 
-    pub async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, RecordSQLError> {
+    pub async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Creator,
             r#"UPDATE creator SET
@@ -392,9 +376,9 @@ impl Creator {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError {
-            table: ErrorTable::Creator,
-            action: ErrorAction::Update,
+        .map_err(|e| RecordSQL {
+            table: Table::Creator,
+            action: Action::Update,
             source: e,
         })
     }
@@ -440,7 +424,7 @@ impl File {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO file(file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size, created_on)
@@ -457,9 +441,9 @@ impl File {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| RecordSQLError{
-                table: ErrorTable::File,
-                action: ErrorAction::Insert,
+            .map_err(|e| RecordSQL{
+                table: Table::File,
+                action: Action::Insert,
                 source: e
             },)
     }
@@ -478,7 +462,7 @@ impl Instance {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Instance) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, model: Instance) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Instance,
             r#"INSERT INTO instance(
@@ -502,9 +486,9 @@ impl Instance {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError {
-            table: ErrorTable::Instance,
-            action: ErrorAction::Insert,
+        .map_err(|e| RecordSQL {
+            table: Table::Instance,
+            action: Action::Insert,
             source: e,
         })
     }
@@ -526,14 +510,14 @@ impl Instance {
         .fetch_all(conn)
         .await
     }
-
+    #[allow(clippy::too_many_lines)]
     pub async fn get_all_states(
         conn: &mut PgConnection,
         instance_id: Uuid,
         for_user: Option<Uuid>,
         contains: Option<String>,
-        offset: usize,
-        limit: usize,
+        offset: u32,
+        limit: u32,
     ) -> sqlx::Result<Vec<State>> {
         match (contains, for_user) {
             (None, None) => {
@@ -557,8 +541,8 @@ impl Instance {
             OFFSET $2
             LIMIT $3"#,
                 instance_id,
-                offset as i64,
-                limit as i64
+                i64::from(offset),
+                i64::from(limit)
             )
             .fetch_all(conn)
             .await
@@ -585,8 +569,8 @@ impl Instance {
             LIMIT $4"#,
                     instance_id,
                     user,
-                    offset as i64,
-                    limit as i64
+                i64::from(offset),
+                i64::from(limit)
             )
             .fetch_all(conn)
             .await
@@ -611,7 +595,9 @@ impl Instance {
             ORDER BY state.created_on DESC
             OFFSET $3
             LIMIT $4"#,
-            instance_id, contains, offset as i64, limit as i64
+            instance_id, contains,                 i64::from(offset),
+                i64::from(limit)
+
         )
         .fetch_all(conn)
                 .await
@@ -636,7 +622,9 @@ impl Instance {
             ORDER BY state.created_on DESC
             OFFSET $4
             LIMIT $5"#,
-            instance_id, user, contains, offset as i64, limit as i64
+            instance_id, user, contains,                 i64::from(offset),
+                i64::from(limit)
+
         )
         .fetch_all(conn)
                 .await
@@ -649,8 +637,8 @@ impl Instance {
         instance_id: Uuid,
         for_user: Option<Uuid>,
         contains: Option<String>,
-        offset: usize,
-        limit: usize,
+        offset: u32,
+        limit: u32,
     ) -> sqlx::Result<Vec<Replay>> {
         match (contains, for_user) {
             (None, None) => {
@@ -670,8 +658,8 @@ impl Instance {
             OFFSET $2
             LIMIT $3"#,
                 instance_id,
-                offset as i64,
-                limit as i64
+                i64::from(offset),
+                i64::from(limit)
             )
             .fetch_all(conn)
             .await
@@ -694,8 +682,8 @@ impl Instance {
             LIMIT $4"#,
                     instance_id,
                     user,
-                offset as i64,
-                limit as i64
+                i64::from(offset),
+                i64::from(limit)
             )
             .fetch_all(conn)
             .await
@@ -716,7 +704,9 @@ impl Instance {
             ORDER BY created_on DESC
             OFFSET $3
             LIMIT $4"#,
-            instance_id, contains, offset as i64, limit as i64
+            instance_id, contains,                 i64::from(offset),
+                i64::from(limit)
+
         )
         .fetch_all(conn)
         .await
@@ -737,7 +727,9 @@ impl Instance {
             ORDER BY created_on DESC
             OFFSET $4
             LIMIT $5"#,
-            instance_id, user, contains, offset as i64, limit as i64
+            instance_id, user, contains,                 i64::from(offset),
+                i64::from(limit)
+
         )
         .fetch_all(conn)
         .await
@@ -759,10 +751,7 @@ impl Environment {
             .await
     }
 
-    pub async fn insert(
-        conn: &mut PgConnection,
-        model: Environment,
-    ) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO environment (environment_id, environment_name, environment_framework, environment_core_name, environment_core_version, environment_derived_from, environment_config, created_on)
@@ -780,9 +769,9 @@ impl Environment {
         )
             .fetch_one(conn)
             .await
-            .map_err(|e| RecordSQLError{
-                table: ErrorTable::Environment,
-                action: ErrorAction::Insert,
+            .map_err(|e| RecordSQL{
+                table: Table::Environment,
+                action: Action::Insert,
                 source: e
             },)
     }
@@ -816,7 +805,7 @@ impl Object {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, RecordSQL> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
@@ -832,9 +821,9 @@ impl Object {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError {
-            table: ErrorTable::Object,
-            action: ErrorAction::Insert,
+        .map_err(|e| RecordSQL {
+            table: Table::Object,
+            action: Action::Insert,
             source: e,
         })
     }
@@ -846,14 +835,14 @@ impl Object {
         object_id: Uuid,
         instance_id: Uuid,
         role: ObjectRole,
-        role_index: usize,
+        role_index: u16,
     ) -> sqlx::Result<PgQueryResult> {
         sqlx::query!(
             r#"INSERT INTO instanceObject(instance_id, object_id, object_role, object_role_index)  VALUES ($1, $2, $3, $4)"#,
             instance_id,
             object_id,
             role as _,
-            role_index as i32
+            i32::from(role_index)
         )
         .execute(conn)
         .await
@@ -897,7 +886,7 @@ impl Replay {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Replay,
             r#"INSERT INTO replay (
@@ -931,9 +920,9 @@ impl Replay {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError {
-            table: ErrorTable::Replay,
-            action: ErrorAction::Insert,
+        .map_err(|e| RecordSQL {
+            table: Table::Replay,
+            action: Action::Insert,
             source: e,
         })
     }
@@ -958,7 +947,7 @@ impl Save {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO save (
@@ -989,9 +978,9 @@ impl Save {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError {
-            table: ErrorTable::Save,
-            action: ErrorAction::Insert,
+        .map_err(|e| RecordSQL {
+            table: Table::Save,
+            action: Action::Insert,
             source: e,
         })
     }
@@ -1044,7 +1033,7 @@ impl State {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, RecordSQL> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
@@ -1092,9 +1081,9 @@ impl State {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError {
-            table: ErrorTable::State,
-            action: ErrorAction::Insert,
+        .map_err(|e| RecordSQL {
+            table: Table::State,
+            action: Action::Insert,
             source: e,
         })
     }
@@ -1138,7 +1127,7 @@ impl Work {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, RecordSQL> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
@@ -1157,9 +1146,9 @@ impl Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError {
-            table: ErrorTable::Work,
-            action: ErrorAction::Insert,
+        .map_err(|e| RecordSQL {
+            table: Table::Work,
+            action: Action::Insert,
             source: e,
         })
     }
@@ -1203,7 +1192,7 @@ impl Screenshot {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQLError> {
+    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Screenshot,
             r#"INSERT INTO screenshot (screenshot_id, screenshot_data) VALUES ($1, $2)
@@ -1214,18 +1203,20 @@ impl Screenshot {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQLError {
-            table: ErrorTable::Screenshot,
-            action: ErrorAction::Insert,
+        .map_err(|e| RecordSQL {
+            table: Table::Screenshot,
+            action: Action::Insert,
             source: e,
         })
     }
 }
 
+#[must_use]
 pub fn default_uuid() -> Uuid {
     Uuid::new_v4()
 }
 
+#[must_use]
 fn utc_datetime_now() -> DateTime<Utc> {
     Utc::now()
 }
@@ -1245,8 +1236,8 @@ impl InstanceWork {
         conn: &mut sqlx::PgConnection,
         containing: Option<String>,
         platform: Option<String>,
-        start_from: usize,
-        limit: usize,
+        offset: u32,
+        limit: u32,
     ) -> sqlx::Result<Vec<Self>> {
         match (containing,platform) {
             (None, None) => sqlx::query_as!(
@@ -1258,8 +1249,9 @@ impl InstanceWork {
             ORDER BY row_num ASC
             LIMIT $2
             "#,
-            start_from as i64,
-            limit as i64
+                            i64::from(offset),
+                i64::from(limit)
+
         ).fetch_all(conn)
         .await,
             (None, Some(plat)) => sqlx::query_as!(
@@ -1273,8 +1265,9 @@ impl InstanceWork {
             LIMIT $3
             "#,
                 plat,
-                start_from as i64,
-                limit as i64
+                                i64::from(offset),
+                i64::from(limit)
+
         ).fetch_all(conn)
         .await,
             (Some(contains), None) => sqlx::query_as!(
@@ -1288,8 +1281,8 @@ impl InstanceWork {
             LIMIT $3
             "#,
                 contains,
-                start_from as i64,
-                limit as i64
+                                i64::from(offset),
+                i64::from(limit)
         ).fetch_all(conn)
         .await,
             (Some(contains), Some(plat)) => sqlx::query_as!(
@@ -1304,8 +1297,8 @@ impl InstanceWork {
             "#,
                 contains,
                 plat,
-                start_from as i64,
-                limit as i64
+                                i64::from(offset),
+                i64::from(limit)
         ).fetch_all(conn)
         .await,
         }
@@ -1447,14 +1440,18 @@ pub async fn insert_file_object(
     object_description: Option<String>,
     file_source_path: String,
     duplicate: Duplicate,
-) -> Result<Uuid, crate::error::InsertFileError> {
-    use crate::error::InsertFileError;
+) -> Result<Uuid, crate::error::InsertFile> {
+    use crate::error::InsertFile;
     use crate::storage::StorageHandler;
     use tracing::info;
-    let file_name = filename_override
-        .unwrap_or_else(|| path.file_name().unwrap().to_string_lossy().to_string());
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| InsertFile::Path(path.to_path_buf()))?
+        .to_string_lossy()
+        .to_string();
+    let file_name = filename_override.unwrap_or(file_name);
     let created_on = chrono::Utc::now();
-    let file_size = std::fs::metadata(path)?.len() as i64;
+    let file_size = i64::try_from(std::fs::metadata(path)?.len())?;
     let hash = StorageHandler::get_file_hash(path)?;
     if let Some(file_info) = File::get_by_hash(conn, &hash).await? {
         let object_id = match duplicate {
@@ -1488,7 +1485,7 @@ pub async fn insert_file_object(
                     .map(|o| o.object_id)
             }
         };
-        object_id.ok_or(InsertFileError::ObjectMissing(hash))
+        object_id.ok_or(InsertFile::ObjectMissing(hash))
     } else {
         let file_uuid = Uuid::new_v4();
         info!("Do write file {file_name}");
