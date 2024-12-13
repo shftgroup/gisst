@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM state\n                       WHERE instance_id = $1 AND creator_id = $2 AND\n                          f_unaccent(state_name || state_description)\n                          ILIKE ('%' || f_unaccent($3) || '%')\n                       ORDER BY state.created_on DESC\n                       OFFSET $4\n                       LIMIT $5",
+  "query": "SELECT * FROM state\n                       WHERE instance_id = $1 AND creator_id = $2 AND\nf_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($3) || '%')\n                       ORDER BY state.created_on DESC\n                       OFFSET $4\n                       LIMIT $5",
   "describe": {
     "columns": [
       {
@@ -88,5 +88,5 @@
       false
     ]
   },
-  "hash": "55be0d9fc31497b572578d928645e21f36e7634a7431c4b72caaf44d05c314a9"
+  "hash": "4ae40e8a341e0876cb11a35a2d1d1934f159b47931a2f5607a75e434b9644602"
 }

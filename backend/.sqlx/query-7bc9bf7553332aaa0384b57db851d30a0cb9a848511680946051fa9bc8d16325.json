@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id as \"work_id!\", work_name as \"work_name!\",\n                          work_version as \"work_version!\", work_platform as \"work_platform!\",\n                          instance_id as \"instance_id!\", row_num as \"row_num!\"\n                   FROM instanceWork\n                   WHERE work_platform ILIKE ('%' || $1 || '%')\n                   ORDER BY row_num ASC\n                   OFFSET $2\n                   LIMIT $3",
+  "query": "SELECT work_id as \"work_id!\", work_name as \"work_name!\",\n               work_version as \"work_version!\", work_platform as \"work_platform!\",\n               instance_id as \"instance_id!\", row_num as \"row_num!\" FROM instanceWork\n                       WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%')\n                       ORDER BY row_num ASC OFFSET $2 LIMIT $3",
   "describe": {
     "columns": [
       {
@@ -50,5 +50,5 @@
       true
     ]
   },
-  "hash": "9bd9365c51ac044386bd32d8ea5f4369176abe0d0b2648f278cef793d59bdc38"
+  "hash": "7bc9bf7553332aaa0384b57db851d30a0cb9a848511680946051fa9bc8d16325"
 }

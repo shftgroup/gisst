@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT replay.*,\n                  file.file_hash,\n                  file.file_filename,\n                  file.file_source_path,\n                  file.file_dest_path\n                FROM replay\n                JOIN file USING(file_id)\n                WHERE replay_id = $1",
+  "query": "SELECT * FROM replay\n                       WHERE instance_id = $1 AND\nf_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')\n                       ORDER BY created_on DESC\n                       OFFSET $3\n                       LIMIT $4",
   "describe": {
     "columns": [
       {
@@ -42,31 +42,14 @@
         "ordinal": 7,
         "name": "created_on",
         "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 8,
-        "name": "file_hash",
-        "type_info": "Bpchar"
-      },
-      {
-        "ordinal": 9,
-        "name": "file_filename",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 10,
-        "name": "file_source_path",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 11,
-        "name": "file_dest_path",
-        "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -77,12 +60,8 @@
       false,
       true,
       false,
-      false,
-      false,
-      false,
-      false,
       false
     ]
   },
-  "hash": "dce5e962b04cf45ac86ece7a1dd5dd04f771309e3e46d6c731ab4a772df2a031"
+  "hash": "983b882f13b35566fe6f529d6fb7a79b8697a48eb182039e9e2c5afa669847b4"
 }
