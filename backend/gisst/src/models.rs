@@ -220,8 +220,7 @@ impl Creator {
                           file_id, instance_id
                    FROM work JOIN instance USING (work_id) JOIN state USING (instance_id)
                    WHERE state.creator_id = $1 AND
-                       f_unaccent(work_name || state_name || state_description)
-                          ILIKE ('%' || f_unaccent($2) || '%')
+f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
                    ORDER BY state.created_on DESC
                    OFFSET $3
                    LIMIT $4"#,
@@ -269,8 +268,7 @@ impl Creator {
                    FROM work JOIN instance USING (work_id)
                    JOIN replay USING (instance_id)
                    WHERE replay.creator_id = $1 AND
-                      f_unaccent(work_name || replay_name || replay_description)
-                         ILIKE ('%' || f_unaccent($2) || '%')
+f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
                    ORDER BY replay.created_on DESC
                    OFFSET $3
                    LIMIT $4"#,
@@ -480,8 +478,7 @@ impl Instance {
                     State,
                     r#"SELECT * FROM state
                        WHERE instance_id = $1 AND
-                           f_unaccent(state_name || state_description)
-                              ILIKE ('%' || f_unaccent($2) || '%')
+f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
                        ORDER BY state.created_on DESC
                        OFFSET $3
                        LIMIT $4"#,
@@ -498,8 +495,7 @@ impl Instance {
                     State,
                     r#"SELECT * FROM state
                        WHERE instance_id = $1 AND creator_id = $2 AND
-                          f_unaccent(state_name || state_description)
-                          ILIKE ('%' || f_unaccent($3) || '%')
+f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($3) || '%')
                        ORDER BY state.created_on DESC
                        OFFSET $4
                        LIMIT $5"#,
@@ -560,8 +556,7 @@ impl Instance {
                     Replay,
                     r#"SELECT * FROM replay
                        WHERE instance_id = $1 AND
-                          f_unaccent(replay_name || replay_description)
-                             ILIKE ('%' || f_unaccent($2) || '%')
+f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
                        ORDER BY created_on DESC
                        OFFSET $3
                        LIMIT $4"#,
@@ -578,8 +573,7 @@ impl Instance {
                     Replay,
                     r#"SELECT * FROM replay
                        WHERE instance_id = $1 AND creator_id = $2 AND
-                           f_unaccent(replay_name || replay_description)
-                              ILIKE ('%' || f_unaccent($3) || '%')
+f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%')
                        ORDER BY created_on DESC
                        OFFSET $4
                        LIMIT $5"#,
@@ -810,8 +804,6 @@ impl State {
     }
 
     pub async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, RecordSQL> {
-        // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
-        // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
             State,
             r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -859,8 +851,6 @@ impl Work {
     }
 
     pub async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, RecordSQL> {
-        // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
-        // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
             Work,
             r#"INSERT INTO work VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"#,
@@ -950,6 +940,65 @@ pub struct InstanceWork {
     pub row_num: i64,
 }
 
+#[rustfmt::skip]
+macro_rules! instance_work_queries {
+    ($fields:literal, $containing:expr, $platform:expr,
+     $offset:expr, $limit:expr,
+     $conn:expr) => {
+        match ($containing, $platform) {
+            (None, None) => {
+                sqlx::query_as!(Self,
+                    r#"SELECT "# + $fields + r#" FROM instanceWork
+                       WHERE row_num >= $1
+                       ORDER BY row_num ASC LIMIT $2"#,
+                    i64::from($offset),
+                    i64::from($limit)
+                )
+                .fetch_all($conn)
+                .await
+            }
+            (None, Some(plat)) => {
+                sqlx::query_as!(Self,
+                    r#"SELECT "# + $fields + r#" FROM instanceWork
+                       WHERE work_platform ILIKE ('%' || $1 || '%')
+                       ORDER BY row_num ASC OFFSET $2 LIMIT $3"#,
+                    plat,
+                    i64::from($offset),
+                    i64::from($limit)
+                )
+                .fetch_all($conn)
+                .await
+            }
+            (Some(contains), None) => {
+                sqlx::query_as!(Self,
+                    r#"SELECT "# + $fields + r#" FROM instanceWork
+                       WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%')
+                       ORDER BY row_num ASC OFFSET $2 LIMIT $3"#,
+                    contains,
+                    i64::from($offset),
+                    i64::from($limit)
+                )
+                .fetch_all($conn)
+                .await
+            }
+            (Some(contains), Some(plat)) => {
+                sqlx::query_as!(Self,
+                    r#"SELECT "# + $fields + r#" FROM instanceWork
+                       WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%') AND
+                          work_platform ILIKE ('%' || $2 || '%')
+                       ORDER BY row_num ASC OFFSET $3 LIMIT $4"#,
+                    contains,
+                    plat,
+                    i64::from($offset),
+                    i64::from($limit)
+                )
+                .fetch_all($conn)
+                .await
+            }
+        }
+    };
+}
+
 impl InstanceWork {
     pub async fn get_all(
         conn: &mut sqlx::PgConnection,
@@ -958,82 +1007,16 @@ impl InstanceWork {
         offset: u32,
         limit: u32,
     ) -> sqlx::Result<Vec<Self>> {
-        match (containing, platform) {
-            // The casts to assert not-null are unavoidable because views in postgres
-            // don't get not-null constraints propagated through
-            (None, None) => {
-                sqlx::query_as!(
-                    Self,
-                    r#"SELECT work_id as "work_id!", work_name as "work_name!",
-                          work_version as "work_version!", work_platform as "work_platform!",
-                          instance_id as "instance_id!", row_num as "row_num!"
-                   FROM instanceWork
-                   WHERE row_num >= $1
-                   ORDER BY row_num ASC
-                   LIMIT $2"#,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-            (None, Some(plat)) => {
-                sqlx::query_as!(
-                    Self,
-                    r#"SELECT work_id as "work_id!", work_name as "work_name!",
-                          work_version as "work_version!", work_platform as "work_platform!",
-                          instance_id as "instance_id!", row_num as "row_num!"
-                   FROM instanceWork
-                   WHERE work_platform ILIKE ('%' || $1 || '%')
-                   ORDER BY row_num ASC
-                   OFFSET $2
-                   LIMIT $3"#,
-                    plat,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-            (Some(contains), None) => {
-                sqlx::query_as!(
-                    Self,
-                    r#"SELECT work_id as "work_id!", work_name as "work_name!",
-                          work_version as "work_version!", work_platform as "work_platform!",
-                          instance_id as "instance_id!", row_num as "row_num!"
-                   FROM instanceWork
-                   WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%')
-                   ORDER BY row_num ASC
-                   OFFSET $2
-                   LIMIT $3"#,
-                    contains,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-            (Some(contains), Some(plat)) => {
-                sqlx::query_as!(
-                    Self,
-                    r#"SELECT work_id as "work_id!", work_name as "work_name!",
-                          work_version as "work_version!", work_platform as "work_platform!",
-                          instance_id as "instance_id!", row_num as "row_num!"
-                   FROM instanceWork
-                   WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%') AND
-                      work_platform ILIKE ('%' || $2 || '%')
-                   ORDER BY row_num ASC
-                   OFFSET $3
-                   LIMIT $4"#,
-                    contains,
-                    plat,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-        }
+        instance_work_queries!(
+            r#"work_id as "work_id!", work_name as "work_name!",
+               work_version as "work_version!", work_platform as "work_platform!",
+               instance_id as "instance_id!", row_num as "row_num!""#,
+            containing,
+            platform,
+            offset,
+            limit,
+            conn
+        )
     }
 }
 
@@ -1090,13 +1073,11 @@ impl ReplayLink {
         sqlx::query_as!(
             Self,
             r#"SELECT replay.*,
-                  file.file_hash,
-                  file.file_filename,
-                  file.file_source_path,
-                  file.file_dest_path
-                FROM replay
-                JOIN file USING(file_id)
-                WHERE replay_id = $1"#,
+                      file.file_hash, file.file_filename,
+                      file.file_source_path, file.file_dest_path
+               FROM replay
+               JOIN file USING(file_id)
+               WHERE replay_id = $1"#,
             id,
         )
         .fetch_optional(conn)
@@ -1127,8 +1108,9 @@ impl StateLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT state.*, file.file_hash, file.file_filename,
-                               file.file_source_path, file.file_dest_path
+            r#"SELECT state.*,
+                      file.file_hash, file.file_filename,
+                      file.file_source_path, file.file_dest_path
                FROM state
                JOIN file USING(file_id)
                WHERE state_id = $1"#,
