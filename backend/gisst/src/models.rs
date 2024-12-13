@@ -1041,14 +1041,15 @@ impl ObjectLink {
     ) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"
-            SELECT object_id, instanceObject.object_role as "object_role:_", instanceObject.object_role_index, file.file_hash as file_hash, file.file_filename as file_filename, file.file_source_path as file_source_path, file.file_dest_path as file_dest_path
-            FROM object
-            JOIN instanceObject USING(object_id)
-            JOIN instance USING(instance_id)
-            JOIN file USING(file_id)
-            WHERE instance_id = $1
-            "#,
+            r#"SELECT object_id, instanceObject.object_role as "object_role:_",
+                   instanceObject.object_role_index,
+                   file.file_hash, file.file_filename,
+                   file.file_source_path, file.file_dest_path
+               FROM object
+               JOIN instanceObject USING(object_id)
+               JOIN instance USING(instance_id)
+               JOIN file USING(file_id)
+               WHERE instance_id = $1"#,
             id
         )
         .fetch_all(conn)
@@ -1075,22 +1076,14 @@ impl ReplayLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT replay_id,
-            replay_name,
-            replay_description,
-            instance_id,
-            creator_id,
-            replay_forked_from,
-            replay.created_on,
-            file_id,
-            file.file_hash as file_hash,
-            file.file_filename as file_filename,
-            file.file_source_path as file_source_path,
-            file.file_dest_path as file_dest_path
-            FROM replay
-            JOIN file USING(file_id)
-            WHERE replay_id = $1
-            "#,
+            r#"SELECT replay.*,
+                  file.file_hash,
+                  file.file_filename,
+                  file.file_source_path,
+                  file.file_dest_path
+                FROM replay
+                JOIN file USING(file_id)
+                WHERE replay_id = $1"#,
             id,
         )
         .fetch_optional(conn)
