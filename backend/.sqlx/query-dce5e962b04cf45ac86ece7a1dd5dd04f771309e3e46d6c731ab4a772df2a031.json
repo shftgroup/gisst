@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT replay_id,\n            replay_name,\n            replay_description,\n            instance_id,\n            creator_id,\n            replay_forked_from,\n            replay.created_on,\n            file_id,\n            file.file_hash as file_hash,\n            file.file_filename as file_filename,\n            file.file_source_path as file_source_path,\n            file.file_dest_path as file_dest_path\n            FROM replay\n            JOIN file USING(file_id)\n            WHERE replay_id = $1\n            ",
+  "query": "SELECT replay.*,\n                  file.file_hash,\n                  file.file_filename,\n                  file.file_source_path,\n                  file.file_dest_path\n                FROM replay\n                JOIN file USING(file_id)\n                WHERE replay_id = $1",
   "describe": {
     "columns": [
       {
@@ -35,13 +35,13 @@
       },
       {
         "ordinal": 6,
-        "name": "created_on",
-        "type_info": "Timestamptz"
+        "name": "file_id",
+        "type_info": "Uuid"
       },
       {
         "ordinal": 7,
-        "name": "file_id",
-        "type_info": "Uuid"
+        "name": "created_on",
+        "type_info": "Timestamptz"
       },
       {
         "ordinal": 8,
@@ -84,5 +84,5 @@
       false
     ]
   },
-  "hash": "3887ca26a93f1282e9d1e1c4c038b7474003dea12f88b234ee01c9bce81ffab5"
+  "hash": "dce5e962b04cf45ac86ece7a1dd5dd04f771309e3e46d6c731ab4a772df2a031"
 }
