@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "save_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "save_short_desc",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "save_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6c5261433f2ee0d9f705b9a82372dd298a7ed6cddf205a32505f94a90d1beee8"
+}
