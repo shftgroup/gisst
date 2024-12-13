@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT object_id, instanceObject.object_role as \"object_role:_\", instanceObject.object_role_index, file.file_hash as file_hash, file.file_filename as file_filename, file.file_source_path as file_source_path, file.file_dest_path as file_dest_path\n            FROM object\n            JOIN instanceObject USING(object_id)\n            JOIN instance USING(instance_id)\n            JOIN file USING(file_id)\n            WHERE instance_id = $1\n            ",
+  "query": "SELECT object_id, instanceObject.object_role as \"object_role:_\",\n                   instanceObject.object_role_index,\n                   file.file_hash, file.file_filename,\n                   file.file_source_path, file.file_dest_path\n               FROM object\n               JOIN instanceObject USING(object_id)\n               JOIN instance USING(instance_id)\n               JOIN file USING(file_id)\n               WHERE instance_id = $1",
   "describe": {
     "columns": [
       {
@@ -65,5 +65,5 @@
       false
     ]
   },
-  "hash": "2b1338d6bf148cadb9f0ee00828768442811d661cbc0389aad01d8e07c1c2d95"
+  "hash": "9ddb44fc470cb60d0199165fffe3f069348f41871cd835dffe5e38cfd105c832"
 }
