@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          state_id, state_name, state_description, screenshot_id,\n                          file_id, instance_id\n                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id)\n                   WHERE state.creator_id = $1 AND\n                       f_unaccent(work_name || state_name || state_description)\n                          ILIKE ('%' || f_unaccent($2) || '%')\n                   ORDER BY state.created_on DESC\n                   OFFSET $3\n                   LIMIT $4",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          replay_id, replay_name, replay_description,\n                          file_id, instance_id\n                   FROM work JOIN instance USING (work_id)\n                   JOIN replay USING (instance_id)\n                   WHERE replay.creator_id = $1 AND\nf_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')\n                   ORDER BY replay.created_on DESC\n                   OFFSET $3\n                   LIMIT $4",
   "describe": {
     "columns": [
       {
@@ -25,31 +25,26 @@
       },
       {
         "ordinal": 4,
-        "name": "state_id",
+        "name": "replay_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 5,
-        "name": "state_name",
+        "name": "replay_name",
         "type_info": "Text"
       },
       {
         "ordinal": 6,
-        "name": "state_description",
+        "name": "replay_description",
         "type_info": "Text"
       },
       {
         "ordinal": 7,
-        "name": "screenshot_id",
-        "type_info": "Uuid"
-      },
-      {
-        "ordinal": 8,
         "name": "file_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "instance_id",
         "type_info": "Uuid"
       }
@@ -71,9 +66,8 @@
       false,
       false,
       false,
-      false,
       false
     ]
   },
-  "hash": "a7b91f1a1591bd5b088296fc4c581a2a24389bde805ab9914b6767ea7fae2c2a"
+  "hash": "ac0f14c9717c07f8374e45ae27b26cb8539eb94f4a3af4fbefef6ff51593c9ae"
 }

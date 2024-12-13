@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM replay\n                       WHERE instance_id = $1 AND creator_id = $2 AND\n                           f_unaccent(replay_name || replay_description)\n                              ILIKE ('%' || f_unaccent($3) || '%')\n                       ORDER BY created_on DESC\n                       OFFSET $4\n                       LIMIT $5",
+  "query": "SELECT * FROM replay\n                       WHERE instance_id = $1 AND creator_id = $2 AND\nf_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%')\n                       ORDER BY created_on DESC\n                       OFFSET $4\n                       LIMIT $5",
   "describe": {
     "columns": [
       {
@@ -64,5 +64,5 @@
       false
     ]
   },
-  "hash": "21e0ed160fafc188ef174e71ea5dcaf6c0279a832f58ee2f57e6d5c2bd2a762a"
+  "hash": "3b7b087ef8a3faed67d8d940b94f23e5dd79a098fb83e5eb0fcd83de34ca7f54"
 }

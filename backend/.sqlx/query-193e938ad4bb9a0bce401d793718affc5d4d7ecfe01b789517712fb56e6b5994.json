@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM state\n                       WHERE instance_id = $1 AND\n                           f_unaccent(state_name || state_description)\n                              ILIKE ('%' || f_unaccent($2) || '%')\n                       ORDER BY state.created_on DESC\n                       OFFSET $3\n                       LIMIT $4",
+  "query": "SELECT state.*,\n                      file.file_hash, file.file_filename,\n                      file.file_source_path, file.file_dest_path\n               FROM state\n               JOIN file USING(file_id)\n               WHERE state_id = $1",
   "describe": {
     "columns": [
       {
@@ -62,14 +62,31 @@
         "ordinal": 11,
         "name": "created_on",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "file_hash",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "file_filename",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "file_source_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "file_dest_path",
+        "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text",
-        "Int8",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -84,8 +101,12 @@
       false,
       true,
       true,
+      false,
+      false,
+      false,
+      false,
       false
     ]
   },
-  "hash": "228a0d0f8c935e4d110a4cb21d8122189795aba175982710a57f2b9506b0401a"
+  "hash": "193e938ad4bb9a0bce401d793718affc5d4d7ecfe01b789517712fb56e6b5994"
 }
