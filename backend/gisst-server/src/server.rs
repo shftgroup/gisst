@@ -268,7 +268,9 @@ struct PlayerParams {
     boot_into_record: Option<bool>,
 }
 
-async fn get_about(app_state: Extension<ServerState>) -> Result<axum::response::Response, ServerError> {
+async fn get_about(
+    app_state: Extension<ServerState>,
+) -> Result<axum::response::Response, ServerError> {
     Ok(Html(
         app_state
             .templates
