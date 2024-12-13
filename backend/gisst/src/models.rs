@@ -958,68 +958,81 @@ impl InstanceWork {
         offset: u32,
         limit: u32,
     ) -> sqlx::Result<Vec<Self>> {
-        match (containing,platform) {
-            (None, None) => sqlx::query_as!(
-            Self,
-            r#"
-            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!", row_num as "row_num!"
-            FROM instanceWork
-            WHERE row_num >= $1
-            ORDER BY row_num ASC
-            LIMIT $2
-            "#,
-                i64::from(offset),
-                i64::from(limit)
-
-        ).fetch_all(conn)
-        .await,
-            (None, Some(plat)) => sqlx::query_as!(
-            Self,
-            r#"
-            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!", row_num as "row_num!"
-            FROM instanceWork
-            WHERE work_platform ILIKE ('%' || $1 || '%')
-            ORDER BY row_num ASC
-            OFFSET $2
-            LIMIT $3
-            "#,
-                plat,
-                                i64::from(offset),
-                i64::from(limit)
-
-        ).fetch_all(conn)
-        .await,
-            (Some(contains), None) => sqlx::query_as!(
-            Self,
-            r#"
-            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!", row_num as "row_num!"
-            FROM instanceWork
-            WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%')
-            ORDER BY row_num ASC
-            OFFSET $2
-            LIMIT $3
-            "#,
-                contains,
-                                i64::from(offset),
-                i64::from(limit)
-        ).fetch_all(conn)
-        .await,
-            (Some(contains), Some(plat)) => sqlx::query_as!(
-            Self,
-            r#"
-            SELECT work_id as "work_id!", work_name as "work_name!", work_version as "work_version!", work_platform as "work_platform!", instance_id as "instance_id!", row_num as "row_num!"
-            FROM instanceWork
-            WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%') AND work_platform ILIKE ('%' || $2 || '%')
-            ORDER BY row_num ASC
-            OFFSET $3
-            LIMIT $4
-            "#,
-                contains,
-                plat,
-                                i64::from(offset),
-                i64::from(limit)
-        ).fetch_all(conn)
-        .await,
+        match (containing, platform) {
+            // The casts to assert not-null are unavoidable because views in postgres
+            // don't get not-null constraints propagated through
+            (None, None) => {
+                sqlx::query_as!(
+                    Self,
+                    r#"SELECT work_id as "work_id!", work_name as "work_name!",
+                          work_version as "work_version!", work_platform as "work_platform!",
+                          instance_id as "instance_id!", row_num as "row_num!"
+                   FROM instanceWork
+                   WHERE row_num >= $1
+                   ORDER BY row_num ASC
+                   LIMIT $2"#,
+                    i64::from(offset),
+                    i64::from(limit)
+                )
+                .fetch_all(conn)
+                .await
+            }
+            (None, Some(plat)) => {
+                sqlx::query_as!(
+                    Self,
+                    r#"SELECT work_id as "work_id!", work_name as "work_name!",
+                          work_version as "work_version!", work_platform as "work_platform!",
+                          instance_id as "instance_id!", row_num as "row_num!"
+                   FROM instanceWork
+                   WHERE work_platform ILIKE ('%' || $1 || '%')
+                   ORDER BY row_num ASC
+                   OFFSET $2
+                   LIMIT $3"#,
+                    plat,
+                    i64::from(offset),
+                    i64::from(limit)
+                )
+                .fetch_all(conn)
+                .await
+            }
+            (Some(contains), None) => {
+                sqlx::query_as!(
+                    Self,
+                    r#"SELECT work_id as "work_id!", work_name as "work_name!",
+                          work_version as "work_version!", work_platform as "work_platform!",
+                          instance_id as "instance_id!", row_num as "row_num!"
+                   FROM instanceWork
+                   WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%')
+                   ORDER BY row_num ASC
+                   OFFSET $2
+                   LIMIT $3"#,
+                    contains,
+                    i64::from(offset),
+                    i64::from(limit)
+                )
+                .fetch_all(conn)
+                .await
+            }
+            (Some(contains), Some(plat)) => {
+                sqlx::query_as!(
+                    Self,
+                    r#"SELECT work_id as "work_id!", work_name as "work_name!",
+                          work_version as "work_version!", work_platform as "work_platform!",
+                          instance_id as "instance_id!", row_num as "row_num!"
+                   FROM instanceWork
+                   WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%') AND
+                      work_platform ILIKE ('%' || $2 || '%')
+                   ORDER BY row_num ASC
+                   OFFSET $3
+                   LIMIT $4"#,
+                    contains,
+                    plat,
+                    i64::from(offset),
+                    i64::from(limit)
+                )
+                .fetch_all(conn)
+                .await
+            }
         }
     }
 }
@@ -1114,27 +1127,11 @@ impl StateLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT
-            state_id,
-            instance_id,
-            is_checkpoint,
-            state_name,
-            state_description,
-            screenshot_id,
-            replay_id,
-            creator_id,
-            state_replay_index,
-            state_derived_from,
-            state.created_on,
-            file_id,
-            file.file_hash as file_hash,
-            file.file_filename as file_filename,
-            file.file_source_path as file_source_path,
-            file.file_dest_path as file_dest_path
-            FROM state
-            JOIN file USING(file_id)
-            WHERE state_id = $1
-            "#,
+            r#"SELECT state.*, file.file_hash, file.file_filename,
+                               file.file_source_path, file.file_dest_path
+               FROM state
+               JOIN file USING(file_id)
+               WHERE state_id = $1"#,
             id,
         )
         .fetch_optional(conn)
