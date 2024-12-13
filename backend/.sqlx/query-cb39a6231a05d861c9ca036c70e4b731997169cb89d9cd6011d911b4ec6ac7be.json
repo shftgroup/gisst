@@ -1,0 +1,78 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          state_id, state_name, state_description, screenshot_id,\n                          file_id, instance_id\n                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id)\n                   WHERE state.creator_id = $1\n                   ORDER BY state.created_on DESC\n                   OFFSET $2\n                   LIMIT $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "work_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "work_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "work_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "work_platform",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "state_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "state_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "state_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "screenshot_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "cb39a6231a05d861c9ca036c70e4b731997169cb89d9cd6011d911b4ec6ac7be"
+}

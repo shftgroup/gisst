@@ -428,7 +428,7 @@ async fn get_single_object(
 
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-            use gisst::fslist::{is_disk_image,recursive_listing,file_to_path};
+            use gisst::fslist::{file_to_path, is_disk_image, recursive_listing};
             let object_page = app_state.templates.get_template("object_listing.html")?;
             // TODO reuse cookie instead of reloading every time
             let path = file_to_path(&app_state.root_storage_path, &file);
@@ -462,7 +462,7 @@ async fn get_subobject(
     Path((id, subpath)): Path<(Uuid, String)>,
     _auth: auth::AuthContext,
 ) -> Result<axum::response::Response, ServerError> {
-    use gisst::fslist::{file_to_path,is_disk_image,get_file_at_path};
+    use gisst::fslist::{file_to_path, get_file_at_path, is_disk_image};
 
     let mut conn = app_state.pool.acquire().await?;
 

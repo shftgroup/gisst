@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO instanceObject VALUES ($1, $2, $3, null, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "object_role",
+            "kind": {
+              "Enum": [
+                "content",
+                "dependency",
+                "config"
+              ]
+            }
+          }
+        },
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3a1ae7abf4d8a1d3a7c2c1d7ed6ae54efbaccabbc7cf33056a61c2f45487b6c1"
+}

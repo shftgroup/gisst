@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO creator VALUES($1, $2, $3, $4) RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_full_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "35cd27271730f7abc379c22830b802c0ecad2524b2427f8b861f52a2d053d6d3"
+}
