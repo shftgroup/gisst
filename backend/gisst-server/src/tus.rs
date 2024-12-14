@@ -15,7 +15,6 @@ use axum::{
     Extension,
 };
 
-use axum_macros::debug_handler;
 use gisst::storage::{FileInformation, PendingUpload, StorageHandler};
 use std::collections::HashMap;
 use std::sync::{RwLockReadGuard, RwLockWriteGuard};
@@ -94,7 +93,6 @@ fn is_octet_stream(val: &str) -> bool {
     val == "application/offset+octet-stream"
 }
 
-#[debug_handler]
 pub async fn patch(
     app_state: Extension<ServerState>,
     headers: HeaderMap,

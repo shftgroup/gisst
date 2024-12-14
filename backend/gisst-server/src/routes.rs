@@ -602,7 +602,6 @@ pub struct CreateState {
     pub state_derived_from: Option<Uuid>,
 }
 
-#[axum::debug_handler]
 async fn create_state(
     app_state: Extension<ServerState>,
     auth: axum_login::AuthSession<crate::auth::AuthBackend>,
