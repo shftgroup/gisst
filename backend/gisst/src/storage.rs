@@ -1,3 +1,5 @@
+#![allow(clippy::missing_errors_doc)]
+
 use tokio::{
     fs::{create_dir_all, remove_file, File},
     io::AsyncRead,
@@ -10,10 +12,11 @@ use std::path::{Component, Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 use tracing::debug;
 
-use crate::error::StorageError;
+use crate::error::Storage;
 use bytes::Bytes;
 use uuid::Uuid;
 
+#[allow(clippy::module_name_repetitions)]
 pub struct StorageHandler;
 
 pub struct PendingUpload {
@@ -32,7 +35,7 @@ pub struct FileInformation {
 }
 
 impl StorageHandler {
-    pub fn init_storage(root_path: &str, temp_path: &str) -> Result<(), StorageError> {
+    pub fn init_storage(root_path: &str, temp_path: &str) -> Result<(), Storage> {
         if !Path::new(root_path).is_dir() {
             std::fs::create_dir_all(root_path)?;
         }
@@ -44,6 +47,7 @@ impl StorageHandler {
         Ok(())
     }
 
+    #[must_use]
     pub fn split_uuid_to_path_buf(uuid: Uuid, length: u8) -> PathBuf {
         let mut uuid_string = uuid.to_string();
         uuid_string.truncate(length as usize);
@@ -56,38 +60,40 @@ impl StorageHandler {
 
     // TODO fixme: this is synchronous but should probably be async.
     // But we don't have an async md5 hasher out there.
-    pub fn get_file_hash(path: impl AsRef<Path>) -> Result<String, StorageError> {
+    pub fn get_file_hash(path: impl AsRef<Path>) -> Result<String, Storage> {
         use md5::Digest;
 
         let mut hasher = md5::Md5::new();
         let mut file = std::fs::File::open(path)?;
         std::io::copy(&mut file, &mut hasher)?;
         let hash = hasher.finalize();
-        Ok(format!("{:x}", hash))
-    }
-    pub fn get_dest_filename(hash: &str, filename: &str) -> String {
-        format!("{}-{}", hash, filename)
+        Ok(format!("{hash:x}"))
     }
 
+    #[must_use]
+    pub fn get_dest_filename(hash: &str, filename: &str) -> String {
+        format!("{hash}-{filename}")
+    }
+
+    #[must_use]
     pub fn get_dest_file_path(root_path: &str, file_info: &FileInformation) -> PathBuf {
         let mut path = PathBuf::from(root_path);
         path.push(&file_info.dest_path);
         path
     }
 
+    #[must_use]
     pub fn get_temp_file_path(temp_path: &str, file_info: &FileInformation) -> PathBuf {
         let mut path = PathBuf::from(temp_path);
         path.push(&file_info.dest_filename);
         path
     }
 
+    #[must_use]
     pub fn get_folder_depth_from_path(path: &Path, filename: Option<String>) -> u8 {
         let mut depth = 1;
         let mut path_buf = path.to_path_buf();
-        if filename
-            .map(|filename| path_buf.ends_with(filename))
-            .unwrap_or(false)
-        {
+        if filename.is_some_and(|filename| path_buf.ends_with(filename)) {
             path_buf.pop();
         }
         for component in path_buf.components() {
@@ -117,17 +123,19 @@ impl StorageHandler {
         root_path: &str,
         temp_path: &str,
         file_info: &FileInformation,
-    ) -> Result<(), StorageError> {
+    ) -> Result<(), Storage> {
         let path = Self::get_dest_file_path(root_path, file_info);
         debug!("In rename_file, dest_path is {}", path.to_string_lossy());
-
-        if !path.parent().unwrap().is_dir() {
-            create_dir_all(path.parent().unwrap()).await?;
+        let parent = path
+            .parent()
+            .ok_or_else(|| Storage::PathTooShallow(path.clone()))?;
+        if !parent.is_dir() {
+            create_dir_all(parent).await?;
         }
 
         tokio::fs::rename(Self::get_temp_file_path(temp_path, file_info), &path)
             .await
-            .map_err(StorageError::IO)?;
+            .map_err(Storage::IO)?;
 
         let data = tokio::fs::File::open(&path).await?;
         Self::gzip_file(&path, data).await
@@ -137,12 +145,12 @@ impl StorageHandler {
         temp_path: &str,
         file_info: &FileInformation,
         mut bytes: Bytes,
-    ) -> Result<(), StorageError> {
+    ) -> Result<(), Storage> {
         let temp_path = Self::get_temp_file_path(temp_path, file_info);
 
         // This should never trigger, but may as well check
         if !temp_path.as_path().exists() {
-            return Err(StorageError::FileNotFoundError);
+            return Err(Storage::FileNotFoundError);
         }
 
         tokio::task::spawn_blocking(move || {
@@ -164,7 +172,7 @@ impl StorageHandler {
     pub async fn create_temp_file(
         temp_path: &str,
         file_info: &FileInformation,
-    ) -> Result<(), StorageError> {
+    ) -> Result<(), Storage> {
         let temp_path = Self::get_temp_file_path(temp_path, file_info);
         tokio::task::spawn_blocking(move || {
             OpenOptions::new()
@@ -173,7 +181,7 @@ impl StorageHandler {
                 .truncate(true)
                 .create_new(true)
                 .open(temp_path)
-                .map_err(StorageError::IO)?;
+                .map_err(Storage::IO)?;
             Ok(())
         })
         .await?
@@ -185,16 +193,14 @@ impl StorageHandler {
         uuid: Uuid,
         filename: &str,
         file_path: impl AsRef<Path>,
-    ) -> Result<FileInformation, StorageError> {
+    ) -> Result<FileInformation, Storage> {
         // TODO dedupe if the hash is present somewhere in here?
         let file_path = file_path.as_ref();
         let mut path =
             Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
 
         if !path.is_dir() {
-            create_dir_all(path.as_path())
-                .await
-                .expect("Unable to create directory for uuid")
+            create_dir_all(path.as_path()).await?;
         }
 
         let hash_string = Self::get_file_hash(file_path)?;
@@ -220,7 +226,7 @@ impl StorageHandler {
             file_hash: hash_string.to_string(),
         })
     }
-    async fn gzip_file<R: AsyncRead + Unpin>(path: &Path, data: R) -> Result<(), StorageError> {
+    async fn gzip_file<R: AsyncRead + Unpin>(path: &Path, data: R) -> Result<(), Storage> {
         let ext: Option<&str> = path.extension().and_then(|ext| ext.to_str());
         let gz_path = if let Some(e) = ext {
             let mut s = e.to_string();
@@ -260,7 +266,7 @@ mod tests {
         assert_eq!(
             Path::new("/storage").join(path2),
             Path::new("/storage/0/0/0/0/")
-        )
+        );
     }
 
     #[test]
@@ -283,6 +289,6 @@ mod tests {
         assert_eq!(
             0,
             StorageHandler::get_folder_depth_from_path(Path::new(""), None)
-        )
+        );
     }
 }

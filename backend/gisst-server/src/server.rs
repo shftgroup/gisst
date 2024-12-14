@@ -1,4 +1,4 @@
-use crate::error::GISSTError;
+use crate::error::ServerError;
 use gisst::models::{Environment, Instance, ObjectLink, ReplayLink, Save, StateLink, Work};
 use std::collections::HashMap;
 use tower::ServiceBuilder;
@@ -10,7 +10,7 @@ use crate::{
         work_router,
     },
     serverconfig::ServerConfig,
-    tus::{tus_creation, tus_head, tus_patch},
+    tus,
 };
 use anyhow::Result;
 use axum::{
@@ -31,14 +31,13 @@ use axum::extract::OriginalUri;
 use axum_login::axum_sessions::async_session::MemoryStore;
 use axum_login::axum_sessions::{SameSite, SessionLayer};
 use chrono::{DateTime, Local};
-use gisst::error::ErrorTable;
+use gisst::error::Table;
 use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::context;
 use oauth2::basic::BasicClient;
 use rand::Rng;
 use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
@@ -46,6 +45,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::debug;
 use uuid::Uuid;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
 pub struct ServerState {
     pub pool: PgPool,
@@ -59,6 +59,30 @@ pub struct ServerState {
     pub oauth_client: BasicClient,
     pub user_whitelist: Vec<String>,
 }
+impl ServerState {
+    async fn with_config(config: &ServerConfig) -> Result<Self, ServerError> {
+        let mut user_whitelist_sorted: Vec<String> = config.auth.user_whitelist.clone();
+        user_whitelist_sorted.sort();
+        let mut template_environment = minijinja::Environment::new();
+        template_environment.set_loader(minijinja::path_loader("gisst-server/src/templates"));
+        Ok(Self {
+            pool: db::new_pool(config).await?,
+            root_storage_path: config.storage.root_folder_path.clone(),
+            temp_storage_path: config.storage.temp_folder_path.clone(),
+            folder_depth: config.storage.folder_depth,
+            default_chunk_size: config.storage.chunk_size,
+            base_url: config.http.base_url.clone(),
+            pending_uploads: Arc::default(),
+            templates: template_environment,
+            user_whitelist: user_whitelist_sorted,
+            oauth_client: auth::build_oauth_client(
+                &config.http.base_url,
+                config.auth.google_client_id.expose_secret(),
+                config.auth.google_client_secret.expose_secret(),
+            ),
+        })
+    }
+}
 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     use crate::selective_serve_dir;
@@ -66,44 +90,11 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         &config.storage.root_folder_path,
         &config.storage.temp_folder_path,
     )?;
-
-    let mut template_environment = minijinja::Environment::new();
-    template_environment.set_loader(minijinja::path_loader("gisst-server/src/templates"));
-
     debug!("Configured URL is {}", config.http.base_url.clone());
-
-    let mut user_whitelist_sorted: Vec<String> = config.auth.user_whitelist.to_vec();
-
-    user_whitelist_sorted.sort();
-
-    let app_state = ServerState {
-        pool: db::new_pool(config).await?,
-        root_storage_path: config.storage.root_folder_path.clone(),
-        temp_storage_path: config.storage.temp_folder_path.clone(),
-        folder_depth: config.storage.folder_depth,
-        default_chunk_size: config.storage.chunk_size,
-        base_url: config.http.base_url.clone(),
-        pending_uploads: Default::default(),
-        templates: template_environment,
-        user_whitelist: user_whitelist_sorted,
-        oauth_client: auth::build_oauth_client(
-            &config.http.base_url,
-            config.auth.google_client_id.expose_secret(),
-            config.auth.google_client_secret.expose_secret(),
-        ),
-    };
-
+    let app_state = ServerState::with_config(config).await?;
     let secret = rand::thread_rng().gen::<[u8; 64]>();
-    let user_pool = PgPoolOptions::new()
-        .connect(config.database.database_url.expose_secret())
-        .await
-        .unwrap();
-
-    let user_store = auth::PostgresStore::new(user_pool.clone());
-    let auth_layer: AuthLayer<auth::PostgresStore, i32, auth::User, auth::Role> =
-        AuthLayer::new(user_store, &secret);
-    let session_store = MemoryStore::new();
-    let session_layer = SessionLayer::new(session_store, &secret)
+    let auth_layer = AuthLayer::new(auth::PostgresStore::new(app_state.pool.clone()), &secret);
+    let session_layer = SessionLayer::new(MemoryStore::new(), &secret)
         .with_secure(false)
         .with_same_site_policy(SameSite::Lax);
 
@@ -122,12 +113,12 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         )
         .layer(HandleErrorLayer::new(handle_error))
         // This map_err is needed to get the types to work out after handleerror and before servedir.
-        .map_err(|e| panic!("{:?}", e));
+        .map_err(|e| unreachable!("somehow a handled error wasn't actually handled {e:?}"));
 
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
-        .route("/resources/:id", patch(tus_patch).head(tus_head))
-        .route("/resources", post(tus_creation))
+        .route("/resources/:id", patch(tus::patch).head(tus::head))
+        .route("/resources", post(tus::creation))
         .nest("/objects", object_router())
         .route_layer(RequireAuthorizationLayer::<i32, auth::User, auth::Role>::login_or_redirect(Arc::new("/login".into()), None))
         .route("/data/:instance_id", get(get_data))
@@ -180,7 +171,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/", get(get_homepage))
         .route("/about", get(get_about))
         .layer(Extension(app_state))
-        .layer(DefaultBodyLimit::max(33554432))
+        .layer(DefaultBodyLimit::max(33_554_432))
         .layer(auth_layer)
         .layer(TraceLayer::new_for_http())
         .layer(session_layer);
@@ -200,7 +191,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
 async fn handle_error(error: axum::BoxError) -> impl axum::response::IntoResponse {
     (
         axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-        format!("Unhandled internal error: {}", error),
+        format!("Unhandled internal error: {error}"),
     )
 }
 
@@ -279,7 +270,7 @@ struct PlayerParams {
 
 async fn get_about(
     app_state: Extension<ServerState>,
-) -> Result<axum::response::Response, GISSTError> {
+) -> Result<axum::response::Response, ServerError> {
     Ok(Html(
         app_state
             .templates
@@ -290,7 +281,7 @@ async fn get_about(
 }
 async fn get_homepage(
     app_state: Extension<ServerState>,
-) -> Result<axum::response::Response, GISSTError> {
+) -> Result<axum::response::Response, ServerError> {
     Ok(Html(
         app_state
             .templates
@@ -306,46 +297,46 @@ async fn get_data(
     Path(id): Path<Uuid>,
     OriginalUri(uri): OriginalUri,
     Query(params): Query<PlayerParams>,
-) -> Result<axum::response::Response, GISSTError> {
+) -> Result<axum::response::Response, ServerError> {
     let mut conn = app_state.pool.acquire().await?;
-    let instance =
-        Instance::get_by_id(&mut conn, id)
-            .await?
-            .ok_or(GISSTError::RecordMissingError {
-                table: ErrorTable::Instance,
-                uuid: id,
-            })?;
+    let instance = Instance::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Instance,
+            uuid: id,
+        })?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::RecordMissingError {
-            table: ErrorTable::Environment,
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Environment,
             uuid: instance.environment_id,
         })?;
-    let work = Work::get_by_id(&mut conn, instance.work_id).await?.ok_or(
-        GISSTError::RecordMissingError {
-            table: ErrorTable::Work,
-            uuid: instance.work_id,
-        },
-    )?;
+    let work =
+        Work::get_by_id(&mut conn, instance.work_id)
+            .await?
+            .ok_or(ServerError::RecordMissing {
+                table: Table::Work,
+                uuid: instance.work_id,
+            })?;
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinkingError {
-                    table: ErrorTable::State,
+                ServerError::RecordLinking {
+                    table: Table::State,
                     uuid: id,
                 },
             )?)
         }
         (None, Some(id)) => {
             PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinkingError {
-                    table: ErrorTable::Replay,
+                ServerError::RecordLinking {
+                    table: Table::Replay,
                     uuid: id,
                 },
             )?)
         }
         (None, None) => PlayerStartTemplateInfo::Cold,
-        (_, _) => return Err(GISSTError::Unreachable),
+        (_, _) => return Err(ServerError::Unreachable),
     };
     let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     debug!("{manifest:?}");
@@ -362,7 +353,7 @@ async fn get_data(
         PlayerStartTemplateInfo::Replay(r) => {
             format!("GISST Citation of {} in {}", r.replay_name, work.work_name)
         }
-        PlayerStartTemplateInfo::Cold => "".to_string(),
+        PlayerStartTemplateInfo::Cold => String::new(),
     };
 
     let citation_data: CitationDataInfo = CitationDataInfo {
@@ -406,7 +397,7 @@ async fn get_data(
             )
                 .into_response()
         } else {
-            Err(GISSTError::MimeTypeError)?
+            Err(ServerError::MimeType)?
         })
         .into_response(),
     )
@@ -418,47 +409,47 @@ async fn get_player(
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
     auth: AuthContext,
-) -> Result<axum::response::Response, GISSTError> {
+) -> Result<axum::response::Response, ServerError> {
     let mut conn = app_state.pool.acquire().await?;
-    let instance =
-        Instance::get_by_id(&mut conn, id)
-            .await?
-            .ok_or(GISSTError::RecordMissingError {
-                table: ErrorTable::Instance,
-                uuid: id,
-            })?;
+    let instance = Instance::get_by_id(&mut conn, id)
+        .await?
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Instance,
+            uuid: id,
+        })?;
     let environment = Environment::get_by_id(&mut conn, instance.environment_id)
         .await?
-        .ok_or(GISSTError::RecordMissingError {
-            table: ErrorTable::Environment,
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Environment,
             uuid: instance.environment_id,
         })?;
-    let work = Work::get_by_id(&mut conn, instance.work_id).await?.ok_or(
-        GISSTError::RecordMissingError {
-            table: ErrorTable::Work,
-            uuid: instance.work_id,
-        },
-    )?;
+    let work =
+        Work::get_by_id(&mut conn, instance.work_id)
+            .await?
+            .ok_or(ServerError::RecordMissing {
+                table: Table::Work,
+                uuid: instance.work_id,
+            })?;
     let user = LoggedInUserInfo::generate_from_user(&auth.current_user.unwrap());
     let start = match dbg!((params.state, params.replay)) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinkingError {
-                    table: ErrorTable::State,
+                ServerError::RecordLinking {
+                    table: Table::State,
                     uuid: id,
                 },
             )?)
         }
         (None, Some(id)) => {
             PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
-                GISSTError::RecordLinkingError {
-                    table: ErrorTable::Replay,
+                ServerError::RecordLinking {
+                    table: Table::Replay,
                     uuid: id,
                 },
             )?)
         }
         (None, None) => PlayerStartTemplateInfo::Cold,
-        (_, _) => return Err(GISSTError::Unreachable),
+        (_, _) => return Err(ServerError::Unreachable),
     };
     let manifest =
         dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);

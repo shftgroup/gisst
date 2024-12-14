@@ -3,7 +3,7 @@ use crate::{
     utils::{check_header, get_metadata, parse_header},
 };
 
-use crate::error::GISSTError;
+use crate::error::ServerError;
 use bytes::Bytes;
 use gisst::models::File as GFile;
 use uuid::Uuid;
@@ -16,14 +16,44 @@ use axum::{
     Extension,
 };
 
-use axum_macros::debug_handler;
 use gisst::storage::{FileInformation, PendingUpload, StorageHandler};
+use std::collections::HashMap;
+use std::sync::{RwLockReadGuard, RwLockWriteGuard};
+trait ServerStateExt {
+    fn get_pending_uploads(&self) -> Option<RwLockReadGuard<HashMap<Uuid, PendingUpload>>>;
+    fn get_pending_uploads_mut(&self) -> RwLockWriteGuard<HashMap<Uuid, PendingUpload>>;
+    fn insert_pending_upload(&self, uuid: Uuid, pending: PendingUpload) -> Option<PendingUpload>;
+    fn remove_pending_upload(&self, uuid: Uuid) -> Option<PendingUpload>;
+}
+impl ServerStateExt for ServerState {
+    fn get_pending_uploads(&self) -> Option<RwLockReadGuard<HashMap<Uuid, PendingUpload>>> {
+        self.pending_uploads.read().ok()
+    }
 
-pub async fn tus_head(
+    fn get_pending_uploads_mut(&self) -> RwLockWriteGuard<HashMap<Uuid, PendingUpload>> {
+        self.pending_uploads.write().unwrap_or_else(|mut e| {
+            **e.get_mut() = std::collections::HashMap::new();
+            self.pending_uploads.clear_poison();
+            e.into_inner()
+        })
+    }
+
+    fn insert_pending_upload(&self, uuid: Uuid, pending: PendingUpload) -> Option<PendingUpload> {
+        let mut ups = self.get_pending_uploads_mut();
+        ups.insert(uuid, pending)
+    }
+
+    fn remove_pending_upload(&self, uuid: Uuid) -> Option<PendingUpload> {
+        let mut ups = self.get_pending_uploads_mut();
+        ups.remove(&uuid)
+    }
+}
+
+pub async fn head(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
-) -> Result<Response, GISSTError> {
+) -> Result<Response, ServerError> {
     let tus_resumable: Option<String> = parse_header(&headers, "Tus-Resumable");
     if tus_resumable.is_none() || tus_resumable.unwrap() != "1.0.0" {
         return Ok(([("Tus-Version", "1.0.0")], StatusCode::PRECONDITION_FAILED).into_response());
@@ -40,41 +70,42 @@ pub async fn tus_head(
         .into_response());
     }
 
-    if let Some(pu) = app_state.pending_uploads.read().unwrap().get(&id) {
+    if let Some((offset, length)) = app_state
+        .get_pending_uploads()
+        .and_then(|ups| ups.get(&id).map(|pu| (pu.offset, pu.length)))
+    {
         Ok(([
             ("Tus-Resumable", "1.0.0"),
-            ("Upload-Offset", &pu.offset.to_string()),
-            ("Upload-Length", &pu.length.to_string()),
+            ("Upload-Offset", &offset.to_string()),
+            ("Upload-Length", &length.to_string()),
             ("Cache-Control", "no-store"),
         ])
         .into_response())
     } else {
         Ok((
             StatusCode::NOT_FOUND,
-            format!("Unable to locate pending upload with id {}", id),
+            format!("Unable to locate pending upload with id {id}"),
         )
             .into_response())
     }
 }
 
-#[debug_handler]
-pub async fn tus_patch(
+fn is_octet_stream(val: &str) -> bool {
+    val == "application/offset+octet-stream"
+}
+
+pub async fn patch(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
     body: Bytes,
-) -> Result<axum::response::Response, GISSTError> {
-    //Check for correct headers
-    let check_content_type = |val: &str| val == "application/offset+octet-stream";
-    if !check_header(&headers, "Content-Type", check_content_type) {
+) -> Result<axum::response::Response, ServerError> {
+    if !check_header(&headers, "Content-Type", is_octet_stream) {
         return Ok((StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unknown content-type.").into_response());
     }
-
-    let offset: Option<usize> = parse_header(&headers, "Upload-Offset");
-    if offset.is_none() {
+    let Some(offset): Option<usize> = parse_header(&headers, "Upload-Offset") else {
         return Ok((StatusCode::UNSUPPORTED_MEDIA_TYPE, "No offset provided.").into_response());
-    }
-    let offset = offset.unwrap();
+    };
 
     // Check if file upload has completed, if so, send offset equal to length
     let mut conn = app_state.pool.acquire().await?;
@@ -90,33 +121,18 @@ pub async fn tus_patch(
     }
 
     // Check that file upload exists
-    if app_state.pending_uploads.read().unwrap().get(&id).is_none() {
-        return Err(GISSTError::FileNotFoundError);
-    }
-
-    let mut pu_offset = app_state
-        .pending_uploads
-        .read()
-        .unwrap()
-        .get(&id)
-        .unwrap()
-        .offset;
-    let pu_length = app_state
-        .pending_uploads
-        .read()
-        .unwrap()
-        .get(&id)
-        .unwrap()
-        .length;
+    let Some((mut pu_offset, pu_length)) = app_state
+        .get_pending_uploads()
+        .and_then(|ups| ups.get(&id).map(|pu| (pu.offset, pu.length)))
+    else {
+        return Err(ServerError::FileNotFound);
+    };
 
     // Check that offset is correct
     if pu_offset != offset {
         return Ok((
             StatusCode::CONFLICT,
-            format!(
-                "Client offset ({}) does not match server offset ({})",
-                pu_offset, offset
-            ),
+            format!("Client offset ({pu_offset}) does not match server offset ({offset})",),
         )
             .into_response());
     }
@@ -144,24 +160,18 @@ pub async fn tus_patch(
     }
 
     // Append chunk to file
-    let file_info = app_state
-        .pending_uploads
-        .read()
-        .unwrap()
-        .get(&id)
-        .unwrap()
-        .file_information
-        .clone();
+    let file_info = {
+        let mut uploads = app_state.get_pending_uploads_mut();
+        let Some(upload) = uploads.get_mut(&id) else {
+            return Err(ServerError::FileNotFound);
+        };
+        upload.offset += body.len();
+        pu_offset += body.len();
+        upload.file_information.clone()
+    };
+
     StorageHandler::add_bytes_to_file(&app_state.temp_storage_path, &file_info, body.clone())
         .await?;
-    app_state
-        .pending_uploads
-        .write()
-        .unwrap()
-        .get_mut(&id)
-        .unwrap()
-        .offset += body.len();
-    pu_offset += body.len();
 
     // Check if upload is complete and clean up
     if pu_offset == pu_length {
@@ -183,12 +193,12 @@ pub async fn tus_patch(
                 file_filename: file_info.source_filename.clone(),
                 file_source_path: file_info.source_path.clone(),
                 file_dest_path: file_info.dest_path.clone(),
-                file_size: pu_length as i64,
+                file_size: i64::try_from(pu_length).map_err(ServerError::UploadTooBig)?,
                 created_on: chrono::Utc::now(),
             },
         )
         .await?;
-        app_state.pending_uploads.write().unwrap().remove(&id);
+        let _ = app_state.remove_pending_upload(id);
     }
 
     Ok((
@@ -201,10 +211,10 @@ pub async fn tus_patch(
         .into_response())
 }
 
-pub async fn tus_creation(
+pub async fn creation(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
-) -> Result<Response, GISSTError> {
+) -> Result<Response, ServerError> {
     // Get file length header information
     // We are not allowing deferred length at this time
     let length: Option<usize> = parse_header(&headers, "Upload-Length");
@@ -225,14 +235,11 @@ pub async fn tus_creation(
     }
 
     let metadata = metadata.unwrap();
-    for key in ["filename", "hash"].iter() {
-        if !metadata.contains_key(*key) {
+    for key in ["filename", "hash"] {
+        if !metadata.contains_key(key) {
             return Ok((
                 StatusCode::BAD_REQUEST,
-                format!(
-                    "Upload-Metadata header must contain a value for '{}' key.",
-                    key
-                ),
+                format!("Upload-Metadata header must contain a value for '{key}' key."),
             )
                 .into_response());
         }
@@ -247,7 +254,7 @@ pub async fn tus_creation(
 
     let file_info = FileInformation {
         source_filename: filename.to_string(),
-        source_path: "".to_string(),
+        source_path: String::new(),
         dest_filename: StorageHandler::get_dest_filename(hash, filename),
         dest_path: dest_path.to_string_lossy().to_string(),
         file_hash: hash.to_string(),
@@ -256,8 +263,8 @@ pub async fn tus_creation(
     // Create temp file for PATCH
     StorageHandler::create_temp_file(&app_state.temp_storage_path, &file_info).await?;
 
-    // Add pending upload to queue
-    let _ = &app_state.pending_uploads.write().unwrap().insert(
+    // Add pending upload to queue, ignore old one if present
+    let _ = &app_state.insert_pending_upload(
         new_uuid,
         PendingUpload {
             file_information: file_info,
@@ -270,7 +277,7 @@ pub async fn tus_creation(
     Ok((
         [
             ("Tus-Resumable", "1.0.0"),
-            ("Location", &format!("/resources/{}", new_uuid)),
+            ("Location", &format!("/resources/{new_uuid}")),
         ],
         StatusCode::CREATED,
     )

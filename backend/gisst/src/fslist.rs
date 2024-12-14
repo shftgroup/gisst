@@ -1,4 +1,8 @@
-use crate::error::FSListError;
+#![allow(clippy::missing_errors_doc)]
+
+use magic::cookie::DatabasePaths;
+
+use crate::error::FSList;
 
 const DEPTH_LIMIT: usize = 1024;
 
@@ -16,7 +20,7 @@ pub enum FSFileListingType {
     File,
 }
 
-fn get_partitions(image_file: &std::fs::File) -> Result<Vec<(u32, u64, u64)>, FSListError> {
+fn get_partitions(image_file: &std::fs::File) -> Result<Vec<(usize, u64, u64)>, FSList> {
     use tracing::info;
     let file_len = image_file.metadata()?.len();
     let mut image = fscommon::BufStream::new(image_file);
@@ -26,21 +30,21 @@ fn get_partitions(image_file: &std::fs::File) -> Result<Vec<(u32, u64, u64)>, FS
                 .filter(|(_, part)| part.is_used())
                 .map(|(idx, part)| {
                     (
-                        idx as u32,
-                        part.starting_lba as u64 * mbr.sector_size as u64,
-                        part.sectors as u64 * mbr.sector_size as u64,
+                        idx,
+                        u64::from(part.starting_lba) * u64::from(mbr.sector_size),
+                        u64::from(part.sectors) * u64::from(mbr.sector_size),
                     )
                 })
                 .collect()
         })
         .or_else(|_err| {
             info!("disk image has bad or missing MBR, treating as raw filesystem");
-            Ok::<Vec<(u32, u64, u64)>, mbrman::Error>(vec![(0, 0, file_len)])
+            Ok::<Vec<(usize, u64, u64)>, mbrman::Error>(vec![(0, 0, file_len)])
         })?;
     Ok(parts)
 }
 
-pub fn recursive_listing(mut image_file: std::fs::File) -> Result<Vec<FSFileListing>, FSListError> {
+pub fn recursive_listing(mut image_file: std::fs::File) -> Result<Vec<FSFileListing>, FSList> {
     use tracing::info;
     let partitions = get_partitions(&image_file)?;
     let mut result = Vec::with_capacity(partitions.len());
@@ -62,8 +66,8 @@ fn recursive_listing_fat_partition(
     start_byte: u64,
     sz: u64,
     path: &std::path::Path,
-) -> Result<FSFileListing, FSListError> {
-    use fatfs::*;
+) -> Result<FSFileListing, FSList> {
+    use fatfs::{FileSystem, FsOptions};
     use fscommon::{BufStream, StreamSlice};
     use tracing::debug;
     debug!(
@@ -83,12 +87,11 @@ fn recursive_listing_fat_partition(
     };
     while let Some((dir, idx, path)) = stack.pop() {
         if idx.len() > DEPTH_LIMIT {
-            return Err(FSListError::TraversalDepth);
+            return Err(FSList::TraversalDepth);
         }
         // dbg!(&path, &idx);
-        let lst = get_lst_mut(&mut root_lst, &idx).ok_or(FSListError::TraversalPath(
-            path.to_string_lossy().into_owned(),
-        ))?;
+        let lst = get_lst_mut(&mut root_lst, &idx)
+            .ok_or(FSList::TraversalPath(path.to_string_lossy().into_owned()))?;
         for (eidx, entry) in dir
             .iter()
             .filter(|entry| {
@@ -116,7 +119,7 @@ fn recursive_listing_fat_partition(
                 } else if entry.is_file() {
                     FSFileListingType::File
                 } else {
-                    return Err(FSListError::FATError(format!(
+                    return Err(FSList::FATError(format!(
                         "fat file entry is neither dir nor file {:?}",
                         path.join(filename),
                     )));
@@ -126,7 +129,7 @@ fn recursive_listing_fat_partition(
             if entry.is_dir() {
                 let mut idx = idx.clone();
                 idx.push(eidx);
-                stack.push((entry.to_dir(), idx, path.join(entry.file_name())))
+                stack.push((entry.to_dir(), idx, path.join(entry.file_name())));
             }
         }
     }
@@ -144,6 +147,7 @@ fn get_lst_mut<'a>(
     }
 }
 
+#[must_use]
 pub fn file_to_path(storage_root: &str, file: &crate::models::File) -> std::path::PathBuf {
     std::path::PathBuf::from(&format!("{storage_root}/{}", file.file_dest_path))
 }
@@ -151,47 +155,42 @@ pub fn file_to_path(storage_root: &str, file: &crate::models::File) -> std::path
 pub fn get_file_at_path(
     image_file: std::fs::File,
     path: &std::path::Path,
-) -> Result<(String, Vec<u8>), FSListError> {
+) -> Result<(String, Vec<u8>), FSList> {
     let partitions = get_partitions(&image_file)?;
     let mut components = path.components();
-    let std::path::Component::Normal(partid) = components.next().ok_or(
-        FSListError::TraversalPath(path.to_string_lossy().into_owned()),
-    )?
+    let std::path::Component::Normal(partid) = components
+        .next()
+        .ok_or(FSList::TraversalPath(path.to_string_lossy().into_owned()))?
     else {
-        return Err(FSListError::TraversalPath(
-            path.to_string_lossy().into_owned(),
-        ));
+        return Err(FSList::TraversalPath(path.to_string_lossy().into_owned()));
     };
     let partid = partid
         .to_string_lossy()
         .strip_prefix("part")
-        .ok_or(FSListError::PathError)?
-        .parse::<u32>()?;
+        .ok_or(FSList::Path)?
+        .parse::<usize>()?;
     for (idx, start_byte, sz) in partitions {
+        use fatfs::{FileSystem, FsOptions};
+        use fscommon::{BufStream, StreamSlice};
         if idx != partid {
             continue;
         }
-        use fatfs::*;
-        use fscommon::{BufStream, StreamSlice};
         let image = BufStream::new(StreamSlice::new(image_file, start_byte, start_byte + sz)?);
         let fs = FileSystem::new(image, FsOptions::new())?;
         let subpath = components.as_path();
         if file_at_path_is_dir_fat(&fs, subpath) {
             let dir_zipped = get_dir_at_path_fat(&fs, subpath)?;
             return Ok(("application/zip".to_string(), dir_zipped));
-        } else {
-            let file = get_file_at_path_fat(&fs, subpath)?;
-            let cookie = magic::Cookie::open(magic::cookie::Flags::MIME)
-                .map_err(|_| FSListError::FiletypeDBError)?;
-            let db = Default::default();
-            let cookie = cookie.load(&db).map_err(|_| FSListError::FiletypeDBError)?;
-            let mime = cookie.buffer(&file)?;
-            return Ok((mime, file));
         }
+        let file = get_file_at_path_fat(&fs, subpath)?;
+        let cookie =
+            magic::Cookie::open(magic::cookie::Flags::MIME).map_err(|_| FSList::FiletypeDB)?;
+        let db = DatabasePaths::default();
+        let cookie = cookie.load(&db).map_err(|_| FSList::FiletypeDB)?;
+        let mime = cookie.buffer(&file)?;
+        return Ok((mime, file));
     }
-    Err(FSListError::FileNotFound(
-        path.to_string_lossy().into_owned(),
-    ))
+    Err(FSList::FileNotFound(path.to_string_lossy().into_owned()))
 }
 
 type FATStorage = fatfs::StdIoWrapper<fscommon::BufStream<fscommon::StreamSlice<std::fs::File>>>;
@@ -204,8 +203,8 @@ fn file_at_path_is_dir_fat(fs: &fatfs::FileSystem<FATStorage>, path: &std::path:
 fn get_file_at_path_fat(
     fs: &fatfs::FileSystem<FATStorage>,
     path: &std::path::Path,
-) -> Result<Vec<u8>, FSListError> {
-    use fatfs::*;
+) -> Result<Vec<u8>, FSList> {
+    use fatfs::Read;
     let mut file = fs.root_dir().open_file(&path.to_string_lossy()).unwrap();
     let file_size = file
         .extents()
@@ -220,7 +219,7 @@ fn get_file_at_path_fat(
             Ok(_n) => {
                 continue;
             }
-            Err(e) => return Err(FSListError::from(e)),
+            Err(e) => return Err(FSList::from(e)),
         }
     }
 }
@@ -228,7 +227,7 @@ fn get_file_at_path_fat(
 fn get_dir_at_path_fat(
     fs: &fatfs::FileSystem<FATStorage>,
     path: &std::path::Path,
-) -> Result<Vec<u8>, FSListError> {
+) -> Result<Vec<u8>, FSList> {
     use zip::{write::SimpleFileOptions, ZipWriter};
     let mut out_bytes: Vec<u8> = Vec::with_capacity(16 * 1024);
     let directory = if path.parent().is_none() {
@@ -266,11 +265,12 @@ fn get_dir_at_path_fat(
     Ok(out_bytes)
 }
 
+#[must_use]
 pub fn is_disk_image(file: &std::path::Path) -> bool {
     let Ok(cookie) = magic::Cookie::open(magic::cookie::Flags::ERROR) else {
         return false;
     };
-    let db = Default::default();
+    let db = DatabasePaths::default();
     match cookie.load(&db) {
         Ok(cookie) => cookie
             .file(file)

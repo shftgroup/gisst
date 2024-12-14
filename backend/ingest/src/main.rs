@@ -11,7 +11,7 @@ use gisst::{
     },
 };
 use log::{error, info, warn};
-use rdb_sys::*;
+use rdb_sys::{RVal, RDB};
 use sqlx::pool::PoolOptions;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -24,11 +24,11 @@ struct Args {
     #[command(flatten)]
     pub verbose: Verbosity,
 
-    /// GISST_CLI_DB_URL environment variable must be set to PostgreSQL path
+    /// `GISST_CLI_DB_URL` environment variable must be set to database path
     #[clap(env)]
     pub gisst_cli_db_url: String,
 
-    /// GISST_STORAGE_ROOT_PATH environment variable must be set
+    /// `GISST_STORAGE_ROOT_PATH` environment variable must be set
     #[clap(env)]
     pub gisst_storage_root_path: String,
 
@@ -69,9 +69,9 @@ pub enum IngestError {
     #[error("nul error")]
     Nul(#[from] std::ffi::NulError),
     #[error("storage error")]
-    Storage(#[from] gisst::error::StorageError),
+    Storage(#[from] gisst::error::Storage),
     #[error("new record")]
-    NewRecord(#[from] gisst::error::RecordSQLError),
+    NewRecord(#[from] gisst::error::RecordSQL),
     #[error("directory traversal error")]
     Directory(#[from] walkdir::Error),
     #[error("rdb open error")]
@@ -79,11 +79,15 @@ pub enum IngestError {
     #[error("file metadata error")]
     File(),
     #[error("file insertion error")]
-    InsertFile(#[from] gisst::error::InsertFileError),
+    InsertFile(#[from] gisst::error::InsertFile),
+    #[error("Role index too high, must be <= 65535")]
+    RoleTooHigh(usize),
 }
 
+#[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<(), IngestError> {
+    use rayon::prelude::*;
     let Args {
         rdb,
         dir: roms,
@@ -144,7 +148,6 @@ async fn main() -> Result<(), IngestError> {
         .map(|e| e.unwrap())
         .collect();
 
-    use rayon::prelude::*;
     let handle = tokio::runtime::Handle::current();
     let result: Result<_, _> = files
         .par_iter()
@@ -174,15 +177,15 @@ async fn main() -> Result<(), IngestError> {
             let dep_ids = dep_ids.clone();
             let db = Arc::clone(&db);
             let roms = Arc::clone(&roms);
-            let platform = platform.to_owned();
-            let core_name = core_name.to_owned();
-            let core_version = core_version.to_owned();
-            let storage_root = storage_root.to_owned();
+            let platform = platform.clone();
+            let core_name = core_name.clone();
+            let core_version = core_version.clone();
+            let storage_root = storage_root.clone();
 
             let pool = Arc::clone(&pool);
             handle.block_on(async move {
                 let mut conn = pool.acquire().await?;
-                if ext == "m3u" {
+                if ext.eq_ignore_ascii_case("m3u") {
                     let mut found = false;
                     for file in files_of_playlist(&roms, &path)? {
                         match find_entry(&mut conn, &db, &file).await? {
@@ -327,7 +330,7 @@ async fn find_entry(
         std::io::copy(&mut file, &mut hasher)?;
         hasher.finalize()
     };
-    let hash_str = format!("{:x}", hash);
+    let hash_str = format!("{hash:x}");
     if GFile::get_by_hash(conn, &hash_str).await?.is_some() {
         info!("{:?}:{hash_str} already in DB, skip", path);
         return Ok(FindResult::AlreadyHave);
@@ -336,7 +339,7 @@ async fn find_entry(
     info!("{:?}: {}: {hash_str}", path, hash.len());
 
     if let Some(rval) = db.find_entry::<&str, &[u8]>("md5", &hash) {
-        info!("metadata found\n{} for {:?}", rval, path);
+        info!("metadata found\n{rval} for {path:?}");
         Ok(FindResult::InRDB(rval))
     } else {
         warn!("md5 not found");
@@ -499,7 +502,14 @@ async fn link_deps(
     Object::link_object_to_instance(conn, ra_cfg_object_id, instance_id, ObjectRole::Config, 0)
         .await?;
     for (i, dep) in deps.iter().enumerate() {
-        Object::link_object_to_instance(conn, *dep, instance_id, ObjectRole::Dependency, i).await?;
+        Object::link_object_to_instance(
+            conn,
+            *dep,
+            instance_id,
+            ObjectRole::Dependency,
+            u16::try_from(i).map_err(|_| IngestError::RoleTooHigh(i))?,
+        )
+        .await?;
     }
     Ok(())
 }
@@ -513,7 +523,10 @@ fn files_of_playlist(
     for file in std::fs::read_to_string(path)?.lines() {
         let file_path = roms.join(std::path::Path::new(file));
         out.push(file_path.clone());
-        if file.ends_with(".cue") {
+        if file_path
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case(".cue"))
+        {
             for cue_line in std::fs::read_to_string(file_path)?.lines() {
                 if let Some(captures) = cue_file_re.captures(cue_line) {
                     let track = &captures[1];

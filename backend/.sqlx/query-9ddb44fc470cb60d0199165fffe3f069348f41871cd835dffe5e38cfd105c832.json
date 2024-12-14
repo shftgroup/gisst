@@ -1,0 +1,69 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT object_id, instanceObject.object_role as \"object_role:_\",\n                   instanceObject.object_role_index,\n                   file.file_hash, file.file_filename,\n                   file.file_source_path, file.file_dest_path\n               FROM object\n               JOIN instanceObject USING(object_id)\n               JOIN instance USING(instance_id)\n               JOIN file USING(file_id)\n               WHERE instance_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "object_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "object_role:_",
+        "type_info": {
+          "Custom": {
+            "name": "object_role",
+            "kind": {
+              "Enum": [
+                "content",
+                "dependency",
+                "config"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "object_role_index",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "file_hash",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "file_filename",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "file_source_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "file_dest_path",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9ddb44fc470cb60d0199165fffe3f069348f41871cd835dffe5e38cfd105c832"
+}

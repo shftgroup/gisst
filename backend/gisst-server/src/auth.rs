@@ -16,7 +16,7 @@ use axum_login::{secrecy::SecretVec, AuthUser, UserStore};
 use chrono::Utc;
 use sqlx::{PgConnection, PgPool};
 
-use crate::error::GISSTError;
+use crate::error::ServerError;
 use crate::server::ServerState;
 #[cfg(not(feature = "dummy_auth"))]
 use oauth2::Scope;
@@ -28,7 +28,7 @@ use oauth2::{
 #[cfg(not(feature = "dummy_auth"))]
 use axum_login::axum_sessions::extractors::WritableSession;
 
-use crate::error::GISSTError::{AuthTokenResponseError, AuthUserNotPermittedError};
+use crate::error::ServerError::{AuthTokenResponse, AuthUserNotPermitted};
 use serde::Deserialize;
 use tracing::{debug, info, warn};
 
@@ -108,7 +108,7 @@ impl User {
         .await
     }
 
-    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, GISSTError> {
+    async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, ServerError> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO users (sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)
@@ -137,10 +137,10 @@ impl User {
         )
             .fetch_one(conn)
             .await
-            .map_err( GISSTError::SqlError )
+            .map_err( ServerError::Sql )
     }
 
-    async fn update(conn: &mut PgConnection, model: &User) -> Result<Self, GISSTError> {
+    async fn update(conn: &mut PgConnection, model: &User) -> Result<Self, ServerError> {
         sqlx::query_as!(
             Self,
             r#"
@@ -180,12 +180,14 @@ impl User {
         )
         .fetch_one(conn)
         .await
-        .map_err(GISSTError::SqlError)
+        .map_err(ServerError::Sql)
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub type AuthContext = axum_login::extractors::AuthContext<i32, User, PostgresStore, Role>;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize)]
 pub struct AuthRequest {
     code: String,
@@ -221,7 +223,7 @@ pub async fn oauth_callback_handler(
         .exchange_code(AuthorizationCode::new(query.code))
         .request_async(async_http_client)
         .await
-        .map_err(|_| AuthTokenResponseError)?;
+        .map_err(|_| AuthTokenResponse)?;
 
     // Get OpenID provider userinfo from token
     let profile = match reqwest::Client::new()
@@ -231,7 +233,7 @@ pub async fn oauth_callback_handler(
         .await
     {
         Ok(res) => res,
-        Err(e) => return Err(GISSTError::ReqwestError(e)),
+        Err(e) => return Err(ServerError::Reqwest(e)),
     };
 
     let profile: OpenIDUserInfo = profile.json::<OpenIDUserInfo>().await.unwrap();
@@ -239,7 +241,7 @@ pub async fn oauth_callback_handler(
     if let Some(email) = profile.email.as_ref() {
         debug!("Comparing {email} ");
         if state.user_whitelist.binary_search(email).is_err() {
-            return Err(AuthUserNotPermittedError);
+            return Err(AuthUserNotPermitted);
         }
     }
 
@@ -255,7 +257,7 @@ async fn auth_get_user(
     pool: PgPool,
     profile: &OpenIDUserInfo,
     secret: &str,
-) -> Result<User, GISSTError> {
+) -> Result<User, ServerError> {
     let mut conn = pool.acquire().await?;
     if let Some(user) = sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", profile.email)
         .fetch_optional(&mut *conn)
@@ -281,14 +283,14 @@ async fn auth_get_user(
                 creator_username: profile
                     .email
                     .as_ref()
-                    .ok_or(GISSTError::AuthMissingProfileInfoError {
+                    .ok_or(ServerError::AuthMissingProfileInfo {
                         field: "email".to_string(),
                     })?
                     .clone(),
                 creator_full_name: profile
                     .given_name
                     .as_ref()
-                    .ok_or(GISSTError::AuthMissingProfileInfoError {
+                    .ok_or(ServerError::AuthMissingProfileInfo {
                         field: "given_name".to_string(),
                     })?
                     .clone(),
@@ -340,12 +342,12 @@ pub async fn login_handler(
 pub async fn login_handler(
     mut auth: AuthContext,
     Extension(state): Extension<ServerState>,
-) -> Result<impl IntoResponse, GISSTError> {
+) -> Result<impl IntoResponse, ServerError> {
     let dummy = OpenIDUserInfo::test_user();
     let user = auth_get_user(state.pool, &dummy, "verysecret").await?;
     auth.login(&user)
         .await
-        .map_err(GISSTError::AuthUserSerdeLoginError)?;
+        .map_err(ServerError::AuthUserSerdeLogin)?;
     debug!("Logged in the user: {user:?}");
     Ok(Redirect::to("/instances"))
 }

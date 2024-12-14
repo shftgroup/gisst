@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM state WHERE state_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "state_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "is_checkpoint",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "state_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "state_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "screenshot_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "replay_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "state_replay_index",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "state_derived_from",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "e3afaf642565417e94a1d4bf0925b0dd53f07cf62e42b02a1507581ba1261d0a"
+}

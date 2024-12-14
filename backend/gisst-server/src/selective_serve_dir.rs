@@ -84,17 +84,11 @@ impl tower::Service<Request<axum::body::Body>> for SelectiveServeDir {
         if is_uncompressed_request(&req) {
             self.iu_ready = false;
             let future = self.inner_uncompressed.call(req);
-            Box::pin(async move {
-                let res = future.await?;
-                Ok(res.into_response())
-            })
+            Box::pin(async move { Ok(future.await?.into_response()) })
         } else {
             self.ic_ready = false;
             let future = self.inner_compressed.call(req);
-            Box::pin(async move {
-                let res = future.await?;
-                Ok(res.into_response())
-            })
+            Box::pin(async move { Ok(future.await?.into_response()) })
         }
     }
 }
@@ -102,6 +96,5 @@ impl tower::Service<Request<axum::body::Body>> for SelectiveServeDir {
 fn is_uncompressed_request<B>(req: &Request<B>) -> bool {
     req.headers()
         .get("X-Accept-Encoding")
-        .map(|xae| xae == "identity")
-        .unwrap_or(false)
+        .is_some_and(|xae| xae == "identity")
 }

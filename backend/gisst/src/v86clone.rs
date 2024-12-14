@@ -1,74 +1,73 @@
-use crate::error::V86CloneError;
-use crate::model_enums::*;
-use crate::models::*;
+use crate::error::V86Clone;
+use crate::model_enums::Framework;
+use crate::models::{Environment, File, Instance, Object, ObjectLink, ObjectRole, StateLink};
 use crate::storage::StorageHandler;
 use log::{error, info};
 use sqlx::PgConnection;
 use std::path::Path;
 use uuid::Uuid;
 
+#[allow(clippy::too_many_lines, clippy::missing_errors_doc)]
 pub async fn clone_v86_machine(
     conn: &mut PgConnection,
     instance_id: Uuid,
     state_id: Uuid,
     storage_root: &str,
     depth: u8,
-) -> Result<Uuid, V86CloneError> {
+) -> Result<Uuid, V86Clone> {
+    use std::process::Command;
     let instance = Instance::get_by_id(conn, instance_id)
         .await?
-        .ok_or(V86CloneError::InstanceNotFound(instance_id))?;
+        .ok_or(V86Clone::InstanceNotFound(instance_id))?;
 
     let env = Environment::get_by_id(conn, instance.environment_id)
         .await?
-        .ok_or(V86CloneError::EnvironmentNotFound(instance.environment_id))?;
+        .ok_or(V86Clone::EnvironmentNotFound(instance.environment_id))?;
     if env.environment_framework != Framework::V86 {
-        return Err(V86CloneError::WrongEnvironmentType);
+        return Err(V86Clone::WrongEnvironmentType);
     }
     let state = StateLink::get_by_id(conn, state_id)
         .await?
-        .ok_or(V86CloneError::StateNotFound(state_id))?;
+        .ok_or(V86Clone::StateNotFound(state_id))?;
     if state.instance_id != instance_id {
-        return Err(V86CloneError::WrongInstanceForState);
+        return Err(V86Clone::WrongInstanceForState);
     }
     let state_file_path = format!(
         "{storage_root}/{}/{}-{}",
         state.file_dest_path, state.file_hash, state.file_filename
     );
     let objects = ObjectLink::get_all_for_instance_id(conn, instance_id).await?;
-    // This unwrap is safe since we know it's a v86 framework environment
-    let mut env_json = env.environment_config.unwrap().to_string();
-    for obj in objects.iter() {
+    let mut env_json = env
+        .environment_config
+        .ok_or(V86Clone::EnvironmentInvalid(instance.environment_id))?
+        .to_string();
+    for obj in &objects {
         let file_path = format!(
             "{storage_root}/{}/{}-{}",
             obj.file_dest_path, obj.file_hash, obj.file_filename
         );
-        match obj.object_role {
-            ObjectRole::Content => {
-                let idx = obj.object_role_index;
-                env_json = env_json.replace(&format!("$CONTENT{idx}"), &file_path);
-                if idx == 0 {
-                    env_json = env_json.replace("$CONTENT\"", &format!("{file_path}\""));
-                }
+        if let ObjectRole::Content = obj.object_role {
+            let idx = obj.object_role_index;
+            env_json = env_json.replace(&format!("$CONTENT{idx}"), &file_path);
+            if idx == 0 {
+                env_json = env_json.replace("$CONTENT\"", &format!("{file_path}\""));
             }
-            ObjectRole::Dependency => { /* nop */ }
-            ObjectRole::Config => { /*nop*/ }
         }
     }
     env_json = env_json.replace("seabios.bin", "web-dist/v86/bios/seabios.bin");
     env_json = env_json.replace("vgabios.bin", "web-dist/v86/bios/vgabios.bin");
-    use std::process::Command;
     info!("Input {env_json}\n{state_file_path}");
     let proc_output = Command::new("node")
         .arg("v86dump/index.js")
         .arg(env_json)
         .arg(state_file_path)
         .output()?;
-    let err = String::from_utf8(proc_output.stderr).expect("stderr not utf8");
+    let err = String::from_utf8(proc_output.stderr)?;
     info!("{err}");
-    let output = String::from_utf8(proc_output.stdout).expect("disk image names not utf-8");
+    let output = String::from_utf8(proc_output.stdout)?;
     info!("Output {output}");
     if !proc_output.status.success() {
-        return Err(V86CloneError::V86DumpError(err));
+        return Err(V86Clone::V86Dump(err));
     }
     // create the new instance
     let mut instance = instance;
@@ -86,7 +85,7 @@ pub async fn clone_v86_machine(
         if line.trim().is_empty() {
             continue;
         }
-        let (drive, diskpath) = match line.find(':').ok_or(V86CloneError::V86DumpError(
+        let (drive, diskpath) = match line.find(':').ok_or(V86Clone::V86Dump(
             "Invalid output from v86dump:{line}".to_owned(),
         )) {
             Ok(split) => line.split_at(split + 1),
@@ -97,21 +96,26 @@ pub async fn clone_v86_machine(
                 return Err(err);
             }
         };
-        temp_folder = Some(Path::new(diskpath).parent().unwrap());
+        temp_folder = Some(
+            Path::new(diskpath)
+                .parent()
+                .ok_or_else(|| V86Clone::DiskNotFound(diskpath.to_string()))?,
+        );
         info!("Linking {drive}{diskpath} as CONTENT{content_index}");
         let file_name = Path::new(diskpath)
             .to_path_buf()
             .file_name()
-            .unwrap()
+            .ok_or_else(|| V86Clone::DiskNotFound(diskpath.to_string()))?
             .to_string_lossy()
             .to_string();
-        let file_size = std::fs::metadata(diskpath)?.len() as i64;
+        let file_size =
+            i64::try_from(std::fs::metadata(diskpath)?.len()).map_err(V86Clone::DiskTooBig)?;
         let mut file_record = crate::models::File {
             file_id: Uuid::new_v4(),
             file_hash: StorageHandler::get_file_hash(diskpath)?,
             file_filename: file_name.clone(),
             file_source_path: String::new(),
-            file_dest_path: Default::default(),
+            file_dest_path: String::new(),
             file_size,
             created_on: chrono::Utc::now(),
         };
@@ -167,7 +171,7 @@ pub async fn clone_v86_machine(
             if let Some(temp) = temp_folder {
                 std::fs::remove_dir_all(temp)?;
             }
-            return Err(V86CloneError::IncompleteClone(new_id));
+            return Err(V86Clone::IncompleteClone(new_id));
         }
     }
     if let Some(temp) = temp_folder {

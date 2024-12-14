@@ -29,11 +29,11 @@ pub enum GISSTCliError {
     #[error("database error")]
     Sql(#[from] sqlx::Error),
     #[error("gisst new model error")]
-    NewModel(#[from] gisst::error::RecordSQLError),
+    NewModel(#[from] gisst::error::RecordSQL),
     #[error("json parse error")]
     JsonParse(#[from] serde_json::Error),
     #[error("storage error")]
-    Storage(#[from] gisst::error::StorageError),
+    Storage(#[from] gisst::error::Storage),
     #[error("configuration error")]
     Config(#[from] config::ConfigError),
     #[error("record not found error")]
@@ -41,9 +41,11 @@ pub enum GISSTCliError {
     #[error("invalid link record type")]
     InvalidRecordType(String),
     #[error("v86 clone error")]
-    V86CloneError(#[from] gisst::error::V86CloneError),
+    V86CloneError(#[from] gisst::error::V86Clone),
     #[error("insert file error")]
-    InsertFileError(#[from] gisst::error::InsertFileError),
+    InsertFileError(#[from] gisst::error::InsertFile),
+    #[error("invalid role index {0}")]
+    InvalidRoleIndex(std::num::TryFromIntError),
 }
 
 #[derive(Debug, Parser)]
@@ -55,7 +57,7 @@ pub struct GISSTCli {
     #[command(flatten)]
     pub verbose: Verbosity<InfoLevel>,
 
-    /// GISST_CONFIG_PATH environment variable must be set
+    /// `GISST_CONFIG_PATH` environment variable must be set
     #[clap(env)]
     pub gisst_config_path: String,
 }
@@ -83,7 +85,7 @@ pub enum Commands {
         #[arg(long)]
         role: Option<ObjectRole>,
         #[arg(long)]
-        role_index: Option<usize>,
+        role_index: Option<u16>,
     },
 
     /// Manage object records and files
@@ -117,13 +119,14 @@ pub enum Commands {
     AddPatch {
         /// The instance to clone and patch along with its work
         instance: Uuid,
-        /// A JSON file containing PatchData for the new work
+        /// A JSON file containing a JSON string that parses as `PatchData` for the new work
         data: String,
         #[arg(default_value_t = 4)]
         depth: u8,
     },
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Args)]
 pub struct CreateObject {
     /// Create objects recursively if input file is directory
@@ -152,7 +155,7 @@ pub struct CreateObject {
 
     /// Object role index for instance link. For retroarch, this is typically 0 for all content; for v86, 0=fda, 1=fdb, 2=hda, 3=hdb, 4=cdrom.
     #[arg(long)]
-    pub role_index: usize,
+    pub role_index: u16,
 
     /// Folder depth to use for input file to path based off of characters in assigned UUID
     #[arg(short, long, default_value_t = 4)]
@@ -165,7 +168,7 @@ pub struct CreateObject {
     /// Paths of file(s) to create in the database, directories will be ignored unless -r/--recursive flag is enabled
     pub file: Vec<String>,
 
-    /// Search for files in this directory, useful if you don't want deeply nested file_source_paths.
+    /// Search for files in this directory, useful if you don't want deeply nested `file_source_paths`.
     #[arg(long)]
     pub cwd: Option<String>,
 }
