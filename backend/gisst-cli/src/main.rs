@@ -166,7 +166,7 @@ async fn add_patched_instance(
                 .files
                 .get(role_index as usize)
                 .map_or("", String::as_str)
-                != ""
+                .is_empty()
         {
             let patch = Path::new(&data.files[role_index as usize]);
             let object_id = insert_file_object(
