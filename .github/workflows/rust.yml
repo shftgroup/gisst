@@ -20,6 +20,8 @@ jobs:
       uses: Swatinem/rust-cache@v2.5.1
       with:
         workspaces: "backend"
+    - name: Install magic
+      run: sudo apt-get install -y libmagic-dev
     - name: Clippy
       working-directory: backend
       run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
