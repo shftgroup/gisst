@@ -342,7 +342,7 @@ impl axum_login::AuthnBackend for AuthBackend {
             )
         };
         let mut conn = self.pool.acquire().await?;
-        let user = match sqlx::query_as!(
+        let user = if let Some(mut user) = sqlx::query_as!(
             Self::User,
             "SELECT * FROM users WHERE iss = $1 AND sub = $2",
             "https://accounts.google.com",
@@ -351,58 +351,55 @@ impl axum_login::AuthnBackend for AuthBackend {
         .fetch_optional(&mut *connection)
         .await?
         {
-            Some(mut user) => {
-                info!("refresh token to {:?}", token.secret());
-                User::update_token(&mut conn, &user.iss, &user.sub, token.secret()).await?;
-                user.password_hash = token.secret().clone();
-                Some(user)
-            }
-            None => {
-                info!("New user login, creating creator and user records.");
-                let creator = Creator::insert(
-                    &mut conn,
-                    Creator {
-                        creator_id: Uuid::new_v4(),
-                        creator_username: profile
-                            .email
-                            .as_ref()
-                            .ok_or(AuthError::MissingProfileInfo {
-                                field: "email".to_string(),
-                            })?
-                            .clone(),
-                        creator_full_name: profile
-                            .given_name
-                            .as_ref()
-                            .ok_or(AuthError::MissingProfileInfo {
-                                field: "given_name".to_string(),
-                            })?
-                            .clone(),
-                        created_on: Utc::now(),
-                    },
-                )
-                .await?;
-                debug!("Creator record created: {creator:?}.");
-                let user = User::insert(
-                    &mut conn,
-                    &User {
-                        id: 0, // will be ignored on insert since insert id is serial auto-increment
-                        iss: "https://accounts.google.com".to_string(),
-                        sub: profile.sub.clone(),
-                        creator_id: creator.creator_id,
-                        password_hash: token.secret().to_owned(),
-                        name: profile.name.clone(),
-                        given_name: profile.given_name.clone(),
-                        family_name: profile.family_name.clone(),
-                        preferred_username: profile.preferred_username.clone(),
-                        email: profile.email.clone(),
-                        picture: profile.picture.clone(),
-                    },
-                )
-                .await?;
+            info!("refresh token to {:?}", token.secret());
+            User::update_token(&mut conn, &user.iss, &user.sub, token.secret()).await?;
+            user.password_hash.clone_from(token.secret());
+            Some(user)
+        } else {
+            info!("New user login, creating creator and user records.");
+            let creator = Creator::insert(
+                &mut conn,
+                Creator {
+                    creator_id: Uuid::new_v4(),
+                    creator_username: profile
+                        .email
+                        .as_ref()
+                        .ok_or(AuthError::MissingProfileInfo {
+                            field: "email".to_string(),
+                        })?
+                        .clone(),
+                    creator_full_name: profile
+                        .given_name
+                        .as_ref()
+                        .ok_or(AuthError::MissingProfileInfo {
+                            field: "given_name".to_string(),
+                        })?
+                        .clone(),
+                    created_on: Utc::now(),
+                },
+            )
+            .await?;
+            debug!("Creator record created: {creator:?}.");
+            let user = User::insert(
+                &mut conn,
+                &User {
+                    id: 0, // will be ignored on insert since insert id is serial auto-increment
+                    iss: "https://accounts.google.com".to_string(),
+                    sub: profile.sub.clone(),
+                    creator_id: creator.creator_id,
+                    password_hash: token.secret().to_owned(),
+                    name: profile.name.clone(),
+                    given_name: profile.given_name.clone(),
+                    family_name: profile.family_name.clone(),
+                    preferred_username: profile.preferred_username.clone(),
+                    email: profile.email.clone(),
+                    picture: profile.picture.clone(),
+                },
+            )
+            .await?;
 
-                debug!("User record created: {user:?}.");
-                Some(user)
-            }
+            debug!("User record created: {user:?}.");
+            Some(user)
         };
         Ok(user)
     }

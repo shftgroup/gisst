@@ -85,8 +85,8 @@ impl tower::Service<Request<axum::body::Body>> for SelectiveServeDir {
             self.iu_ready = false;
             let future = self.inner_uncompressed.call(req);
             Box::pin(async move {
-                let res = future.await?;
-                let mut resp = res.into_response();
+                let result = future.await?;
+                let mut resp = result.into_response();
                 add_headers(&mut resp);
                 Ok(resp)
             })
@@ -94,8 +94,8 @@ impl tower::Service<Request<axum::body::Body>> for SelectiveServeDir {
             self.ic_ready = false;
             let future = self.inner_compressed.call(req);
             Box::pin(async move {
-                let res = future.await?;
-                let mut resp = res.into_response();
+                let result = future.await?;
+                let mut resp = result.into_response();
                 add_headers(&mut resp);
                 Ok(resp)
             })

@@ -70,16 +70,11 @@ impl ServerState {
             base_url: config.http.base_url.clone(),
             pending_uploads: Arc::default(),
             templates: template_environment,
-            user_whitelist: user_whitelist_sorted,
-            oauth_client: auth::build_oauth_client(
-                &config.http.base_url,
-                config.auth.google_client_id.expose_secret(),
-                config.auth.google_client_secret.expose_secret(),
-            ),
         })
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     use crate::selective_serve_dir;
     StorageHandler::init_storage(
@@ -88,12 +83,12 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     )?;
     debug!("Configured URL is {}", config.http.base_url.clone());
 
-    let mut user_whitelist_sorted: Vec<String> = config.auth.user_whitelist.to_vec();
+    let mut user_whitelist_sorted: Vec<String> = config.auth.user_whitelist.clone();
     user_whitelist_sorted.sort();
 
     let app_state = ServerState::with_config(config).await?;
 
-    let user_pool = PgPoolOptions::new()
+    let user_pool = sqlx::postgres::PgPoolOptions::new()
         .connect(config.database.database_url.expose_secret())
         .await
         .unwrap();
@@ -332,6 +327,7 @@ async fn get_homepage(
     .into_response())
 }
 
+#[allow(clippy::too_many_lines)]
 async fn get_data(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
