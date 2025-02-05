@@ -25,11 +25,7 @@ async fn main() -> Result<()> {
     let filter = EnvFilter::builder()
         .with_default_directive(default_tracing_directive)
         .parse(config.env.rust_log.clone())?;
-    tracing_subscriber::fmt()
-        .with_target(false)
-        .with_env_filter(filter)
-        .pretty()
-        .init();
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
     tracing::info!("The current directory is {}", path.display());
     tracing::debug!("{:?}", &config);

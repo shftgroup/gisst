@@ -21,4 +21,5 @@ folder_depth = 4
 
 [env]
 default_directive = "gisst_server=debug"
-rust_log = "warn,gisst_server=debug,gisst=debug"
+rust_log = "tower_http=debug,gisst_server=debug"
+trace_include_headers = false

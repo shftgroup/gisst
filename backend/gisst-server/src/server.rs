@@ -192,7 +192,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33_554_432))
         .layer(auth_layer)
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http().make_span_with(tower_http::trace::DefaultMakeSpan::new().include_headers(config.env.trace_include_headers)));
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
