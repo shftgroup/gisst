@@ -228,6 +228,14 @@ impl StorageHandler {
     }
     async fn gzip_file<R: AsyncRead + Unpin>(path: &Path, data: R) -> Result<(), Storage> {
         let ext: Option<&str> = path.extension().and_then(|ext| ext.to_str());
+        // Skip compressing disk images
+        match ext {
+            Some("chd") => return Ok(()),
+            Some("img") => return Ok(()),
+            Some("iso") => return Ok(()),
+            Some("bin") => return Ok(()),
+            _ => (),
+        }
         let gz_path = if let Some(e) = ext {
             let mut s = e.to_string();
             s.push_str(".gz");
