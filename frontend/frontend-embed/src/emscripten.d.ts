@@ -180,7 +180,7 @@ declare interface FS {
     mount(type: Emscripten.FileSystemType, opts: any, mountpoint: string): any;
     unmount(mountpoint: string): void;
     create(path:string, mode?: number): any;
-    createFile(path:string, mode?: number, backend?: number): any;
+    createFile(parent:string, path:string, mode?: number, backend?: number): any;
     mkdir(path: string, mode?: number): any;
     mkdirTree(path: string): any;
     mkdev(path: string, mode?: number, dev?: number): any;

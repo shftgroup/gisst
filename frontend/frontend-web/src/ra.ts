@@ -4,7 +4,6 @@ import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink, EmbedOptions, ControllerOverlayMode} from './types.d';
 import {LibretroModule, loadRetroArch} from './libretro_adapter';
 import * as zip from "@zip.js/zip.js";
-import bpath from "path-browserify";
 
 const FS_CHECK_INTERVAL = 1000;
 // one auto state per 5 minutes feels reasonable
@@ -64,7 +63,7 @@ async function setupFileSystem(module:LibretroModule) {
       break;
     }
   }
-  let resp = await fetch("assets/frontend/assets-minimal.zip", {
+  let resp = await fetch("assets/frontend/assets_minimal.zip", {
     headers: {
       "If-Modified-Since": old_timestamp
     }
@@ -102,8 +101,8 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
     retro_args.push("-R");
     retro_args.push(state_dir+"/"+content_base+".replay1");
   }
-  retro_args.push("-c");
-  retro_args.push("/mem/retroarch.cfg");
+  retro_args.push("--config=/mem/retroarch.cfg");
+  //retro_args.push("/mem/retroarch.cfg");
   const has_config = manifest.find((o) => o.object_role=="config")!;
   if(has_config) {
     retro_args.push("--appendconfig");
@@ -222,7 +221,7 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
     }
   }
   loadRetroArch("", core,
-    function (module:LibretroModule) {
+    async function (module:LibretroModule) {
       RA = module;
       setupFileSystem(RA);
       RA.FS.createPath("/", "/fetch/content", true, true);
@@ -244,14 +243,14 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
           module.FS.createDataFile("/", download_source_path+"/"+file.file_filename!, new Uint8Array(data), true, true, true);
         } else {
           let backend = module.FETCHFS.createBackend({base_url:content_url, chunkSize:16*1024*1024});
-          module.FS.createFile(download_source_path+"/"+file.file_filename!, 0o666, backend);
+          module.FS.createFile(download_source_path, file.file_filename!, 0o666, backend);
         }
       }
       if (entryState) {
         const data = (start as StateStart).data;
         let file_bytes = new Uint8Array(await (await fetch("/storage/"+data.file_dest_path)).arrayBuffer());
-        module.FS.createDataFile(state_dir, content_base + ".state1.entry", file_bytes, true, true);
-        module.FS.createDataFile(state_dir, content_base + ".state1", file_bytes, true, true);
+        module.FS.createDataFile(state_dir, content_base + ".state1.entry", file_bytes, true, true, true);
+        module.FS.createDataFile(state_dir, content_base + ".state1", file_bytes, true, true, true);
       }
       if (movie) {
         const data = (start as ReplayStart).data;
@@ -484,21 +483,4 @@ function mobileAndTabletCheck() {
   return check;
 }
 
-
-async function fetchZip(zipfile:string) : Promise<{path:string, file:string, data:ArrayBuffer}[]> {
-  const zipReader = new zip.ZipReader(new zip.HttpReader(zipfile), {useWebWorkers:false});
-  const entries = await zipReader.getEntries();
-  const ret = [];
-  for(const entry of entries) {
-    if (entry.getData && !entry.directory) {
-      const writer = new zip.Uint8ArrayWriter();
-      const data:Uint8Array = await entry.getData(writer);
-      const path = bpath.dirname(entry.filename);
-      const file = bpath.basename(entry.filename);
-      ret.push({path, file, data});
-    }
-  }
-  await zipReader.close();
-  return ret;
-}
 

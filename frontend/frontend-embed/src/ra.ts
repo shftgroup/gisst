@@ -39,7 +39,7 @@ async function setupZipFS(zipBuf:Uint8Array) {
   await zipReader.close();
 }
 
-async function setupFileSystem(module:LibretroModule) {
+async function setupFileSystem(module:LibretroModule, gisst_root:string) {
   let old_timestamp = localStorage.getItem("asset_time") ?? "";
   for await (const key of ((await navigator.storage.getDirectory()) as any).keys()) {
     if (key == "assets") {
@@ -48,7 +48,7 @@ async function setupFileSystem(module:LibretroModule) {
       break;
     }
   }
-  let resp = await fetch(gisst_root+"/assets/frontend/assets-minimal.zip", {
+  let resp = await fetch(gisst_root+"/assets/frontend/assets_minimal.zip", {
     headers: {
       "If-Modified-Since": old_timestamp
     }
@@ -101,7 +101,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   return new Promise((res) => {
     loadRetroArch(gisst_root, core,
       async function (module:LibretroModule) {
-        setupFileSystem(module);
+        setupFileSystem(module, gisst_root);
         module.FS.createPath("/", "fetch/content", true, true);
         module.FS.createPath("/", state_dir, true, true);
         for(const file of manifest) {
@@ -120,7 +120,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
             module.FS.createDataFile("/", download_source_path+"/"+file.file_filename!, new Uint8Array(data), true, true, true);
           } else {
             let backend = module.FETCHFS.createBackend({base_url:content_url, chunkSize:16*1024*1024});
-            module.FS.createFile(download_source_path+"/"+file.file_filename!, 0o666, backend);
+            module.FS.createFile(download_source_path, file.file_filename!, 0o666, backend);
           }
         }
         if (entryState) {
