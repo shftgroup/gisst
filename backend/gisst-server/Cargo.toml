@@ -42,3 +42,4 @@ axum-login = { version = "0.16.0" } #features = ["sqlx", "postgres"]}
 oauth2 = "4.4.2"
 reqwest = {version="0.11.20", features=["json"]}
 rand = { version = "0.8.5", features = ["min_const_gen"]}
+rustls = "0.23.23"

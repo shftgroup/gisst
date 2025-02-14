@@ -13,6 +13,9 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .unwrap();
     let path = std::env::current_dir()?;
     let config = serverconfig::ServerConfig::new()?;
 
