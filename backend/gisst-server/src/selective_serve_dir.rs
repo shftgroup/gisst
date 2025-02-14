@@ -114,6 +114,7 @@ fn add_headers(resp: &mut Response) {
         "cross-origin".parse().unwrap(),
     );
     headers.insert("Cross-Origin-Opener-Policy", "same-origin".parse().unwrap());
+    headers.insert("Access-Control-Allow-Origin", "*".parse().unwrap());
 }
 
 fn is_uncompressed_request<B>(req: &Request<B>) -> bool {
