@@ -10,14 +10,17 @@ interface LibretroModuleDef {
   locateFile(path:string,prefix:string):string;
   retroArchSend(msg:string):void;
   retroArchRecv():string|undefined;
-  mainScriptUrlOrBlob: Blob | string;
   message_queue:[Uint8Array,number][];
   message_out:string[];
   message_accum:string;
+  mainScriptUrlOrBlob: Blob | string;
   encoder:TextEncoder;
   noInitialRun: boolean;
+  noImageDecoding: boolean;
+  noAudioDecoding: boolean;
   preRun: Array<{ (mod:object|undefined): void }>;
   postRun: Array<{ (mod:object|undefined): void }>;
+  onRuntimeInitialized(): void;
   printErr(str:string):void;
 }
 
@@ -28,7 +31,6 @@ async function downloadScript(src:string) : Promise<Blob> {
   let blob = await resp.blob();
   return blob;
 }
-
 
 export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:LibretroModule) => void) {
     /**
@@ -66,8 +68,9 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
             e.preventDefault();
         }
     });
-    downloadScript(gisst_root + '/cores/'+core+'_libretro.js').then(scriptBlob => {
-    const module:LibretroModuleDef = {
+    downloadScript(gisst_root+'/cores/'+core+'_libretro.js').then(scriptBlob => {
+      let initial_mod:object | undefined;
+      const module:LibretroModuleDef = {
         startRetroArch: function(canvas:HTMLCanvasElement, retro_args:string[], initialized_cb:() => void) {
             const me = <LibretroModule>this;
             if(!canvas.tabIndex) { canvas.tabIndex = 1; }
@@ -96,9 +99,12 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
             return out;
         },
         noInitialRun: true,
+        noImageDecoding: true,
+        noAudioDecoding: true,
         preRun: [
             function(init_mod:object|undefined) {
                 if(init_mod === undefined) { throw "Must use modularized emscripten"; }
+                initial_mod = init_mod;
                 const module = <LibretroModule>(init_mod!);
                 function stdin() {
                     // Return ASCII code of character, or null if no input
@@ -135,16 +141,16 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
                 }
                 module.FS.init(stdin,stdout,null);
             },
-            function(init_mod:object|undefined) {
-              if(init_mod === undefined) { throw "Must use modularized emscripten"; }
-              const module = <LibretroModule>(init_mod!);
-              loaded_cb(module);
-            }
         ],
+        postRun:[],
+        onRuntimeInitialized: function() {
+            if(initial_mod === undefined) { throw "Must use modularized emscripten libretro"; }
+            const module = <LibretroModule>(initial_mod!);
+            loaded_cb(module);
+        },
         locateFile: function(path, _prefix) {
             return gisst_root+'/cores/'+path;
         },
-        postRun: [],
         printErr: function(text:string) {
             console.log(text);
         },
@@ -164,5 +170,5 @@ export function loadRetroArch(gisst_root:string, core:string, loaded_cb:(mod:Lib
             instantiate(cores[core]);
         }).catch(err => { console.error("Couldn't instantiate module", err); throw err; });
     }
-    });
+  });
 }
