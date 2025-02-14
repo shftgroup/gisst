@@ -1,7 +1,64 @@
 import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls, EmbedOptions, ControllerOverlayMode} from './types.d';
 import {loadRetroArch,LibretroModule} from './libretro_adapter';
+import * as zip from "@zip.js/zip.js";
+
+async function setupZipFS(zipBuf:Uint8Array) {
+  async function writeFile(path:string, data:Uint8Array) {
+    const dir_end = path.lastIndexOf("/");
+    const parent = path.substr(0, dir_end);
+    const child = path.substr(dir_end+1);
+    const parent_dir = await mkdirTree(parent);
+    //console.log("about to create", parent, "/", child);
+    const file = await parent_dir.getFileHandle(child,{create:true});
+    const stream = await file.createWritable();
+    await stream.write(data);
+    await stream.close();
+  }
+  async function mkdirTree(path:string) {
+    const parts = path.split("/");
+    let here = root;
+    for (const part of parts) {
+      if (part == "") { continue; }
+      here = await here.getDirectoryHandle(part, {create:true});
+    }
+    return here;
+  }
+  const root = await navigator.storage.getDirectory();
+  const mount = "assets";
+  const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(zipBuf), {useWebWorkers:false});
+  const entries = await zipReader.getEntries();
+  for(const file of entries) {
+    if (file.getData && !file.directory) {
+      const writer = new zip.Uint8ArrayWriter();
+      const data = await file.getData(writer);
+      await writeFile(mount+"/"+file.filename, data);
+    } else if (file.directory) {
+      await mkdirTree(mount+"/"+file.filename);
+    }
+  }
+  await zipReader.close();
+}
 
 async function setupFileSystem(module:LibretroModule) {
+  let old_timestamp = localStorage.getItem("asset_time") ?? "";
+  for await (const key of ((await navigator.storage.getDirectory()) as any).keys()) {
+    if (key == "assets") {
+      // If our FS has been wiped, just get it anyway
+      old_timestamp = "";
+      break;
+    }
+  }
+  let resp = await fetch(gisst_root+"/assets/frontend/assets-minimal.zip", {
+    headers: {
+      "If-Modified-Since": old_timestamp
+    }
+  });
+  if (resp.status == 200) {
+    await setupZipFS(new Uint8Array(await resp.arrayBuffer()));
+    localStorage.setItem("asset_time", resp.headers.get("last-modified") ?? "");
+  } else {
+    await resp.text();
+  }
   module.FS.createPath("/","opfs",true,true);
   module.FS.mount(module.OPFS, {}, "/opfs");
   module.FS.createPath("/","fetch",true,true);
@@ -31,7 +88,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   const has_config = manifest.find((o) => o.object_role=="config")!;
   if(has_config) {
     retro_args.push("--appendconfig");
-    retro_args.push("/fetch/retroarch.cfg");
+    retro_args.push("/fetch/content/retroarch.cfg");
   }
   retro_args.push("/fetch/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
@@ -45,8 +102,8 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     loadRetroArch(gisst_root, core,
       async function (module:LibretroModule) {
         setupFileSystem(module);
-        module.FS.createPath("", "/fetch/content", true, true);
-        module.FS.createPath("", state_dir, true, true);
+        module.FS.createPath("/", "fetch/content", true, true);
+        module.FS.createPath("/", state_dir, true, true);
         for(const file of manifest) {
           let download_source_path = "/fetch/content/" + file.file_source_path;
           let content_url = gisst_root+"/storage/"+file.file_dest_path;
@@ -58,7 +115,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
             sz = parseInt(resp.headers.get("Content-Length") ?? "0",10);
           }
           await resp.text();
-          if (sz > 0 && sz <= 16*1024) {
+          if (sz > 0 && sz <= 16*1024*1024) {
             let data = await (await fetch(content_url)).arrayBuffer();
             module.FS.createDataFile("/", download_source_path+"/"+file.file_filename!, new Uint8Array(data), true, true, true);
           } else {
@@ -89,7 +146,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
           if (core in overlays) {
             overlay = overlays[core as keyof typeof overlays];
           }
-          ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/bundle/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
+          ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/opfs/assets/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
         }
         const enc = new TextEncoder();
         const lines_enc = enc.encode(ra_cfg_text);
