@@ -15,6 +15,7 @@ axum = { version = "0.7.9", features = ["multipart", "macros"] }
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
 axum-macros = "0.4.2"
 base64 = "0.21.2"
+rustls = "0.23"
 bytes = { version = "1.4.0", features = ["serde"] }
 config = {  version = "0.13.3", features = ["toml"], default-features = false }
 crc = "3.0.1"
@@ -33,7 +34,7 @@ tokio = { version = "1.27.0", features = ["full"] }
 tower = {version="0.4.13",features=["util"]}
 tower-http = { version = "0.6.2", features = ["fs", "trace", "cors"] }
 tracing = "0.1.37"
-tracing-subscriber = { version = "0.3.16", features = ["env-filter"]}
+tracing-subscriber = { version = "0.3.17", features = ["env-filter", "registry"]}
 uuid = { version = "1.8", features = ["serde", "v4"] }
 gisst = { path = "../gisst" }
 serde_with = {version = "3.3.0", features = ["base64"]}
@@ -42,3 +43,7 @@ axum-login = { version = "0.16.0" } #features = ["sqlx", "postgres"]}
 oauth2 = "4.4.2"
 reqwest = {version="0.11.20", features=["json"]}
 rand = { version = "0.8.5", features = ["min_const_gen"]}
+opentelemetry = { version = "0.19.0", features = ["rt-tokio", "trace"]}
+opentelemetry-otlp = { version = "0.12.0", features = ["tonic", "metrics"] }
+opentelemetry-semantic-conventions = { version="0.11.0" }
+tracing-opentelemetry = "0.19.0"

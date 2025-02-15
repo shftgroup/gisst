@@ -75,6 +75,7 @@ impl ServerState {
 }
 
 #[allow(clippy::too_many_lines)]
+#[tracing::instrument(name="launch")]
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     use crate::selective_serve_dir;
     StorageHandler::init_storage(
