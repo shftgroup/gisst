@@ -14,6 +14,7 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
   canvas.classList.add("gisst-embed-hidden");
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   canvas.id = "embed_canvas_"+which_canvas;
+  which_canvas += 1;
   const canvas_txt = document.createElement("div");
   canvas_txt.classList.add("gisst-embed-webplayer-textmode");
   canvas_txt.classList.add("gisst-embed-hidden");
@@ -77,7 +78,7 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
     const w = canvas.width;
     const h = canvas.height;
     if (w == 0 || h == 0) { return; }
-    let target_w = container.offsetWidth;
+    const target_w = container.offsetWidth;
     let target_h;
     if (kind == "v86") {
       const aspect = w / h;

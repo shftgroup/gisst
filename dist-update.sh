@@ -59,7 +59,7 @@ pushd ra-build
 mkdir -p cores
 emsdk install tot
 emsdk activate tot
-git clone --depth 1 -b emscripten-worker-pthread https://github.com/JoeOsborn/retroarch ra || echo "already have RA"
+git clone --depth 1 https://github.com/libretro/retroarch ra || echo "already have RA"
 git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "already have fceumm"
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
 git clone --depth 1 https://github.com/libretro/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
@@ -67,7 +67,9 @@ git clone --depth 1 https://github.com/libretro/vba-next vba_next || echo "alrea
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
 git clone --depth 1 https://github.com/libretro/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
 
+
 cd ra
+rm -rf ra/obj-emscripten
 emconfigure ./configure
 cd ..
 
@@ -93,7 +95,7 @@ for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte}; do
     fi
     pushd ../ra
     cp libretro_emscripten.bc libretro_emscripten.a
-    emmake make -f Makefile.emscripten LIBRETRO=$f -j all || die "could not build RA dist for ${f}"
+    emmake make -f Makefile.emscripten LIBRETRO=$f PTHREAD=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EGL=0 ASYNC=0 -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* ../cores
     popd
     popd

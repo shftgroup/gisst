@@ -36,11 +36,16 @@ declare namespace Emscripten {
     }
 }
 
+interface Environment {
+  [key:string]: string
+}
+
 interface EmscriptenModule {
     print(str: string): void;
     printErr(str: string): void;
     arguments: string[];
     environment: Emscripten.EnvironmentType;
+    ENV:Environment,
     preInit: Array<{ (): void }>;
     preRun: Array<{ (mod:object|undefined): void }>;
     postRun: Array<{ (mod:object|undefined): void }>;

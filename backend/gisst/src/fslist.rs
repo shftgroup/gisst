@@ -267,16 +267,5 @@ fn get_dir_at_path_fat(
 
 #[must_use]
 pub fn is_disk_image(file: &std::path::Path) -> bool {
-    let Ok(cookie) = magic::Cookie::open(magic::cookie::Flags::ERROR) else {
-        return false;
-    };
-    let db = DatabasePaths::default();
-    match cookie.load(&db) {
-        Ok(cookie) => cookie
-            .file(file)
-            .map(|desc| desc.contains("DOS/MBR boot sector"))
-            .unwrap_or(false),
-        // TODO error reporting
-        _ => false,
-    }
+    std::fs::File::open(file).is_ok_and(|mut f| mbrman::MBR::read_from(&mut f, 512).is_ok())
 }

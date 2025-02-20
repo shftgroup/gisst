@@ -82,6 +82,10 @@ pub enum IngestError {
     InsertFile(#[from] gisst::error::InsertFile),
     #[error("Role index too high, must be <= 65535")]
     RoleTooHigh(usize),
+    #[error("CHD error")]
+    Chd(#[from] chd::Error),
+    #[error("CHD no checksum error")]
+    ChdNoChecksum(),
 }
 
 #[allow(clippy::too_many_lines)]
@@ -341,7 +345,9 @@ async fn find_entry(
     if let Some(rval) = db.find_entry::<&str, &[u8]>("md5", &hash) {
         info!("metadata found\n{rval} for {path:?}");
         Ok(FindResult::InRDB(rval))
-    } else {
+    } else if let Some(rval) = db.find_entry_by::<&str, &str>("name", (nom) => {
+        
+    }){
         warn!("md5 not found");
         Ok(FindResult::NotInRDB)
     }

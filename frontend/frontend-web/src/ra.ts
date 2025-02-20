@@ -3,7 +3,6 @@ import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink, EmbedOptions, ControllerOverlayMode} from './types.d';
 import {LibretroModule, loadRetroArch} from './libretro_adapter';
-import * as zip from "@zip.js/zip.js";
 
 const FS_CHECK_INTERVAL = 1000;
 // one auto state per 5 minutes feels reasonable
@@ -18,42 +17,6 @@ let RA:LibretroModule;
 let ui_state:UI<string>;
 let db:GISSTDBConnector;
 
-async function setupZipFS(zipBuf:Uint8Array) {
-  async function writeFile(path:string, data:Uint8Array) {
-    const dir_end = path.lastIndexOf("/");
-    const parent = path.substr(0, dir_end);
-    const child = path.substr(dir_end+1);
-    const parent_dir = await mkdirTree(parent);
-    //console.log("about to create", parent, "/", child);
-    const file = await parent_dir.getFileHandle(child,{create:true});
-    const stream = await file.createWritable();
-    await stream.write(data);
-    await stream.close();
-  }
-  async function mkdirTree(path:string) {
-    const parts = path.split("/");
-    let here = root;
-    for (const part of parts) {
-      if (part == "") { continue; }
-      here = await here.getDirectoryHandle(part, {create:true});
-    }
-    return here;
-  }
-  const root = await navigator.storage.getDirectory();
-  const mount = "assets";
-  const zipReader = new zip.ZipReader(new zip.Uint8ArrayReader(zipBuf), {useWebWorkers:false});
-  const entries = await zipReader.getEntries();
-  for(const file of entries) {
-    if (file.getData && !file.directory) {
-      const writer = new zip.Uint8ArrayWriter();
-      const data = await file.getData(writer);
-      await writeFile(mount+"/"+file.filename, data);
-    } else if (file.directory) {
-      await mkdirTree(mount+"/"+file.filename);
-    }
-  }
-  await zipReader.close();
-}
 async function setupFileSystem(module:LibretroModule) {
   let old_timestamp = localStorage.getItem("asset_time") ?? "";
   for await (const key of ((await navigator.storage.getDirectory()) as any).keys()) {
@@ -69,7 +32,7 @@ async function setupFileSystem(module:LibretroModule) {
     }
   });
   if (resp.status == 200) {
-    await setupZipFS(new Uint8Array(await resp.arrayBuffer()));
+    // await setupZipFS(new Uint8Array(await resp.arrayBuffer()));
     localStorage.setItem("asset_time", resp.headers.get("last-modified") ?? "");
   } else {
     await resp.text();
