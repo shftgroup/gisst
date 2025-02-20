@@ -9,7 +9,7 @@ mod tus;
 mod utils;
 
 use anyhow::Result;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{fmt,EnvFilter};
 
 // Tracing dependencies
 use opentelemetry::{global, runtime, KeyValue};
@@ -37,31 +37,48 @@ fn init_tracer() -> Result<trace::Tracer, TraceError> {
 }
 
 #[tokio::main]
-#[tracing::instrument(name="main")]
+#[tracing::instrument(name="main")] 
 async fn main() -> Result<()> {
     global::set_text_map_propagator(TraceContextPropagator::new());
     let tracer = init_tracer().unwrap();
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    let subscriber = tracing_subscriber::Registry::default().with(telemetry);
+    let subscriber = tracing_subscriber::Registry::default()
+        .with(tracing_subscriber::EnvFilter::from_default_env())
+        .with(telemetry).with(fmt::Layer::default());
     tracing::subscriber::set_global_default(subscriber).unwrap();
-
-    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
-    let path = std::env::current_dir()?;
-    let config = serverconfig::ServerConfig::new()?;
-
+    
     // let default_tracing_directive = config
     //     .env
     //     .default_directive
     //     .clone()
     //     .parse()
     //     .expect("default tracing directive has to be valid");
-    // let _filter = EnvFilter::builder()
+    // let filter = EnvFilter::builder()
     //     .with_default_directive(default_tracing_directive)
     //     .parse(config.env.rust_log.clone())?;
+    // tracing_subscriber::fmt()
+    //     .with_target(false)
+    //     .with_env_filter(filter)
+    //     .pretty()
+    //     .init();
+
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    let path = std::env::current_dir()?;
+    let config = serverconfig::ServerConfig::new()?;
+
+    let default_tracing_directive = config
+        .env
+        .default_directive
+        .clone()
+        .parse()
+        .expect("default tracing directive has to be valid");
+    let _filter = EnvFilter::builder()
+        .with_default_directive(default_tracing_directive)
+        .parse(config.env.rust_log.clone())?;
     
     tracing::info!("The current directory is {}", path.display());
     tracing::debug!("{:?}", &config);
-
+    tracing::error!("WHoopsie daisy its good");
     server::launch(&config).await?;
 
     global::shutdown_tracer_provider();

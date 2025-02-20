@@ -75,8 +75,11 @@ impl ServerState {
 }
 
 #[allow(clippy::too_many_lines)]
-#[tracing::instrument(name="launch")]
+#[tracing::instrument]
 pub async fn launch(config: &ServerConfig) -> Result<()> {
+    debug!("Starting launch sequence!!");
+    debug!("T-Minus 10 seconds...");
+    tracing::error!("SCreeeeeee");
     use crate::selective_serve_dir;
     StorageHandler::init_storage(
         &config.storage.root_folder_path,
@@ -187,8 +190,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/about", get(get_about))
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33_554_432))
-        .layer(auth_layer)
-        .layer(TraceLayer::new_for_http().make_span_with(tower_http::trace::DefaultMakeSpan::new().include_headers(config.env.trace_include_headers)));
+        .layer(auth_layer);
+        // .layer(TraceLayer::new_for_http().make_span_with(tower_http::trace::DefaultMakeSpan::new().include_headers(config.env.trace_include_headers)));
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
@@ -222,7 +225,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             .await
             .expect("could not launch GISST HTTP server on port 3000");
     }
-
+    tracing::error!("zam");
     Ok(())
 }
 async fn handle_error(error: axum::BoxError) -> impl axum::response::IntoResponse {
