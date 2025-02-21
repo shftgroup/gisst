@@ -1217,6 +1217,7 @@ pub async fn insert_file_object(
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Duplicate {
     ReuseObject,
     ReuseData,

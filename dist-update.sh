@@ -68,6 +68,7 @@ git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || ec
 git clone --depth 1 https://github.com/libretro/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
 
 
+pushd ra-build
 cd ra
 rm -rf ra/obj-emscripten
 emconfigure ./configure
