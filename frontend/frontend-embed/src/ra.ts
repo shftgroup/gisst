@@ -46,7 +46,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         let fetch_manifest = "";
         /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
         for(const file of manifest) {
-          let download_source_path_full = "/fetch/content/" + file.file_source_path;
+          const download_source_path_full = "/fetch/content/" + file.file_source_path;
           let download_source_path = download_source_path_full;
           const last_index = download_source_path.lastIndexOf(file.file_filename!);
           if(last_index >= 0) {

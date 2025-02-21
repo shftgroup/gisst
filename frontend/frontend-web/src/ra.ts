@@ -17,32 +17,6 @@ let RA:LibretroModule;
 let ui_state:UI<string>;
 let db:GISSTDBConnector;
 
-async function setupFileSystem(module:LibretroModule) {
-  let old_timestamp = localStorage.getItem("asset_time") ?? "";
-  for await (const key of ((await navigator.storage.getDirectory()) as any).keys()) {
-    if (key == "assets") {
-      // If our FS has been wiped, just get it anyway
-      old_timestamp = "";
-      break;
-    }
-  }
-  let resp = await fetch("assets/frontend/assets_minimal.zip", {
-    headers: {
-      "If-Modified-Since": old_timestamp
-    }
-  });
-  if (resp.status == 200) {
-    // await setupZipFS(new Uint8Array(await resp.arrayBuffer()));
-    localStorage.setItem("asset_time", resp.headers.get("last-modified") ?? "");
-  } else {
-    await resp.text();
-  }
-  module.FS.createPath("/","opfs",true,true);
-  module.FS.mount(module.OPFS, {}, "/opfs");
-  module.FS.createPath("/","fetch",true,true);
-  module.FS.createPath("/","mem",true,true);
-}
-
 export async function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
   db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
 
@@ -53,19 +27,33 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
   const movie = start.type == "replay";
   const source_path = content.file_source_path!.replace(content.file_filename!, "");
   const use_gamepad_overlay = embed_options.controls == ControllerOverlayMode.On || ((embed_options.controls??ControllerOverlayMode.Auto) == ControllerOverlayMode.Auto && mobileAndTabletCheck());
+  let entryScreenshot:GISSTModels.DBRecord;
+  let state_data:Uint8Array|null = null;
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
+    const data = (start as StateStart).data;
+    state_data = new Uint8Array(await (await fetch("/storage/"+data.file_dest_path)).arrayBuffer());
+    console.log(data, "/storage/"+data.file_dest_path,"/fetch/content/entry_state");
+    if(!data.screenshot_id) {
+      console.error("No screenshot for entry state");
+      entryScreenshot = {screenshot_id:"", screenshot_data:""};
+    } else {
+      entryScreenshot = await db.getRecordById("screenshot", data.screenshot_id);
+    }
   }
+  let replay:Uint8Array|null = null;
   if (movie) {
     retro_args.push("-P");
     retro_args.push(state_dir+"/"+content_base+".replay1");
+    const data = (start as ReplayStart).data;
+    replay = new Uint8Array(await ((await fetch("/storage/"+data.file_dest_path)).arrayBuffer()));
   } else if(boot_into_record) {
     retro_args.push("-R");
     retro_args.push(state_dir+"/"+content_base+".replay1");
   }
-  retro_args.push("--config=/mem/retroarch.cfg");
-  //retro_args.push("/mem/retroarch.cfg");
+  retro_args.push("-c");
+  retro_args.push("/mem/retroarch.cfg");
   const has_config = manifest.find((o) => o.object_role=="config")!;
   if(has_config) {
     retro_args.push("--appendconfig");
@@ -73,6 +61,7 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
   }
   retro_args.push("/fetch/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
+  let ra_cfg_text:string = await ((await fetch("/assets/retroarch_web_base.cfg")).text());
 
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
@@ -165,55 +154,42 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
     JSON.parse(document.getElementById("config")!.textContent!)
   );
   ui_state.setReplayMode(movie ? UIReplayMode.Playback : (boot_into_record ? UIReplayMode.Record : UIReplayMode.Inactive));
-  let ra_cfg_text:string = await ((await fetch("/assets/retroarch_web_base.cfg")).text());
-  let replay:Uint8Array|null = null;
-  if(movie) {
-    const data = (start as ReplayStart).data;
-    replay = new Uint8Array(await ((await fetch("/storage/"+data.file_dest_path)).arrayBuffer()));
-  }
-  let entryScreenshot:GISSTModels.DBRecord;
-  if (entryState) {
-    // Cast: This one is definitely a statestart because the type is state
-    const data = (start as StateStart).data;
-    console.log(data, "/storage/"+data.file_dest_path,"/fetch/content/entry_state");
-    if(!data.screenshot_id) {
-      console.error("No screenshot for entry state");
-      entryScreenshot = {screenshot_id:"", screenshot_data:""};
-    } else {
-      entryScreenshot = await db.getRecordById("screenshot", data.screenshot_id);
-    }
-  }
-  loadRetroArch("", core,
+  loadRetroArch("", core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt'},
+    true,
     async function (module:LibretroModule) {
+      const enc = new TextEncoder();
       RA = module;
-      setupFileSystem(RA);
-      RA.FS.createPath("/", "/fetch/content", true, true);
+      RA.FS.createPath("/", "fetch/content", true, true);
       RA.FS.createPath("/", state_dir, true, true);
+      let fetch_manifest = "";
+      /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
 
       for(const file of manifest) {
-        let download_source_path = "/fetch/content/" + file.file_source_path;
-        let content_url = "/storage/"+file.file_dest_path;
-        download_source_path = download_source_path.replace(file.file_filename!, "");
-        module.FS.createPath("/", download_source_path, true, true);
-        let resp = await fetch(content_url, {method:"HEAD"});
+        const download_source_path_full = "/fetch/content/" + file.file_source_path;
+        let download_source_path = download_source_path_full;
+        const last_index = download_source_path.lastIndexOf(file.file_filename!);
+        if(last_index >= 0) {
+          download_source_path = download_source_path_full.substring(0, last_index);
+        }
+        const content_url = "/storage/"+file.file_dest_path;
+        const resp = await fetch(content_url, {method:"HEAD"});
         let sz = 0;
         if (resp.status == 200) {
           sz = parseInt(resp.headers.get("Content-Length") ?? "0",10);
         }
         await resp.text();
         if (sz > 0 && sz <= 16*1024*1024) {
-          let data = await (await fetch(content_url)).arrayBuffer();
-          module.FS.createDataFile("/", download_source_path+"/"+file.file_filename!, new Uint8Array(data), true, true, true);
+          const data = await (await fetch(content_url)).arrayBuffer();
+          module.FS.createPath("/",download_source_path, true, true);
+          module.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
         } else {
-          let backend = module.FETCHFS.createBackend({base_url:content_url, chunkSize:16*1024*1024});
-          module.FS.createFile(download_source_path, file.file_filename!, 0o666, backend);
+          fetch_manifest += `${content_url} ${download_source_path_full}\n`;
         }
       }
+      module.FS.createDataFile("/mem", "fetch.txt", enc.encode(fetch_manifest), true, true, true);
       if (entryState) {
-        const data = (start as StateStart).data;
-        let file_bytes = new Uint8Array(await (await fetch("/storage/"+data.file_dest_path)).arrayBuffer());
-        module.FS.createDataFile(state_dir, content_base + ".state1.entry", file_bytes, true, true, true);
-        module.FS.createDataFile(state_dir, content_base + ".state1", file_bytes, true, true, true);
+        module.FS.createDataFile(state_dir, content_base + ".state1.entry", state_data, true, true, true);
+        module.FS.createDataFile(state_dir, content_base + ".state1", state_data, true, true, true);
       }
       if (movie) {
         const data = (start as ReplayStart).data;
@@ -234,11 +210,9 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
         if (core in overlays) {
           overlay = overlays[core as keyof typeof overlays];
         }
-        ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/opfs/assets/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
+        ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/bundle/assets/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
       }
-      const enc = new TextEncoder();
       const lines_enc = enc.encode(ra_cfg_text);
-      module.FS.createPath("/", "/mem", true, true);
       module.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);
       if (entryState) {
         const data = (start as StateStart).data;

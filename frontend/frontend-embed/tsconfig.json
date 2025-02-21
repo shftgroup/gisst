@@ -15,6 +15,5 @@
     "noImplicitReturns": true,
     "skipLibCheck": true
   },
-  "include": ["src"],
-  "exclude": ["src/libretro.worker.ts"]
+  "include": ["src"]
 }
