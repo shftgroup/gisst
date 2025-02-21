@@ -111,6 +111,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
         if(!canvas.tabIndex) { canvas.tabIndex = 1; }
         canvas.addEventListener("click", () => canvas.focus());
         me.canvas = canvas;
+        me.ENV = env;
         me.callMain(retro_args);
         initialized_cb();
         canvas.focus();
@@ -133,7 +134,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
         }
         return out;
       },
-      ENV: {},
+      ENV: env,
       noInitialRun: true,
       noImageDecoding: true,
       noAudioDecoding: true,
@@ -188,6 +189,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
       onRuntimeInitialized: function() {
         if(initial_mod === undefined) { throw "Must use modularized emscripten libretro"; }
         const module = <LibretroModule>(initial_mod!);
+        module.ENV = env;
         loaded_cb(module);
       },
       locateFile: function(path, _prefix) {

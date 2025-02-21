@@ -26,8 +26,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     const data = (start as ReplayStart).data;
     replay = new Uint8Array(await ((await fetch(gisst_root+"/storage/"+data.file_dest_path)).arrayBuffer()));
   }
-  retro_args.push("-c");
-  retro_args.push("/mem/retroarch.cfg");
+  retro_args.push("--config=/mem/retroarch.cfg");
   const has_config = manifest.find((o) => o.object_role=="config")!;
   if(has_config) {
     retro_args.push("--appendconfig");
@@ -46,11 +45,13 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         let fetch_manifest = "";
         /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
         for(const file of manifest) {
-          const download_source_path_full = "/fetch/content/" + file.file_source_path;
+          let download_source_path_full = "/fetch/content/" + file.file_source_path;
           let download_source_path = download_source_path_full;
           const last_index = download_source_path.lastIndexOf(file.file_filename!);
           if(last_index >= 0) {
             download_source_path = download_source_path_full.substring(0, last_index);
+          } else {
+            download_source_path_full += `/${file.file_filename!}`;
           }
           const content_url = gisst_root+"/storage/"+file.file_dest_path;
           const resp = await fetch(content_url, {method:"HEAD"});
@@ -64,7 +65,8 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
             module.FS.createPath("/",download_source_path, true, true);
             module.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
           } else {
-            fetch_manifest += `${content_url} ${download_source_path_full}\n`;
+            const content_url_encoded = encodeURI(content_url);
+            fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
           }
         }
         module.FS.createDataFile("/mem", "fetch.txt", enc.encode(fetch_manifest), true, true, true);

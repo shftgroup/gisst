@@ -152,7 +152,7 @@ pub enum V86Clone {
 
 #[derive(Debug, thiserror::Error)]
 pub enum InsertFile {
-    #[error("Invalid path")]
+    #[error("Invalid path or no file at path")]
     Path(std::path::PathBuf),
     #[error("too big {0}")]
     TooBig(#[from] std::num::TryFromIntError),

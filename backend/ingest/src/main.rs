@@ -106,9 +106,7 @@ async fn main() -> Result<(), IngestError> {
         dep_paths,
         allow_unmatched,
     } = Args::parse();
-    env_logger::Builder::new()
-        .filter_level(verbose.log_level_filter())
-        .init();
+    env_logger::init();
     info!("Connecting to database: {}", gisst_cli_db_url.to_string());
     let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.to_string()).await?);
     info!("DB connection successful.");
@@ -131,6 +129,7 @@ async fn main() -> Result<(), IngestError> {
         let dep = std::path::Path::new(dep);
         let file_name = dep.file_name().unwrap().to_string_lossy().to_string();
         let dep_path = dep_paths.get(i).unwrap_or(&file_name);
+        info!("inserting dep {dep:?} @ {dep_path:?}");
         let dep_id = insert_file_object(
             &mut base_conn,
             &storage_root,
@@ -191,6 +190,7 @@ async fn main() -> Result<(), IngestError> {
                 let mut conn = pool.acquire().await?;
                 if ext.eq_ignore_ascii_case("m3u") {
                     let mut found = false;
+                    info!("playlist file {path:?}");
                     for file in files_of_playlist(&roms, &path)? {
                         match find_entry(&mut conn, &db, &file).await? {
                             FindResult::AlreadyHave => {
@@ -345,9 +345,7 @@ async fn find_entry(
     if let Some(rval) = db.find_entry::<&str, &[u8]>("md5", &hash) {
         info!("metadata found\n{rval} for {path:?}");
         Ok(FindResult::InRDB(rval))
-    } else if let Some(rval) = db.find_entry_by::<&str, &str>("name", (nom) => {
-        
-    }){
+    } else {
         warn!("md5 not found");
         Ok(FindResult::NotInRDB)
     }
@@ -479,6 +477,7 @@ async fn create_playlist_instance_objects(
     .await?;
     Object::link_object_to_instance(conn, playlist_id, instance_id, ObjectRole::Content, 0).await?;
     let mut c_idx = 1;
+    info!("inserting playlist objects {path:?}");
     for file in files_of_playlist(roms, path)? {
         let file_id = insert_file_object(
             conn,
@@ -529,12 +528,16 @@ fn files_of_playlist(
     for file in std::fs::read_to_string(path)?.lines() {
         let file_path = roms.join(std::path::Path::new(file));
         out.push(file_path.clone());
+        info!("read playlist line {file:?}");
         if file_path
             .extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case(".cue"))
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("cue"))
         {
+            info!("read cue file {file_path:?}");
             for cue_line in std::fs::read_to_string(file_path)?.lines() {
+                info!("read cue line {cue_line}");
                 if let Some(captures) = cue_file_re.captures(cue_line) {
+                    info!("cap: {captures:?}");
                     let track = &captures[1];
                     let track_path = roms.join(std::path::Path::new(track));
                     out.push(track_path.clone());

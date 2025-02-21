@@ -134,7 +134,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
         }
         return out;
       },
-      ENV: {},
+      ENV: env,
       noInitialRun: true,
       noImageDecoding: true,
       noAudioDecoding: true,

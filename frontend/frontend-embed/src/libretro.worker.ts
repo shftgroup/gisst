@@ -85,5 +85,6 @@ onmessage = async (msg:MessageEvent<SetupMessage>) => {
       throw resp;
     }
     postMessage({command:"loaded_bundle", time:resp.headers.get("last-modified")});
+    close();
   }
 }

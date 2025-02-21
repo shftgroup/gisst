@@ -1140,6 +1140,9 @@ pub async fn insert_file_object(
         .ok_or_else(|| InsertFile::Path(path.to_path_buf()))?
         .to_string_lossy()
         .to_string();
+    if !path.exists() {
+        return Err(InsertFile::Path(path.to_path_buf()));
+    }
     let file_name = filename_override.unwrap_or(file_name);
     let created_on = chrono::Utc::now();
     let file_size = i64::try_from(std::fs::metadata(path)?.len())?;

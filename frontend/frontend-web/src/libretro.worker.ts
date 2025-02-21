@@ -71,11 +71,13 @@ onmessage = async (msg:MessageEvent<SetupMessage>) => {
     } catch (_) {
       old_timestamp = "";
     }
+    console.log("old timestamp:",old_timestamp);
     const resp = await fetch(gisst_root+"/assets/frontend/bundle.zip", {
       headers: {
         "If-Modified-Since": old_timestamp
       }
     });
+    console.log("resp.status",resp.status);
     if (resp.status == 200) {
       await setupZipFS(new Uint8Array(await resp.arrayBuffer()));
     } else if (resp.status < 400) {
@@ -84,5 +86,6 @@ onmessage = async (msg:MessageEvent<SetupMessage>) => {
       throw resp;
     }
     postMessage({command:"loaded_bundle", time:resp.headers.get("last-modified")});
+    close();
   }
 }

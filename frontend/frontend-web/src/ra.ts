@@ -165,11 +165,13 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
       /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
 
       for(const file of manifest) {
-        const download_source_path_full = "/fetch/content/" + file.file_source_path;
+        let download_source_path_full = "/fetch/content/" + file.file_source_path;
         let download_source_path = download_source_path_full;
         const last_index = download_source_path.lastIndexOf(file.file_filename!);
         if(last_index >= 0) {
           download_source_path = download_source_path_full.substring(0, last_index);
+        } else {
+          download_source_path_full += `/${file.file_filename!}`;
         }
         const content_url = "/storage/"+file.file_dest_path;
         const resp = await fetch(content_url, {method:"HEAD"});
@@ -183,9 +185,11 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
           module.FS.createPath("/",download_source_path, true, true);
           module.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
         } else {
-          fetch_manifest += `${content_url} ${download_source_path_full}\n`;
+          const content_url_encoded = encodeURI(content_url);
+          fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
         }
       }
+      console.log("Place fetch manifest",fetch_manifest);
       module.FS.createDataFile("/mem", "fetch.txt", enc.encode(fetch_manifest), true, true, true);
       if (entryState) {
         module.FS.createDataFile(state_dir, content_base + ".state1.entry", state_data, true, true, true);
