@@ -17,7 +17,7 @@
   "types": "./dist/ra-util.d.ts",
   "scripts": {
     "dev": "vite",
-    "check": "tsc && npx eslint src",
+    "check": "npx tsc && npx eslint src",
     "build": "tsc && vite build && cp dist/ra-util.d.ts dist/ra-util.umd.d.ts",
     "preview": "vite preview"
   },
