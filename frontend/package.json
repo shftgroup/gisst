@@ -8,8 +8,7 @@
     "frontend-embed"
   ],
   "scripts": {
-    "check": "npx tsc --noEmit -p embedv86 && npx tsc --noEmit -p ra-util && npx tsc --noEmit -p gisst-player-ui && npx tsc --noEmit -p frontend-embed && npx tsc --noEmit -p frontend-web && npx eslint */src",
-    "fix": "npx eslint */src --fix"
+    "check": "npm run check --workspaces"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
