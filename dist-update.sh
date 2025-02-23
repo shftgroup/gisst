@@ -28,6 +28,7 @@ PLATFORM_SUB="${2:-x86_64}"
 mkdir -p frontend/frontend-web/public/cores
 mkdir -p frontend/frontend-web/public/assets
 
+if [ ${GET_ASSETS:-1} -eq 1 ] ; then
 rm -rf retroarch-web
 mkdir -p assets
 pushd assets
@@ -53,7 +54,9 @@ rm -rf assets/{xmb,switch,rgui,glui}
 zip -r -l ../assets_minimal.zip *
 cp ../assets_minimal.zip ../frontend/frontend-web/public/assets/frontend/
 popd
+fi
 
+if [ ${FETCH_CORES:-1} -eq 1 ] ; then
 mkdir -p ra-build
 pushd ra-build
 mkdir -p cores
@@ -66,8 +69,10 @@ git clone --depth 1 https://github.com/libretro/pcsx_rearmed pcsx_rearmed || ech
 git clone --depth 1 https://github.com/libretro/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
 git clone --depth 1 https://github.com/libretro/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
+popd
+fi
 
-
+if [ ${BUILD_CORES:-1} -eq 1 ]; then
 pushd ra-build
 cd ra
 rm -rf ra/obj-emscripten
@@ -76,7 +81,7 @@ cd ..
 
 for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte}; do
     pushd $f
-    git pull
+    # git pull
     if [ -f Makefile.libretro ]
     then
         # emmake make -f Makefile.libretro platform=emscripten clean
@@ -102,12 +107,13 @@ for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte}; do
     popd
 done
 popd
-
 cp ra-build/cores/* frontend/frontend-web/public/cores/
+fi
 
+if [ ${BUILD_FRONTEND:-1} -eq 1 ]; then
 cd frontend
 npm i
 npm run build --workspaces --if-present
 npm run dist --workspaces --if-present
 cd ..
-
+fi
