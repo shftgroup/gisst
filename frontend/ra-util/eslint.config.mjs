@@ -26,8 +26,7 @@ export default [
             sourceType: "script",
 
             parserOptions: {
-                tsconfigRootDir: "/home/jcoa2018/Projects/embedulator/frontend/ra-util",
-                project: true,
+                project: true
             },
         },
 
