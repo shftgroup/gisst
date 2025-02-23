@@ -38,7 +38,7 @@ jobs:
       run: npm run build --workspaces --if-present
       working-directory: frontend
     - name: tsc
-      run: npm run check
+      run: npm run check --workspaces --if-present
       working-directory: frontend
     # - name: upload frontend-web/dist
     #   uses: actions/upload-artifact@v3

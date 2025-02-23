@@ -10,12 +10,4 @@
   "scripts": {
     "check": "npm run check --workspaces"
   },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3.1.0",
-    "@eslint/js": "^9.13.0",
-    "@typescript-eslint/eslint-plugin": "^8.12.2",
-    "@typescript-eslint/parser": "^8.12.2",
-    "eslint": "^9.13.0",
-    "eslint-config-prettier": "^9.0.0"
-  }
 }
