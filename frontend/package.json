@@ -9,5 +9,5 @@
   ],
   "scripts": {
     "check": "npm run check --workspaces"
-  },
+  }
 }
