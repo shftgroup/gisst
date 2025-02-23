@@ -106,7 +106,9 @@ async fn main() -> Result<(), IngestError> {
         dep_paths,
         allow_unmatched,
     } = Args::parse();
-    env_logger::init();
+    env_logger::Builder::new()
+        .filter_level(verbose.log_level_filter())
+        .init();
     info!("Connecting to database: {}", gisst_cli_db_url.to_string());
     let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.to_string()).await?);
     info!("DB connection successful.");
