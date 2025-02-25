@@ -341,14 +341,21 @@ async fn find_entry(
         info!("{:?}:{hash_str} already in DB, skip", path);
         return Ok(FindResult::AlreadyHave);
     }
+    let name_without_ext = path.file_stem();
 
     info!("{:?}: {}: {hash_str}", path, hash.len());
 
     if let Some(rval) = db.find_entry::<&str, &[u8]>("md5", &hash) {
         info!("metadata found\n{rval} for {path:?}");
         Ok(FindResult::InRDB(rval))
+    } else if let Some(rval) = name_without_ext
+        .and_then(|name| name.to_str())
+        .and_then(|name| db.find_entry_by::<&str, &str>("name", |n| n == name))
+    {
+        info!("metadata found\n{rval} for {path:?} by name prefix");
+        Ok(FindResult::InRDB(rval))
     } else {
-        warn!("md5 not found");
+        warn!("md5 or name not found");
         Ok(FindResult::NotInRDB)
     }
 }

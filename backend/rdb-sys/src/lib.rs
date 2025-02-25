@@ -322,10 +322,18 @@ impl RDB {
         K: Into<RVal>,
         V: for<'a> TryFrom<&'a RVal> + std::cmp::PartialEq,
     {
+        self.find_entry_by::<K, V>(key, |kv| kv == val)
+    }
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn find_entry_by<K, V>(&self, key: K, test: impl Fn(V) -> bool) -> Option<RVal>
+    where
+        K: Into<RVal>,
+        V: for<'a> TryFrom<&'a RVal> + std::cmp::PartialEq,
+    {
         let mut cursor = self.open_cursor()?;
         let key: RVal = key.into();
         while let Some(rval) = cursor.next() {
-            if rval.map_get_rval::<V>(&key).is_some_and(|v| v == val) {
+            if rval.map_get_rval::<V>(&key).is_some_and(&test) {
                 return Some(rval);
             }
         }
