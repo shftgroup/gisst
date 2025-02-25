@@ -91,7 +91,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
           if (core in overlays) {
             overlay = overlays[core as keyof typeof overlays];
           }
-          ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/bundle/assets/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
+          ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/bundle/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
         }
         const lines_enc = enc.encode(ra_cfg_text);
         module.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);
