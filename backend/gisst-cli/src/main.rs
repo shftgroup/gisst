@@ -162,13 +162,14 @@ async fn add_patched_instance(
         let role_index =
             u16::try_from(link.object_role_index).map_err(GISSTCliError::InvalidRoleIndex)?;
         if link.object_role == ObjectRole::Content
-            && data
+            && !data
                 .files
                 .get(role_index as usize)
                 .map_or("", String::as_str)
                 .is_empty()
         {
             let patch = Path::new(&data.files[role_index as usize]);
+            info!("Patching file {patch:?} for index {role_index} @ {link:?}");
             let object_id = insert_file_object(
                 &mut conn,
                 &storage_root,
