@@ -736,8 +736,8 @@ impl Replay {
             model.replay_description,
             model.instance_id,
             model.creator_id,
-            model.file_id,
             model.replay_forked_from,
+            model.file_id,
             model.created_on,
         )
         .fetch_one(conn)
