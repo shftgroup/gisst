@@ -21,8 +21,8 @@
   "types": "./dist/gisst-player.d.ts",
   "scripts": {
     "dev": "vite",
-    "check": "tsc && npx eslint src",
-    "build": "tsc && vite build && cp dist/gisst-player.d.ts dist/gisst-player.umd.d.ts",
+    "check": "tsc && eslint src",
+    "build": "tsc && vite build && shx cp dist/gisst-player.d.ts dist/gisst-player.umd.d.ts",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -33,6 +33,7 @@
     "eslint": "^9.13.0",
     "sass": "^1.60.0",
     "spark-md5": "^3.0.2",
+    "shx":  "^0.3.4",
     "tus-js-client": "^3.1.1",
     "typescript": "^4.9.5",
     "uuid": "^9.0.0",
