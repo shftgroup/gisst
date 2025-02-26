@@ -104,8 +104,6 @@ pub enum FSList {
     PartitionID(#[from] std::num::ParseIntError),
     #[error("directory zip error")]
     ZIP(#[from] zip::result::ZipError),
-    #[error("file identifier error")]
-    FileMIME(#[from] magic::cookie::Error),
     #[error("fs traversal error: depth limit exceeded")]
     TraversalDepth,
     #[error("fs traversal error: path {0} invalid or not found")]

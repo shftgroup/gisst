@@ -1,7 +1,5 @@
 #![allow(clippy::missing_errors_doc)]
 
-use magic::cookie::DatabasePaths;
-
 use crate::error::FSList;
 
 const DEPTH_LIMIT: usize = 1024;
@@ -183,11 +181,7 @@ pub fn get_file_at_path(
             return Ok(("application/zip".to_string(), dir_zipped));
         }
         let file = get_file_at_path_fat(&fs, subpath)?;
-        let cookie =
-            magic::Cookie::open(magic::cookie::Flags::MIME).map_err(|_| FSList::FiletypeDB)?;
-        let db = DatabasePaths::default();
-        let cookie = cookie.load(&db).map_err(|_| FSList::FiletypeDB)?;
-        let mime = cookie.buffer(&file)?;
+        let mime = tree_magic::from_u8(&file);
         return Ok((mime, file));
     }
     Err(FSList::FileNotFound(path.to_string_lossy().into_owned()))
