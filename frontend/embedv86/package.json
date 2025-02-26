@@ -17,7 +17,7 @@
   "types": "./dist/embedv86.d.ts",
   "scripts": {
     "dev": "vite",
-    "check": "tsc && shx cp eslint src",
+    "check": "tsc && eslint src",
     "build": "tsc && vite build && shx cp dist/embedv86.d.ts dist/embedv86.umd.d.ts",
     "preview": "vite preview"
   },

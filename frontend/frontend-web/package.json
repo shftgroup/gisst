@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "check": "tsc && shx cp eslint src",
+    "check": "tsc && eslint src",
     "build": "tsc && vite build",
     "dist": "vite build && shx cp -r dist ../../backend/web-dist",
     "preview": "vite preview"
