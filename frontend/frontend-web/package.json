@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "check": "tsc && npx eslint src",
+    "check": "tsc && shx cp eslint src",
     "build": "tsc && vite build",
-    "dist": "vite build && rsync -acvzh --exclude index.html dist/* ../../backend/web-dist/",
+    "dist": "vite build && shx cp -r dist ../../backend/web-dist",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -17,6 +17,7 @@
     "coffeescript": "^2.7.0",
     "eslint": "^9.13.0",
     "rollup-plugin-sourcemaps": "0.6.3",
+     "shx": "^0.3.4",
     "typescript": "^4.9.5",
     "vite": "^4.1.0",
     "vite-plugin-checker": "^0.5.5",
