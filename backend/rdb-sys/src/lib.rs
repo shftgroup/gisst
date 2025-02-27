@@ -86,12 +86,12 @@ impl Drop for RVal {
 
 #[allow(dead_code)]
 #[link(name = "retro-db")]
-extern "C" {
-    pub fn libretrodb_new() -> *mut RetroDB;
+unsafe extern "C" {
+    pub safe fn libretrodb_new() -> *mut RetroDB;
     pub fn libretrodb_open(path: *const c_char, db: *mut RetroDB) -> c_int;
     pub fn libretrodb_close(db: *mut RetroDB);
     pub fn libretrodb_free(db: *mut RetroDB);
-    pub fn libretrodb_cursor_new() -> *mut RetroCursor;
+    pub safe fn libretrodb_cursor_new() -> *mut RetroCursor;
     pub fn libretrodb_cursor_open(
         db: *const RetroDB,
         cursor: *mut RetroCursor,
@@ -299,7 +299,7 @@ impl RDB {
     pub fn open(path: &std::path::Path) -> Result<Self, RDBError> {
         let path = path.as_os_str();
         let path = std::ffi::CString::new(path.as_encoded_bytes()).map_err(|_| RDBError::Path)?;
-        let db: *mut RetroDB = unsafe { libretrodb_new() };
+        let db: *mut RetroDB = libretrodb_new();
         if unsafe { libretrodb_open(path.as_ptr(), db) == 0 } {
             Ok(Self(db))
         } else {
