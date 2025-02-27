@@ -19,6 +19,8 @@ jobs:
       with:
         workspaces: "backend"
         cache-all-crates: "true"
+    - name: Install zshell
+      run: sudo apt install -y zsh
     - name: Clippy
       working-directory: backend
       run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
@@ -33,7 +35,7 @@ jobs:
         cargo sqlx database reset -y -f
     - name: Load example data into DB
       working-directory: backend
-      run: mkdir storage; zsh -e ./load_examples.sh
+      run: rm -rf storage; mkdir storage; zsh -e ./load_examples.sh
     - name: Check DB contents
       working-directory: backend
       run: |
