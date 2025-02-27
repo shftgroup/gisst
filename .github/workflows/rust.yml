@@ -11,15 +11,41 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2.5.1
       with:
         workspaces: "backend"
+        cache-all-crates: "true"
     - name: Clippy
       working-directory: backend
       run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
+    - name: Create DB
+      working-directory: backend
+      run: |
+        sudo systemctl start postgresql.service
+        cargo install sqlx-cli
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb" >> .env
+        cargo sqlx database reset -y -f
+    - name: Load example data into DB
+      working-directory: backend
+      run: mkdir storage; zsh -e ./load_examples.sh
+    - name: Check DB contents
+      working-directory: backend
+      run: |
+        sudo -u postgres psql gisstdb -c "select count(*) from instance;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "30"
+        sudo -u postgres psql gisstdb -c "select count(*) from work;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "30"
+        sudo -u postgres psql gisstdb -c "select count(*) from instancework;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "30"
+        sudo -u postgres psql gisstdb -c "select count(*) from state;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from replay;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from screenshot;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from creator;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from environment;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "6"
+        sudo -u postgres psql gisstdb -c "select count(*) from file;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "38"
+        sudo -u postgres psql gisstdb -c "select count(*) from object;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "36"
+        sudo -u postgres psql gisstdb -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fqx "57"
+        du -ac storage > du-out.txt
+        grep -Fqx "52116   total" du-out.txt
+        wc -l du-out.txt | grep -Fqx "199"
