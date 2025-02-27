@@ -195,6 +195,7 @@ pub struct NextUrl {
 }
 
 #[cfg(not(feature = "dummy_auth"))]
+#[tracing::instrument(name="standard_auth_login")] 
 pub async fn login_handler(
     auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
@@ -206,12 +207,15 @@ pub async fn login_handler(
     session.insert(NEXT_URL_KEY, next.next).await?;
     Ok(Redirect::to(auth_url.as_str()).into_response())
 }
+
 #[cfg(feature = "dummy_auth")]
+#[tracing::instrument(name="dummy_auth_login")] 
 pub async fn login_handler(
     mut auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
     session: axum_login::tower_sessions::Session,
 ) -> Result<impl IntoResponse, ServerError> {
+    debug!("Attempting login with dummy duth!");
     let (_, csrf_state) = auth_session.backend.authorize_url();
     session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
     session.insert(NEXT_URL_KEY, next.next).await?;
@@ -267,7 +271,7 @@ pub struct Credentials {
     pub old_state: CsrfToken,
     pub new_state: CsrfToken,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AuthBackend {
     pool: PgPool,
     client: BasicClient,

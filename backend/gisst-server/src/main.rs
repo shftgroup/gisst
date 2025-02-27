@@ -12,7 +12,7 @@ use anyhow::Result;
 use tracing_subscriber::{fmt,EnvFilter};
 
 // Tracing dependencies
-use opentelemetry::{global, runtime, KeyValue};
+use opentelemetry::{global, runtime, Array, KeyValue};
 use opentelemetry::sdk::propagation::TraceContextPropagator;
 use opentelemetry::sdk::{Resource, trace};
 use opentelemetry::trace::TraceError;
@@ -39,11 +39,20 @@ fn init_tracer() -> Result<trace::Tracer, TraceError> {
 #[tokio::main]
 #[tracing::instrument(name="main")] 
 async fn main() -> Result<()> {
+
+    let crates_to_ignore_logs : Vec<&str> = vec!["tower", "sqlx_core", "h2", "axum_login"];
+
     global::set_text_map_propagator(TraceContextPropagator::new());
     let tracer = init_tracer().unwrap();
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    
+    let mut filter = tracing_subscriber::EnvFilter::from_default_env();
+    for ignore_crate in crates_to_ignore_logs.iter() {
+        let my_str = format!("{}=error", ignore_crate);
+        filter = filter.add_directive(my_str.parse()?);
+    }
     let subscriber = tracing_subscriber::Registry::default()
-        .with(tracing_subscriber::EnvFilter::from_default_env())
+        .with(filter)
         .with(telemetry).with(fmt::Layer::default());
     tracing::subscriber::set_global_default(subscriber).unwrap();
     

@@ -44,7 +44,7 @@ use tracing::debug;
 use uuid::Uuid;
 
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ServerState {
     pub pool: PgPool,
     pub root_storage_path: String,
@@ -75,7 +75,7 @@ impl ServerState {
 }
 
 #[allow(clippy::too_many_lines)]
-#[tracing::instrument]
+#[tracing::instrument(name="launch_sequence")] 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     debug!("Starting launch sequence!!");
     debug!("T-Minus 10 seconds...");
@@ -198,6 +198,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         config.http.listen_port,
     );
 
+    tracing::error!("wam?");
     if config.http.dev_ssl {
         use axum_server::tls_rustls::RustlsConfig;
         let tlsconfig = RustlsConfig::from_pem_file(
@@ -319,9 +320,12 @@ async fn get_about(
     )
     .into_response())
 }
+
+#[tracing::instrument(name="access_homepage")] 
 async fn get_homepage(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, ServerError> {
+    debug!("Hello friend!");
     Ok(Html(
         app_state
             .templates
