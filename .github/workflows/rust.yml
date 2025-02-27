@@ -50,6 +50,10 @@ jobs:
         sudo -u postgres psql gisstdb -c "select count(*) from file;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "38"
         sudo -u postgres psql gisstdb -c "select count(*) from object;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "36"
         sudo -u postgres psql gisstdb -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "57"
+        echo "All DB table counts OK"
         du -ac storage > du-out.txt
+        cat du-out.txt
         grep -Fx "52116   total" du-out.txt
+        echo "Total byte count OK"
         wc -l du-out.txt | grep -Fx "199"
+        echo "Line count OK"
