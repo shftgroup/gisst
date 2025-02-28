@@ -26,8 +26,7 @@ jobs:
       uses: Swatinem/rust-cache@v2.5.1
       with:
         workspaces: "backend"
-    - name: Install magic
-      run: sudo apt-get install -y libmagic-dev
+        cache-all-crates: "true"
     - name: Build backend
       working-directory: backend
       run: cargo build --release --bin gisst-server

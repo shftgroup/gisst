@@ -128,6 +128,9 @@ uuid_counter=$((uuid_counter+1));
 ./target/debug/gisst-cli replay create --force-uuid "$work_uuid" --link "$work_uuid" --file ./examples/data/v86/snake_replay0.v86replay --name "Snake Test Replay" --creator-id "$uuid_0"
 work_uuid=$(get_uuid_from_counter)
 uuid_counter=$((uuid_counter+1));
-./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"Window 3.1\", \"work_version\":\"Windows 3.1\", \"work_platform\":\"Windows 3.1\"}"
-./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_v86_win_31\", \"work_id\":\"$work_uuid\"}"
-./target/debug/gisst-cli object create -i --cwd examples/data/v86 --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 0 'win31.img'
+
+if [ -f examples/data/v86/win31.img ]; then
+  ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"Window 3.1\", \"work_version\":\"Windows 3.1\", \"work_platform\":\"Windows 3.1\"}"
+  ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_v86_win_31\", \"work_id\":\"$work_uuid\"}"
+  ./target/debug/gisst-cli object create -i --cwd examples/data/v86 --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 0 'win31.img'
+fi
