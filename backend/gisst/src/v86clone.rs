@@ -32,20 +32,14 @@ pub async fn clone_v86_machine(
     if state.instance_id != instance_id {
         return Err(V86Clone::WrongInstanceForState);
     }
-    let state_file_path = format!(
-        "{storage_root}/{}/{}-{}",
-        state.file_dest_path, state.file_hash, state.file_filename
-    );
+    let state_file_path = format!("{storage_root}/{}", state.file_dest_path);
     let objects = ObjectLink::get_all_for_instance_id(conn, instance_id).await?;
     let mut env_json = env
         .environment_config
         .ok_or(V86Clone::EnvironmentInvalid(instance.environment_id))?
         .to_string();
     for obj in &objects {
-        let file_path = format!(
-            "{storage_root}/{}/{}-{}",
-            obj.file_dest_path, obj.file_hash, obj.file_filename
-        );
+        let file_path = format!("{storage_root}/{}", obj.file_dest_path);
         if let ObjectRole::Content = obj.object_role {
             let idx = obj.object_role_index;
             env_json = env_json.replace(&format!("$CONTENT{idx}"), &file_path);

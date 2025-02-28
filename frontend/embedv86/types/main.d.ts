@@ -23,6 +23,8 @@ export interface ConfigSettings {
     hda?: V86Image;
     hdb?: V86Image;
     cdrom?: V86Image;
+    memory_size?: number;
+    vga_memory_size?: number;
 }
 export declare class State {
     name: string;

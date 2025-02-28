@@ -23,6 +23,8 @@ export interface ConfigSettings {
   hda?:V86Image;
   hdb?:V86Image;
   cdrom?:V86Image;
+  memory_size?:number;
+  vga_memory_size?:number;
 }
 
 export class State {
@@ -213,6 +215,12 @@ export class EmbedV86 {
     setup_image("hda", content_json, config, content_folder);
     setup_image("hdb", content_json, config, content_folder);
     setup_image("cdrom", content_json, config, content_folder);
+    if(content_json.memory_size) {
+      config.memory_size = content_json.memory_size;
+    }
+    if(content_json.vga_memory_size) {
+      config.vga_memory_size = content_json.vga_memory_size;
+    }
 
     this.emulator = new V86Starter(config);
     this.emulator.emulator_bus.register("keyboard-code", (k:number) => this.replay_log(Evt.KeyCode,k));
