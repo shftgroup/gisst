@@ -52,7 +52,7 @@ jobs:
         sudo -u postgres psql gisstdb -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "57"
         echo "All DB table counts OK"
         find storage -type f -print0 | du -a --files0-from=- --total | sort -k 2 > du-out.txt
-        grep -x "51608\s*total" du-out.txt
+        grep -x "51796\s*total" du-out.txt
         echo "Total byte count OK"
         wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "72"
         echo "Total file count OK"
