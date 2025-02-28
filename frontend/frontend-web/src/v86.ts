@@ -197,7 +197,8 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
       prev.classList.add("hidden");
       document.getElementById("webplayer-textmode")!.classList.remove("hidden");
-      v86.run(environment.environment_config, entry_state, movie);
+      await v86.run(environment.environment_config, entry_state, movie);
+      container.addEventListener("click", () => { v86.emulator.lock_mouse(); } )
       canv.classList.remove("hidden");
       return false;
     });
@@ -217,5 +218,4 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       ui_state.evtlog_set_playhead(replay.current_time());
     }
   }, 250);
-  container.addEventListener("click", () => { v86.emulator.lock_mouse(); } )
 }

@@ -79,7 +79,7 @@
                     </td>
                     {% if instance.environment.environment_framework == "v86" %}
                     <td>
-                        <a class="btn btn-primary" href="clone?state={{ state.state_id }}" target="_blank">
+                        <a class="btn btn-primary" href="{{ instance.info.instance_id }}/clone?state={{ state.state_id }}" target="_blank">
                             Clone
                         </a>
                     </td>
