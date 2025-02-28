@@ -181,8 +181,8 @@ pub fn get_file_at_path(
             return Ok(("application/zip".to_string(), dir_zipped));
         }
         let file = get_file_at_path_fat(&fs, subpath)?;
-        let mime = tree_magic::from_u8(&file);
-        return Ok((mime, file));
+        let mime = tree_magic_mini::from_u8(&file);
+        return Ok((mime.to_string(), file));
     }
     Err(FSList::FileNotFound(path.to_string_lossy().into_owned()))
 }
@@ -222,7 +222,7 @@ fn get_dir_at_path_fat(
     fs: &fatfs::FileSystem<FATStorage>,
     path: &std::path::Path,
 ) -> Result<Vec<u8>, FSList> {
-    use zip::{write::SimpleFileOptions, ZipWriter};
+    use zip::{ZipWriter, write::SimpleFileOptions};
     let mut out_bytes: Vec<u8> = Vec::with_capacity(16 * 1024);
     let directory = if path.parent().is_none() {
         fs.root_dir()
