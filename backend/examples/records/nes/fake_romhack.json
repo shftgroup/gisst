@@ -1,0 +1,8 @@
+{
+  "version": "1.0",
+  "name": "Fake ROM hack of the first NES game in the list",
+  "description": "This just replaces the whole game with a different game'",
+  "files": [
+    "../../data/nes/Chrono Knight.nes"
+  ]
+}
