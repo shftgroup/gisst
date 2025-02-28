@@ -22,3 +22,4 @@ backend/embed-dist
 backend/examples/data/v86/local
 backend/examples/records/v86/local
 backend/examples/log.txt
+backend/config/localhost.toml

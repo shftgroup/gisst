@@ -115,7 +115,7 @@ work_uuid=$(get_uuid_from_counter)
 uuid_counter=$((uuid_counter+1));
 
 # add a nonsensical ROM hack to the first game in the database
-./target/debug/gisst-cli add-patch 00000000000000000000000000001000 examples/records/nes/alter_ego_fake_romhack.json
+./target/debug/gisst-cli add-patch 00000000000000000000000000001000 examples/records/nes/fake_romhack.json
 
 work_uuid=$(get_uuid_from_counter)
 uuid_counter=$((uuid_counter+1));
