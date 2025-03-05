@@ -1,88 +1,37 @@
-# version: '3'
-
-# services:
-#     jaeger:
-#         image: jaegertracing/all-in-one
-#         container_name: gisst-jaeger-tracing
-#         environment:
-#             - COLLECTOR_ZIPKIN_HOST_PORT=:9411
-#             - COLLECTOR_OTLP_ENABLED=true
-#             - JAEGER_UI_MONITOR_MENUENABLED=true
-#         ports:
-#             - "6831:6831/udp"  # Jaeger compact Thrift protocol (UDP)
-#             - "6832:6832/udp"  # Jaeger binary Thrift protocol (UDP)
-#             - "5778:5778"      # Jaeger agent HTTP management port
-#             - "16686:16686"    # Jaeger query UI port
-#             - "4317:4317"      # Jaeger gRPC HTTP collector port
-#             - "4318:4318"      # Jaeger gRPC HTTP collector port (encrypted)
-#             - "14250:14250"    # Jaeger gRPC tracing port
-#             - "14268:14268"    # Jaeger gRPC HTTP internal service communication port
-#             - "14269:14269"    # Jaeger gRPC HTTP internal service communication port (encrypted)
-#             - "9411:9411"      # Zipkin collector port
-
 services:
   jaeger:
     networks:
       backend:
         # This is the host name used in Prometheus scrape configuration.
         aliases: [ spm_metrics_source ]
-    image: jaegertracing/all-in-one # jaegertracing/jaeger:${JAEGER_VERSION:-latest}
+      frontend:
+    image: jaegertracing/jaeger:${JAEGER_VERSION:-latest}
     volumes:
+      - "./jaeger-ui.json:/etc/jaeger/jaeger-ui.json" # Do we need this for v2 ? Seems to be running without this.
       - "./docker-configs/config-spm.yaml:/etc/jaeger/config.yml"
-    # command: ["--config", "/etc/jaeger/config.yml"]
-    environment:
-      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
-      - COLLECTOR_OTLP_ENABLED=true
-      - JAEGER_UI_MONITOR_MENUENABLED=true
-      - METRICS_STORAGE_TYPE=prometheus
-      - PROMETHEUS_SERVER_URL=http://prometheus:9090
-    #   - PROMETHEUS_QUERY_NAMESPACE=${PROMETHEUS_QUERY_NAMESPACE:-}
-    #   - PROMETHEUS_QUERY_DURATION_UNIT=${PROMETHEUS_QUERY_DURATION_UNIT:-}
-      - PROMETHEUS_QUERY_NORMALIZE_CALLS=true
-      - PROMETHEUS_QUERY_NORMALIZE_DURATION=true
+    command: ["--config", "/etc/jaeger/config.yml"]
     ports:
-    #   - "8888:8888"
-    #   - "8889:8889"
-    #   - "6831:6831/udp"  # Jaeger compact Thrift protocol (UDP)
-    #   - "6832:6832/udp"  # Jaeger binary Thrift protocol (UDP)
-    #   - "5778:5778"      # Jaeger agent HTTP management port
-      - "16686:16686"    # Jaeger query UI port
-      - "4317:4317"      # Jaeger gRPC HTTP collector port
-    #   - "4318:4318"      # Jaeger gRPC HTTP collector port (encrypted)
-    #   - "14250:14250"    # Jaeger gRPC tracing port
-    #   - "14268:14268"    # Jaeger gRPC HTTP internal service communication port
-    #   - "14269:14269"    # Jaeger gRPC HTTP internal service communication port (encrypted)
-    #   - "9411:9411"      # Zipkin collector port
+      - "16686:16686"
+      - "8888:8888"
+      - "8889:8889"
+      - "4317:4317"
+      - "4318:4318" # May not need this port if we're using 4317 on grpc
 
-  otel_collector:
-    networks:
-      backend:
-        # This is the host name used in Prometheus scrape configuration.
-        aliases: [spm_metrics_source]
-    image: otel/opentelemetry-collector-contrib
-    # volumes:
-    #   - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
-    # command: --config /etc/otelcol/otel-collector-config.yml
-    depends_on:
-      - jaeger
-    ports:
-    #   - "8888:8888" # Prometheus metrics exposed by the Collector
-      - "8889:8889" # Prometheus exporter metrics
+  # microsim:
+  #   networks:
+  #     - backend
+  #   image: yurishkuro/microsim:v0.5.0
+  #   command: "-d 24h -s 500ms"
+  #   environment:
+  #     - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://jaeger:4318/v1/traces
+  #   depends_on:
+  #     - jaeger
 
-#   microsim:
-#     networks:
-#       - backend
-#     image: yurishkuro/microsim:v0.5.0
-#     command: "-d 24h -s 500ms"
-#     environment:
-#       - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://jaeger:4318/v1/traces
-#     depends_on:
-#       - jaeger
 
   prometheus:
     networks:
       - backend
-    image: prom/prometheus # :v3.1.0
+    image: prom/prometheus:v3.2.0
     volumes:
       - "./docker-configs/prometheus.yml:/etc/prometheus/prometheus.yml"
     ports:
@@ -90,3 +39,7 @@ services:
 
 networks:
   backend:
+  frontend: # An end to expose the docker network to localhost for gisst to connect
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"

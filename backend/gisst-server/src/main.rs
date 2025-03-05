@@ -25,7 +25,7 @@ fn init_tracer() -> Result<trace::Tracer, TraceError> {
         .with_exporter(
             opentelemetry_otlp::new_exporter()
                 .tonic()
-                .with_endpoint("http://localhost:4317"),
+                .with_endpoint("http://127.0.0.1:4317/"), // Uses grpc
         )
         .with_trace_config(
             trace::config().with_resource(Resource::new(vec![KeyValue::new(
@@ -41,19 +41,19 @@ fn init_tracer() -> Result<trace::Tracer, TraceError> {
 async fn main() -> Result<()> {
 
     let crates_to_ignore_logs : Vec<&str> = vec!["tower", "sqlx_core", "h2", "axum_login"];
-
-    global::set_text_map_propagator(TraceContextPropagator::new());
-    let tracer = init_tracer().unwrap();
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    
     let mut filter = tracing_subscriber::EnvFilter::from_default_env();
     for ignore_crate in crates_to_ignore_logs.iter() {
         let my_str = format!("{}=error", ignore_crate);
         filter = filter.add_directive(my_str.parse()?);
     }
+
+    global::set_text_map_propagator(TraceContextPropagator::new());
+    let tracer = init_tracer().unwrap();
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
     let subscriber = tracing_subscriber::Registry::default()
         .with(filter)
-        .with(telemetry).with(fmt::Layer::default());
+        .with(telemetry)
+        .with(fmt::Layer::default());
     tracing::subscriber::set_global_default(subscriber).unwrap();
     
     // let default_tracing_directive = config
@@ -87,7 +87,6 @@ async fn main() -> Result<()> {
     
     tracing::info!("The current directory is {}", path.display());
     tracing::debug!("{:?}", &config);
-    tracing::error!("WHoopsie daisy its good");
     server::launch(&config).await?;
 
     global::shutdown_tracer_provider();

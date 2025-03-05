@@ -77,9 +77,6 @@ impl ServerState {
 #[allow(clippy::too_many_lines)]
 #[tracing::instrument(name="launch_sequence")] 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
-    debug!("Starting launch sequence!!");
-    debug!("T-Minus 10 seconds...");
-    tracing::error!("SCreeeeeee");
     use crate::selective_serve_dir;
     StorageHandler::init_storage(
         &config.storage.root_folder_path,
@@ -198,7 +195,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         config.http.listen_port,
     );
 
-    tracing::error!("wam?");
     if config.http.dev_ssl {
         use axum_server::tls_rustls::RustlsConfig;
         let tlsconfig = RustlsConfig::from_pem_file(
@@ -226,7 +222,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             .await
             .expect("could not launch GISST HTTP server on port 3000");
     }
-    tracing::error!("zam");
     Ok(())
 }
 async fn handle_error(error: axum::BoxError) -> impl axum::response::IntoResponse {
