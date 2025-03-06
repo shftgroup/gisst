@@ -39,6 +39,8 @@ pub enum Platform {
     N64,
     DOS,
     PSX,
+    Atari2600,
+    AtariST,
 }
 
 impl FromStr for Platform {
@@ -51,6 +53,8 @@ impl FromStr for Platform {
             "Super Nintendo Entertainment System" => Ok(Platform::SNES),
             "Nintendo 64" => Ok(Platform::N64),
             "Sony Playstation" => Ok(Platform::PSX),
+            "Atari 2600" => Ok(Platform::Atari2600),
+            "Atari ST" => Ok(Platform::AtariST),
             _ => Err("Attempting to convert Platform that does not exist"),
         }
     }
