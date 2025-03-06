@@ -65,6 +65,8 @@ emsdk activate tot
 git clone --depth 1 https://github.com/libretro/retroarch ra || echo "already have RA"
 git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "already have fceumm"
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
+git clone --depth 1 https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
+git clone --depth 1 https://github.com/libretro/stella2014-libretro || echo "already have stella2014"
 git clone --depth 1 https://github.com/libretro/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
 git clone --depth 1 https://github.com/libretro/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
@@ -79,7 +81,7 @@ rm -rf ra/obj-emscripten
 emconfigure ./configure
 cd ..
 
-for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte}; do
+for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte,hatari,stella}; do
     pushd $f
     # git pull
     if [ -f Makefile.libretro ]
