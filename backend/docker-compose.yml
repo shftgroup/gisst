@@ -37,6 +37,29 @@ services:
     ports:
       - "9090:9090"
 
+  # node_exporter:
+  #   image: quay.io/prometheus/node-exporter:latest
+  #   container_name: node_exporter
+  #   command:
+  #     - '--path.rootfs=/host'
+  #   network_mode: host
+  #   pid: host
+  #   restart: unless-stopped
+  #   volumes:
+  #     - '/:/host:ro,rslave'
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    networks:
+      - backend
+    ports:
+      - '3003:3000' # Graphana can be access on port 3003, instead of usual 3000 (where gisst is)
+    volumes: 
+      - "grafana-storage:/var/lib/grafana"
+volumes:
+  grafana-storage: {}
+
 networks:
   backend:
   frontend: # An end to expose the docker network to localhost for gisst to connect
