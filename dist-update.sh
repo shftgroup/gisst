@@ -76,9 +76,12 @@ fi
 
 if [ ${BUILD_CORES:-1} -eq 1 ]; then
 pushd ra-build
+
 cd ra
-rm -rf ra/obj-emscripten
-# emconfigure ./configure
+rm -rf obj-emscripten
+git remote add JoeOsborn https://github.com/JoeOsborn/retroarch || echo "JoeOsborn remote already added"
+git fetch JoeOsborn fetch-single-backend
+git checkout JoeOsborn/fetch-single-backend
 cd ..
 
 for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte,hatari,stella2014}; do
