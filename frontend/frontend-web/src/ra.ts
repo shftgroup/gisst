@@ -154,24 +154,26 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
     JSON.parse(document.getElementById("config")!.textContent!)
   );
   ui_state.setReplayMode(movie ? UIReplayMode.Playback : (boot_into_record ? UIReplayMode.Record : UIReplayMode.Inactive));
-  loadRetroArch("", core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt'},
+  loadRetroArch("", core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
     true,
     async function (module:LibretroModule) {
       const enc = new TextEncoder();
       RA = module;
       RA.FS.createPath("/", "fetch/content", true, true);
       RA.FS.createPath("/", state_dir, true, true);
-      let fetch_manifest = "";
+      let fetch_manifest = `/storage/\n`;
       /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
 
       for(const file of manifest) {
-        let download_source_path_full = "/fetch/content/" + file.file_source_path;
+        let sep = file.file_source_path.startsWith("/") ? "" : "/";
+        let download_source_path_full = "/fetch/content" + sep + file.file_source_path;
         let download_source_path = download_source_path_full;
         const last_index = download_source_path.lastIndexOf(file.file_filename!);
         if(last_index >= 0) {
           download_source_path = download_source_path_full.substring(0, last_index);
         } else {
-          download_source_path_full += `/${file.file_filename!}`;
+          sep = download_source_path_full.endsWith("/") ? "" : "/";
+          download_source_path_full += sep + file.file_filename!;
         }
         const content_url = "/storage/"+file.file_dest_path;
         const resp = await fetch(content_url, {method:"HEAD"});
@@ -185,7 +187,7 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
           module.FS.createPath("/",download_source_path, true, true);
           module.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
         } else {
-          const content_url_encoded = encodeURI(content_url);
+          const content_url_encoded = encodeURI(file.file_dest_path);
           fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
         }
       }
