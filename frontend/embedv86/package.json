@@ -25,9 +25,9 @@
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
     "eslint": "^9.13.0",
-    "typescript": "^4.9.5",
-    "vite": "^4.1.0",
-    "vite-plugin-dts": "^2.0.2",
-    "shx": "^0.3.4"
+    "shx": "^0.3.4",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.1",
+    "vite-plugin-dts": "^4.5.3"
   }
 }
