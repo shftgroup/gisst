@@ -65,6 +65,8 @@ emsdk activate tot
 git clone --depth 1 https://github.com/libretro/retroarch ra || echo "already have RA"
 git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "already have fceumm"
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
+#git clone --depth 1 https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
+git clone --depth 1 https://github.com/libretro/stella2014-libretro stella2014 || echo "already have stella2014"
 git clone --depth 1 https://github.com/libretro/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
 git clone --depth 1 https://github.com/libretro/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
@@ -74,12 +76,16 @@ fi
 
 if [ ${BUILD_CORES:-1} -eq 1 ]; then
 pushd ra-build
+
 cd ra
-rm -rf ra/obj-emscripten
-emconfigure ./configure
+rm -rf obj-emscripten
+git remote add JoeOsborn https://github.com/JoeOsborn/retroarch || echo "JoeOsborn remote already added"
+git fetch JoeOsborn fetch-single-backend
+git checkout JoeOsborn/fetch-single-backend
 cd ..
 
-for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte}; do
+# todo: fix and put back hatari
+for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte,stella2014}; do
     pushd $f
     # git pull
     if [ -f Makefile.libretro ]
@@ -101,7 +107,7 @@ for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte}; do
     fi
     pushd ../ra
     cp libretro_emscripten.bc libretro_emscripten.a
-    emmake make -f Makefile.emscripten LIBRETRO=$f PTHREAD=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EGL=0 ASYNC=0 -j all || die "could not build RA dist for ${f}"
+    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EGL=0 ASYNC=0 SYMBOLS=1 -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* ../cores
     popd
     popd

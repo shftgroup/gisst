@@ -36,22 +36,24 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   console.log(retro_args);
   let ra_cfg_text:string = await ((await fetch(gisst_root+"/assets/retroarch_web_base.cfg")).text());
   return new Promise((res) => {
-    loadRetroArch(gisst_root, core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt'},
+    loadRetroArch(gisst_root, core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
       true,
       async function (module:LibretroModule) {
         const enc = new TextEncoder();
         module.FS.createPath("/", "fetch/content", true, true);
         module.FS.createPath("/", state_dir, true, true);
-        let fetch_manifest = "";
+        let fetch_manifest = `${gisst_root}/storage/\n`;
         /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
         for(const file of manifest) {
-          let download_source_path_full = "/fetch/content/" + file.file_source_path;
+          let sep = file.file_source_path.startsWith("/") ? "" : "/";
+          let download_source_path_full = "/fetch/content" + sep + file.file_source_path;
           let download_source_path = download_source_path_full;
           const last_index = download_source_path.lastIndexOf(file.file_filename!);
           if(last_index >= 0) {
             download_source_path = download_source_path_full.substring(0, last_index);
           } else {
-            download_source_path_full += `/${file.file_filename!}`;
+            sep = download_source_path_full.endsWith("/") ? "" : "/";
+            download_source_path_full += sep + file.file_filename!;
           }
           const content_url = gisst_root+"/storage/"+file.file_dest_path;
           const resp = await fetch(content_url, {method:"HEAD"});
@@ -65,10 +67,11 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
             module.FS.createPath("/",download_source_path, true, true);
             module.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
           } else {
-            const content_url_encoded = encodeURI(content_url);
+            const content_url_encoded = encodeURI(file.file_dest_path);
             fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
           }
         }
+        console.log("Place fetch manifest",fetch_manifest);
         module.FS.createDataFile("/mem", "fetch.txt", enc.encode(fetch_manifest), true, true, true);
         if (entryState) {
           module.FS.createDataFile(state_dir, content_base + ".state1.entry", state_data, true, true, true);

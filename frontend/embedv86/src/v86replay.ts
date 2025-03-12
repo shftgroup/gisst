@@ -401,7 +401,7 @@ export class Replay {
       const state = new Uint8Array(state_len);
       state.set(src_buf);
       x += state_len;
-      checkpoints.push(new Checkpoint(when, name, event_index, state, thumb));
+      checkpoints.push(new Checkpoint(when, name, event_index, state.buffer, thumb));
     }
     const r = new Replay(id, ReplayMode.Inactive);
     r.events = events;

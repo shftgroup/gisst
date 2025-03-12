@@ -103,7 +103,13 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
     }
     check();
   });
-  Promise.all([downloadScript(gisst_root+'/cores/'+core+'_libretro.js'),fsready]).then(([scriptBlob,_]) => {
+  let promise:Promise<Blob|string>;
+  if (gisst_root.startsWith("https://")) {
+    promise = downloadScript(gisst_root+'/cores/'+core+'_libretro.js');
+  } else {
+    promise = new Promise((resolve) => resolve(gisst_root+'/cores/'+core+'_libretro.js'));
+  }
+  Promise.all([promise,fsready]).then(([scriptUrlOrBlob,_]) => {
     let initial_mod:LibretroModule | undefined;
     const module:LibretroModuleDef = {
       startRetroArch: function(canvas:HTMLCanvasElement, retro_args:string[], initialized_cb:() => void) {
@@ -112,7 +118,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
         canvas.addEventListener("click", () => canvas.focus());
         me.canvas = canvas;
         me.ENV = env;
-	me.callMain(retro_args);
+        me.callMain(retro_args);
         initialized_cb();
         canvas.focus();
       },
@@ -152,7 +158,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
       printErr: function(text:string) {
         console.log(text);
       },
-      mainScriptUrlOrBlob: scriptBlob
+      mainScriptUrlOrBlob: scriptUrlOrBlob
     };
     function instantiate(core_factory:(mod:LibretroModuleDef) => Promise<LibretroModule>) {
       core_factory(module).catch(err => {
@@ -163,8 +169,13 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
     if (core in cores) {
       instantiate(cores[core]);
     } else {
-      /* TODO use new URL, import.meta, etc instead of blob */
-      import(/* @vite-ignore */ URL.createObjectURL(scriptBlob)).then(fac => {
+      let importPromise;
+      if (scriptUrlOrBlob instanceof Blob) {
+        importPromise = import(/* @vite-ignore */ URL.createObjectURL(scriptUrlOrBlob));
+      } else {
+        importPromise = import(/* @vite-ignore */ (new URL(scriptUrlOrBlob, import.meta.url)).toString());
+      }
+      importPromise.then(fac => {
         cores[core] = fac.default;
         instantiate(cores[core]);
       }).catch(err => { console.error("Couldn't instantiate module", err); throw err; });

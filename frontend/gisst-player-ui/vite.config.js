@@ -19,6 +19,13 @@ const htmlImport = {
   }
 }
 export default defineConfig({
+  css: {
+    preprocessorOptions: {
+      scss: {
+        quietDeps: true
+      }
+    }
+  },
   build: {
     lib: {
       // Could also be a dictionary or array of multiple entry points
@@ -48,4 +55,3 @@ export default defineConfig({
     output: {globals:{}},
   },
 })
-
