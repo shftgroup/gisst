@@ -83,7 +83,7 @@ git pull || echo "RA directory dirty or pull failed for other reason"
 popd
 
 for f in *; do
-    if [ $f = "ra" ]; then 
+    if [ $f = "ra" ] || [ $f = "cores" ]; then 
       continue
     fi
     pushd $f
