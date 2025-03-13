@@ -10,21 +10,6 @@ function die
     exit 1
 }
 
-# PLATFORM_MAIN may be one of:
-# linux
-# osx
-# windows
-# PLATFORM_SUB may be one of:
-# linux/windows:
-#   x86
-#   x86_64
-# osx:
-#   x86_64
-#   arm64
-
-PLATFORM_MAIN="${1:-linux}"
-PLATFORM_SUB="${2:-x86_64}"
-
 mkdir -p frontend/frontend-web/public/cores
 mkdir -p frontend/frontend-web/public/assets
 
@@ -71,7 +56,7 @@ git clone --depth 1 https://github.com/libretro/stella2014-libretro stella2014 |
 git clone --depth 1 -b emscripten-build-fixes https://github.com/JoeOsborn/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
 git clone --depth 1 https://github.com/libretro/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
-git clone --depth 1 https://github.com/libretro/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
+# git clone --depth 1 https://github.com/libretro/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
 popd
 fi
 
