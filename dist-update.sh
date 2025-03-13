@@ -67,7 +67,7 @@ git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
 #git clone --depth 1 https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
 git clone --depth 1 https://github.com/libretro/stella2014-libretro stella2014 || echo "already have stella2014"
-git clone --depth 1 https://github.com/libretro/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
+git clone --depth 1 -b emscripten-build-fixes https://github.com/JoeOsborn/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
 git clone --depth 1 https://github.com/libretro/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
 git clone --depth 1 https://github.com/libretro/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
@@ -79,8 +79,7 @@ pushd ra-build
 
 cd ra
 rm -rf obj-emscripten
-git fetch origin main
-git checkout origin/main
+git pull
 cd ..
 
 # todo: fix and put back hatari
