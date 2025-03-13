@@ -31,12 +31,11 @@ export default {
     proxy: {
       "/storage": {
         changeOrigin: false,
-        secure: true,
+        secure: false,
         target: {
-          protocol:'https:',
-          host:'localhost',
+          protocol: 'https:',
+          host: 'localhost',
           port: 3000,
-          ca: fs.readFileSync('../../test-cert/rootCA.pem')
         },
       }
     }
