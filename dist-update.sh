@@ -54,7 +54,7 @@ git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already h
 #git clone --depth 1 https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
 git clone --depth 1 https://github.com/libretro/stella2014-libretro stella2014 || echo "already have stella2014"
 git clone --depth 1 -b emscripten-build-fixes https://github.com/JoeOsborn/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
-git clone --depth 1 https://github.com/libretro/vba-next vba_next || echo "already have vba"
+git clone --depth 1 -b fix-makefile-emscripten https://github.com/JoeOsborn/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
 # git clone --depth 1 https://github.com/libretro/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
 popd
