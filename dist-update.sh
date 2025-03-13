@@ -78,7 +78,7 @@ for f in *; do
     then
         # make clean
         make all -j || die "could not build v86"
-        cp build/libv86.mjs build/v86.wasm ../../frontend/frontend-web/public/v86
+        cp build/libv86.js build/v86.wasm ../../frontend/frontend-web/public/v86
         popd
         continue
     elif [ -f Makefile.libretro ]
