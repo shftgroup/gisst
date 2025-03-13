@@ -1,4 +1,4 @@
-declare class V86Starter {
+declare class V86 {
   constructor(config:object);
   is_running(): bool;
   destroy():void;
@@ -11,7 +11,7 @@ declare class V86Starter {
   add_listener(evt:string, listener:(any)=>void);
   remove_listener(evt:string, listener:(any)=>void);
   get_instruction_counter():number;
-  v86:V86;
+  v86:V86v86;
   bus:Bus;
   emulator_bus:Bus;
 }
@@ -19,7 +19,7 @@ declare class Bus {
   send(evt:string, val:unknown);
   register(evt:string, handler:(any) => void)
 }
-declare class V86 {
+declare class V86v86 {
   cpu:Cpu
 }
 declare class Cpu {
@@ -37,7 +37,7 @@ declare class ScreenAdapter {
   cursor_col:number;
   cursor_row:number;
 }
-interface V86StarterConfig {
+interface V86Config {
   wasm_path:string,
   bios?:V86Image,
   vga_bios?:V86Image,

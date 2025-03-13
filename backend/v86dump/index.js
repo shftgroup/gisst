@@ -20,13 +20,13 @@ function readfile(path)
     return new Uint8Array(fs.readFileSync(path)).buffer;
 }
 
-var V86Starter = require("../web-dist/v86/libv86.js").V86Starter;
+var V86 = require("../web-dist/v86/libv86.js").V86;
 
 // console.log("Now booting, please stand by ...");
 
 // let state=readfile(__dirname+"/../storage/0/3/1/e/087bbdc6dbb84234b43ce0b562d8486c-state2.v86state");
 let state=readfile(state_path);
-var emulator = new V86Starter(emu_info);
+var emulator = new V86(emu_info);
 emulator.add_listener("emulator-loaded", async function(){
   // console.log("load state")
   emulator.stop();
