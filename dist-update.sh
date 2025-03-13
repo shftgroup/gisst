@@ -43,8 +43,8 @@ unzip overlays.zip -d overlays
 rm overlays.zip
 unzip info.zip -d info
 rm info.zip
-rm -rf overlays/{borders,ctr,effects,ipad,keyboards,misc,wii}
-rm -rf overlays/gamepads/{720-med,arcade,arcade-anim,arcade-minimal,cdi_anim_portrait,dual-shock,example,flat,flip_phone,gba-anim_landscape,gba-grey,gb_anim_portrait,genesis,lite,n64,neo-retropad,old,psx,rgpad,scummvm}
+rm -rf overlays/{borders,ctr,effects,ipad,misc,wii}
+rm -rf overlays/gamepads/{720-med,arcade,arcade-anim,arcade-minimal,cdi_anim_portrait,example,flat,flip_phone,gba-anim_landscape,gba-grey,gb_anim_portrait,genesis,lite,n64,old,rgpad,scummvm}
 rm -f assets/ozone/png/icons/*\ -\ *
 rm -f assets/sounds/*.wav
 rm -f assets/pkg/chinese-*
@@ -67,7 +67,7 @@ git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
 #git clone --depth 1 https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
 git clone --depth 1 https://github.com/libretro/stella2014-libretro stella2014 || echo "already have stella2014"
-git clone --depth 1 https://github.com/libretro/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
+git clone --depth 1 -b emscripten-build-fixes https://github.com/JoeOsborn/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
 git clone --depth 1 https://github.com/libretro/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
 git clone --depth 1 https://github.com/libretro/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
@@ -77,17 +77,17 @@ fi
 if [ ${BUILD_CORES:-1} -eq 1 ]; then
 pushd ra-build
 
-cd ra
+pushd ra
 rm -rf obj-emscripten
-git remote add JoeOsborn https://github.com/JoeOsborn/retroarch || echo "JoeOsborn remote already added"
-git fetch JoeOsborn fetch-single-backend
-git checkout JoeOsborn/fetch-single-backend
-cd ..
+git pull || echo "RA directory dirty or pull failed for other reason"
+popd
 
-# todo: fix and put back hatari
-for f in {fceumm,snes9x,pcsx_rearmed,vba_next,gambatte,stella2014}; do
+for f in *; do
+    if [ $f = "ra" ]; then 
+      continue
+    fi
     pushd $f
-    # git pull
+    git pull || echo "${f} pull failed"
     if [ -f Makefile.libretro ]
     then
         # emmake make -f Makefile.libretro platform=emscripten clean
