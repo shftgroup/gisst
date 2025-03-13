@@ -1,6 +1,12 @@
 retroarch-web/
 simple/content/
 .idea/
+ra-build
+gisst.campus.pomona.edu.*
+id_deploy*
+backend/roms-*
+test-cert
+backend/.cargo
 frontend/frontend-elec/resources/binaries/
 frontend/frontend-elec/resources/content/
 frontend/frontend-elec/resources/ra-assets/
@@ -8,6 +14,7 @@ frontend/frontend-tauri/src-tauri/ra-assets/
 frontend/frontend-web/.index-xhr
 frontend/node_modules
 frontend/frontend-embed/types
+vite.config.js.timestamp*
 .DS_Store
 target
 .idea
@@ -16,9 +23,10 @@ storage
 backend/config/local.toml
 backend/test_content/
 backend/rdb-sys/libretro-util
-backend/ingest/rdb
+backend/rdb
 backend/web-dist
 backend/embed-dist
 backend/examples/data/v86/local
 backend/examples/records/v86/local
 backend/examples/log.txt
+backend/examples/data/v86/win31.img

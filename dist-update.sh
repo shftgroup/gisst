@@ -62,6 +62,7 @@ pushd ra-build
 mkdir -p cores
 emsdk install tot
 emsdk activate tot
+git clone --depth 1 -b tick-event https://github.com/JoeOsborn/v86 v86 || echo "already have v86"
 git clone --depth 1 https://github.com/libretro/retroarch ra || echo "already have RA"
 git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "already have fceumm"
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
@@ -84,11 +85,18 @@ popd
 
 for f in *; do
     if [ $f = "ra" ] || [ $f = "cores" ]; then 
-      continue
+        continue
     fi
     pushd $f
     git pull || echo "${f} pull failed"
-    if [ -f Makefile.libretro ]
+    if [ $f = "v86" ]
+    then
+        # make clean
+        make all -j || die "could not build v86"
+        cp build/libv86.mjs build/v86.wasm ../../frontend/frontend-web/public/v86
+        popd
+        continue
+    elif [ -f Makefile.libretro ]
     then
         # emmake make -f Makefile.libretro platform=emscripten clean
         emmake make -f Makefile.libretro platform=emscripten pthread=4 STATIC_LINKING=1 -j || die "could not build core ${f}"
