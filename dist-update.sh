@@ -51,12 +51,12 @@ git clone --depth 1 -b tick-event https://github.com/JoeOsborn/v86 v86 || echo "
 git clone --depth 1 https://github.com/libretro/retroarch ra || echo "already have RA"
 git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "already have fceumm"
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
-#git clone --depth 1 https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
+git clone --depth 1 -b emscripten-build https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
 git clone --depth 1 https://github.com/libretro/stella2014-libretro stella2014 || echo "already have stella2014"
 git clone --depth 1 -b emscripten-build-fixes https://github.com/JoeOsborn/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
 git clone --depth 1 -b fix-makefile-emscripten https://github.com/JoeOsborn/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
-# git clone --depth 1 https://github.com/libretro/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
+git clone --depth 1 -b https://github.com/JoeOsborn/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
 popd
 fi
 
@@ -74,6 +74,10 @@ for f in *; do
     fi
     pushd $f
     git pull || echo "${f} pull failed"
+
+    ASYNC=0
+    if [ $f = "mupen64plus_next" ] || [ $f = "hatari" ]; then ASYNC=1; fi
+
     if [ $f = "v86" ]
     then
         # make clean
@@ -85,23 +89,23 @@ for f in *; do
     elif [ -f Makefile.libretro ]
     then
         # emmake make -f Makefile.libretro platform=emscripten clean
-        emmake make -f Makefile.libretro platform=emscripten pthread=4 STATIC_LINKING=1 -j || die "could not build core ${f}"
+        emmake make -f Makefile.libretro platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC -j || die "could not build core ${f}"
         cp ${f}_libretro_emscripten.bc ../ra/libretro_emscripten.bc
     elif [ -d libretro ] && [ -f libretro/Makefile ]
     then
         pushd libretro
         # emmake make platform=emscripten clean
-        emmake make platform=emscripten pthread=4 STATIC_LINKING=1 -j || die "could not build core ${f}"
+        emmake make platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC -j || die "could not build core ${f}"
         cp ${f}_libretro_emscripten.bc ../../ra/libretro_emscripten.bc
         popd
     else
         # emmake make platform=emscripten clean
-        emmake make platform=emscripten pthread=4 STATIC_LINKING=1 -j || die "could not build core ${f}"
+        emmake make platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC -j || die "could not build core ${f}"
         cp ${f}_libretro_emscripten.bc ../ra/libretro_emscripten.bc
     fi
     pushd ../ra
     cp libretro_emscripten.bc libretro_emscripten.a
-    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EGL=0 ASYNC=0 SYMBOLS=1 -j all || die "could not build RA dist for ${f}"
+    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EGL=0 ASYNC=$ASYNC SYMBOLS=1 HAVE_OPENGLES3=1 -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* ../cores
     popd
     popd
