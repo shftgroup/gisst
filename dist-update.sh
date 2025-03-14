@@ -69,7 +69,7 @@ git pull || echo "RA directory dirty or pull failed for other reason"
 popd
 
 for f in *; do
-    if [ $f = "ra" ] || [ $f = "cores" ]; then 
+    if [ $f = "ra" ] || [ $f = "cores" ]; then
         continue
     fi
     pushd $f
@@ -81,9 +81,8 @@ for f in *; do
     if [ $f = "v86" ]
     then
         # make clean
-        WASM_OPT=true PATH="${EMSDK}/upstream/bin:${PATH}" make all -j || die "could not build v86"
+        WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
         cp build/libv86.js build/v86.wasm ../../frontend/frontend-web/public/v86
-        cp build/libv86.js build/v86.wasm ../../backend/v86dump/
         popd
         continue
     elif [ -f Makefile.libretro ]
