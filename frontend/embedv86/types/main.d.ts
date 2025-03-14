@@ -33,7 +33,7 @@ export declare class State {
     constructor(name: string, state: ArrayBuffer, thumbnail: string);
 }
 export declare class EmbedV86 {
-    emulator: V86Starter | null;
+    emulator: V86 | null;
     config: EmbedV86Config;
     states: State[];
     replays: Replay[];

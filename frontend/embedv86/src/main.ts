@@ -39,7 +39,7 @@ export class State {
 }
 
 export class EmbedV86 {
-  emulator:V86Starter | null;
+  emulator:V86 | null;
   config:EmbedV86Config;
   // TODO wrap in a State class that includes the current replay ID if any
   states:State[];
@@ -172,7 +172,7 @@ export class EmbedV86 {
   async run(content:ConfigSettings|string, entryState:string|null, movie:string|null):Promise<void> {
     this.clear();
     const content_folder = this.config.content_root;
-    const config:V86StarterConfig = {
+    const config:V86Config = {
       wasm_path: this.config.wasm_root+"/v86.wasm",
       screen_container:this.config.container,
       autostart: true
@@ -222,7 +222,7 @@ export class EmbedV86 {
       config.vga_memory_size = content_json.vga_memory_size;
     }
 
-    this.emulator = new V86Starter(config);
+    this.emulator = new V86(config);
     this.emulator.emulator_bus.register("keyboard-code", (k:number) => this.replay_log(Evt.KeyCode,k));
     this.emulator.emulator_bus.register("mouse-click", (v:[boolean,boolean,boolean]) => this.replay_log(Evt.MouseClick,v));
     this.emulator.emulator_bus.register("mouse-delta", (delta:[number,number]) => this.replay_log(Evt.MouseDelta,delta));
@@ -248,7 +248,7 @@ function nonnull(obj:number|object|null):asserts obj {
     throw "Must be non-null";
   }
 }
-function setup_image(img:"bios"|"vga_bios"|"fda"|"fdb"|"hda"|"hdb"|"cdrom", content_json:ConfigSettings, config:V86StarterConfig, content_folder:string) {
+function setup_image(img:"bios"|"vga_bios"|"fda"|"fdb"|"hda"|"hdb"|"cdrom", content_json:ConfigSettings, config:V86Config, content_folder:string) {
   if(img in content_json) {
     const cjimg = content_json[img]!;
     if("url" in cjimg) {

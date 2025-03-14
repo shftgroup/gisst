@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "shx mkdir -p ../../test-cert && vite",
     "check": "tsc && eslint src",
-    "build": "tsc && vite build",
-    "dist": "vite build && shx mkdir -p ../../backend/web-dist && shx cp -r dist/* ../../backend/web-dist/",
-    "preview": "vite preview"
+    "build": "shx mkdir -p ../../test-cert && tsc && vite build",
+    "dist": "shx mkdir -p ../../test-cert && vite build && shx mkdir -p ../../backend/web-dist && shx cp -r dist/* ../../backend/web-dist/",
+    "preview": "shx mkdir -p ../../test-cert && vite preview"
   },
   "devDependencies": {
     "@types/path-browserify": "^1.0.3",
