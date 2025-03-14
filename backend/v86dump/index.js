@@ -20,7 +20,7 @@ function readfile(path)
     return new Uint8Array(fs.readFileSync(path)).buffer;
 }
 
-var V86 = require("../web-dist/v86/libv86.js").V86;
+var V86 = require("libv86.js").V86;
 
 // console.log("Now booting, please stand by ...");
 
