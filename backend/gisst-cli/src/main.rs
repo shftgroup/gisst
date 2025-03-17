@@ -126,7 +126,7 @@ async fn add_patched_instance(
     storage_root: String,
     depth: u8,
 ) -> Result<(Uuid, Uuid), GISSTCliError> {
-    let mut tx: sqlx::Transaction<'_, sqlx::Postgres> = db.begin().await?;
+    let mut tx = db.begin().await?;
     let inst = Instance::get_by_id(&mut tx, instance_id)
         .await?
         .ok_or(GISSTCliError::RecordNotFound(instance_id))?;
@@ -200,7 +200,7 @@ async fn add_patched_instance(
             .await?;
         }
     }
-    tx.commit().await;
+    tx.commit().await.map_err(|e| GISSTCliError::Sql)?;
     Ok((derived_work_id, derived_inst_id))
 }
 
