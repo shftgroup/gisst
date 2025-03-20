@@ -11,12 +11,16 @@ uuid_v86_freedos=00000000000000000000000000000002
 uuid_v86_win_31=00000000000000000000000000000003
 uuid_n64=00000000000000000000000000000064
 uuid_pcsx=00000000000000000000000000000065
+uuid_gambatte=00000000000000000000000000000066
+uuid_sameboy=00000000000000000000000000000067
 ./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_1_52_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/snes/snes_snes9x_1_62_3_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/win_31_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
 ./target/debug/gisst-cli environment create --json-file ./examples/records/n64/n64_gliden64_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/psx/psx_pcsx_rearmed_1_62_3_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
 
 # Create retroarch.cfg for nes / snes / n64
 uuid_retro_cfg=00000000000000000000000000000100
@@ -40,7 +44,7 @@ get_uuid_from_counter() {
   fi
 }
 
-for work in ./examples/data/*/*.{nes,sfc,z64};
+for work in ./examples/data/*/*.{nes,sfc,z64,gb};
 do
   folder=$(basename `dirname "$work"`)
   file=$(basename -- "$work")
@@ -59,6 +63,14 @@ do
   then
     ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"$base\", \"work_version\":\"NTSC\",\"work_platform\":\"Super Nintendo Entertainment System\"}"
     ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_snes9x\", \"work_id\":\"$work_uuid\"}"
+  elif [ "$folder" = "gb" ]
+  then
+    ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"$base\", \"work_version\":\"NTSC\",\"work_platform\":\"Game Boy\"}"
+    ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_gambatte\", \"work_id\":\"$work_uuid\"}"
+    instance_uuid=$(get_uuid_from_counter)
+    uuid_counter=$((uuid_counter+1));
+    ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$instance_uuid\", \"environment_id\":\"$uuid_sameboy\", \"work_id\":\"$work_uuid\"}"
+    ./target/debug/gisst-cli object create --cwd "examples/data/$folder" -i --force-uuid "$instance_uuid" --link "$instance_uuid" --role content --role-index 0 "$file"
   elif [ "$folder" = "n64" ]
   then
     ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"$base\", \"work_version\":\"NTSC\",\"work_platform\":\"Nintendo 64\"}"
@@ -141,8 +153,10 @@ uuid_counter=$((uuid_counter+1));
 work_uuid=$(get_uuid_from_counter)
 uuid_counter=$((uuid_counter+1));
 
+if [ ${LOAD_WIN:-1} -eq 1 ] ; then
 if [ -f examples/data/v86/win31.img ]; then
   ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"Window 3.1\", \"work_version\":\"Windows 3.1\", \"work_platform\":\"Windows 3.1\"}"
   ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_v86_win_31\", \"work_id\":\"$work_uuid\"}"
   ./target/debug/gisst-cli object create -i --cwd examples/data/v86 --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 0 'win31.img'
+fi
 fi
