@@ -200,7 +200,7 @@ async fn add_patched_instance(
             .await?;
         }
     }
-    tx.commit().await.map_err(|e| GISSTCliError::Sql)?;
+    tx.commit().await.map_err(GISSTCliError::Sql)?;
     Ok((derived_work_id, derived_inst_id))
 }
 
