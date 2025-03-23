@@ -126,11 +126,11 @@ async fn add_patched_instance(
     storage_root: String,
     depth: u8,
 ) -> Result<(Uuid, Uuid), GISSTCliError> {
-    let mut conn = db.acquire().await?;
-    let inst = Instance::get_by_id(&mut conn, instance_id)
+    let mut tx = db.begin().await?;
+    let inst = Instance::get_by_id(&mut tx, instance_id)
         .await?
         .ok_or(GISSTCliError::RecordNotFound(instance_id))?;
-    let work = Work::get_by_id(&mut conn, inst.work_id)
+    let work = Work::get_by_id(&mut tx, inst.work_id)
         .await?
         .ok_or(GISSTCliError::RecordNotFound(inst.work_id))?;
     let derived_inst_id = Uuid::new_v4();
@@ -155,10 +155,10 @@ async fn add_patched_instance(
         work_name: data.name,
         work_platform: work.work_platform,
     };
-    Work::insert(&mut conn, new_work).await?;
-    Instance::insert(&mut conn, new_inst).await?;
+    Work::insert(&mut tx, new_work).await?;
+    Instance::insert(&mut tx, new_inst).await?;
     let patch_root = Path::new(&patch_file).parent().unwrap_or(Path::new(""));
-    for link in gisst::models::ObjectLink::get_all_for_instance_id(&mut conn, instance_id).await? {
+    for link in gisst::models::ObjectLink::get_all_for_instance_id(&mut tx, instance_id).await? {
         let role_index =
             u16::try_from(link.object_role_index).map_err(GISSTCliError::InvalidRoleIndex)?;
         if link.object_role == ObjectRole::Content
@@ -171,7 +171,7 @@ async fn add_patched_instance(
             let patch = Path::new(&data.files[role_index as usize]);
             info!("Patching file {patch:?} for index {role_index} @ {link:?}");
             let object_id = insert_file_object(
-                &mut conn,
+                &mut tx,
                 &storage_root,
                 depth,
                 &patch_root.join(patch),
@@ -182,7 +182,7 @@ async fn add_patched_instance(
             )
             .await?;
             Object::link_object_to_instance(
-                &mut conn,
+                &mut tx,
                 object_id,
                 derived_inst_id,
                 ObjectRole::Content,
@@ -191,7 +191,7 @@ async fn add_patched_instance(
             .await?;
         } else {
             Object::link_object_to_instance(
-                &mut conn,
+                &mut tx,
                 link.object_id,
                 derived_inst_id,
                 link.object_role,
@@ -200,6 +200,7 @@ async fn add_patched_instance(
             .await?;
         }
     }
+    tx.commit().await.map_err(GISSTCliError::Sql)?;
     Ok((derived_work_id, derived_inst_id))
 }
 
