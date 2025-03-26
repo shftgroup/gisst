@@ -23,11 +23,13 @@ fn init_tracer() -> Result<trace::Tracer, TraceError> {
     opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(
+            // Specify which port we want to export to (Jaeger)
             opentelemetry_otlp::new_exporter()
                 .tonic()
                 .with_endpoint("http://127.0.0.1:4317/"), // Uses grpc
         )
         .with_trace_config(
+            // Specifiy the name of our server in Jaeger
             trace::config().with_resource(Resource::new(vec![KeyValue::new(
                 opentelemetry_semantic_conventions::resource::SERVICE_NAME,
                 "gisst-server"
@@ -40,13 +42,15 @@ fn init_tracer() -> Result<trace::Tracer, TraceError> {
 #[tracing::instrument(name="main")] 
 async fn main() -> Result<()> {
 
+    // Specify which crates should only log on Error
     let crates_to_ignore_logs : Vec<&str> = vec!["tower", "sqlx_core", "h2", "axum_login"];
     let mut filter = tracing_subscriber::EnvFilter::from_default_env();
     for ignore_crate in crates_to_ignore_logs.iter() {
-        let my_str = format!("{}=error", ignore_crate);
-        filter = filter.add_directive(my_str.parse()?);
+        let log_level_directive = format!("{}=error", ignore_crate);
+        filter = filter.add_directive(log_level_directive.parse()?);
     }
 
+    // Setup the tracer
     global::set_text_map_propagator(TraceContextPropagator::new());
     let tracer = init_tracer().unwrap();
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
