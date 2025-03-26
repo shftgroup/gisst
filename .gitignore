@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 retroarch-web/
 simple/content/
 .idea/
@@ -23,3 +24,32 @@ backend/examples/data/v86/local
 backend/examples/records/v86/local
 backend/examples/log.txt
 backend/config/localhost.toml
+=======
+retroarch-web/
+simple/content/
+.idea/
+frontend/frontend-elec/resources/binaries/
+frontend/frontend-elec/resources/content/
+frontend/frontend-elec/resources/ra-assets/
+frontend/frontend-tauri/src-tauri/ra-assets/
+frontend/frontend-web/.index-xhr
+frontend/node_modules
+frontend/frontend-embed/types
+.DS_Store
+target
+.idea
+storage
+.env
+backend/config/local.toml
+backend/test_content/
+backend/rdb-sys/libretro-util
+backend/ingest/rdb
+backend/web-dist
+backend/embed-dist
+backend/examples/data/v86/local
+backend/examples/records/v86/local
+backend/examples/log.txt
+backend/config/localhost.toml
+notes.txt
+run-all.bat
+>>>>>>> a9aeb7f (prepared and tested main.ts in frontend-embed)

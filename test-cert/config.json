@@ -1,0 +1,15 @@
+{
+  "record": {
+    "hosts": [
+      "localhost",
+      "172.29.64.1",
+      "10.128.6.34",
+      "127.0.0.1"
+    ],
+    "hash": {
+      "key": "ca1b07ad3de532eac2bfd7c0d95c02381557b72bf55650ab8eee368ba8c815c9",
+      "cert": "9af0bcbe3d1467c5e224b2b6c222528c5617f8dfbf6d9f7038980775d1c7b96a"
+    }
+  },
+  "configFilePath": "C:\\work\\work-giist\\test-cert\\config.json"
+}
