@@ -14,12 +14,12 @@ use crate::{
 };
 use anyhow::Result;
 use axum::{
+    Extension, Router,
     error_handling::HandleErrorLayer,
     extract::{DefaultBodyLimit, Path, Query},
     http::HeaderMap,
     response::{Html, IntoResponse},
     routing::method_routing::{get, patch, post},
-    Extension, Router,
 };
 
 use crate::auth::{AuthBackend, User};
@@ -28,7 +28,7 @@ use crate::utils::parse_header;
 use axum::extract::OriginalUri;
 use axum_login::{
     login_required,
-    tower_sessions::{cookie::SameSite, MemoryStore, SessionManagerLayer},
+    tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite},
 };
 use chrono::{DateTime, Local};
 use gisst::error::Table;
@@ -43,6 +43,8 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::debug;
 use uuid::Uuid;
 
+pub static BASE_URL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
 pub struct ServerState {
@@ -51,7 +53,6 @@ pub struct ServerState {
     pub temp_storage_path: String,
     pub folder_depth: u8,
     pub default_chunk_size: usize,
-    pub base_url: String,
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: minijinja::Environment<'static>,
 }
@@ -67,7 +68,6 @@ impl ServerState {
             temp_storage_path: config.storage.temp_folder_path.clone(),
             folder_depth: config.storage.folder_depth,
             default_chunk_size: config.storage.chunk_size,
-            base_url: config.http.base_url.clone(),
             pending_uploads: Arc::default(),
             templates: template_environment,
         })
@@ -77,6 +77,10 @@ impl ServerState {
 #[allow(clippy::too_many_lines)]
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     use crate::selective_serve_dir;
+
+    // Unwrap here is fine since the server can't be launched more than once
+    BASE_URL.set(config.http.base_url.clone()).unwrap();
+
     StorageHandler::init_storage(
         &config.storage.root_folder_path,
         &config.storage.temp_folder_path,
@@ -116,6 +120,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                 .expose_headers([
                     axum::http::header::ACCEPT_RANGES,
                     axum::http::header::CONTENT_LENGTH,
+                    axum::http::header::CONTENT_ENCODING,
                     axum::http::header::RANGE,
                     axum::http::header::CONTENT_RANGE,
                     "Content-Security-Policy".parse().unwrap(),
@@ -311,7 +316,7 @@ async fn get_about(
         app_state
             .templates
             .get_template("about.html")?
-            .render(context!())?,
+            .render(context!(base_url => BASE_URL.get()))?,
     )
     .into_response())
 }
@@ -322,7 +327,7 @@ async fn get_homepage(
         app_state
             .templates
             .get_template("index.html")?
-            .render(context!())?,
+            .render(context!(base_url => BASE_URL.get()))?,
     )
     .into_response())
 }
@@ -378,7 +383,8 @@ async fn get_data(
     let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     debug!("{manifest:?}");
 
-    let url_string = app_state.base_url.clone();
+    // This unwrap is safe since BASE_URL is initialized at launch
+    let url_string = BASE_URL.get().unwrap().clone();
 
     let url_parts: Vec<&str> = url_string.split("//").collect();
     let current_date: DateTime<Local> = Local::now();
@@ -430,6 +436,7 @@ async fn get_data(
                 ("Cross-Origin-Embedder-Policy", "require-corp"),
             ],
             Html(citation_page.render(context! {
+                base_url => BASE_URL.get(),
                 embed_data => embed_data,
             })?),
         )
@@ -517,6 +524,7 @@ async fn get_player(
                 .templates
                 .get_template("player.html")?
                 .render(context!(
+                    base_url => BASE_URL.get(),
                     player_params => PlayerTemplateInfo {
                         environment,
                         instance,

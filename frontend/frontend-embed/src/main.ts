@@ -1,12 +1,19 @@
-import './style.css';
+import STYLES from './style.css?inline';
 import * as ra from './ra';
 import * as v86 from './v86';
 import {EmuControls,EmbedOptions,ControllerOverlayMode} from './types.d';
 import imgUrl from './canvas.svg';
 
+// TODO replace with a shadow DOM thing?
 let which_canvas = 0;
 
 export async function embed(gisst:string, container:HTMLDivElement, options?:EmbedOptions) {
+  if(which_canvas == 0) {
+    const style = document.createElement("style");
+    style.textContent = STYLES;
+    document.head.appendChild(style);
+  }
+  
   container.classList.add("gisst-embed-webplayer-container");
   const canvas = document.createElement("canvas");
   canvas.tabIndex = 1; // make canvas focusable
@@ -121,3 +128,32 @@ function touchHandler(event:TouchEvent)
     first.target.dispatchEvent(simulatedEvent);
     event.preventDefault();
 }
+
+
+function controller_mode_from(s:string|null) : ControllerOverlayMode {
+  if(s == "on") { return ControllerOverlayMode.On; }
+  else if(s == "off") { return ControllerOverlayMode.Off; }
+  else { return ControllerOverlayMode.Auto; }
+}
+
+class GISSTElement extends HTMLElement {
+  static observedAttributes = ["src", "controller", "width", "height"];
+
+  constructor() {
+    super();
+  }
+
+  connectedCallback() {
+    const src = this.getAttribute("src");
+    if(!src) {
+      throw "Cannot create GISST embed without src attribute";
+    }
+    const div = document.createElement("div");
+    div.style.width = this.getAttribute("width") ?? "auto";
+    div.style.height = this.getAttribute("height") ?? "auto";
+    this.appendChild(div);
+    embed(src!, div, {controls:controller_mode_from(this.getAttribute("controller"))});
+  }
+}
+
+customElements.define("gisst-embed", GISSTElement);
