@@ -7,33 +7,40 @@ let v86_loading = false;
 let v86_loaded = false;
 const emulators:EmbedV86[] = [];
 
-function load_v86(gisst_root:string) : Promise<void> {
-  return new Promise((resolve) => {
-    v86_loading = true;
-    const v86 = document.createElement("script");
-    v86.onload = () => {
-      v86_loading = false;
-      v86_loaded = true;
-      resolve();
-    };
-    v86.onerror = (err) => {
-      console.error("Couldn't load v86", err);
-      throw err;
-    };
-    v86.crossOrigin = "anonymous";
-    v86.src = gisst_root+"/v86/libv86.js";
-    document.head.appendChild(v86);
-  });
+async function downloadScript(src:string) : Promise<Blob> {
+  const resp = await fetch(src);
+  const blob = await resp.blob();
+  return blob;
+}
+
+function load_v86(gisst_root:string) : Promise<Blob | string> {
+  const path = gisst_root+'/v86/libv86.js';
+  if (gisst_root.startsWith("https://")) {
+    return downloadScript(path);
+  } else {
+    return new Promise((resolve) => resolve(path));
+  }
 }
 
 export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement, _options:EmbedOptions):Promise<EmuControls> {
-  if(!v86_loaded) {
+  if(!v86_loaded && !v86_loading) {
+    v86_loading = true;
     console.log("Loading v86");
-    await load_v86(gisst_root);
+    let blobOrUrl = await load_v86(gisst_root);
+    if (blobOrUrl instanceof Blob) {
+      blobOrUrl = URL.createObjectURL(blobOrUrl);
+    }
+    const scpt = document.createElement("script");
+    scpt.src = blobOrUrl;
+    scpt.onload = () => {
+      v86_loaded = true;
+      v86_loading = false;
+    }
+    document.head.appendChild(scpt);
   }
   while(v86_loading) {
     console.log("Another v86 instance is loading, please wait...");
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
   console.log("v86 loaded");
   for (const obj of manifest) {
@@ -58,8 +65,8 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   }
 
   const v86 = new EmbedV86({
-    wasm_root:"/v86",
-    bios_root:"/v86/bios",
+    wasm_root:gisst_root+"/v86",
+    bios_root:gisst_root+"/v86/bios",
     record_from_start:false,
     content_root:gisst_root,
     container: container,

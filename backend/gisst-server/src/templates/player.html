@@ -5,7 +5,7 @@
 {% block gisst_imports %}
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <script type="module" crossorigin src="/assets/index.js"></script>
-<link rel="stylesheet" href="/assets/index.css">
+<link rel="stylesheet" href="{{ base_url }}/assets/index.css">
 {% if player_params.environment.environment_framework == "retroarch" %}
 <script src="/ra/libretro_adapter.js"></script>
 {% elif player_params.environment.environment_framework == "v86" %}
