@@ -37,9 +37,6 @@ impl ServerConfig {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EnvConfig {
-    // Default directive is the fallback default for tracing if `rust_log` does not parse
-    // Default directive MUST parse for application to start
-    pub default_directive: String,
     // RUST_LOG env variable as parsed by EnvFilter in tracing_subscriber
     // May change this to an environment (dev / test / prod) variable with internal
     pub rust_log: String,
@@ -51,7 +48,6 @@ pub struct EnvConfig {
 impl Default for EnvConfig {
     fn default() -> Self {
         Self {
-            default_directive: "gisst_server=debug".to_string(),
             rust_log: "warn,gisst_server=debug,gisst=debug".to_string(),
             trace_include_headers: false,
             jaeger_endpoint: "http://127.0.0.1:4317/".to_string(),
