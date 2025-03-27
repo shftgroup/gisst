@@ -8,7 +8,6 @@ export default {
   plugins: [
     mkcert({savePath: "../../test-cert/"}),
     checker({
-      // e.g. use TypeScript check
       typescript: true,
     }),
     dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],}),
@@ -16,20 +15,11 @@ export default {
   ],
   build: {
     lib: {
-      // Could also be a dictionary or array of multiple entry points
       entry: resolve(__dirname, 'src/main.ts'),
       name: 'GISST',
-      // the proper extensions will be added
       fileName: 'embed',
     },
     sourcemap: true,
-    // rollupOptions: {
-    //   output: {
-    //     entryFileNames: `embed/[name].js`,
-    //     chunkFileNames: `embed/[name].js`,
-    //     assetFileNames: `embed/[name].[ext]`
-    //   }
-    // }
   },
   server: {
     headers:{

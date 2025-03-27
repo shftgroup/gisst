@@ -1,10 +1,8 @@
 import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls, EmbedOptions, ControllerOverlayMode} from './types.d';
 import {loadRetroArch,LibretroModule} from './libretro_adapter';
-import bpath from "path-browserify";
-import * as zip from "@zip.js/zip.js";
 
 export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement, embed_options:EmbedOptions):Promise<EmuControls> {
-  const state_dir = "/home/web_user/retroarch/userdata/states";
+  const state_dir = "/mem/states";
   const retro_args = ["-v"];
   const content = manifest.find((o) => o.object_role=="content" && o.object_role_index == 0)!;
   const content_file = content.file_filename!;
@@ -13,50 +11,75 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   const movie = start.type == "replay";
   const source_path = content.file_source_path!.replace(content.file_filename!, "");
   const use_gamepad_overlay = embed_options.controls == ControllerOverlayMode.On || ((embed_options.controls??ControllerOverlayMode.Auto) == ControllerOverlayMode.Auto && mobileAndTabletCheck());
+  /* These two could be loaded concurrently using Promises.all */
+  let state_data:Uint8Array|null = null;
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
+    const data = (start as StateStart).data;
+    state_data = new Uint8Array(await (await fetch(gisst_root+"/storage/"+data.file_dest_path)).arrayBuffer());
   }
+  let replay:Uint8Array|null = null;
   if (movie) {
     retro_args.push("-P");
     retro_args.push(state_dir+"/"+content_base+".replay1");
-  }
-  retro_args.push("-c");
-  retro_args.push("/home/web_user/retroarch/userdata/retroarch.cfg");
-  const has_config = manifest.find((o) => o.object_role=="config")!;
-  if(has_config) {
-    retro_args.push("--appendconfig");
-    retro_args.push("/home/web_user/content/retroarch.cfg");
-  }
-  retro_args.push("/home/web_user/content/" + source_path + "/" + content.file_filename!);
-  console.log(retro_args);
-  let fetched_files = await fetchZip(gisst_root+"/assets/frontend/bundle.zip");
-  let ra_cfg_text:string = await ((await fetch(gisst_root+"/assets/retroarch_web_base.cfg")).text());
-  let replay:Uint8Array|null = null;
-  if(movie) {
     const data = (start as ReplayStart).data;
     replay = new Uint8Array(await ((await fetch(gisst_root+"/storage/"+data.file_dest_path)).arrayBuffer()));
   }
+  retro_args.push("--config=/mem/retroarch.cfg");
+  const has_config = manifest.find((o) => o.object_role=="config")!;
+  if(has_config) {
+    retro_args.push("--appendconfig");
+    retro_args.push("/fetch/content/retroarch.cfg");
+  }
+  retro_args.push("/fetch/content/" + source_path + "/" + content.file_filename!);
+  console.log(retro_args);
+  let ra_cfg_text:string = await ((await fetch(gisst_root+"/assets/retroarch_web_base.cfg")).text());
   return new Promise((res) => {
-    loadRetroArch(gisst_root, core,
-      function (module:LibretroModule) {
-        module.FS.createPath("/", "/home/web_user/content", true, true);
+    loadRetroArch(gisst_root, core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
+      true,
+      async function (module:LibretroModule) {
+        const enc = new TextEncoder();
+        module.FS.createPath("/", "fetch/content", true, true);
         module.FS.createPath("/", state_dir, true, true);
-        mountFetchedFiles(module, fetched_files, "/home/web_user/retroarch/");
+        let fetch_manifest = `${gisst_root}/storage/\n`;
+        /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
         for(const file of manifest) {
-          let download_source_path = "/home/web_user/content/" + file.file_source_path;
-          download_source_path = download_source_path.replace(file.file_filename!, "");
-          module.FS.createPath("/", download_source_path, true, true);
-          module.FS.createPreloadedFile(download_source_path, file.file_filename, gisst_root+"/storage/" + file.file_dest_path, true, true);
+          let sep = file.file_source_path.startsWith("/") ? "" : "/";
+          let download_source_path_full = "/fetch/content" + sep + file.file_source_path;
+          let download_source_path = download_source_path_full;
+          const last_index = download_source_path.lastIndexOf(file.file_filename!);
+          if(last_index >= 0) {
+            download_source_path = download_source_path_full.substring(0, last_index);
+          } else {
+            sep = download_source_path_full.endsWith("/") ? "" : "/";
+            download_source_path_full += sep + file.file_filename!;
+          }
+          const content_url = gisst_root+"/storage/"+file.file_dest_path;
+          const resp = await fetch(content_url, {method:"HEAD"});
+          let sz = 0;
+          if (resp.status == 200) {
+            sz = parseInt(resp.headers.get("Content-Length") ?? "0",10);
+          }
+          await resp.text();
+          if (sz > 0 && sz <= 16*1024*1024) {
+            const data = await (await fetch(content_url)).arrayBuffer();
+            module.FS.createPath("/",download_source_path, true, true);
+            module.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
+          } else {
+            const content_url_encoded = encodeURI(file.file_dest_path);
+            fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
+          }
         }
+        console.log("Place fetch manifest",fetch_manifest);
+        module.FS.createDataFile("/mem", "fetch.txt", enc.encode(fetch_manifest), true, true, true);
         if (entryState) {
-          const data = (start as StateStart).data;
-          module.FS.createPreloadedFile(state_dir, content_base + ".state1.entry", gisst_root+"/storage/"+data.file_dest_path, true, true);
-          module.FS.createPreloadedFile(state_dir, content_base + ".state1", gisst_root+"/storage/"+data.file_dest_path, true, true);
+          module.FS.createDataFile(state_dir, content_base + ".state1.entry", state_data, true, true, true);
+          module.FS.createDataFile(state_dir, content_base + ".state1", state_data, true, true, true);
         }
         if (movie) {
           module.FS.createPath("/", state_dir, true, true);
-          module.FS.createDataFile(state_dir, content_base + ".replay1", replay, true, true, false);
+          module.FS.createDataFile(state_dir, content_base + ".replay1", replay, true, true, true);
         }
         if (use_gamepad_overlay) {
           // gameboy, gba, nes, snes, retropad
@@ -73,10 +96,8 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
           }
           ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/bundle/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
         }
-        const enc = new TextEncoder();
         const lines_enc = enc.encode(ra_cfg_text);
-        module.FS.createPath("/", "/home/web_user/retroarch/userdata", true, true);
-        module.FS.createDataFile("/home/web_user/retroarch/userdata", "retroarch.cfg", lines_enc, true, true, true);
+        module.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);
         retroReady(module, retro_args, container);
         res({
           toggle_mute:() => {
@@ -148,27 +169,3 @@ function mobileAndTabletCheck() {
   return check;
 }
 
-
-async function fetchZip(zipfile:string) : Promise<{path:string, file:string, data:ArrayBuffer}[]> {
-  const zipReader = new zip.ZipReader(new zip.HttpReader(zipfile), {useWebWorkers:false});
-  const entries = await zipReader.getEntries();
-  const ret = [];
-  for(const entry of entries) {
-    if (entry.getData && !entry.directory) {
-      const writer = new zip.Uint8ArrayWriter();
-      const data:Uint8Array = await entry.getData(writer);
-      const path = bpath.dirname(entry.filename);
-      const file = bpath.basename(entry.filename);
-      ret.push({path, file, data});
-    }
-  }
-  await zipReader.close();
-  return ret;
-}
-
-function mountFetchedFiles(RA:LibretroModule, files:{path:string, file:string, data:ArrayBuffer}[], mount:string) {
-  for(const file of files) {
-    RA.FS.createPath(mount, file.path, true, true);
-    RA.FS.createDataFile(mount+"/"+file.path, file.file, file.data, true, true, true);
-  }
-};

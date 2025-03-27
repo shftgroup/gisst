@@ -29,6 +29,7 @@ export default [{
             argsIgnorePattern: "^_",
             destructuredArrayIgnorePattern: "^_",
             varsIgnorePattern: "^_",
+            caughtErrorsIgnorePattern: "^_"
         }],
     },
 }];

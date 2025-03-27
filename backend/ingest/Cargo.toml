@@ -1,7 +1,7 @@
 [package]
 name = "ingest"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -19,10 +19,11 @@ sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid"
 env_logger = "0.10.0"
 clap = { version = "4.2.1", features = ["derive", "cargo", "env"] }
 clap-verbosity-flag = "2.0.1"
-anyhow = "1.0.70"
+anyhow = {version="1.0.70", features=["backtrace"]}
 gisst = { path = "../gisst" }
 rdb-sys = { path = "../rdb-sys" }
 chrono = { version = "0.4.28", features = ["clock"]}
 md-5                    = "0.10"
 regex = "1.11.1"
 rayon = "1.10.0"
+chd = "0.3.2"

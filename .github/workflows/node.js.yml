@@ -37,12 +37,9 @@ jobs:
     - name: build
       run: npm run build --workspaces --if-present
       working-directory: frontend
-    - name: tsc
-      run: npm run check
+    - name: dist
+      run: npm run dist --workspaces --if-present
       working-directory: frontend
-    # - name: upload frontend-web/dist
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: web-dist
-    #     path: frontend/frontend-web/dist
-    #     retention-days: 1
+    - name: tsc
+      run: npm run check --workspaces --if-present
+      working-directory: frontend

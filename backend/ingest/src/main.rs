@@ -57,7 +57,7 @@ struct Args {
     pub dep_paths: Vec<String>,
 
     #[clap(short = 'f', long = "force")]
-    pub allow_unmatched: bool,
+    pub force: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -82,6 +82,10 @@ pub enum IngestError {
     InsertFile(#[from] gisst::error::InsertFile),
     #[error("Role index too high, must be <= 65535")]
     RoleTooHigh(usize),
+    #[error("CHD error")]
+    Chd(#[from] chd::Error),
+    #[error("CHD no checksum error")]
+    ChdNoChecksum(),
 }
 
 #[allow(clippy::too_many_lines)]
@@ -100,7 +104,7 @@ async fn main() -> Result<(), IngestError> {
         verbose,
         deps,
         dep_paths,
-        allow_unmatched,
+        force,
     } = Args::parse();
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
@@ -127,6 +131,7 @@ async fn main() -> Result<(), IngestError> {
         let dep = std::path::Path::new(dep);
         let file_name = dep.file_name().unwrap().to_string_lossy().to_string();
         let dep_path = dep_paths.get(i).unwrap_or(&file_name);
+        info!("inserting dep {dep:?} @ {dep_path:?}");
         let dep_id = insert_file_object(
             &mut base_conn,
             &storage_root,
@@ -187,6 +192,7 @@ async fn main() -> Result<(), IngestError> {
                 let mut conn = pool.acquire().await?;
                 if ext.eq_ignore_ascii_case("m3u") {
                     let mut found = false;
+                    info!("playlist file {path:?}");
                     for file in files_of_playlist(&roms, &path)? {
                         match find_entry(&mut conn, &db, &file).await? {
                             FindResult::AlreadyHave => {
@@ -222,7 +228,7 @@ async fn main() -> Result<(), IngestError> {
                             }
                         }
                     }
-                    if !found && allow_unmatched {
+                    if !found && force {
                         let instance_id = create_metadata_records(
                             &mut conn,
                             &file_name,
@@ -269,7 +275,7 @@ async fn main() -> Result<(), IngestError> {
                             )
                             .await
                         }
-                        FindResult::NotInRDB if allow_unmatched => {
+                        FindResult::NotInRDB if force => {
                             let instance_id = create_metadata_records(
                                 &mut conn,
                                 &file_name,
@@ -291,6 +297,28 @@ async fn main() -> Result<(), IngestError> {
                             )
                             .await
                         }
+                        FindResult::AlreadyHave if force => {
+                            let instance_id = create_metadata_records(
+                                &mut conn,
+                                &file_name,
+                                &stem,
+                                &file_name,
+                                &platform,
+                                &core_name,
+                                &core_version,
+                            )
+                            .await?;
+                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            create_single_file_instance_objects(
+                                &mut conn,
+                                &storage_root,
+                                &roms,
+                                instance_id,
+                                &path,
+                                Some(stem.to_string()),
+                            )
+                            .await
+                        },
                         _ => Ok(()),
                     }
                 }
@@ -335,14 +363,21 @@ async fn find_entry(
         info!("{:?}:{hash_str} already in DB, skip", path);
         return Ok(FindResult::AlreadyHave);
     }
+    let name_without_ext = path.file_stem();
 
     info!("{:?}: {}: {hash_str}", path, hash.len());
 
     if let Some(rval) = db.find_entry::<&str, &[u8]>("md5", &hash) {
         info!("metadata found\n{rval} for {path:?}");
         Ok(FindResult::InRDB(rval))
+    } else if let Some(rval) = name_without_ext
+        .and_then(|name| name.to_str())
+        .and_then(|name| db.find_entry_by::<&str, &str>("name", |n| n == name))
+    {
+        info!("metadata found\n{rval} for {path:?} by name prefix");
+        Ok(FindResult::InRDB(rval))
     } else {
-        warn!("md5 not found");
+        warn!("md5 or name not found");
         Ok(FindResult::NotInRDB)
     }
 }
@@ -473,6 +508,7 @@ async fn create_playlist_instance_objects(
     .await?;
     Object::link_object_to_instance(conn, playlist_id, instance_id, ObjectRole::Content, 0).await?;
     let mut c_idx = 1;
+    info!("inserting playlist objects {path:?}");
     for file in files_of_playlist(roms, path)? {
         let file_id = insert_file_object(
             conn,
@@ -523,12 +559,16 @@ fn files_of_playlist(
     for file in std::fs::read_to_string(path)?.lines() {
         let file_path = roms.join(std::path::Path::new(file));
         out.push(file_path.clone());
+        info!("read playlist line {file:?}");
         if file_path
             .extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case(".cue"))
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("cue"))
         {
+            info!("read cue file {file_path:?}");
             for cue_line in std::fs::read_to_string(file_path)?.lines() {
+                info!("read cue line {cue_line}");
                 if let Some(captures) = cue_file_re.captures(cue_line) {
+                    info!("cap: {captures:?}");
                     let track = &captures[1];
                     let track_path = roms.join(std::path::Path::new(track));
                     out.push(track_path.clone());

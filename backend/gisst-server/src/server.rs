@@ -416,33 +416,44 @@ async fn get_data(
     };
 
     let accept: Option<String> = parse_header(&headers, "Accept");
-    Ok(
-        (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
-            let citation_page = app_state
-                .templates
-                .get_template("single_citation_page.html")?;
-            (
-                [
-                    ("Access-Control-Allow-Origin", "*"),
-                    ("Cross-Origin-Opener-Policy", "same-origin"),
-                    ("Cross-Origin-Resource-Policy", "same-origin"),
-                    ("Cross-Origin-Embedder-Policy", "require-corp"),
-                ],
-                Html(citation_page.render(context! {
-                    embed_data => embed_data,
-                })?),
-            )
-                .into_response()
-        } else if accept
-            .as_ref()
-            .is_some_and(|hv| hv.contains("application/json"))
-        {
-            (axum::Json(embed_data),).into_response()
-        } else {
-            Err(ServerError::MimeType)?
-        })
-        .into_response(),
-    )
+    Ok((if accept.is_none()
+        || accept.as_ref().is_some_and(|hv| hv.contains("text/html"))
+        || accept.as_ref().is_some_and(|hv| hv.contains("*/*"))
+    {
+        let citation_page = app_state
+            .templates
+            .get_template("single_citation_page.html")?;
+        (
+            [
+                ("Access-Control-Allow-Origin", "*"),
+                ("Cross-Origin-Opener-Policy", "same-origin"),
+                ("Cross-Origin-Resource-Policy", "same-origin"),
+                ("Cross-Origin-Embedder-Policy", "require-corp"),
+            ],
+            Html(citation_page.render(context! {
+                embed_data => embed_data,
+            })?),
+        )
+            .into_response()
+    } else if accept
+        .as_ref()
+        .is_some_and(|hv| hv.contains("application/json"))
+    {
+        (
+            [
+                ("Access-Control-Allow-Origin", "*"),
+                ("Cross-Origin-Opener-Policy", "cross-origin"),
+                ("Cross-Origin-Resource-Policy", "cross-origin"),
+                ("Cross-Origin-Embedder-Policy", "require-corp"),
+            ],
+            axum::Json(embed_data),
+        )
+            .into_response()
+    } else {
+        tracing::error!("unrecognized accept header {accept:?}");
+        Err(ServerError::MimeType)?
+    })
+    .into_response())
 }
 
 async fn get_player(

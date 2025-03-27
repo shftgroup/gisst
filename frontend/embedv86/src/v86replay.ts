@@ -7,7 +7,7 @@ export enum Evt {
 }
 export const EvtNames:string[] = ["keyboard-code", "mouse-click", "mouse-delta", "mouse-absolute", "mouse-wheel"];
 
-const REPLAY_CHECKPOINT_INTERVAL:number = 10003*1000*120;
+const REPLAY_CHECKPOINT_INTERVAL:number = 100003*1000*12;
 /* Cycles per millisecond (appx) * milliseconds per second * number of seconds */
 
 export enum ReplayMode {
@@ -52,7 +52,7 @@ export class Replay {
     this.last_time = 0;
     this.mode = mode;
   }
-  reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86Starter):Checkpoint[] {
+  reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86):Checkpoint[] {
     const checkpoint = this.checkpoints[n];
     this.checkpoint_index = n+1;
     emulator.restore_state(checkpoint.state);
@@ -77,7 +77,7 @@ export class Replay {
     this.wraps = wraps;
     this.last_time = time;
   }
-  private resume(mode:ReplayMode, emulator:V86Starter) {
+  private resume(mode:ReplayMode, emulator:V86) {
     // ensure emulator time is current time
     this.mode = mode;
     console.log("Resume",mode);
@@ -112,19 +112,19 @@ export class Replay {
     const rem = t - (wraps * (2**32-1));
     return [wraps, rem];
   }
-  log_evt(emulator:V86Starter, code:Evt, val:object|number) {
+  log_evt(emulator:V86, code:Evt, val:object|number) {
     if(this.mode == ReplayMode.Record) {
       //console.log("R",this.replay_time(emulator.get_instruction_counter()), EvtNames[code], val);
       this.events.push(new ReplayEvent(this.replay_time(emulator.get_instruction_counter()), code, val));
       this.index += 1;
     }
   }
-  async make_checkpoint(emulator:V86Starter) {
+  async make_checkpoint(emulator:V86) {
     // console.log("make cp",this.replay_time(emulator.get_instruction_counter()),this.index,this.checkpoints.length);
     this.checkpoints.push(new Checkpoint(this.replay_time(emulator.get_instruction_counter()), "replay"+this.id+"-check"+this.checkpoints.length.toString(), this.index, await emulator.save_state(), emulator.screen_make_screenshot().src));
     this.checkpoint_index += 1;
   }
-  async tick(emulator:V86Starter) {
+  async tick(emulator:V86) {
     const t = emulator.get_instruction_counter();
     if (t < this.last_time) { // counter wrapped around, increase wraps
       this.wraps += 1;
@@ -178,22 +178,22 @@ export class Replay {
         break;
     }
   }
-  static async start_recording(emulator:V86Starter):Promise<Replay> {
+  static async start_recording(emulator:V86):Promise<Replay> {
     const r = new Replay(generateUUID(),ReplayMode.Record);
     emulator.v86.cpu.instruction_counter[0] = 0;
     r.make_checkpoint(emulator);
     return r;
   }
-  private finish_playback(emulator:V86Starter) {
+  private finish_playback(emulator:V86) {
     emulator.mouse_set_status(true);
     emulator.keyboard_set_status(true);
     this.mode = ReplayMode.Finished;
   }
-  private async finish_recording(emulator:V86Starter) {
+  private async finish_recording(emulator:V86) {
     this.make_checkpoint(emulator);
     this.mode = ReplayMode.Finished;
   }
-  async stop(emulator:V86Starter) {
+  async stop(emulator:V86) {
     if(this.mode == ReplayMode.Record) {
       await this.finish_recording(emulator);
     }
@@ -202,7 +202,7 @@ export class Replay {
     }
     // console.log(this);
   }
-  async start_playback(emulator:V86Starter) {
+  async start_playback(emulator:V86) {
     this.mode = ReplayMode.Playback;
     this.index = 0;
     this.checkpoint_index = 0;
@@ -401,7 +401,7 @@ export class Replay {
       const state = new Uint8Array(state_len);
       state.set(src_buf);
       x += state_len;
-      checkpoints.push(new Checkpoint(when, name, event_index, state, thumb));
+      checkpoints.push(new Checkpoint(when, name, event_index, state.buffer, thumb));
     }
     const r = new Replay(id, ReplayMode.Inactive);
     r.events = events;

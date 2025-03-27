@@ -3,15 +3,13 @@ import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink, EmbedOptions, ControllerOverlayMode} from './types.d';
 import {LibretroModule, loadRetroArch} from './libretro_adapter';
-import * as zip from "@zip.js/zip.js";
-import bpath from "path-browserify";
 
 const FS_CHECK_INTERVAL = 1000;
 // one auto state per 5 minutes feels reasonable
 const AUTO_STATE_INTERVAL = 5*60*1000;
 
-const state_dir = "/home/web_user/retroarch/userdata/states";
-// const saves_dir = "/home/web_user/retroarch/userdata/saves";
+const state_dir = "/mem/states";
+// const saves_dir = "/mem/saves";
 
 const retro_args = ["-v"];
 
@@ -29,26 +27,41 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
   const movie = start.type == "replay";
   const source_path = content.file_source_path!.replace(content.file_filename!, "");
   const use_gamepad_overlay = embed_options.controls == ControllerOverlayMode.On || ((embed_options.controls??ControllerOverlayMode.Auto) == ControllerOverlayMode.Auto && mobileAndTabletCheck());
+  let entryScreenshot:GISSTModels.DBRecord;
+  let state_data:Uint8Array|null = null;
   if (entryState) {
     retro_args.push("-e");
     retro_args.push("1");
+    const data = (start as StateStart).data;
+    state_data = new Uint8Array(await (await fetch("/storage/"+data.file_dest_path)).arrayBuffer());
+    console.log(data, "/storage/"+data.file_dest_path,"/fetch/content/entry_state");
+    if(!data.screenshot_id) {
+      console.error("No screenshot for entry state");
+      entryScreenshot = {screenshot_id:"", screenshot_data:""};
+    } else {
+      entryScreenshot = await db.getRecordById("screenshot", data.screenshot_id);
+    }
   }
+  let replay:Uint8Array|null = null;
   if (movie) {
     retro_args.push("-P");
     retro_args.push(state_dir+"/"+content_base+".replay1");
+    const data = (start as ReplayStart).data;
+    replay = new Uint8Array(await ((await fetch("/storage/"+data.file_dest_path)).arrayBuffer()));
   } else if(boot_into_record) {
     retro_args.push("-R");
     retro_args.push(state_dir+"/"+content_base+".replay1");
   }
   retro_args.push("-c");
-  retro_args.push("/home/web_user/retroarch/userdata/retroarch.cfg");
+  retro_args.push("/mem/retroarch.cfg");
   const has_config = manifest.find((o) => o.object_role=="config")!;
   if(has_config) {
     retro_args.push("--appendconfig");
-    retro_args.push("/home/web_user/content/retroarch.cfg");
+    retro_args.push("/fetch/content/retroarch.cfg");
   }
-  retro_args.push("/home/web_user/content/" + source_path + "/" + content.file_filename!);
+  retro_args.push("/fetch/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
+  let ra_cfg_text:string = await ((await fetch("/assets/retroarch_web_base.cfg")).text());
 
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
@@ -58,126 +71,131 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
         elt.innerText=evt;
         return elt;
       },
-        "toggle_mute": () => send_message("MUTE"),
-        "load_state": (num: number) => load_state_slot(num),
-        "save_state": () => save_state(),
-        "play_replay": (num: number) => play_replay_slot(num),
-        "start_replay": () => record_replay(),
-        "stop_and_save_replay": () => stop_replay(),
-        "checkpoints_of":(replay_slot:number) => {
-          const replay_file = state_dir+"/"+content_base+".replay"+replay_slot;
-          const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(replay_file))).id;
-          const checkpoints = [];
-          for(const state of Object.keys(seen_states)) {
-            const state_replay = ra_util.replay_of_state((RA.FS.readFile(state_dir+"/"+state)))?.id;
-            if(state_replay == replay) {
-              checkpoints.push(state);
-            }
+      "toggle_mute": () => send_message("MUTE"),
+      "load_state": (num: number) => load_state_slot(num),
+      "save_state": () => save_state(),
+      "play_replay": (num: number) => play_replay_slot(num),
+      "start_replay": () => record_replay(),
+      "stop_and_save_replay": () => stop_replay(),
+      "checkpoints_of":(replay_slot:number) => {
+        const replay_file = state_dir+"/"+content_base+".replay"+replay_slot;
+        const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(replay_file))).id;
+        const checkpoints = [];
+        for(const state of Object.keys(seen_states)) {
+          const state_replay = ra_util.replay_of_state((RA.FS.readFile(state_dir+"/"+state)))?.id;
+          if(state_replay == replay) {
+            checkpoints.push(state);
           }
-          return checkpoints;
-        },
-        "download_file": (category: "state" | "save" | "replay", file_name: string) => {
-          let path = "/home/web_user/retroarch/userdata";
-          if (category == "state") {
+        }
+        return checkpoints;
+      },
+      "download_file": (category: "state" | "save" | "replay", file_name: string) => {
+        let path = "/mem";
+        if (category == "state") {
+          path += "/states";
+        } else if (category == "save") {
+          path += "/saves";
+        } else if (category == "replay") {
+          path += "/states";
+        } else {
+          console.error("Invalid save category", category, file_name);
+        }
+        const data = RA.FS.readFile(path + "/" + file_name);
+        saveAs(new Blob([data]), file_name);
+      },
+      "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
+        return new Promise((resolve, reject) => {
+          let path = "/mem";
+          if (category === "state") {
             path += "/states";
-          } else if (category == "save") {
+          } else if (category === "save") {
             path += "/saves";
-          } else if (category == "replay") {
+          } else if (category === "replay") {
             path += "/states";
           } else {
             console.error("Invalid save category", category, file_name);
+            reject("Invalid save category:" + category + ":" + file_name)
           }
           const data = RA.FS.readFile(path + "/" + file_name);
-          saveAs(new Blob([data]), file_name);
-        },
-        "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
-          return new Promise((resolve, reject) => {
-            let path = "/home/web_user/retroarch/userdata";
-            if (category === "state") {
-              path += "/states";
-            } else if (category === "save") {
-              path += "/saves";
-            } else if (category === "replay") {
-              path += "/states";
-            } else {
-              console.error("Invalid save category", category, file_name);
-              reject("Invalid save category:" + category + ":" + file_name)
-            }
-            const data = RA.FS.readFile(path + "/" + file_name);
 
-            db.uploadFile(new File([data], file_name), metadata.record.file_id,
-                (error:Error) => { reject(console.error("ran error callback", error.message))},
-                (_percentage: number) => {},
-                (uuid_string: string) => {
-                  metadata.record.file_id = uuid_string;
-                  if (category === "state"){
-                    db.uploadRecord({screenshot_data: metadata.screenshot}, "screenshot")
-                        .then((screenshot:GISSTModels.DBRecord) => {
-                          (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
-                          db.uploadRecord(metadata.record, category)
-                              .then((state:GISSTModels.DBRecord) => {
-                                (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
-                                resolve(metadata)
-                              })
-                            .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
-                        })
-                      .catch((e) => {console.error(e); reject("Screenshot upload from RA failed.");})
-                  } else if (category === "replay") {
+          db.uploadFile(new File([data], file_name), metadata.record.file_id,
+            (error:Error) => { reject(console.error("ran error callback", error.message))},
+            (_percentage: number) => {},
+            (uuid_string: string) => {
+              metadata.record.file_id = uuid_string;
+              if (category === "state"){
+                db.uploadRecord({screenshot_data: metadata.screenshot}, "screenshot")
+                  .then((screenshot:GISSTModels.DBRecord) => {
+                    (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
                     db.uploadRecord(metadata.record, category)
-                        .then((replay:GISSTModels.DBRecord) => {
-                          (metadata.record as GISSTModels.Replay).replay_id = (replay as GISSTModels.Replay).replay_id;
-                          resolve(metadata)
-                        })
+                      .then((state:GISSTModels.DBRecord) => {
+                        (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
+                        resolve(metadata)
+                      })
                       .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
-                    // upload all associated states too
-                  }
-                })
-                .catch(() => reject("File upload from RA failed."));
+                  })
+                  .catch((e) => {console.error(e); reject("Screenshot upload from RA failed.");})
+              } else if (category === "replay") {
+                db.uploadRecord(metadata.record, category)
+                  .then((replay:GISSTModels.DBRecord) => {
+                    (metadata.record as GISSTModels.Replay).replay_id = (replay as GISSTModels.Replay).replay_id;
+                    resolve(metadata)
+                  })
+                  .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
+                // upload all associated states too
+              }
+            })
+            .catch(() => reject("File upload from RA failed."));
 
-          })
-        }
-      },
-      false,
-      JSON.parse(document.getElementById("config")!.textContent!)
+        })
+      }
+    },
+    false,
+    JSON.parse(document.getElementById("config")!.textContent!)
   );
   ui_state.setReplayMode(movie ? UIReplayMode.Playback : (boot_into_record ? UIReplayMode.Record : UIReplayMode.Inactive));
-  let fetched_files = await fetchZip("/assets/frontend/bundle.zip");
-  let ra_cfg_text:string = await ((await fetch("/assets/retroarch_web_base.cfg")).text());
-  let replay:Uint8Array|null = null;
-  if(movie) {
-    const data = (start as ReplayStart).data;
-    replay = new Uint8Array(await ((await fetch("/storage/"+data.file_dest_path)).arrayBuffer()));
-  }
-  let entryScreenshot:GISSTModels.DBRecord;
-  if (entryState) {
-    // Cast: This one is definitely a statestart because the type is state
-    const data = (start as StateStart).data;
-    console.log(data, "/storage/"+data.file_dest_path,"/home/web_user/content/entry_state");
-    if(!data.screenshot_id) {
-      console.error("No screenshot for entry state");
-      entryScreenshot = {screenshot_id:"", screenshot_data:""};
-    } else {
-      entryScreenshot = await db.getRecordById("screenshot", data.screenshot_id);
-    }
-  }
-  loadRetroArch("", core,
-    function (module:LibretroModule) {
+  loadRetroArch("", core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
+    true,
+    async function (module:LibretroModule) {
+      const enc = new TextEncoder();
       RA = module;
-
-      RA.FS.createPath("/", "/home/web_user/content", true, true);
+      RA.FS.createPath("/", "fetch/content", true, true);
       RA.FS.createPath("/", state_dir, true, true);
-      mountFetchedFiles(RA, fetched_files, "/home/web_user/retroarch/");
+      let fetch_manifest = `/storage/\n`;
+      /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
 
       for(const file of manifest) {
-        let download_source_path = "/home/web_user/content/" + file.file_source_path;
-        download_source_path = download_source_path.replace(file.file_filename!, "");
-        module.FS.createPath("/", download_source_path, true, true);
-        module.FS.createPreloadedFile(download_source_path, file.file_filename, "/storage/" + file.file_dest_path, true, true);
+        let sep = file.file_source_path.startsWith("/") ? "" : "/";
+        let download_source_path_full = "/fetch/content" + sep + file.file_source_path;
+        let download_source_path = download_source_path_full;
+        const last_index = download_source_path.lastIndexOf(file.file_filename!);
+        if(last_index >= 0) {
+          download_source_path = download_source_path_full.substring(0, last_index);
+        } else {
+          sep = download_source_path_full.endsWith("/") ? "" : "/";
+          download_source_path_full += sep + file.file_filename!;
+        }
+        const content_url = "/storage/"+file.file_dest_path;
+        const resp = await fetch(content_url, {method:"HEAD"});
+        let sz = 0;
+        if (resp.status == 200) {
+          sz = parseInt(resp.headers.get("Content-Length") ?? "0",10);
+        }
+        await resp.text();
+        if (sz > 0 && sz <= 16*1024*1024) {
+          const data = await (await fetch(content_url)).arrayBuffer();
+          module.FS.createPath("/",download_source_path, true, true);
+          module.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
+        } else {
+          const content_url_encoded = encodeURI(file.file_dest_path);
+          fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
+        }
       }
+      console.log("Place fetch manifest",fetch_manifest);
+      module.FS.createDataFile("/mem", "fetch.txt", enc.encode(fetch_manifest), true, true, true);
       if (entryState) {
-        const data = (start as StateStart).data;
-        module.FS.createPreloadedFile(state_dir, content_base + ".state1.entry", "/storage/"+data.file_dest_path, true, true);
-        module.FS.createPreloadedFile(state_dir, content_base + ".state1", "/storage/"+data.file_dest_path, true, true);
+        module.FS.createDataFile(state_dir, content_base + ".state1.entry", state_data, true, true, true);
+        module.FS.createDataFile(state_dir, content_base + ".state1", state_data, true, true, true);
       }
       if (movie) {
         const data = (start as ReplayStart).data;
@@ -200,10 +218,8 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
         }
         ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/bundle/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
       }
-      const enc = new TextEncoder();
       const lines_enc = enc.encode(ra_cfg_text);
-      module.FS.createPath("/", "/home/web_user/retroarch/userdata", true, true);
-      module.FS.createDataFile("/home/web_user/retroarch/userdata", "retroarch.cfg", lines_enc, true, true, true);
+      module.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);
       if (entryState) {
         const data = (start as StateStart).data;
         seen_states[content_base+".state1"] = (entryScreenshot as GISSTModels.Screenshot).screenshot_data;
@@ -411,26 +427,3 @@ function mobileAndTabletCheck() {
 }
 
 
-async function fetchZip(zipfile:string) : Promise<{path:string, file:string, data:ArrayBuffer}[]> {
-  const zipReader = new zip.ZipReader(new zip.HttpReader(zipfile), {useWebWorkers:false});
-  const entries = await zipReader.getEntries();
-  const ret = [];
-  for(const entry of entries) {
-    if (entry.getData && !entry.directory) {
-      const writer = new zip.Uint8ArrayWriter();
-      const data:Uint8Array = await entry.getData(writer);
-      const path = bpath.dirname(entry.filename);
-      const file = bpath.basename(entry.filename);
-      ret.push({path, file, data});
-    }
-  }
-  await zipReader.close();
-  return ret;
-}
-
-function mountFetchedFiles(RA:LibretroModule, files:{path:string, file:string, data:ArrayBuffer}[], mount:string) {
-  for(const file of files) {
-    RA.FS.createPath(mount, file.path, true, true);
-    RA.FS.createDataFile(mount+"/"+file.path, file.file, file.data, true, true, true);
-  }
-};

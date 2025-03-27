@@ -4,26 +4,27 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "check": "tsc && npx eslint src",
-    "build": "tsc && vite build",
-    "dist": "vite build && rsync -acvzh --exclude index.html dist/* ../../backend/web-dist/",
-    "preview": "vite preview"
+    "dev": "shx mkdir -p ../../test-cert && vite",
+    "check": "tsc && eslint src",
+    "build": "shx mkdir -p ../../test-cert && tsc && vite build",
+    "dist": "shx mkdir -p ../../test-cert && vite build && shx mkdir -p ../../backend/web-dist && shx cp -r dist/* ../../backend/web-dist/",
+    "preview": "shx mkdir -p ../../test-cert && vite preview"
   },
   "devDependencies": {
     "@types/path-browserify": "^1.0.3",
-    "@typescript-eslint/eslint-plugin": "^8.12.2",
-    "@typescript-eslint/parser": "^8.12.2",
+    "@typescript-eslint/eslint-plugin": "^8.26.1",
+    "@typescript-eslint/parser": "^8.26.1",
     "coffeescript": "^2.7.0",
-    "eslint": "^9.13.0",
+    "eslint": "^9.22.0",
     "rollup-plugin-sourcemaps": "0.6.3",
-    "typescript": "^4.9.5",
-    "vite": "^4.1.0",
-    "vite-plugin-checker": "^0.5.5",
-    "vite-plugin-mkcert": "^1.17.6"
+    "shx": "^0.3.4",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.1",
+    "vite-plugin-checker": "^0.9.0",
+    "vite-plugin-mkcert": "^1.17.7"
   },
   "dependencies": {
-    "@zip.js/zip.js": "^2.7.53",
+    "@zip.js/zip.js": "^2.7.57",
     "embedv86": "file:../embedv86",
     "gisst-player": "file:../gisst-player-ui",
     "path-browserify": "^1.0.1",

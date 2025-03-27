@@ -14,7 +14,7 @@ const compat = new FlatCompat({
 });
 
 export default [{
-    ignores: ["src/libretro_adapter.js"],
+    ignores: ["src/libretro.worker.ts"],
 }, ...compat.extends("eslint:recommended", "plugin:@typescript-eslint/recommended"), {
     plugins: {
         "@typescript-eslint": typescriptEslint,
@@ -29,6 +29,7 @@ export default [{
             argsIgnorePattern: "^_",
             destructuredArrayIgnorePattern: "^_",
             varsIgnorePattern: "^_",
+            caughtErrorsIgnorePattern: "^_"
         }],
     },
 }];

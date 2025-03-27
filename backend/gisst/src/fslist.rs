@@ -1,7 +1,5 @@
 #![allow(clippy::missing_errors_doc)]
 
-use magic::cookie::DatabasePaths;
-
 use crate::error::FSList;
 
 const DEPTH_LIMIT: usize = 1024;
@@ -183,12 +181,8 @@ pub fn get_file_at_path(
             return Ok(("application/zip".to_string(), dir_zipped));
         }
         let file = get_file_at_path_fat(&fs, subpath)?;
-        let cookie =
-            magic::Cookie::open(magic::cookie::Flags::MIME).map_err(|_| FSList::FiletypeDB)?;
-        let db = DatabasePaths::default();
-        let cookie = cookie.load(&db).map_err(|_| FSList::FiletypeDB)?;
-        let mime = cookie.buffer(&file)?;
-        return Ok((mime, file));
+        let mime = tree_magic_mini::from_u8(&file);
+        return Ok((mime.to_string(), file));
     }
     Err(FSList::FileNotFound(path.to_string_lossy().into_owned()))
 }
@@ -228,7 +222,7 @@ fn get_dir_at_path_fat(
     fs: &fatfs::FileSystem<FATStorage>,
     path: &std::path::Path,
 ) -> Result<Vec<u8>, FSList> {
-    use zip::{write::SimpleFileOptions, ZipWriter};
+    use zip::{ZipWriter, write::SimpleFileOptions};
     let mut out_bytes: Vec<u8> = Vec::with_capacity(16 * 1024);
     let directory = if path.parent().is_none() {
         fs.root_dir()
@@ -267,16 +261,5 @@ fn get_dir_at_path_fat(
 
 #[must_use]
 pub fn is_disk_image(file: &std::path::Path) -> bool {
-    let Ok(cookie) = magic::Cookie::open(magic::cookie::Flags::ERROR) else {
-        return false;
-    };
-    let db = DatabasePaths::default();
-    match cookie.load(&db) {
-        Ok(cookie) => cookie
-            .file(file)
-            .map(|desc| desc.contains("DOS/MBR boot sector"))
-            .unwrap_or(false),
-        // TODO error reporting
-        _ => false,
-    }
+    std::fs::File::open(file).is_ok_and(|mut f| mbrman::MBR::read_from(&mut f, 512).is_ok())
 }

@@ -526,7 +526,6 @@ async fn create_replay(
     Json(replay): Json<CreateReplay>,
 ) -> Result<Json<Replay>, ServerError> {
     let mut conn = app_state.pool.acquire().await?;
-
     if File::get_by_id(&mut conn, replay.file_id).await?.is_some() {
         Ok(Json(
             Replay::insert(

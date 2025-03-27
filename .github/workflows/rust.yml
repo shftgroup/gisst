@@ -11,17 +11,50 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2.5.1
       with:
         workspaces: "backend"
-    - name: Install magic
-      run: sudo apt-get install -y libmagic-dev
+        cache-all-crates: "true"
+    - name: Install zshell
+      run: sudo apt install -y zsh
     - name: Clippy
       working-directory: backend
       run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
+    - name: Prep libv86
+      run: mkdir -p backend/web-dist && cp -r frontend/frontend-web/public/v86 backend/web-dist/
+    - name: Create DB
+      working-directory: backend
+      run: |
+        sudo systemctl start postgresql.service
+        sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+        cargo install sqlx-cli
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb" >> .env
+        echo "GISST_CONFIG=./" >> .env
+        cargo sqlx database reset -y -f
+    - name: Load example data into DB
+      working-directory: backend
+      run: rm -rf storage; mkdir storage; LOAD_WIN=0 zsh -e ./load_examples.sh
+    - name: Check DB contents
+      working-directory: backend
+      run: |
+        sudo -u postgres psql gisstdb -c "select count(*) from instance;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "54"
+        sudo -u postgres psql gisstdb -c "select count(*) from work;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "42"
+        sudo -u postgres psql gisstdb -c "select count(*) from instancework;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "54"
+        sudo -u postgres psql gisstdb -c "select count(*) from state;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from replay;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from screenshot;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from creator;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from environment;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "8"
+        sudo -u postgres psql gisstdb -c "select count(*) from file;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "62"
+        sudo -u postgres psql gisstdb -c "select count(*) from object;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "60"
+        sudo -u postgres psql gisstdb -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "82"
+        echo "All DB table counts OK"
+        find storage -type f -print0 | du -a --files0-from=- --total | sort -k 2 > du-out.txt
+        grep -x "61932\s*total" du-out.txt
+        echo "Total byte count OK"
+        wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "117"
+        echo "Total file count OK"

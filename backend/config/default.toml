@@ -24,3 +24,4 @@ default_directive = "gisst_server=debug"
 rust_log = "warn,gisst_server=debug,gisst=debug"
 trace_include_headers = false
 jaeger_endpoint = "http://127.0.0.1:4317/"
+

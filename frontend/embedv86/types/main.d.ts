@@ -23,6 +23,8 @@ export interface ConfigSettings {
     hda?: V86Image;
     hdb?: V86Image;
     cdrom?: V86Image;
+    memory_size?: number;
+    vga_memory_size?: number;
 }
 export declare class State {
     name: string;
@@ -31,7 +33,7 @@ export declare class State {
     constructor(name: string, state: ArrayBuffer, thumbnail: string);
 }
 export declare class EmbedV86 {
-    emulator: V86Starter | null;
+    emulator: V86 | null;
     config: EmbedV86Config;
     states: State[];
     replays: Replay[];

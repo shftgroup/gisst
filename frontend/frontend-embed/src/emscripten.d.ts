@@ -36,16 +36,20 @@ declare namespace Emscripten {
     }
 }
 
+interface Environment {
+  [key:string]: string
+}
+
 interface EmscriptenModule {
     print(str: string): void;
     printErr(str: string): void;
     arguments: string[];
     environment: Emscripten.EnvironmentType;
+    ENV:Environment,
     preInit: Array<{ (): void }>;
     preRun: Array<{ (mod:object|undefined): void }>;
     postRun: Array<{ (mod:object|undefined): void }>;
     onAbort: { (what: any): void };
-    onRuntimeInitialized: { (): void };
     preinitializedWebGLContext: WebGLRenderingContext;
     noInitialRun: boolean;
     noExitRuntime: boolean;
@@ -82,6 +86,9 @@ interface EmscriptenModule {
     TOTAL_MEMORY: number;
     FAST_MEMORY: number;
 
+    FETCHFS:WASMFSBackend;
+    OPFS:WASMFSBackend;
+
     addOnPreRun(cb: () => any): void;
     addOnInit(cb: () => any): void;
     addOnPreMain(cb: () => any): void;
@@ -93,8 +100,11 @@ interface EmscriptenModule {
 
     _malloc(size: number): number;
     _free(ptr: number): void;
+    FS:FS;
+}
 
-  FS:FS;
+interface WASMFSBackend {
+  createBackend(opts:object) : number;
 }
 
 /**
@@ -174,8 +184,10 @@ declare interface FS {
     syncfs(callback: (e: any) => any, populate?: boolean): void;
     mount(type: Emscripten.FileSystemType, opts: any, mountpoint: string): any;
     unmount(mountpoint: string): void;
-
+    create(path:string, mode?: number): any;
+    createFile(parent:string, path:string, mode?: number, backend?: number): any;
     mkdir(path: string, mode?: number): any;
+    mkdirTree(path: string): any;
     mkdev(path: string, mode?: number, dev?: number): any;
     symlink(oldpath: string, newpath: string): any;
     rename(old_path: string, new_path: string): void;
@@ -265,6 +277,9 @@ declare interface FS {
         canWrite: boolean,
         canOwn: boolean,
     ): FSNode;
+
+    // Etc
+    handleError(code:int):object;
 }
 
 declare let MEMFS: Emscripten.FileSystemType;
