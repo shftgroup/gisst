@@ -56,7 +56,8 @@ git clone --depth 1 https://github.com/libretro/stella2014-libretro stella2014 |
 git clone --depth 1 -b emscripten-build-fixes https://github.com/JoeOsborn/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
 git clone --depth 1 -b fix-makefile-emscripten https://github.com/JoeOsborn/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
-git clone --depth 1 -b https://github.com/JoeOsborn/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
+git clone --depth 1 https://github.com/LIJI32/SameBoy sameboy || echo "already have sameboy"
+git clone --depth 1 -b emscripten_testing https://github.com/JoeOsborn/mupen64plus-libretro-nx mupen64plus_next || echo "already have mupen64"
 popd
 fi
 
@@ -85,6 +86,13 @@ for f in *; do
         cp build/libv86.js build/v86.wasm ../../frontend/frontend-web/public/v86
         popd
         continue
+    elif [ $f = "sameboy" ]
+    then
+        git clone --depth 1 git@github.com:gbdev/rgbds.git || echo "Could not get rgbds or rgbds already present"
+        make -C rgbds -j || die "Could not build rgbds"
+        PATH="./rgbds:${PATH}" make -j CONF=release bootroms || die "could not build sameboy bootroms"
+        PATH="./rgbds:${PATH}" emmake make CONF=release platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC -j libretro || die "could not build core ${f}"
+        cp build/bin/${f}_libretro_emscripten.bc ../ra/libretro_emscripten.bc
     elif [ -f Makefile.libretro ]
     then
         # emmake make -f Makefile.libretro platform=emscripten clean

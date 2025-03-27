@@ -57,7 +57,7 @@ struct Args {
     pub dep_paths: Vec<String>,
 
     #[clap(short = 'f', long = "force")]
-    pub allow_unmatched: bool,
+    pub force: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -104,7 +104,7 @@ async fn main() -> Result<(), IngestError> {
         verbose,
         deps,
         dep_paths,
-        allow_unmatched,
+        force,
     } = Args::parse();
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
@@ -228,7 +228,7 @@ async fn main() -> Result<(), IngestError> {
                             }
                         }
                     }
-                    if !found && allow_unmatched {
+                    if !found && force {
                         let instance_id = create_metadata_records(
                             &mut conn,
                             &file_name,
@@ -275,7 +275,7 @@ async fn main() -> Result<(), IngestError> {
                             )
                             .await
                         }
-                        FindResult::NotInRDB if allow_unmatched => {
+                        FindResult::NotInRDB if force => {
                             let instance_id = create_metadata_records(
                                 &mut conn,
                                 &file_name,
@@ -297,6 +297,28 @@ async fn main() -> Result<(), IngestError> {
                             )
                             .await
                         }
+                        FindResult::AlreadyHave if force => {
+                            let instance_id = create_metadata_records(
+                                &mut conn,
+                                &file_name,
+                                &stem,
+                                &file_name,
+                                &platform,
+                                &core_name,
+                                &core_version,
+                            )
+                            .await?;
+                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            create_single_file_instance_objects(
+                                &mut conn,
+                                &storage_root,
+                                &roms,
+                                instance_id,
+                                &path,
+                                Some(stem.to_string()),
+                            )
+                            .await
+                        },
                         _ => Ok(()),
                     }
                 }
