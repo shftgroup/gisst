@@ -75,7 +75,7 @@ impl ServerState {
 }
 
 #[allow(clippy::too_many_lines)]
-#[tracing::instrument(name="launch_sequence")] 
+#[tracing::instrument(name="launch")] 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     use crate::selective_serve_dir;
     StorageHandler::init_storage(
@@ -188,7 +188,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33_554_432))
         .layer(auth_layer);
-        // .layer(TraceLayer::new_for_http().make_span_with(tower_http::trace::DefaultMakeSpan::new().include_headers(config.env.trace_include_headers)));
 
     let addr = SocketAddr::new(
         IpAddr::V4(config.http.listen_address),
@@ -316,11 +315,10 @@ async fn get_about(
     .into_response())
 }
 
-#[tracing::instrument(name="access_homepage")] 
+#[tracing::instrument(name="get_homepage")] 
 async fn get_homepage(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, ServerError> {
-    debug!("Hello friend!");
     Ok(Html(
         app_state
             .templates
