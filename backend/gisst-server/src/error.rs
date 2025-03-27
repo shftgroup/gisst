@@ -5,7 +5,7 @@ use axum::{
 };
 
 use gisst::error::Table;
-use minijinja::{context, Environment};
+use minijinja::{Environment, context};
 use std::error::Error;
 use std::fmt::Debug;
 use tracing::error;
@@ -77,18 +77,21 @@ impl Debug for ServerError {
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
         let mut env = Environment::new();
+        // This unwrap is safe because errors can't happen before the serverstate is initialized
         env.add_template("error.html", r#"
-
-        <div id="embedExample" style="width:320px; height: 280px"></div>
-        <h1>{{status_code }}</h1>
-        <p>Oops! We've encountered a {{ status_code }}, please go back to the previous page while we sort this out.</p>
-        <h2> Cryptic Error Message </h2>
-        <p>{{ message }}</p>
-        <link rel="stylesheet" href="/embed/style.css">
-        <script type="module">
-            import {embed} from '/embed/embed.js';
-            embed("https://gisst.pomona.edu/data/62f78345-b4b0-458d-a6ea-5c08724a6415?state=e32b9c0f-f56e-4a84-b2e6-e4996a82e35a", document.getElementById("embedExample"));
-        </script>
+<!DOCTYPE "html"/>
+<html class="h-100" lang="en">
+<head>
+  <title>GISST Error</title>
+</head>
+<body>
+  <script type="module" src="{{ base_url }}/embed/embed.js"></script>
+  <gisst-embed src="https://gisst.pomona.edu/data/62f78345-b4b0-458d-a6ea-5c08724a6415?state=e32b9c0f-f56e-4a84-b2e6-e4996a82e35a" controller="off" width="320px" height="280px"></gisst-embed>
+  <h1>{{ status_code }}</h1>
+  <p>Oops! We've encountered a {{ status_code }}, please go back to the previous page while we sort this out.</p>
+  <h2> Cryptic Error Message </h2>
+  <p>{{ message }}</p>
+</body>
         "#).unwrap();
         error!("{self}");
         let mut err: &(dyn std::error::Error + 'static) = &self;
@@ -154,13 +157,26 @@ impl IntoResponse for ServerError {
             ),
         };
 
+        let base_url = crate::server::BASE_URL.get();
         let body = Html(
             error_template
-                .render(context!(status_code => status.clone().to_string(), message => message))
+                .render(context!(base_url => base_url, status_code => status.clone().to_string(), message => message))
                 .unwrap(),
         );
 
-        (status, body).into_response()
+        (
+            status,
+            (
+                [
+                    ("Access-Control-Allow-Origin", "*"),
+                    ("Cross-Origin-Opener-Policy", "same-origin"),
+                    ("Cross-Origin-Resource-Policy", "same-origin"),
+                    ("Cross-Origin-Embedder-Policy", "require-corp"),
+                ],
+                body,
+            ),
+        )
+            .into_response()
     }
 }
 
