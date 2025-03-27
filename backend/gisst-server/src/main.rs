@@ -12,7 +12,7 @@ use anyhow::Result;
 use tracing_subscriber::{fmt,EnvFilter};
 
 // Tracing dependencies
-use opentelemetry::{global, runtime, Array, KeyValue};
+use opentelemetry::{global, runtime, KeyValue};
 use opentelemetry::sdk::propagation::TraceContextPropagator;
 use opentelemetry::sdk::{Resource, trace};
 use opentelemetry::trace::TraceError;
@@ -29,7 +29,7 @@ fn init_tracer() -> Result<trace::Tracer, TraceError> {
                 .with_endpoint("http://127.0.0.1:4317/"), // Uses grpc
         )
         .with_trace_config(
-            // Specifiy the name of our server in Jaeger
+            // Specify the name of our server in Jaeger
             trace::config().with_resource(Resource::new(vec![KeyValue::new(
                 opentelemetry_semantic_conventions::resource::SERVICE_NAME,
                 "gisst-server"
@@ -42,16 +42,13 @@ fn init_tracer() -> Result<trace::Tracer, TraceError> {
 #[tracing::instrument(name="main")] 
 async fn main() -> Result<()> {
 
-    // Specify which crates should only log on Error
-    let crates_to_ignore_logs : Vec<&str> = vec!["tower", "sqlx_core", "h2", "axum_login"];
-    let mut filter = tracing_subscriber::EnvFilter::from_default_env();
-    for ignore_crate in crates_to_ignore_logs.iter() {
-        let log_level_directive = format!("{}=error", ignore_crate);
-        filter = filter.add_directive(log_level_directive.parse()?);
-    }
+    let config = serverconfig::ServerConfig::new()?;
 
-    // Setup the tracer
+    // Setup the tracer and logging
     global::set_text_map_propagator(TraceContextPropagator::new());
+    let filter = EnvFilter::builder()
+        .with_default_directive("warn".parse()?)
+        .parse(config.env.rust_log.clone())?; // Log levels taken from ../../config/default.toml
     let tracer = init_tracer().unwrap();
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
     let subscriber = tracing_subscriber::Registry::default()
@@ -61,20 +58,9 @@ async fn main() -> Result<()> {
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     
-    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
-    let path = std::env::current_dir()?;
-    let config = serverconfig::ServerConfig::new()?;
-
-    let default_tracing_directive = config
-        .env
-        .default_directive
-        .clone()
-        .parse()
-        .expect("default tracing directive has to be valid");
-    let _filter = EnvFilter::builder()
-        .with_default_directive(default_tracing_directive)
-        .parse(config.env.rust_log.clone())?;
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default().unwrap();
     
+    let path = std::env::current_dir()?;
     tracing::info!("The current directory is {}", path.display());
     tracing::debug!("{:?}", &config);
     server::launch(&config).await?;
