@@ -14,7 +14,7 @@ async function downloadScript(src:string) : Promise<Blob> {
 }
 
 function load_v86(gisst_root:string) : Promise<Blob | string> {
-  let path = gisst_root+'/v86/libv86.js';
+  const path = gisst_root+'/v86/libv86.js';
   if (gisst_root.startsWith("https://")) {
     return downloadScript(path);
   } else {
