@@ -9,6 +9,7 @@ mod tus;
 mod utils;
 
 use anyhow::Result;
+use serverconfig::ServerConfig;
 use tracing_subscriber::{fmt,EnvFilter};
 
 // Tracing dependencies
@@ -19,14 +20,14 @@ use opentelemetry::trace::TraceError;
 use opentelemetry_otlp::WithExportConfig;
 use tracing_subscriber::layer::SubscriberExt;
 
-fn init_tracer() -> Result<trace::Tracer, TraceError> {
+fn init_tracer(config : &ServerConfig) -> Result<trace::Tracer, TraceError> {
     opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(
             // Specify which port we want to export to (Jaeger)
             opentelemetry_otlp::new_exporter()
                 .tonic()
-                .with_endpoint("http://127.0.0.1:4317/"), // Uses grpc
+                .with_endpoint(config.env.jaeger_endpoint.clone()), // Uses grpc
         )
         .with_trace_config(
             // Specify the name of our server in Jaeger
@@ -49,7 +50,7 @@ async fn main() -> Result<()> {
     let filter = EnvFilter::builder()
         .with_default_directive("warn".parse()?)
         .parse(config.env.rust_log.clone())?; // Log levels taken from ../../config/default.toml
-    let tracer = init_tracer().unwrap();
+    let tracer = init_tracer(&config).unwrap();
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
     let subscriber = tracing_subscriber::Registry::default()
         .with(filter)

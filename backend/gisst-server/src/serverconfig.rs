@@ -44,6 +44,8 @@ pub struct EnvConfig {
     // May change this to an environment (dev / test / prod) variable with internal
     pub rust_log: String,
     pub trace_include_headers: bool,
+    // Jaeger endpoint is the address and port to which the tracer will export traces
+    pub jaeger_endpoint: String,
 }
 
 impl Default for EnvConfig {
@@ -52,6 +54,7 @@ impl Default for EnvConfig {
             default_directive: "gisst_server=debug".to_string(),
             rust_log: "warn,gisst_server=debug,gisst=debug".to_string(),
             trace_include_headers: false,
+            jaeger_endpoint: "http://127.0.0.1:4317/".to_string(),
         }
     }
 }
