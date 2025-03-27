@@ -15,7 +15,7 @@ axum = { version = "0.7.9", features = ["multipart", "macros"] }
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
 axum-macros = "0.4.2"
 base64 = "0.21.2"
-rustls = "0.23"
+rustls = "0.23.23"
 bytes = { version = "1.4.0", features = ["serde"] }
 config = {  version = "0.13.3", features = ["toml"], default-features = false }
 crc = "3.0.1"
@@ -47,4 +47,3 @@ opentelemetry = { version = "0.19.0", features = ["rt-tokio", "trace"]}
 opentelemetry-otlp = { version = "0.12.0", features = ["tonic", "metrics"] }
 opentelemetry-semantic-conventions = { version="0.11.0" }
 tracing-opentelemetry = "0.19.0"
-rustls = "0.23.23"
