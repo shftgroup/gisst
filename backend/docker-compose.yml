@@ -1,0 +1,66 @@
+services:
+  jaeger:
+    image: jaegertracing/jaeger:${JAEGER_VERSION:-latest}
+    container_name: jaeger
+    networks:
+      backend:
+      frontend:
+    volumes:
+      - "./jaeger-ui.json:/etc/jaeger/jaeger-ui.json"
+      - "./docker-configs/config-spm.yaml:/etc/jaeger/config.yml"
+    command: ["--config", "/etc/jaeger/config.yml"]
+    ports:
+      - "16686:16686"
+      - "8888:8888"
+      - "8889:8889"
+      - "4317:4317"
+      - "4318:4318"
+
+  prometheus:
+    image: prom/prometheus:v3.2.0
+    container_name: prometheus
+    networks:
+      - backend
+    volumes:
+      - "./docker-configs/prometheus.yml:/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node_exporter
+    networks:
+      - backend
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.rootfs=/rootfs'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--web.listen-address=0.0.0.0:9100'
+    ports:
+      - '9100:9100'
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    networks:
+      - backend
+    volumes:
+      - "grafana-storage:/var/lib/grafana"
+    ports:
+      - '3003:3000'
+
+volumes:
+  grafana-storage: {}
+
+networks:
+  backend:
+  frontend:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"

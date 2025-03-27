@@ -19,6 +19,7 @@ use uuid::Uuid;
 #[allow(clippy::module_name_repetitions)]
 pub struct StorageHandler;
 
+#[derive(Debug)]
 pub struct PendingUpload {
     pub file_information: FileInformation,
     pub length: usize,
