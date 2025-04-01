@@ -45,8 +45,8 @@ if [ ${FETCH_CORES:-1} -eq 1 ] ; then
 mkdir -p ra-build
 pushd ra-build
 mkdir -p cores
-emsdk install tot
-emsdk activate tot
+emsdk install 4.0.6
+emsdk activate 4.0.6
 git clone --depth 1 -b tick-event https://github.com/JoeOsborn/v86 v86 || echo "already have v86"
 git clone --depth 1 https://github.com/libretro/retroarch ra || echo "already have RA"
 git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "already have fceumm"
