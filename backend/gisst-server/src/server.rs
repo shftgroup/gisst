@@ -26,10 +26,7 @@ use crate::auth::{AuthBackend, User};
 use crate::routes::screenshot_router;
 use crate::utils::parse_header;
 use axum::extract::OriginalUri;
-use axum_login::{
-    login_required,
-    tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite},
-};
+use axum_login::tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
 use chrono::{DateTime, Local};
 use gisst::error::Table;
 use gisst::storage::{PendingUpload, StorageHandler};
@@ -59,6 +56,10 @@ pub struct ServerState {
 }
 impl ServerState {
     async fn with_config(config: &ServerConfig) -> Result<Self, ServerError> {
+        assert!(
+            !config.http.base_url.ends_with('/'),
+            "base_url must not end with slash"
+        );
         let mut user_whitelist_sorted: Vec<String> = config.auth.user_whitelist.clone();
         user_whitelist_sorted.sort();
         let mut template_environment = minijinja::Environment::new();
@@ -80,8 +81,9 @@ impl ServerState {
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     use crate::selective_serve_dir;
 
+    let base_url = &config.http.base_url;
     // Unwrap here is fine since the server can't be launched more than once
-    BASE_URL.set(config.http.base_url.clone()).unwrap();
+    BASE_URL.set(base_url.clone()).unwrap();
 
     StorageHandler::init_storage(
         &config.storage.root_folder_path,
@@ -136,7 +138,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(HandleErrorLayer::new(handle_error))
         // This map_err is needed to get the types to work out after handleerror and before servedir.
         .map_err(|e| unreachable!("somehow a handled error wasn't actually handled {e:?}"));
-
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
         .route("/resources/:id", patch(tus::patch).head(tus::head))
@@ -150,7 +151,11 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/screenshots", screenshot_router())
         .nest("/states", state_router())
         .nest("/works", work_router())
-        .route_layer(login_required!(AuthBackend, login_url="/login"))
+        .route_layer(
+            // This is ugly, but it achieves the goal; the unwrap is fine
+            // because BASE_URL was initialized earlier in this function.
+            axum_login::login_required!(AuthBackend, login_url=&{format!("{}/login", BASE_URL.get().unwrap())})
+        )
         .route("/data/:instance_id", get(get_data))
         .route("/login", get(auth::login_handler))
         .route("/auth/google/callback", get(auth::oauth_callback_handler))
@@ -264,6 +269,7 @@ impl LoggedInUserInfo {
 
 #[derive(Deserialize, Serialize, Debug)]
 struct PlayerTemplateInfo {
+    gisst_root: String,
     instance: Instance,
     work: Work,
     environment: Environment,
@@ -276,6 +282,7 @@ struct PlayerTemplateInfo {
 
 #[derive(Deserialize, Serialize, Debug)]
 struct EmbedDataInfo {
+    gisst_root: String,
     instance: Instance,
     work: Work,
     environment: Environment,
@@ -365,7 +372,7 @@ async fn get_data(
                 table: Table::Work,
                 uuid: instance.work_id,
             })?;
-    let start = match dbg!((params.state, params.replay)) {
+    let start = match (params.state, params.replay) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
                 ServerError::RecordLinking {
@@ -389,7 +396,7 @@ async fn get_data(
     debug!("{manifest:?}");
 
     // This unwrap is safe since BASE_URL is initialized at launch
-    let url_string = BASE_URL.get().unwrap().clone();
+    let url_string = BASE_URL.get().unwrap();
 
     let url_parts: Vec<&str> = url_string.split("//").collect();
     let current_date: DateTime<Local> = Local::now();
@@ -414,6 +421,7 @@ async fn get_data(
     };
 
     let embed_data = EmbedDataInfo {
+        gisst_root: BASE_URL.get().unwrap().clone(),
         environment,
         instance,
         work,
@@ -531,6 +539,7 @@ async fn get_player(
                 .render(context!(
                     base_url => BASE_URL.get(),
                     player_params => PlayerTemplateInfo {
+                        gisst_root: BASE_URL.get().unwrap().clone(),
                         environment,
                         instance,
                         work,

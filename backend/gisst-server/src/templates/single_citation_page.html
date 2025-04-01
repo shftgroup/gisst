@@ -74,7 +74,7 @@
 
 
 <script type="module">
-  import {embed} from '/embed/embed.js';
+  import {embed} from '{{ base_url }}/embed/embed.js';
   {% if embed_data.start.type == "replay" %}
   embed("{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}?replay={{ embed_data.start.data.replay_id }}", document.getElementById("embedTarget"));
   {% elif embed_data.start.type == "state" %}

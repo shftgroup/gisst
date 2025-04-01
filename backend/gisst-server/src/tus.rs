@@ -9,10 +9,10 @@ use gisst::models::File as GFile;
 use uuid::Uuid;
 
 use axum::{
-    extract::Path,
-    http::{header::HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
     Extension,
+    extract::Path,
+    http::{StatusCode, header::HeaderMap},
+    response::{IntoResponse, Response},
 };
 
 use gisst::storage::{FileInformation, PendingUpload, StorageHandler};
@@ -271,12 +271,13 @@ pub async fn creation(
             offset: 0,
         },
     );
-
+    // This unwrap is fine since the url is initialized on server start
+    let base_url = crate::server::BASE_URL.get().unwrap();
     // Construct header response with id for resource/:id url
     Ok((
         [
             ("Tus-Resumable", "1.0.0"),
-            ("Location", &format!("/resources/{new_uuid}")),
+            ("Location", &format!("{base_url}/resources/{new_uuid}")),
         ],
         StatusCode::CREATED,
     )

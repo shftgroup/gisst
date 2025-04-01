@@ -151,6 +151,8 @@ pub async fn oauth_callback_handler(
     session: axum_login::tower_sessions::Session,
 ) -> Result<Redirect, ServerError> {
     debug!("Running oauth callback {query:?}, {:?}", auth.user);
+    // This unwrap is fine since BASE_URL is initialized at launch
+    let base_url = crate::server::BASE_URL.get().unwrap();
     // Compare the csrf state in the callback with the state generated before the
     // request
     let original_csrf_state: CsrfToken = session
@@ -173,15 +175,14 @@ pub async fn oauth_callback_handler(
     auth.login(&user).await?;
     if let Ok(Some(next)) = session.remove::<String>(NEXT_URL_KEY).await {
         debug!("success {:?}, redirect to {next}", auth.user);
-        // This unwrap is safe since BASE_URL is initialized at server launch
-        if next.starts_with(crate::server::BASE_URL.get().unwrap()) {
+        if next.starts_with(base_url) {
             Ok(Redirect::to(&next))
         } else {
-            Ok(Redirect::to("/instances"))
+            Ok(Redirect::to(&format!("{base_url}/instances")))
         }
     } else {
         debug!("success {:?}, redirect to instances", auth.user);
-        Ok(Redirect::to("/instances"))
+        Ok(Redirect::to(&format!("{base_url}/instances")))
     }
 }
 
@@ -225,7 +226,9 @@ pub async fn login_handler(
     if let Ok(Some(next)) = session.remove::<String>(NEXT_URL_KEY).await {
         Ok(Redirect::to(&next))
     } else {
-        Ok(Redirect::to("/instances"))
+        // This unwrap is fine since BASE_URL is initialized at launch
+        let base_url = crate::server::BASE_URL.get().unwrap();
+        Ok(Redirect::to(&format!("{base_url}/instances")))
     }
 }
 
@@ -233,7 +236,9 @@ pub async fn logout_handler(
     mut auth: axum_login::AuthSession<AuthBackend>,
 ) -> Result<impl IntoResponse, ServerError> {
     auth.logout().await?;
-    Ok(Redirect::to("/").into_response())
+    // This unwrap is fine since BASE_URL is initialized at launch
+    let base_url = crate::server::BASE_URL.get().unwrap();
+    Ok(Redirect::to(base_url))
 }
 
 pub fn build_oauth_client(

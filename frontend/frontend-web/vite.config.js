@@ -4,6 +4,7 @@ import mkcert from 'vite-plugin-mkcert';
 import fs from 'node:fs';
 
 export default {
+  base: "./",
   plugins: [
     mkcert({savePath: "../../test-cert/"}),
     checker({
