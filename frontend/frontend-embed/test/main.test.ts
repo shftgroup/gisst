@@ -113,7 +113,7 @@ describe("frontend-embed", () => {
     await expect(fetchConfig(mock_gisst_localhost_url)).rejects.toThrow("Request Status 500: Internal Server Error")
   })
 
-  it("should throw error when server response status is 500", async () => {
+  it("should throw error when server response status is 404", async () => {
     global.fetch = vi.fn(() =>
                 Promise.resolve({
                     status: 404,
