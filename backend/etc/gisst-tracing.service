@@ -1,0 +1,18 @@
+[Unit]
+Description=GISST Tracing Containers
+After=gisst.service docker.service
+Requires=gisst.service docker.service
+
+[Service]
+Type=simple
+User=jcoa2018
+WorkingDirectory=/home/jcoa2018/gisst/backend
+Environment="GF_SERVER_PROTOCOL=http"
+Environment="GF_SERVER_ROOT_URL=https://ultra64.cs.pomona.edu/dash/"
+Environment="GF_SERVER_DOMAIN=https://ultra64.cs.pomona.edu"
+Environment="QUERY_BASE_PATH=/tracing"
+ExecStart=/bin/bash -c "docker compose -f docker-compose.yml up"
+ExecStop=/bin/bash -c "docker compose -f docker-compose.yml stop"
+
+[Install]
+WantedBy=gisst.service

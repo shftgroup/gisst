@@ -2,13 +2,15 @@ services:
   jaeger:
     image: jaegertracing/jaeger:${JAEGER_VERSION:-latest}
     container_name: jaeger
+    environment:
+      QUERY_BASE_PATH: $QUERY_BASE_PATH
     networks:
       backend:
       frontend:
     volumes:
       - "./jaeger-ui.json:/etc/jaeger/jaeger-ui.json"
       - "./docker-configs/config-spm.yaml:/etc/jaeger/config.yml"
-    command: ["--config", "/etc/jaeger/config.yml"]
+    command: ["--config", "/etc/jaeger/config.yml", "--set=extensions.jaeger_query.base_path=${QUERY_BASE_PATH}"]
     ports:
       - "16686:16686"
       - "8888:8888"
@@ -48,6 +50,10 @@ services:
   grafana:
     image: grafana/grafana
     container_name: grafana
+    environment:
+      GF_SERVER_PROTOCOL: $GF_SERVER_PROTOCOL 
+      GF_SERVER_ROOT_URL: $GF_SERVER_ROOT_URL
+      GF_SERVER_DOMAIN: $GF_SERVER_DOMAIN
     networks:
       - backend
     volumes:
