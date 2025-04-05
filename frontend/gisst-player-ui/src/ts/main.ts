@@ -13,6 +13,7 @@ import {
   NEVER_UPLOADED_ID
 } from "./models";
 
+import imgUrl from '../img/canvas.svg';
 import '../scss/styles.scss'
 import * as bootstrap from 'bootstrap'
 // import * as uuid from 'uuid'
@@ -85,7 +86,7 @@ export class UI<Evt> {
     }
 
     const emulator_div = <HTMLDivElement>elementFromTemplates(UITemplateConst.EMULATOR_SINGLE_DIV);
-
+    (<HTMLImageElement>emulator_div.querySelector("#webplayer-preview")!).src = imgUrl;
     // Configure initial UI state
     // May turn this into a separate set of functions?
     if (this.headless) {

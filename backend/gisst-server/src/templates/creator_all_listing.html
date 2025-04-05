@@ -42,7 +42,7 @@
                 <td>{{ state.state_name}}</td>
                 <td>{{ state.state_description}}</td>
                 <td>
-                    <a class="btn btn-primary" href="/play/{{ state.instance_id }}?state={{ state.state_id }}" target="_blank">
+                    <a class="btn btn-primary" href="{{ base_url }}/play/{{ state.instance_id }}?state={{ state.state_id }}" target="_blank">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
                             <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
                         </svg>
@@ -50,7 +50,7 @@
                     </a>
                 </td>
                 <td>
-                    <a class="btn btn-primary" href="/play/{{ state.instance_id }}?state={{ state.state_id }}&?boot_into_record=true" target="_blank">
+                    <a class="btn btn-primary" href="{{ base_url }}/play/{{ state.instance_id }}?state={{ state.state_id }}&?boot_into_record=true" target="_blank">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-record" viewBox="0 0 16 16">
                             <path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0 1A5 5 0 1 0 8 3a5 5 0 0 0 0 10z"/>
                         </svg>
@@ -90,7 +90,7 @@
                 <td>{{ replay.replay_name}}</td>
                 <td>{{ replay.replay_description}}</td>
                 <td>
-                    <a class="btn btn-primary" href="/play/{{ replay.instance_id }}?replay={{ replay.replay_id }}" target="_blank">
+                    <a class="btn btn-primary" href="{{ base_url }}/play/{{ replay.instance_id }}?replay={{ replay.replay_id }}" target="_blank">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
                             <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
                         </svg>

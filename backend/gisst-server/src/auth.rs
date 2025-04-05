@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use axum::{
     extract::Query,
     response::{IntoResponse, Redirect},
-    Extension,
 };
 use gisst::models::Creator;
 use uuid::Uuid;
@@ -13,16 +12,13 @@ use axum_login::AuthUser;
 use chrono::Utc;
 use sqlx::{PgConnection, PgPool};
 
-use crate::{
-    error::{AuthError, ServerError},
-    server::ServerState,
-};
+use crate::error::{AuthError, ServerError};
 use oauth2::{
-    basic::BasicClient, AuthUrl, ClientId, ClientSecret, CsrfToken, IntrospectionUrl, RedirectUrl,
-    TokenUrl,
+    AuthUrl, ClientId, ClientSecret, CsrfToken, IntrospectionUrl, RedirectUrl, TokenUrl,
+    basic::BasicClient,
 };
 #[cfg(not(feature = "dummy_auth"))]
-use oauth2::{reqwest::async_http_client, AuthorizationCode, TokenResponse};
+use oauth2::{AuthorizationCode, TokenResponse, reqwest::async_http_client};
 
 use serde::Deserialize;
 use tracing::{debug, info, warn};
@@ -153,9 +149,10 @@ pub async fn oauth_callback_handler(
     mut auth: axum_login::AuthSession<AuthBackend>,
     Query(query): Query<AuthRequest>,
     session: axum_login::tower_sessions::Session,
-    server_state: Extension<ServerState>,
 ) -> Result<Redirect, ServerError> {
     debug!("Running oauth callback {query:?}, {:?}", auth.user);
+    // This unwrap is fine since BASE_URL is initialized at launch
+    let base_url = crate::server::BASE_URL.get().unwrap();
     // Compare the csrf state in the callback with the state generated before the
     // request
     let original_csrf_state: CsrfToken = session
@@ -178,14 +175,14 @@ pub async fn oauth_callback_handler(
     auth.login(&user).await?;
     if let Ok(Some(next)) = session.remove::<String>(NEXT_URL_KEY).await {
         debug!("success {:?}, redirect to {next}", auth.user);
-        if next.starts_with(&server_state.base_url) {
+        if next.starts_with(base_url) {
             Ok(Redirect::to(&next))
         } else {
-            Ok(Redirect::to("/instances"))
+            Ok(Redirect::to(&format!("{base_url}/instances")))
         }
     } else {
         debug!("success {:?}, redirect to instances", auth.user);
-        Ok(Redirect::to("/instances"))
+        Ok(Redirect::to(&format!("{base_url}/instances")))
     }
 }
 
@@ -229,7 +226,9 @@ pub async fn login_handler(
     if let Ok(Some(next)) = session.remove::<String>(NEXT_URL_KEY).await {
         Ok(Redirect::to(&next))
     } else {
-        Ok(Redirect::to("/instances"))
+        // This unwrap is fine since BASE_URL is initialized at launch
+        let base_url = crate::server::BASE_URL.get().unwrap();
+        Ok(Redirect::to(&format!("{base_url}/instances")))
     }
 }
 
@@ -237,7 +236,9 @@ pub async fn logout_handler(
     mut auth: axum_login::AuthSession<AuthBackend>,
 ) -> Result<impl IntoResponse, ServerError> {
     auth.logout().await?;
-    Ok(Redirect::to("/").into_response())
+    // This unwrap is fine since BASE_URL is initialized at launch
+    let base_url = crate::server::BASE_URL.get().unwrap();
+    Ok(Redirect::to(base_url))
 }
 
 pub fn build_oauth_client(

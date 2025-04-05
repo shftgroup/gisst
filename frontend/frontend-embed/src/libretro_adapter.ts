@@ -44,7 +44,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
   if(download_asset_bundle) {
     if('OPFS' in env) {
       if(!setupWorker) {
-        setupWorker = new Worker(new URL('./libretro.worker.ts', import.meta.url), {type:"module"});
+        setupWorker = new Worker(new URL('libretro.worker.ts', import.meta.url), {type:"module"});
         setupWorker.onmessage = (msg:MessageEvent<SetupResponse>) => {
           if(msg.data.command == "loaded_bundle") {
             filesystem_ready = true;
