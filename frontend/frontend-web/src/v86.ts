@@ -6,8 +6,8 @@ let ui_state:UI<ReplayEvent>;
 let db:GISSTDBConnector;
 
 
-export async function init(environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, _embed_options:EmbedOptions) {
-  db = new GISSTDBConnector(window.location.protocol + "//" + window.location.host);
+export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, _embed_options:EmbedOptions) {
+  db = new GISSTDBConnector(gisst_root);
   for (const obj of manifest) {
     if (obj.object_role == "content") {
       const obj_path = "storage/"+obj.file_dest_path;
@@ -148,10 +148,10 @@ export async function init(environment:Environment, start:ColdStart | StateStart
   );
   const container = <HTMLDivElement>document.getElementById("canvas_div")!;
   v86 = new EmbedV86({
-    wasm_root:"/v86",
-    bios_root:"/v86/bios",
+    wasm_root:gisst_root+"/v86",
+    bios_root:gisst_root+"/v86/bios",
     record_from_start:boot_into_record,
-    content_root:window.location.origin,
+    content_root:gisst_root,
     container,
     register_replay:(nom:string)=> {
       if(movie && nom == "replay0") {
@@ -187,7 +187,7 @@ export async function init(environment:Environment, start:ColdStart | StateStart
       }
     },
   });
-  (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = "/media/canvas-v86.svg";
+  (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = gisst_root+"/media/canvas-v86.svg";
   // document.getElementById("v86_controls")!.classList.remove("hidden");
   const prev = document.getElementById("webplayer-preview")!;
   prev.classList.add("loaded");

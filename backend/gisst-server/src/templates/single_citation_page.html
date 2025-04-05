@@ -5,16 +5,23 @@
 {% endblock title %}
 
 {% block gisst_imports %}
-<link rel="stylesheet" href="/embed/style.css"/>
+<link rel="stylesheet" href="{{ base_url }}/embed/style.css"/>
+<script type="module" crossorigin src="{{ base_url }}/embed/embed.js"></script>
 {% endblock gisst_imports %}
 
-
 {% block content %}
-
 <div class="container">
   <div class="row">
     <div class="col-xl-6">
-      <div id="embedTarget"></div>
+<gisst-embed
+  {% if embed_data.start.type == "replay" %}
+  src="{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}?replay={{ embed_data.start.data.replay_id }}"
+  {% elif embed_data.start.type == "state" %}
+  src="{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}?state={{ embed_data.start.data.state_id }}"
+  {% else %}
+  src="{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}"
+  {% endif %}
+></gisst>
     </div>
     <div class="col-xl-6">
       <div class="pt-2">
@@ -70,17 +77,4 @@
     </div>
   </div>
 </div>
-
-
-
-<script type="module">
-  import {embed} from '/embed/embed.js';
-  {% if embed_data.start.type == "replay" %}
-  embed("{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}?replay={{ embed_data.start.data.replay_id }}", document.getElementById("embedTarget"));
-  {% elif embed_data.start.type == "state" %}
-  embed("{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}?state={{ embed_data.start.data.state_id }}", document.getElementById("embedTarget"));
-  {% else %}
-  embed("{{ embed_data.host_protocol }}//{{ embed_data.host_url }}/data/{{ embed_data.instance.instance_id }}", document.getElementById("embedTarget"))
-  {% endif %}
-</script>
 {% endblock content %}

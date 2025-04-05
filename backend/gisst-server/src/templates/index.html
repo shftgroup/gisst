@@ -8,15 +8,14 @@
                     <h1 class="display-5 fw-bolder text-white mb-2">The Game and Interactive Software Scholarship Toolkit</h1>
                     <p class="lead fw-normal text-white-50 mb-4">The Game and Interactive Software Scholarship Toolkit (GISST) is a frontend tool and backend repository software that allows for the citation and retrieval of references to computational states and replays.</p>
                     <div class="d-grid gap-3 d-sm-flex justify-content-sm-center justify-content-xl-start">
-                        <a class="btn btn-primary btn-lg px-4 me-sm-3" href="/login">Login</a>
+                        <a class="btn btn-primary btn-lg px-4 me-sm-3" href="login">Login</a>
                         <a class="btn btn-secondary btn-lg px-4 me-sm-3" href="https://forms.gle/HBXagSRuJd91uXwb8">Request Access</a>
                     </div>
                 </div>
             </div>
             <div class="col-xl-5 col-xxl-6 text-center">
-                <div id="embedExample" style="width: 600px; height: 400px"></div>
+                <gisst-embed src="https://gisst.pomona.edu/data/a435b1d4-ce3a-45d1-a958-f0b0f8095c50?replay=143c178d-9297-423c-9444-a8f53ec84dac" width="600px" height="400px"></gisst-embed>
                 <figcaption class="figure-caption">Click on the image above to start an example performance!</figcaption>
-                <!-- <img class="img-fluid rounded-3 my-5" src="https://dummyimage.com/600x400/343a40/6c757d" alt="..." />-->
             </div>
         </div>
     </div>
@@ -74,9 +73,5 @@
         </div>
     </div>
 </section>
-<link rel="stylesheet" href="/embed/style.css"/>
-<script type="module">
-    import {embed} from './embed/embed.js';
-    embed("https://gisst.pomona.edu/data/a435b1d4-ce3a-45d1-a958-f0b0f8095c50?replay=143c178d-9297-423c-9444-a8f53ec84dac", document.getElementById("embedExample"));
-</script>
+<script type="module" src="{{ base_url }}/embed/embed.js"></script>
 {% endblock %}

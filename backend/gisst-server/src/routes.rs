@@ -1,12 +1,12 @@
 use crate::auth::AuthBackend;
-use crate::server::LoggedInUserInfo;
+use crate::server::{BASE_URL, LoggedInUserInfo};
 use crate::{auth, error::ServerError, server::ServerState, utils::parse_header};
 use axum::{
+    Extension, Router,
     extract::{Json, Path, Query},
     http::header::HeaderMap,
     response::{Html, IntoResponse},
     routing::{get, post},
-    Extension, Router,
 };
 use axum_login::login_required;
 use gisst::models::{
@@ -126,6 +126,7 @@ async fn get_single_creator(
                     .templates
                     .get_template("creator_all_listing.html")?;
                 Html(creator_page.render(context!(
+                    base_url => BASE_URL.get(),
                     state_has_more => state_has_more,
                     replay_has_more => replay_has_more,
                     state_page_num => state_page_num,
@@ -226,6 +227,7 @@ async fn get_instances(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             let instance_listing = app_state.templates.get_template("instance_listing.html")?;
             Html(instance_listing.render(context!(
+                base_url => BASE_URL.get(),
                 has_more => instances.len() >= limit as usize,
                 instances => instances,
                 user => user,
@@ -338,6 +340,7 @@ async fn get_all_for_instance(
                     .templates
                     .get_template("instance_all_listing.html")?;
                 Html(instance_all_listing.render(context!(
+                    base_url => BASE_URL.get(),
                     state_has_more => state_has_more,
                     replay_has_more => replay_has_more,
                     state_page_num => state_page_num,
@@ -430,6 +433,7 @@ async fn get_single_object(
                 vec![]
             };
             Html(object_page.render(context!(
+                base_url => BASE_URL.get(),
                 object => object,
                 file => file,
                 directory => directory,
