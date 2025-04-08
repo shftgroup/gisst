@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use axum::http::header::HeaderMap;
 
-use base64::{engine::general_purpose, Engine};
+use base64::{Engine, engine::general_purpose};
 
 // Adapted from Rustus source: https://github.com/s3rius/rustus/blob/master/src/utils/headers.rs
 pub fn check_header(header_map: &HeaderMap, header_name: &str, expr: fn(&str) -> bool) -> bool {
