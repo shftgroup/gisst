@@ -77,7 +77,7 @@ impl ServerState {
 }
 
 #[allow(clippy::too_many_lines)]
-#[tracing::instrument(name="launch")] 
+#[tracing::instrument(name = "launch")]
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     use crate::selective_serve_dir;
 
@@ -139,8 +139,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         // This map_err is needed to get the types to work out after handleerror and before servedir.
         .map_err(|e| unreachable!("somehow a handled error wasn't actually handled {e:?}"));
     let app = Router::new()
-        .route("/play/:instance_id", get(get_player))
-        .route("/resources/:id", patch(tus::patch).head(tus::head))
+        .route("/play/{instance_id}", get(get_player))
+        .route("/resources/{id}", patch(tus::patch).head(tus::head))
         .route("/resources", post(tus::creation))
         .nest("/objects", object_router())
         .route("/logout", get(auth::logout_handler))
@@ -156,7 +156,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             // because BASE_URL was initialized earlier in this function.
             axum_login::login_required!(AuthBackend, login_url=&{format!("{}/login", BASE_URL.get().unwrap())})
         )
-        .route("/data/:instance_id", get(get_data))
+        .route("/data/{instance_id}", get(get_data))
         .route("/login", get(auth::login_handler))
         .route("/auth/google/callback", get(auth::oauth_callback_handler))
         .nest_service(
@@ -331,7 +331,7 @@ async fn get_about(
     .into_response())
 }
 
-#[tracing::instrument(name="get_homepage")] 
+#[tracing::instrument(name = "get_homepage")]
 async fn get_homepage(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, ServerError> {

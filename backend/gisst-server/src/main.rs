@@ -10,39 +10,32 @@ mod utils;
 
 use anyhow::Result;
 use serverconfig::ServerConfig;
-use tracing_subscriber::{fmt,EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 // Tracing dependencies
-use opentelemetry::{global, runtime, KeyValue};
-use opentelemetry::sdk::propagation::TraceContextPropagator;
-use opentelemetry::sdk::{Resource, trace};
-use opentelemetry::trace::TraceError;
+use opentelemetry::{
+    global::{self},
+    trace::TracerProvider as _,
+};
 use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::{propagation::TraceContextPropagator, trace::SdkTracerProvider};
 use tracing_subscriber::layer::SubscriberExt;
 
-fn init_tracer(config : &ServerConfig) -> Result<trace::Tracer, TraceError> {
-    opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(
-            // Specify which port we want to export to (Jaeger)
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(config.env.jaeger_endpoint.clone()), // Uses grpc
-        )
-        .with_trace_config(
-            // Specify the name of our server in Jaeger
-            trace::config().with_resource(Resource::new(vec![KeyValue::new(
-                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-                "gisst-server"
-            )])),
-        )
-        .install_batch(runtime::Tokio)
+fn init_tracer(config: &ServerConfig) -> Result<SdkTracerProvider, Box<dyn std::error::Error>> {
+    let otlp_exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(config.env.jaeger_endpoint.clone())
+        .with_timeout(std::time::Duration::from_millis(200))
+        .build()?;
+    let tracer_provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+        .with_simple_exporter(otlp_exporter)
+        .build();
+    Ok(tracer_provider)
 }
 
 #[tokio::main]
-#[tracing::instrument(name="main")] 
+#[tracing::instrument(name = "main")]
 async fn main() -> Result<()> {
-
     let config = serverconfig::ServerConfig::new()?;
 
     // Setup the tracer and logging
@@ -50,24 +43,24 @@ async fn main() -> Result<()> {
     let filter = EnvFilter::builder()
         .with_default_directive("warn".parse()?)
         .parse(config.env.rust_log.clone())?; // Log levels taken from ../../config/default.toml
-    let tracer = init_tracer(&config).unwrap();
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    let subscriber = tracing_subscriber::Registry::default()
-        .with(filter)
-        .with(telemetry)
-        .with(fmt::Layer::default());
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    let subscriber = tracing_subscriber::Registry::default().with(filter);
+    if !config.env.jaeger_endpoint.is_empty() {
+        let tracer = init_tracer(&config).unwrap();
+        let telemetry = tracing_opentelemetry::layer().with_tracer(tracer.tracer("gisst-server"));
+        let subscriber = subscriber.with(telemetry).with(fmt::Layer::default());
+        tracing::subscriber::set_global_default(subscriber).unwrap();
+    } else {
+        let subscriber = subscriber.with(fmt::Layer::default());
+        tracing::subscriber::set_global_default(subscriber).unwrap();
+    }
 
-    
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
         .unwrap();
-    
+
     let path = std::env::current_dir()?;
     tracing::info!("The current directory is {}", path.display());
     tracing::debug!("{:?}", &config);
     server::launch(&config).await?;
-
-    global::shutdown_tracer_provider();
     Ok(())
 }
