@@ -13,7 +13,7 @@ services:
         target: /etc/jaeger/jaeger-ui.json
       - type: bind
         source: ./docker-configs/config-spm.yaml
-        target: /etc/jaeger/config.yml"
+        target: /etc/jaeger/config.yml
     command: ["--config", "/etc/jaeger/config.yml", "--set=extensions.jaeger_query.base_path=${QUERY_BASE_PATH}"]
     ports:
       - "16686:16686"
