@@ -11,18 +11,18 @@ use args::{
 use clap::Parser;
 use gisst::{
     models::{
-        insert_file_object, Creator, Environment, Instance, Object, ObjectRole, Replay, Screenshot,
-        State, Work,
+        Creator, Environment, Instance, Object, ObjectRole, Replay, Screenshot, State, Work,
+        insert_file_object,
     },
     storage::StorageHandler,
 };
 use log::{error, info, warn};
+use sqlx::PgPool;
 use sqlx::pool::PoolOptions;
 use sqlx::types::chrono;
-use sqlx::PgPool;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
-use uuid::{uuid, Uuid};
+use uuid::{Uuid, uuid};
 use walkdir::WalkDir;
 
 #[tokio::main]
@@ -33,22 +33,19 @@ async fn main() -> Result<(), GISSTCliError> {
         .filter_level(args.verbose.log_level_filter())
         .init();
 
-    info!(
-        "Found config file at path: {}",
-        args.gisst_config_path.to_string()
-    );
+    info!("Found config file at path: {}", args.gisst_config_path);
     let cli_config: CLIConfig = CLIConfig::new(&args.gisst_config_path)?;
 
     info!(
         "Connecting to database: {}",
-        cli_config.database.database_url.to_string()
+        cli_config.database.database_url
     );
     let db: PgPool = get_db_by_url(cli_config.database.database_url.to_string()).await?;
     info!("DB connection successful.");
     let storage_root = cli_config.storage.root_folder_path.to_string();
     info!(
         "Storage root is set to: {}",
-        cli_config.storage.root_folder_path.to_string()
+        cli_config.storage.root_folder_path
     );
 
     match dbg!(args).command {
@@ -463,7 +460,7 @@ async fn create_environment(
         (_, _) => {
             return Err(GISSTCliError::CreateEnvironment(
                 "Need to provide a JSON string or file to create environment record.".to_string(),
-            ))
+            ));
         }
     };
 
@@ -772,7 +769,7 @@ async fn create_state(
                 )
                 .await?;
                 return Err(GISSTCliError::NewModel(e));
-            };
+            }
         }
         Err(e) => {
             error!("Error writing state file to database, aborting...\n{e}");

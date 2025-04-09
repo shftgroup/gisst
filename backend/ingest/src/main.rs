@@ -6,14 +6,14 @@ use clap_verbosity_flag::Verbosity;
 use gisst::{
     model_enums::Framework,
     models::{
-        insert_file_object, Duplicate, Environment, File as GFile, Instance, Object, ObjectRole,
-        Work,
+        Duplicate, Environment, File as GFile, Instance, Object, ObjectRole, Work,
+        insert_file_object,
     },
 };
 use log::{error, info, warn};
-use rdb_sys::{RVal, RDB};
-use sqlx::pool::PoolOptions;
+use rdb_sys::{RDB, RVal};
 use sqlx::PgPool;
+use sqlx::pool::PoolOptions;
 use uuid::Uuid;
 
 const DEPTH: u8 = 4;
@@ -109,7 +109,7 @@ async fn main() -> Result<(), IngestError> {
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
         .init();
-    info!("Connecting to database: {}", gisst_cli_db_url.to_string());
+    info!("Connecting to database: {gisst_cli_db_url}");
     let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.to_string()).await?);
     info!("DB connection successful.");
     let storage_root = gisst_storage_root_path.to_string();
@@ -199,9 +199,7 @@ async fn main() -> Result<(), IngestError> {
                                 found = true;
                                 break;
                             }
-                            FindResult::NotInRDB => {
-                                continue;
-                            }
+                            FindResult::NotInRDB => {}
                             FindResult::InRDB(rval) => {
                                 let instance_id = create_metadata_records_from_rval(
                                     &mut conn,
@@ -318,7 +316,7 @@ async fn main() -> Result<(), IngestError> {
                                 Some(stem.to_string()),
                             )
                             .await
-                        },
+                        }
                         _ => Ok(()),
                     }
                 }
@@ -333,11 +331,7 @@ async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {
 }
 #[allow(dead_code)]
 fn char_to_num(c: u8) -> u8 {
-    if c <= b'9' {
-        c - b'0'
-    } else {
-        (c - b'A') + 10
-    }
+    if c <= b'9' { c - b'0' } else { (c - b'A') + 10 }
 }
 
 enum FindResult {
@@ -360,7 +354,7 @@ async fn find_entry(
     };
     let hash_str = format!("{hash:x}");
     if GFile::get_by_hash(conn, &hash_str).await?.is_some() {
-        info!("{:?}:{hash_str} already in DB, skip", path);
+        info!("{path:?}:{hash_str} already in DB, skip");
         return Ok(FindResult::AlreadyHave);
     }
     let name_without_ext = path.file_stem();

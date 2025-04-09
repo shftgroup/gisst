@@ -13,20 +13,19 @@ time                    = { version = "0.3.21", features = ["serde", "parsing"] 
 uuid                    = { version = "1.8", features = ["serde", "v4"] }
 serde                   = { version = "1.0.159", features = ["derive"] }
 serde_json              = { version = "1.0.96", features = ["raw_value"] }
-thiserror               = "1.0.40"
+thiserror               = "2.0.12"
 async-trait             = "0.1.68"
 log                     = "0.4.17"
 tokio                   = { version = "1.27.0", features = ["full"] }
 md-5                    = "0.10"
 bytes                   = { version = "1.4.0", features = ["serde"] }
-config                  = { version = "0.13.3", features = ["toml"], default-features = false }
 async-compression       = { version = "0.4", features = ["tokio", "gzip", "zstdmt"] }
 chrono = {version = "0.4.28", features = ["serde"]}
 serde_with = { version = "3.3.0", features = ["base64"] }
-base64 = "0.21.4"
+base64 = "0.22.1"
 tracing = "0.1.40"
 tree_magic_mini = {version="3.1.6", features=["with-gpl-data"]}
-fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="85f06e08edbd3368e1b0562f2fc1b6d178bf7b8a"}
+fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="4eccb50d011146fbed20e133d33b22f3c27292e7"}
 mbrman = "0.5.2"
 fscommon = "0.1.1"
 zip = "2.1.2"

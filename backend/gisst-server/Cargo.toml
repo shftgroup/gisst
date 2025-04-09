@@ -11,27 +11,27 @@ fatfs_logging=["gisst/fatfs_logging"]
 [dependencies]
 anyhow = "1.0.70"
 async-trait = "0.1.68"
-axum = { version = "0.7.9", features = ["multipart", "macros"] }
-axum-server = { version = "0.7.1", features = ["tls-rustls"] }
-axum-macros = "0.4.2"
-base64 = "0.21.2"
-rustls = "0.23.23"
+axum = { version = "0.8.3", features = ["multipart", "macros"] }
+axum-server = { version = "0.7.2", features = ["tls-rustls"] }
+axum-macros = "0.5.0"
+base64 = "0.22.1"
+rustls = "0.23.25"
 bytes = { version = "1.4.0", features = ["serde"] }
-config = {  version = "0.13.3", features = ["toml"], default-features = false }
+config = {  version = "0.15.11", features = ["toml"], default-features = false }
 crc = "3.0.1"
-env_logger = "0.10.0"
+env_logger = "0.11.8"
 futures = "0.3.28"
 log = "0.4.17"
 md5 = "0.7.0"
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "macros"], default-features=false }
-minijinja = {version= "1.0.9", features=["builtins", "macros", "json", "loader", "urlencode"]}
-secrecy = { version = "0.8.0", features = ["serde"] }
+minijinja = {version= "2.9.0", features=["builtins", "macros", "json", "loader", "urlencode"]}
+secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.159", features = ["derive"] }
 serde_json = { version = "1.0.96", features = ["raw_value"] }
-thiserror = "1.0.40"
+thiserror = "2.0.12"
 time = { version = "0.3.21", features = ["serde", "parsing"] }
 tokio = { version = "1.27.0", features = ["full"] }
-tower = {version="0.4.13",features=["util"]}
+tower = {version="0.5.2",features=["util"]}
 tower-http = { version = "0.6.2", features = ["fs", "trace", "cors"] }
 tracing = {version = "0.1.41", features = ["attributes"]}
 tracing-subscriber = { version = "0.3.17", features = ["env-filter", "registry"]}
@@ -39,11 +39,12 @@ uuid = { version = "1.8", features = ["serde", "v4"] }
 gisst = { path = "../gisst" }
 serde_with = {version = "3.3.0", features = ["base64"]}
 chrono = { version = "0.4.28", features = ["clock"]}
-axum-login = { version = "0.16.0" } #features = ["sqlx", "postgres"]}
-oauth2 = "4.4.2"
-reqwest = {version="0.11.20", features=["json"]}
-rand = { version = "0.8.5", features = ["min_const_gen"]}
-opentelemetry = { version = "0.19.0", features = ["rt-tokio", "trace"]}
-opentelemetry-otlp = { version = "0.12.0", features = ["tonic", "metrics"] }
-opentelemetry-semantic-conventions = { version="0.11.0" }
-tracing-opentelemetry = "0.19.0"
+axum-login = { version = "0.17.0" } #features = ["sqlx", "postgres"]}
+oauth2 = "5.0.0"
+reqwest = {version="0.12.15", features=["json"]}
+rand = { version = "0.9.0" }
+opentelemetry = { version = "0.29.1" }
+opentelemetry_sdk = { version = "0.29.0" }
+opentelemetry-otlp = { version = "0.29.0", features = [ "grpc-tonic", "default" ] }
+opentelemetry-semantic-conventions = { version="0.29.0" }
+tracing-opentelemetry = "0.30.0"
