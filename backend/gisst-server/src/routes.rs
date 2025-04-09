@@ -270,6 +270,7 @@ struct StateReplayPageQueryParams {
     replay_contains: Option<String>,
     creator_id: Option<Uuid>,
 }
+#[tracing::instrument("instance-page")]
 async fn get_all_for_instance(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -280,7 +281,7 @@ async fn get_all_for_instance(
     let mut conn = app_state.pool.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
         // TODO: at least instance-environment stuff should really come from a join query
-        tracing::info!("{params:?}");
+        tracing::debug!("get instance environment {params:?}");
         let environment = Environment::get_by_id(&mut conn, instance.environment_id)
             .await?
             .ok_or(ServerError::RecordMissing {
@@ -316,7 +317,7 @@ async fn get_all_for_instance(
         let objects = ObjectLink::get_all_for_instance_id(&mut conn, id).await?;
         let state_has_more = states.len() >= state_limit as usize;
         let replay_has_more = replays.len() >= replay_limit as usize;
-        tracing::info!(
+        tracing::debug!(
             "{} - {state_has_more} - {} - {replay_has_more}",
             states.len(),
             replays.len()
@@ -605,6 +606,7 @@ pub struct CreateState {
     pub state_derived_from: Option<Uuid>,
 }
 
+#[tracing::instrument("create_state")]
 async fn create_state(
     app_state: Extension<ServerState>,
     auth: axum_login::AuthSession<crate::auth::AuthBackend>,
