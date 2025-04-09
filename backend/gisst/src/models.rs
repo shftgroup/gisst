@@ -1222,3 +1222,55 @@ pub enum Duplicate {
     ReuseObject,
     ReuseData,
 }
+
+
+#[cfg(test)]
+mod models {
+
+    #[test]
+    fn default() {
+        
+        /*
+        let object_id = insert_file_object(
+                &mut tx,
+                &storage_root,
+                depth,
+                &patch_root.join(patch),
+                Some(link.file_filename),
+                None,
+                link.file_source_path,
+                gisst::models::Duplicate::ReuseData,
+        )
+
+        let ra_cfg_object_id = insert_file_object(
+            &mut base_conn,
+            &storage_root,
+            DEPTH,
+            std::path::Path::new(&ra_cfg),
+            Some("retroarch.cfg".to_string()),
+            Some("base retroarch config".to_string()),
+            String::new(),
+            Duplicate::ReuseObject,
+        )
+
+        let dep_id = insert_file_object(
+            &mut base_conn,
+            &storage_root,
+            DEPTH,
+            dep,
+            None,
+            Some(dep_path.clone()),
+            dep_path.clone(),
+            Duplicate::ReuseObject,
+        )
+        */
+
+        // let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.to_string()).await?);
+        // let mut base_conn = pool.acquire().await?;
+        
+        const DEPTH: u8 = 4;
+
+
+        assert!(true);
+    }
+}

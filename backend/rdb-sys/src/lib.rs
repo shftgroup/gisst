@@ -288,9 +288,11 @@ pub enum RDBError {
     Path,
 }
 
+#[derive(Debug)]
 pub struct RDB(*mut RetroDB);
 unsafe impl Send for RDB {}
 unsafe impl Sync for RDB {}
+
 impl RDB {
     /// Opens the database; it will be closed automatically on drop.
     /// # Errors
@@ -366,5 +368,17 @@ impl Drop for Cursor {
             libretrodb_cursor_close(self.0);
             libretrodb_cursor_free(self.0);
         }
+    }
+}
+
+#[cfg(test)]
+mod rdb {
+    use crate::{RDB};
+
+    #[test]
+    fn error_on_bad_path() {
+        let result = RDB::open(std::path::Path::new(&"/Bad/Path/"));
+
+        assert!(result.is_err())
     }
 }
