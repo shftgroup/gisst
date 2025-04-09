@@ -14,22 +14,19 @@ use crate::{
 };
 use anyhow::Result;
 use axum::{
+    Extension, Router,
     error_handling::HandleErrorLayer,
     extract::{DefaultBodyLimit, Path, Query},
     http::HeaderMap,
     response::{Html, IntoResponse},
     routing::method_routing::{get, patch, post},
-    Extension, Router,
 };
 
 use crate::auth::{AuthBackend, User};
 use crate::routes::screenshot_router;
 use crate::utils::parse_header;
 use axum::extract::OriginalUri;
-use axum_login::{
-    login_required,
-    tower_sessions::{cookie::SameSite, MemoryStore, SessionManagerLayer},
-};
+use axum_login::tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
 use chrono::{DateTime, Local};
 use gisst::error::Table;
 use gisst::storage::{PendingUpload, StorageHandler};
@@ -44,6 +41,8 @@ use tower_http::trace::TraceLayer;
 use tracing::debug;
 use uuid::Uuid;
 
+pub static BASE_URL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
 pub struct ServerState {
@@ -52,12 +51,15 @@ pub struct ServerState {
     pub temp_storage_path: String,
     pub folder_depth: u8,
     pub default_chunk_size: usize,
-    pub base_url: String,
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: minijinja::Environment<'static>,
 }
 impl ServerState {
     async fn with_config(config: &ServerConfig) -> Result<Self, ServerError> {
+        assert!(
+            !config.http.base_url.ends_with('/'),
+            "base_url must not end with slash"
+        );
         let mut user_whitelist_sorted: Vec<String> = config.auth.user_whitelist.clone();
         user_whitelist_sorted.sort();
         let mut template_environment = minijinja::Environment::new();
@@ -68,7 +70,6 @@ impl ServerState {
             temp_storage_path: config.storage.temp_folder_path.clone(),
             folder_depth: config.storage.folder_depth,
             default_chunk_size: config.storage.chunk_size,
-            base_url: config.http.base_url.clone(),
             pending_uploads: Arc::default(),
             templates: template_environment,
         })
@@ -79,6 +80,11 @@ impl ServerState {
 #[tracing::instrument(name="launch")] 
 pub async fn launch(config: &ServerConfig) -> Result<()> {
     use crate::selective_serve_dir;
+
+    let base_url = &config.http.base_url;
+    // Unwrap here is fine since the server can't be launched more than once
+    BASE_URL.set(base_url.clone()).unwrap();
+
     StorageHandler::init_storage(
         &config.storage.root_folder_path,
         &config.storage.temp_folder_path,
@@ -118,6 +124,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                 .expose_headers([
                     axum::http::header::ACCEPT_RANGES,
                     axum::http::header::CONTENT_LENGTH,
+                    axum::http::header::CONTENT_ENCODING,
                     axum::http::header::RANGE,
                     axum::http::header::CONTENT_RANGE,
                     "Content-Security-Policy".parse().unwrap(),
@@ -131,7 +138,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .layer(HandleErrorLayer::new(handle_error))
         // This map_err is needed to get the types to work out after handleerror and before servedir.
         .map_err(|e| unreachable!("somehow a handled error wasn't actually handled {e:?}"));
-
     let app = Router::new()
         .route("/play/:instance_id", get(get_player))
         .route("/resources/:id", patch(tus::patch).head(tus::head))
@@ -145,7 +151,11 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/screenshots", screenshot_router())
         .nest("/states", state_router())
         .nest("/works", work_router())
-        .route_layer(login_required!(AuthBackend, login_url="/login"))
+        .route_layer(
+            // This is ugly, but it achieves the goal; the unwrap is fine
+            // because BASE_URL was initialized earlier in this function.
+            axum_login::login_required!(AuthBackend, login_url=&{format!("{}/login", BASE_URL.get().unwrap())})
+        )
         .route("/data/:instance_id", get(get_data))
         .route("/login", get(auth::login_handler))
         .route("/auth/google/callback", get(auth::oauth_callback_handler))
@@ -259,6 +269,7 @@ impl LoggedInUserInfo {
 
 #[derive(Deserialize, Serialize, Debug)]
 struct PlayerTemplateInfo {
+    gisst_root: String,
     instance: Instance,
     work: Work,
     environment: Environment,
@@ -271,6 +282,7 @@ struct PlayerTemplateInfo {
 
 #[derive(Deserialize, Serialize, Debug)]
 struct EmbedDataInfo {
+    gisst_root: String,
     instance: Instance,
     work: Work,
     environment: Environment,
@@ -314,7 +326,7 @@ async fn get_about(
         app_state
             .templates
             .get_template("about.html")?
-            .render(context!())?,
+            .render(context!(base_url => BASE_URL.get()))?,
     )
     .into_response())
 }
@@ -327,7 +339,7 @@ async fn get_homepage(
         app_state
             .templates
             .get_template("index.html")?
-            .render(context!())?,
+            .render(context!(base_url => BASE_URL.get()))?,
     )
     .into_response())
 }
@@ -360,7 +372,7 @@ async fn get_data(
                 table: Table::Work,
                 uuid: instance.work_id,
             })?;
-    let start = match dbg!((params.state, params.replay)) {
+    let start = match (params.state, params.replay) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
                 ServerError::RecordLinking {
@@ -383,7 +395,8 @@ async fn get_data(
     let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     debug!("{manifest:?}");
 
-    let url_string = app_state.base_url.clone();
+    // This unwrap is safe since BASE_URL is initialized at launch
+    let url_string = BASE_URL.get().unwrap();
 
     let url_parts: Vec<&str> = url_string.split("//").collect();
     let current_date: DateTime<Local> = Local::now();
@@ -408,6 +421,7 @@ async fn get_data(
     };
 
     let embed_data = EmbedDataInfo {
+        gisst_root: BASE_URL.get().unwrap().clone(),
         environment,
         instance,
         work,
@@ -435,6 +449,7 @@ async fn get_data(
                 ("Cross-Origin-Embedder-Policy", "require-corp"),
             ],
             Html(citation_page.render(context! {
+                base_url => BASE_URL.get(),
                 embed_data => embed_data,
             })?),
         )
@@ -522,7 +537,9 @@ async fn get_player(
                 .templates
                 .get_template("player.html")?
                 .render(context!(
+                    base_url => BASE_URL.get(),
                     player_params => PlayerTemplateInfo {
+                        gisst_root: BASE_URL.get().unwrap().clone(),
                         environment,
                         instance,
                         work,

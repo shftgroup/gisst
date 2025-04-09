@@ -1,0 +1,23 @@
+[Unit]
+Description=GISST Tracing Containers
+After=gisst.service docker.service
+Requires=gisst.service docker.service
+
+[Service]
+Type=simple
+User=jcoa2018
+WorkingDirectory=/home/jcoa2018/gisst/backend
+Environment="GF_SERVER_PROTOCOL=http"
+Environment="GF_SERVER_SERVE_FROM_SUB_PATH=false"
+Environment="GF_SERVER_ROOT_URL=https://ultra64.cs.pomona.edu/dash/"
+Environment="GF_SERVER_DOMAIN=https://ultra64.cs.pomona.edu"
+Environment="GF_AUTH_PROXY_ENABLED=true"
+Environment="GF_AUTH_PROXY_HEADERNAME=X-WEBAUTH-USER"
+Environment="GF_AUTH_PROXY_AUTO_SIGN_UP=true"
+Environment="QUERY_BASE_PATH=/tracing"
+PassEnvironment=GF_SERVER_PROTOCOL GF_SERVER_SERVE_FROM_SUB_PATH GF_SERVER_ROOT_URL GF_SERVER_DOMAIN GF_AUTH_PROXY_ENABLED GF_AUTH_PROXY_HEADERNAME GF_AUTH_PROXY_AUTO_SIGN_UP QUERY_BASE_PATH
+ExecStart=/bin/bash -c "docker compose -f docker-compose.yml up"
+ExecStop=/bin/bash -c "docker compose -f docker-compose.yml stop"
+
+[Install]
+WantedBy=gisst.service

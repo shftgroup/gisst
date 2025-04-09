@@ -1,10 +1,12 @@
-import './style.css';
+import STYLES from './style.css?inline';
 import * as ra from './ra';
 import * as v86 from './v86';
 import {EmuControls,EmbedOptions,ControllerOverlayMode} from './types.d';
 import imgUrl from './canvas.svg';
 
+// TODO replace with a shadow DOM thing?
 let which_canvas = 0;
+
 async function createContainerUI(container: HTMLDivElement) {
   const element_string = `
     <canvas class="gisst-embed-webplayer gisst-embed-hidden" tabindex="1" id="embed_canvas_${which_canvas}"></canvas>
@@ -17,8 +19,9 @@ async function createContainerUI(container: HTMLDivElement) {
   container.innerHTML = element_string;
 
   container.querySelector(`#embed_canvas_${which_canvas}`)!.addEventListener("contextmenu", e => e.preventDefault())
+  
+  which_canvas += 1
 
-  which_canvas += 1;
 }
 
 export async function fetchConfig(gisst_http_proto: string, gisst_root: string, gisst_query: string) {
@@ -51,6 +54,13 @@ export function parseGisstUrl(gisst:string): [http_proto: string, root: string, 
 }
 
 export async function embed(gisst:string, container:HTMLDivElement, options?:EmbedOptions) {
+  
+  if(which_canvas == 0) {
+    const style = document.createElement("style");
+    style.textContent = STYLES;
+    document.head.appendChild(style);
+  }
+  
   createContainerUI(container)
 
   const mute_a = container.querySelector("a.gisst-embed-webplayer-mute")! as HTMLLinkElement;
@@ -134,3 +144,32 @@ function touchHandler(event:TouchEvent)
     first.target.dispatchEvent(simulatedEvent);
     event.preventDefault();
 }
+
+
+function controller_mode_from(s:string|null) : ControllerOverlayMode {
+  if(s == "on") { return ControllerOverlayMode.On; }
+  else if(s == "off") { return ControllerOverlayMode.Off; }
+  else { return ControllerOverlayMode.Auto; }
+}
+
+class GISSTElement extends HTMLElement {
+  static observedAttributes = ["src", "controller", "width", "height"];
+
+  constructor() {
+    super();
+  }
+
+  connectedCallback() {
+    const src = this.getAttribute("src");
+    if(!src) {
+      throw "Cannot create GISST embed without src attribute";
+    }
+    const div = document.createElement("div");
+    div.style.width = this.getAttribute("width") ?? "auto";
+    div.style.height = this.getAttribute("height") ?? "auto";
+    this.appendChild(div);
+    embed(src!, div, {controls:controller_mode_from(this.getAttribute("controller"))});
+  }
+}
+
+customElements.define("gisst-embed", GISSTElement);

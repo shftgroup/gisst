@@ -2,26 +2,21 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <link rel="icon" type="image/svg+xml" href="/vite.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Embedulator</title>
   </head>
   <body>
-    <!-- <div id="container1" style="width: 300px">
+    <script type="module" src="/src/main.ts"></script>
+    <div id="container1" style="width: 300px">
     </div>
-    <div id="container2" style="width: 400px">
-    </div> -->
+    <gisst-embed id="container2" width="400px" src="https://localhost:3000/00000000000000000000000000001001"></gisst-embed>
     <div id="container3" style="width: 500px">
     </div>
-    <div id="container4" style="width: 600px">
-    </div>
-      <script type="module" src="/src/main.ts"></script>
-      <script type="module">
+    <gisst-embed id="container4" width="600px" src="https://localhost:3000/00000000000000000000000000001058"></gisst-embed>
+    <script type="module">
         import {embed} from './src/main';
-        // embed("https://localhost:3000/00000000000000000000000000001001", document.getElementById("container1"));
-        // embed("https://localhost:3000/00000000000000000000000000001001", document.getElementById("container2"));
-        embed("https://localhost:3000/00000000000000000000000000001036", document.getElementById("container3"));
-        embed("https://localhost:3000/00000000000000000000000000001036", document.getElementById("container4"));
-      </script>
+        embed("https://localhost:3000/00000000000000000000000000001001", document.getElementById("container1"));
+        embed("https://localhost:3000/00000000000000000000000000001058", document.getElementById("container3"));
+    </script>
   </body>
 </html>

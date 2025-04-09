@@ -17,8 +17,8 @@ let RA:LibretroModule;
 let ui_state:UI<string>;
 let db:GISSTDBConnector;
 
-export async function init(core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
-  db = new GISSTDBConnector(`${window.location.protocol}//${window.location.host}`);
+export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
+  db = new GISSTDBConnector(gisst_root);
 
   const content = manifest.find((o) => o.object_role=="content" && o.object_role_index == 0)!;
   const content_file = content.file_filename!;
@@ -33,8 +33,8 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
     retro_args.push("-e");
     retro_args.push("1");
     const data = (start as StateStart).data;
-    state_data = new Uint8Array(await (await fetch("/storage/"+data.file_dest_path)).arrayBuffer());
-    console.log(data, "/storage/"+data.file_dest_path,"/fetch/content/entry_state");
+    state_data = new Uint8Array(await (await fetch(gisst_root+"/storage/"+data.file_dest_path)).arrayBuffer());
+    console.log(data, gisst_root+"/storage/"+data.file_dest_path,"/fetch/content/entry_state");
     if(!data.screenshot_id) {
       console.error("No screenshot for entry state");
       entryScreenshot = {screenshot_id:"", screenshot_data:""};
@@ -47,7 +47,7 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
     retro_args.push("-P");
     retro_args.push(state_dir+"/"+content_base+".replay1");
     const data = (start as ReplayStart).data;
-    replay = new Uint8Array(await ((await fetch("/storage/"+data.file_dest_path)).arrayBuffer()));
+    replay = new Uint8Array(await ((await fetch(gisst_root+"/storage/"+data.file_dest_path)).arrayBuffer()));
   } else if(boot_into_record) {
     retro_args.push("-R");
     retro_args.push(state_dir+"/"+content_base+".replay1");
@@ -61,7 +61,7 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
   }
   retro_args.push("/fetch/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
-  let ra_cfg_text:string = await ((await fetch("/assets/retroarch_web_base.cfg")).text());
+  let ra_cfg_text:string = await ((await fetch(gisst_root+"/assets/retroarch_web_base.cfg")).text());
 
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
@@ -154,14 +154,14 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
     JSON.parse(document.getElementById("config")!.textContent!)
   );
   ui_state.setReplayMode(movie ? UIReplayMode.Playback : (boot_into_record ? UIReplayMode.Record : UIReplayMode.Inactive));
-  loadRetroArch("", core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
+  loadRetroArch(gisst_root, core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
     true,
     async function (module:LibretroModule) {
       const enc = new TextEncoder();
       RA = module;
       RA.FS.createPath("/", "fetch/content", true, true);
       RA.FS.createPath("/", state_dir, true, true);
-      let fetch_manifest = `/storage/\n`;
+      let fetch_manifest = `${gisst_root}/storage/\n`;
       /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
 
       for(const file of manifest) {
@@ -175,7 +175,7 @@ export async function init(core:string, start:ColdStart | StateStart | ReplaySta
           sep = download_source_path_full.endsWith("/") ? "" : "/";
           download_source_path_full += sep + file.file_filename!;
         }
-        const content_url = "/storage/"+file.file_dest_path;
+        const content_url = gisst_root+"/storage/"+file.file_dest_path;
         const resp = await fetch(content_url, {method:"HEAD"});
         let sz = 0;
         if (resp.status == 200) {

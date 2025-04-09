@@ -5,11 +5,12 @@ import {ControllerOverlayMode} from './types.d';
 
 window.onload = async function() {
   const config = JSON.parse(document.getElementById("config")!.textContent!);
+  const gisst_root = config.gisst_root;
   const kind = config.environment.environment_framework;
   if(kind == "v86") {
-    await v86.init(config.environment, config.start, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
+    await v86.init(gisst_root, config.environment, config.start, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
   } else {
-    await ra.init(config.environment.environment_core_name, config.start, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
+    await ra.init(gisst_root, config.environment.environment_core_name, config.start, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
   }
   const container = <HTMLCanvasElement>document.getElementById("canvas_div")!;
   const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
