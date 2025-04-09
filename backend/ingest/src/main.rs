@@ -199,9 +199,7 @@ async fn main() -> Result<(), IngestError> {
                                 found = true;
                                 break;
                             }
-                            FindResult::NotInRDB => {
-                                continue;
-                            }
+                            FindResult::NotInRDB => {}
                             FindResult::InRDB(rval) => {
                                 let instance_id = create_metadata_records_from_rval(
                                     &mut conn,

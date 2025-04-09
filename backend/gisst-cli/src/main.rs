@@ -769,7 +769,7 @@ async fn create_state(
                 )
                 .await?;
                 return Err(GISSTCliError::NewModel(e));
-            };
+            }
         }
         Err(e) => {
             error!("Error writing state file to database, aborting...\n{e}");
