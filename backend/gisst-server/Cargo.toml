@@ -34,7 +34,7 @@ tokio = { version = "1.27.0", features = ["full"] }
 tower = {version="0.5.2",features=["util"]}
 tower-http = { version = "0.6.2", features = ["fs", "trace", "cors"] }
 tracing = {version = "0.1.41", features = ["attributes"]}
-tracing-subscriber = { version = "0.3.17", features = ["env-filter", "registry"]}
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "registry"]}
 uuid = { version = "1.8", features = ["serde", "v4"] }
 gisst = { path = "../gisst" }
 serde_with = {version = "3.3.0", features = ["base64"]}
@@ -46,5 +46,6 @@ rand = { version = "0.9.0" }
 opentelemetry = { version = "0.29.1" }
 opentelemetry_sdk = { version = "0.29.0" }
 opentelemetry-otlp = { version = "0.29.0", features = [ "grpc-tonic", "default" ] }
-opentelemetry-semantic-conventions = { version="0.29.0" }
+opentelemetry-stdout = { version = "0.29.0" }
+opentelemetry-semantic-conventions = { version="0.29.0", features=["default", "semconv_experimental"] }
 tracing-opentelemetry = "0.30.0"

@@ -203,7 +203,7 @@ pub async fn login_handler(
     Query(next): Query<NextUrl>,
     session: axum_login::tower_sessions::Session,
 ) -> Result<impl IntoResponse, ServerError> {
-    debug!("Running login {:?}", auth_session.user);
+    info!("Login user {:?}", auth_session.user);
     let (auth_url, csrf_state) = auth_session.backend.authorize_url();
     session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
     session.insert(NEXT_URL_KEY, next.next).await?;
@@ -217,7 +217,7 @@ pub async fn login_handler(
     Query(next): Query<NextUrl>,
     session: axum_login::tower_sessions::Session,
 ) -> Result<impl IntoResponse, ServerError> {
-    debug!("Attempting login with dummy duth!");
+    info!("Login user with dummy auth");
     let (_, csrf_state) = auth_session.backend.authorize_url();
     session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
     session.insert(NEXT_URL_KEY, next.next).await?;
@@ -275,12 +275,17 @@ pub struct Credentials {
     pub old_state: CsrfToken,
     pub new_state: CsrfToken,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AuthBackend {
     pool: PgPool,
     client: OAuthClient,
     #[allow(dead_code)]
     email_whitelist: Vec<String>,
+}
+impl std::fmt::Debug for AuthBackend {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("AuthBackend")
+    }
 }
 impl AuthBackend {
     pub fn new(pool: PgPool, client: OAuthClient, email_whitelist: Vec<String>) -> Self {
@@ -387,7 +392,7 @@ impl axum_login::AuthnBackend for AuthBackend {
                 },
             )
             .await?;
-            debug!("Creator record created: {creator:?}.");
+            info!("Creator record created: {creator:?}.");
             let user = User::insert(
                 &mut conn,
                 &User {
@@ -406,7 +411,7 @@ impl axum_login::AuthnBackend for AuthBackend {
             )
             .await?;
 
-            debug!("User record created: {user:?}.");
+            info!("User record created: {user:?}.");
             Some(user)
         };
         Ok(user)

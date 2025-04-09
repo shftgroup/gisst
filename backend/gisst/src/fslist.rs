@@ -67,8 +67,8 @@ fn recursive_listing_fat_partition(
 ) -> Result<FSFileListing, FSList> {
     use fatfs::{FileSystem, FsOptions};
     use fscommon::{BufStream, StreamSlice};
-    use tracing::debug;
-    debug!(
+    use tracing::{debug, info};
+    info!(
         "Loading image {:?} with bounds {}..{} as FAT filesystem",
         image, start_byte, sz
     );

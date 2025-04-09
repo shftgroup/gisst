@@ -20,8 +20,8 @@ temp_folder_path = "./tmp"
 folder_depth = 4
 
 [env]
-default_directive = "gisst_server=debug"
-rust_log = "warn,gisst_server=debug,gisst=debug"
+default_directive = "info,gisst_server=debug,gisst=debug"
+rust_log = "info,gisst_server=debug,gisst=debug,tower_sessions=warn,tower_sessions_core=warn,axum_login=warn"
 trace_include_headers = false
 # If you want to use jaeger/tracing, be sure to set up the docker compose/tracing infra!
 # see etc/provisioning.txt
