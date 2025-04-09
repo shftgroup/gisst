@@ -38,7 +38,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use tracing::debug;
+use tracing::{debug, info};
 use uuid::Uuid;
 
 pub static BASE_URL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
@@ -89,7 +89,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         &config.storage.root_folder_path,
         &config.storage.temp_folder_path,
     )?;
-    debug!("Configured URL is {}", config.http.base_url.clone());
+    info!("Configured URL is {}", config.http.base_url.clone());
 
     let mut user_whitelist_sorted: Vec<String> = config.auth.user_whitelist.clone();
     user_whitelist_sorted.sort();
@@ -237,6 +237,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
     }
     Ok(())
 }
+
 async fn handle_error(error: axum::BoxError) -> impl axum::response::IntoResponse {
     (
         axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -335,6 +336,7 @@ async fn get_about(
 async fn get_homepage(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, ServerError> {
+    info!("Generating homepage");
     Ok(Html(
         app_state
             .templates

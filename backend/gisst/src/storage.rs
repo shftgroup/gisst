@@ -10,7 +10,7 @@ use std::io::{BufWriter, Write};
 
 use std::path::{Component, Path, PathBuf};
 use tokio::io::AsyncWriteExt;
-use tracing::debug;
+use tracing::info;
 
 use crate::error::Storage;
 use bytes::Bytes;
@@ -111,11 +111,10 @@ impl StorageHandler {
         uuid: Uuid,
         dest_filename: &str,
     ) -> tokio::io::Result<()> {
-        debug!("Deleting file with filename: {}", dest_filename);
         let mut path =
             Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
         path.push(dest_filename);
-        debug!("Deleting file at path: {}", path.to_string_lossy());
+        info!("Deleting file at path: {}", path.to_string_lossy());
         // TODO also delete file.gz
         remove_file(path).await
     }
@@ -126,7 +125,7 @@ impl StorageHandler {
         file_info: &FileInformation,
     ) -> Result<(), Storage> {
         let path = Self::get_dest_file_path(root_path, file_info);
-        debug!("In rename_file, dest_path is {}", path.to_string_lossy());
+        info!("In rename_file, dest_path is {}", path.to_string_lossy());
         let parent = path
             .parent()
             .ok_or_else(|| Storage::PathTooShallow(path.clone()))?;
@@ -209,7 +208,7 @@ impl StorageHandler {
         let save_filename = Self::get_dest_filename(&hash_string, dest_filename);
 
         path.push(&save_filename);
-        debug!("copying from {file_path:?} to {path:?}");
+        info!("copying from {file_path:?} to {path:?}");
         tokio::fs::copy(&file_path, &path).await?;
 
         Self::gzip_file(&path, File::open(file_path).await?).await?;
