@@ -22,12 +22,12 @@ use uuid::Uuid;
 // Nested Router structs for easier reading and manipulation
 
 pub fn creator_router() -> Router {
-    Router::new().route("/:id", get(get_single_creator))
+    Router::new().route("/{id}", get(get_single_creator))
 }
 
 pub fn screenshot_router() -> Router {
     Router::new()
-        .route("/:id", get(get_single_screenshot))
+        .route("/{id}", get(get_single_screenshot))
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_screenshot))
 }
@@ -35,39 +35,39 @@ pub fn screenshot_router() -> Router {
 pub fn instance_router() -> Router {
     Router::new()
         .route("/", get(get_instances))
-        .route("/:id", get(get_all_for_instance))
+        .route("/{id}", get(get_all_for_instance))
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
-        .route("/:id/clone", get(clone_v86_instance))
+        .route("/{id}/clone", get(clone_v86_instance))
 }
 
 pub fn object_router() -> Router {
     Router::new()
-        .route("/:id", get(get_single_object))
-        .route("/:id/*path", get(get_subobject))
+        .route("/{id}", get(get_single_object))
+        .route("/{id}/{*path}", get(get_subobject))
 }
 
 pub fn replay_router() -> Router {
     Router::new()
-        .route("/:id", get(get_single_replay))
+        .route("/{id}", get(get_single_replay))
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_replay))
 }
 pub fn save_router() -> Router {
     Router::new()
-        .route("/:id", get(get_single_save))
+        .route("/{id}", get(get_single_save))
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_save))
 }
 
 pub fn state_router() -> Router {
     Router::new()
-        .route("/:id", get(get_single_state))
+        .route("/{id}", get(get_single_state))
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_state))
 }
 
 pub fn work_router() -> Router {
-    Router::new().route("/:id", get(get_single_work))
+    Router::new().route("/{id}", get(get_single_work))
 }
 
 // CREATOR method handlers

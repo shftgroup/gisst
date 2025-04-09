@@ -1,6 +1,10 @@
 #!/usr/bin/env zsh
 
 export GISST_CONFIG_PATH=./config
+
+# To ensure we don't get different results at different times, touch every file to ensure it has the same ATIME/MTIME
+find examples/data/ -type f -exec touch -t 202401010101.01 '{}' ';'
+
 # Build most recent GISST Command Line Interface
 cargo build --bin gisst-cli
 

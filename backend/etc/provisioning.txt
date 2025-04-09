@@ -13,3 +13,4 @@
 - Grafana: add dashboards, incl. node_exporter, postgres, prometheus
 - Nginx: make sure forwarding is set up right
 - Systemd: double check environment variables
+- local.toml: Add jaeger endpoint (probably 127.0.0.1:4317)

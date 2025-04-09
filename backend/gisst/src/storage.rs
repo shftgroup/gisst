@@ -1,7 +1,7 @@
 #![allow(clippy::missing_errors_doc)]
 
 use tokio::{
-    fs::{create_dir_all, remove_file, File},
+    fs::{File, create_dir_all, remove_file},
     io::AsyncRead,
 };
 
@@ -230,7 +230,7 @@ impl StorageHandler {
     async fn gzip_file<R: AsyncRead + Unpin>(path: &Path, data: R) -> Result<(), Storage> {
         let ext: Option<&str> = path.extension().and_then(|ext| ext.to_str());
         // Skip compressing disk images
-        if let Some("chd"|"img"|"iso"|"bin") = ext{
+        if let Some("chd" | "img" | "iso" | "bin") = ext {
             return Ok(());
         }
         let gz_path = if let Some(e) = ext {

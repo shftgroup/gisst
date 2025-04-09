@@ -13,15 +13,20 @@ use chrono::Utc;
 use sqlx::{PgConnection, PgPool};
 
 use crate::error::{AuthError, ServerError};
-use oauth2::{
-    AuthUrl, ClientId, ClientSecret, CsrfToken, IntrospectionUrl, RedirectUrl, TokenUrl,
-    basic::BasicClient,
-};
+use oauth2::{AuthUrl, ClientId, ClientSecret, CsrfToken, IntrospectionUrl, RedirectUrl, TokenUrl};
 #[cfg(not(feature = "dummy_auth"))]
-use oauth2::{AuthorizationCode, TokenResponse, reqwest::async_http_client};
+use oauth2::{AuthorizationCode, TokenResponse};
 
 use serde::Deserialize;
 use tracing::{debug, info, warn};
+
+type OAuthClient = oauth2::basic::BasicClient<
+    oauth2::EndpointSet,
+    oauth2::EndpointNotSet,
+    oauth2::EndpointSet,
+    oauth2::EndpointNotSet,
+    oauth2::EndpointSet,
+>;
 
 pub const CSRF_STATE_KEY: &str = "auth.csrf_token";
 pub const NEXT_URL_KEY: &str = "auth.next_url";
@@ -192,7 +197,7 @@ pub struct NextUrl {
 }
 
 #[cfg(not(feature = "dummy_auth"))]
-#[tracing::instrument(name="standard_auth_login")] 
+#[tracing::instrument(name = "standard_auth_login")]
 pub async fn login_handler(
     auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
@@ -206,7 +211,7 @@ pub async fn login_handler(
 }
 
 #[cfg(feature = "dummy_auth")]
-#[tracing::instrument(name="dummy_auth_login")] 
+#[tracing::instrument(name = "dummy_auth_login")]
 pub async fn login_handler(
     mut auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
@@ -245,7 +250,7 @@ pub fn build_oauth_client(
     client_base_url: &str,
     client_id: &str,
     client_secret: &str,
-) -> BasicClient {
+) -> OAuthClient {
     let redirect_url = format!("{client_base_url}/auth/google/callback");
 
     let auth_url = AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())
@@ -256,14 +261,12 @@ pub fn build_oauth_client(
         IntrospectionUrl::new("https://www.googleapis.com/oauth2/v3/tokeninfo".to_string())
             .expect("Invalid token introspection endpoint URL");
 
-    BasicClient::new(
-        ClientId::new(client_id.to_string()),
-        Some(ClientSecret::new(client_secret.to_string())),
-        auth_url,
-        Some(token_url),
-    )
-    .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap())
-    .set_introspection_uri(introspect_url)
+    oauth2::basic::BasicClient::new(ClientId::new(client_id.to_string()))
+        .set_client_secret(ClientSecret::new(client_secret.to_string()))
+        .set_auth_uri(auth_url)
+        .set_token_uri(token_url)
+        .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap())
+        .set_introspection_url(introspect_url)
 }
 
 #[derive(Clone)]
@@ -275,12 +278,12 @@ pub struct Credentials {
 #[derive(Clone, Debug)]
 pub struct AuthBackend {
     pool: PgPool,
-    client: BasicClient,
+    client: OAuthClient,
     #[allow(dead_code)]
     email_whitelist: Vec<String>,
 }
 impl AuthBackend {
-    pub fn new(pool: PgPool, client: BasicClient, email_whitelist: Vec<String>) -> Self {
+    pub fn new(pool: PgPool, client: OAuthClient, email_whitelist: Vec<String>) -> Self {
         Self {
             pool,
             client,
@@ -318,7 +321,7 @@ impl axum_login::AuthnBackend for AuthBackend {
             let token = self
                 .client
                 .exchange_code(AuthorizationCode::new(code))
-                .request_async(async_http_client)
+                .request_async(&oauth2::reqwest::Client::new())
                 .await?;
             let user_info = reqwest::Client::new()
                 .get("https://openidconnect.googleapis.com/v1/userinfo")

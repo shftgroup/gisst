@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 
 use config::{Config, ConfigError, Environment, File};
-use secrecy::Secret;
+use secrecy::SecretString;
 use serde::Deserialize;
 
 //Configuration file setup taken from https://github.com/shanesveller/axum-rest-example/blob/develop/src/config.rs
@@ -57,22 +57,18 @@ impl Default for EnvConfig {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AuthConfig {
-    pub google_client_id: Secret<String>,
-    pub google_client_secret: Secret<String>,
+    pub google_client_id: SecretString,
+    pub google_client_secret: SecretString,
     pub user_whitelist: Vec<String>,
 }
 
 impl Default for AuthConfig {
     fn default() -> Self {
         Self {
-            google_client_id: "PROVIDE GOOGLE CLIENT ID in local.toml"
-                .to_string()
-                .parse()
-                .unwrap(),
-            google_client_secret: "PROVIDE GOOGLE CLIENT SECRET in local.toml"
-                .to_string()
-                .parse()
-                .unwrap(),
+            google_client_id: SecretString::new("PROVIDE GOOGLE CLIENT ID in local.toml".into()),
+            google_client_secret: SecretString::new(
+                "PROVIDE GOOGLE CLIENT SECRET in local.toml".into(),
+            ),
             user_whitelist: vec![],
         }
     }
@@ -86,11 +82,11 @@ pub struct DatabaseConfig {
     pub idle_timeout_seconds: u64,
     pub max_lifetime_seconds: u64,
     #[serde(default = "default_database_url")]
-    pub database_url: Secret<String>,
+    pub database_url: SecretString,
 }
 
-fn default_database_url() -> Secret<String> {
-    Secret::new("postgresql://postgres:postgres@localhost/gisstdb".to_owned())
+fn default_database_url() -> SecretString {
+    SecretString::new("postgresql://postgres:postgres@localhost/gisstdb".into())
 }
 
 impl Default for DatabaseConfig {

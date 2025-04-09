@@ -210,10 +210,8 @@ fn get_file_at_path_fat(
             Ok(0) => {
                 return Ok(bytes);
             }
-            Ok(_n) => {
-                continue;
-            }
             Err(e) => return Err(FSList::from(e)),
+            Ok(_n) => {}
         }
     }
 }
