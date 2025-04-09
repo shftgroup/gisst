@@ -16,12 +16,14 @@
     "check": "tsc && eslint src",
     "build": "shx mkdir -p ../../test-cert && tsc && vite build",
     "dist": "shx mkdir -p ../../test-cert && vite build && shx mkdir -p ../../backend/embed-dist && shx cp -r dist/* ../../backend/embed-dist/",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test":"vitest"
   },
   "devDependencies": {
     "@types/path-browserify": "^1.0.3",
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
+    "@vitest/ui": "^3.0.8",
     "coffeescript": "^2.7.0",
     "eslint": "^9.13.0",
     "rollup-plugin-sourcemaps": "0.6.3",
@@ -30,7 +32,8 @@
     "vite": "^6.2.1",
     "vite-plugin-checker": "^0.9.0",
     "vite-plugin-dts": "^4.5.3",
-    "vite-plugin-mkcert": "^1.17.6"
+    "vite-plugin-mkcert": "^1.17.6",
+    "vitest": "^3.0.8"
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.7.53",
