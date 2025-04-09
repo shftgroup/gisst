@@ -44,13 +44,13 @@ async fn main() -> Result<()> {
         .with_default_directive("warn".parse()?)
         .parse(config.env.rust_log.clone())?; // Log levels taken from ../../config/default.toml
     let subscriber = tracing_subscriber::Registry::default().with(filter);
-    if !config.env.jaeger_endpoint.is_empty() {
+    if config.env.jaeger_endpoint.is_empty() {
+        let subscriber = subscriber.with(fmt::Layer::default());
+        tracing::subscriber::set_global_default(subscriber).unwrap();
+    } else {
         let tracer = init_tracer(&config).unwrap();
         let telemetry = tracing_opentelemetry::layer().with_tracer(tracer.tracer("gisst-server"));
         let subscriber = subscriber.with(telemetry).with(fmt::Layer::default());
-        tracing::subscriber::set_global_default(subscriber).unwrap();
-    } else {
-        let subscriber = subscriber.with(fmt::Layer::default());
         tracing::subscriber::set_global_default(subscriber).unwrap();
     }
 
