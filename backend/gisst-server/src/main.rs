@@ -28,7 +28,7 @@ fn init_tracer(config: &ServerConfig) -> Result<SdkTracerProvider, Box<dyn std::
         .with_timeout(std::time::Duration::from_millis(200))
         .build()?;
     let tracer_provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
-        .with_simple_exporter(otlp_exporter)
+        .with_batch_exporter(otlp_exporter)
         .build();
     Ok(tracer_provider)
 }
