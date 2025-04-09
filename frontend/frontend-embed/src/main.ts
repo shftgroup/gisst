@@ -21,9 +21,8 @@ async function createContainerUI(container: HTMLDivElement) {
   which_canvas += 1;
 }
 
-export async function fetchConfig(gisst: string) {
+export async function fetchConfig(gisst_http_proto: string, gisst_root: string, gisst_query: string) {
   // capture groups: root, UUID, query params
-  const [gisst_http_proto, gisst_root, gisst_query] = parseGisstUrl(gisst)
 
   const data_resp = await fetch(gisst_http_proto+"://"+gisst_root+"/data/"+gisst_query, {headers:[["Accept","application/json"]]});
   console.log(data_resp);
@@ -58,12 +57,13 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
   const halt_a = container.querySelector("a.gisst-embed-webplayer-halt")! as HTMLLinkElement;
   const canvas = container.querySelector("canvas.gisst-embed-webplayer")! as HTMLCanvasElement;
 
-  const config = await fetchConfig(gisst);
+  const [gisst_http_proto, gisst_root, gisst_query] = parseGisstUrl(gisst)
+
+  const config = await fetchConfig(gisst_http_proto, gisst_root, gisst_query);
   if (!config) return
 
   const kind = config.environment.environment_framework;
   let emu:EmuControls;
-  const [gisst_http_proto, gisst_root, _] = parseGisstUrl(gisst)
   if(kind == "v86") {
     emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.start, config.manifest, container, options ?? {controls:ControllerOverlayMode.Auto});
   } else {
