@@ -1,7 +1,7 @@
 // Import Bootstrap CSS dependency
-@import "~bootstrap/scss/bootstrap";
+@use "~bootstrap/scss/bootstrap";
 // Import Keyboard CSS fanciness
-@import "~keyboard-css/dist/scss/main";
+@use "~keyboard-css/dist/scss/main";
 #emulator_single_div{
   background-color: black;
 }
@@ -52,7 +52,7 @@
 }
 .emulator-playback {
     border: solid 4px green;
-    
+
 }
 
 .replay-list-item {
