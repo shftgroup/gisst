@@ -1,5 +1,7 @@
+use gisst_server::serverconfig::ServerConfig;
 use reqwest;
 use tokio;
+use std::process::Command;
 
 #[tokio::test]
 async fn test_async_main() {
@@ -11,8 +13,17 @@ async fn test_async_main() {
     assert!(body.contains("Request Access"));
 }
 
+
 #[tokio::test]
 async fn test_authenticated_instances_page() {
+    
+    Command::new("cargo")
+        .env("GISST_ENV", ServerConfig)
+        .args(["run", "--bin", "gisst-server", "--features", "dummy_auth"])
+        .spawn()
+        .expect("process failed to start");
+
+
     let client = reqwest::Client::builder()
         .cookie_store(true) 
         .build()
