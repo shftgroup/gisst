@@ -41,7 +41,7 @@ serde_with = {version = "3.3.0", features = ["base64"]}
 chrono = { version = "0.4.28", features = ["clock"]}
 axum-login = { version = "0.16.0" } #features = ["sqlx", "postgres"]}
 oauth2 = "4.4.2"
-reqwest = {version="0.11.20", features=["json"]}
+reqwest = {version="0.11.20", features=["json", "cookies"]}
 rand = { version = "0.8.5", features = ["min_const_gen"]}
 opentelemetry = { version = "0.19.0", features = ["rt-tokio", "trace"]}
 opentelemetry-otlp = { version = "0.12.0", features = ["tonic", "metrics"] }
