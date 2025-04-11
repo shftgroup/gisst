@@ -29,3 +29,4 @@ fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="4eccb50d011146fbed20e
 mbrman = "0.5.2"
 fscommon = "0.1.1"
 zip = "2.1.2"
+opentelemetry = "0.29.1"

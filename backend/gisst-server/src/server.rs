@@ -100,9 +100,10 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .connect(config.database.database_url.expose_secret())
         .await
         .unwrap();
+    let metrics_pool = user_pool.clone();
 
     let user_store = auth::AuthBackend::new(
-        user_pool.clone(),
+        user_pool,
         auth::build_oauth_client(
             &config.http.base_url,
             config.auth.google_client_id.expose_secret(),
@@ -115,6 +116,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .with_same_site(SameSite::Lax)
         .with_name("gisst.sid");
     let auth_layer = axum_login::AuthManagerLayerBuilder::new(user_store, session_layer).build();
+
+    gisst::metrics::start_reporting(metrics_pool).await;
 
     let builder = ServiceBuilder::new()
         .layer(

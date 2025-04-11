@@ -237,6 +237,7 @@ pub async fn login_handler(
     }
 }
 
+#[tracing::instrument(name = "logout")]
 pub async fn logout_handler(
     mut auth: axum_login::AuthSession<AuthBackend>,
 ) -> Result<impl IntoResponse, ServerError> {

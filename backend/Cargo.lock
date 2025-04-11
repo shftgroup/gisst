@@ -1205,6 +1205,7 @@ dependencies = [
  "log",
  "mbrman",
  "md-5",
+ "opentelemetry",
  "serde",
  "serde_json",
  "serde_with",

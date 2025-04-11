@@ -1122,6 +1122,7 @@ impl StateLink {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[tracing::instrument(skip(conn))]
 pub async fn insert_file_object(
     conn: &mut sqlx::PgConnection,
     storage_root: &str,
@@ -1150,6 +1151,7 @@ pub async fn insert_file_object(
     if let Some(file_info) = File::get_by_hash(conn, &hash).await? {
         let object_id = match duplicate {
             Duplicate::ReuseData => {
+                // metric here
                 info!("adding duplicate file record for {path:?}");
                 let file_id = Uuid::new_v4();
                 let file_record = File {
@@ -1173,6 +1175,7 @@ pub async fn insert_file_object(
                 Some(object_id)
             }
             Duplicate::ReuseObject => {
+                // metric here
                 info!("skipping duplicate record for {path:?}, reusing object");
                 Object::get_by_hash(conn, &file_info.file_hash)
                     .await?
@@ -1182,7 +1185,6 @@ pub async fn insert_file_object(
         object_id.ok_or(InsertFile::ObjectMissing(hash))
     } else {
         let file_uuid = Uuid::new_v4();
-        info!("Do write file {file_name}");
         let file_info = StorageHandler::write_file_to_uuid_folder(
             storage_root,
             depth,
@@ -1191,6 +1193,7 @@ pub async fn insert_file_object(
             path,
         )
         .await?;
+        // metric here
         info!(
             "Wrote file {} to {}",
             file_info.dest_filename, file_info.dest_path
@@ -1215,6 +1218,7 @@ pub async fn insert_file_object(
         Object::insert(conn, object).await?;
         Ok(object_id)
     }
+    // metric here for successful insert probably
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
