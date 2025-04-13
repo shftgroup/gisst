@@ -52,7 +52,7 @@ impl Default for EnvConfig {
             rust_log: "warn,gisst_server=debug,gisst=debug".to_string(),
             trace_include_headers: false,
             jaeger_endpoint: String::new(),
-            prometheus_endpoint: String::new()
+            prometheus_endpoint: String::new(),
         }
     }
 }

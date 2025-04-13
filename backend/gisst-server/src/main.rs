@@ -72,7 +72,10 @@ fn init_metrics(config: &ServerConfig) -> Result<SdkMeterProvider, anyhow::Error
         let exporter = opentelemetry_otlp::MetricExporter::builder()
             .with_http()
             .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
-            .with_endpoint(format!("{}/api/v1/otlp/v1/metrics", config.env.prometheus_endpoint))
+            .with_endpoint(format!(
+                "{}/api/v1/otlp/v1/metrics",
+                config.env.prometheus_endpoint
+            ))
             .build()?;
         SdkMeterProvider::builder()
             .with_periodic_exporter(exporter)

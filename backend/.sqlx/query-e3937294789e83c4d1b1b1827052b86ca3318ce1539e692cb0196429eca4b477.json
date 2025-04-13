@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT reltuples::bigint AS estimate FROM pg_class\n                           WHERE oid = ($1::text)::regclass",
+  "query": "SELECT reltuples::bigint AS estimate FROM pg_class WHERE oid = ($1::text)::regclass",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       null
     ]
   },
-  "hash": "105d12cffbb1da8bc0d5dd372ae6dad859aa5741393199412bb0698e009f6811"
+  "hash": "e3937294789e83c4d1b1b1827052b86ca3318ce1539e692cb0196429eca4b477"
 }

@@ -9,8 +9,8 @@
 //     pub(crate) static COUNTS:OnceCell<>
 // )
 
+#[allow(clippy::unused_async)]
 pub async fn start_reporting(pool: sqlx::PgPool) {
-    let pool = std::sync::Arc::new(pool);
     const TABLES: [&str; 13] = [
         "creator",
         "environment",
@@ -29,30 +29,21 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
     let provider = opentelemetry::global::meter_provider();
     let counts = provider.meter("counts");
     let handle = tokio::runtime::Handle::current();
+    let pool = std::sync::Arc::new(pool);
     for table in TABLES {
         let pool = std::sync::Arc::clone(&pool);
         let handle = handle.clone();
         counts
             .u64_observable_counter(table)
             .with_callback(move |obs| {
-                let count = handle.block_on(async {
-                    let mut conn = pool.acquire().await.unwrap();
-                    sqlx::query_scalar!(
-                        r#"SELECT reltuples::bigint AS estimate FROM pg_class
-                           WHERE oid = ($1::text)::regclass"#,
-                        table
-                    )
-                    .fetch_one(conn.as_mut())
-                    .await
-                    .unwrap()
-                });
-                obs.observe(
-                    count
-                        .and_then(|num| u64::try_from(num).ok())
-                        .unwrap_or_default(),
-                    &[],
-                );
-            })
+                handle.block_on(async {
+                    if let Ok(mut conn) = pool.acquire().await {
+                        if let Some(count) = sqlx::query_scalar!(r#"SELECT reltuples::bigint AS estimate FROM pg_class WHERE oid = ($1::text)::regclass"#, table).fetch_one(conn.as_mut()).await.ok().flatten().and_then(|num| u64::try_from(num).ok()) {
+                         obs.observe(count, &[]);
+                        }
+                    }
+                       });
+                })
             .build();
     }
 }
