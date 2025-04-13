@@ -38,12 +38,23 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
             .with_callback(move |obs| {
                 handle.block_on(async {
                     if let Ok(mut conn) = pool.acquire().await {
-                        if let Some(count) = sqlx::query_scalar!(r#"SELECT reltuples::bigint AS estimate FROM pg_class WHERE oid = ($1::text)::regclass"#, table).fetch_one(conn.as_mut()).await.ok().flatten().and_then(|num| u64::try_from(num).ok()) {
-                         obs.observe(count, &[]);
+                        if let Some(count) = sqlx::query_scalar!(
+                            r#"SELECT reltuples::bigint AS estimate 
+                               FROM pg_class 
+                               WHERE oid = ($1::text)::regclass"#,
+                            table
+                        )
+                        .fetch_one(conn.as_mut())
+                        .await
+                        .ok()
+                        .flatten()
+                        .and_then(|num| u64::try_from(num).ok())
+                        {
+                            obs.observe(count, &[]);
                         }
                     }
-                       });
-                })
+                });
+            })
             .build();
     }
 }
