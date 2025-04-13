@@ -46,7 +46,6 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
                     .await
                     .unwrap()
                 });
-                tracing::info!("counter for {table} is {count:?}");
                 obs.observe(
                     count
                         .and_then(|num| u64::try_from(num).ok())
