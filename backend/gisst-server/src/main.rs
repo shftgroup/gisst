@@ -63,15 +63,15 @@ fn init_tracer(config: &ServerConfig) -> Result<SdkTracerProvider, anyhow::Error
 }
 
 fn init_metrics(config: &ServerConfig) -> Result<SdkMeterProvider, anyhow::Error> {
-    Ok(if config.env.jaeger_endpoint.is_empty() {
+    Ok(if config.env.prometheus_endpoint.is_empty() {
         SdkMeterProvider::builder()
             .with_periodic_exporter(opentelemetry_stdout::MetricExporter::default())
             .with_resource(resource())
             .build()
     } else {
         let exporter = opentelemetry_otlp::MetricExporter::builder()
-            .with_tonic()
-            .with_endpoint(config.env.jaeger_endpoint.clone())
+            .with_http()
+            .with_endpoint(config.env.prometheus_endpoint.clone())
             .with_timeout(std::time::Duration::from_millis(200))
             .build()?;
         SdkMeterProvider::builder()
