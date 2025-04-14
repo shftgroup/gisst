@@ -110,7 +110,7 @@ async fn recalc_sizes(db: PgPool, storage_root: &str) -> Result<(), GISSTCliErro
             .unwrap_or(0)
     };
     info!("count: {count}");
-    for i in 0..((count / 1024) + 1) {
+    for i in 0..=(count / 1024) {
         let this_count = (count - i * 1024).min(1024);
         if this_count <= 0 {
             break;
