@@ -33,6 +33,8 @@ pub struct FileInformation {
     pub dest_filename: String,
     pub dest_path: String,
     pub file_hash: String,
+    pub file_size: i64,
+    pub file_compressed_size: Option<i64>,
 }
 
 impl StorageHandler {
@@ -115,15 +117,27 @@ impl StorageHandler {
             Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
         path.push(dest_filename);
         info!("Deleting file at path: {}", path.to_string_lossy());
-        // TODO also delete file.gz
-        remove_file(path).await
+        let gz_path = if let Some(e) = path.extension().and_then(|e| e.to_str()) {
+            let mut s = e.to_string();
+            s.push_str(".gz");
+            path.with_extension(s)
+        } else {
+            path.with_extension("gz")
+        };
+        if let Err(err) = remove_file(&path).await {
+            tracing::warn!("Error deleting file {path:?} with uuid {uuid}: {err:?}");
+        }
+        if let Err(err) = remove_file(&gz_path).await {
+            tracing::info!("Error deleting compressed file {gz_path:?} with uuid {uuid}: {err:?}");
+        }
+        Ok(())
     }
 
     pub async fn rename_file_from_temp_to_storage(
         root_path: &str,
         temp_path: &str,
         file_info: &FileInformation,
-    ) -> Result<(), Storage> {
+    ) -> Result<Option<PathBuf>, Storage> {
         let path = Self::get_dest_file_path(root_path, file_info);
         info!("In rename_file, dest_path is {}", path.to_string_lossy());
         let parent = path
@@ -208,10 +222,18 @@ impl StorageHandler {
         let save_filename = Self::get_dest_filename(&hash_string, dest_filename);
 
         path.push(&save_filename);
+
+        let file_size = i64::try_from(std::fs::metadata(file_path)?.len())?;
         info!("copying from {file_path:?} to {path:?}");
         tokio::fs::copy(&file_path, &path).await?;
 
-        Self::gzip_file(&path, File::open(file_path).await?).await?;
+        let file_compressed_size = Self::gzip_file(&path, File::open(file_path).await?)
+            .await?
+            .and_then(|path| {
+                std::fs::metadata(path)
+                    .ok()
+                    .and_then(|md| i64::try_from(md.len()).ok())
+            });
 
         path.pop();
         Ok(FileInformation {
@@ -224,13 +246,18 @@ impl StorageHandler {
                 .to_string(),
             dest_filename: save_filename,
             file_hash: hash_string.to_string(),
+            file_size,
+            file_compressed_size,
         })
     }
-    async fn gzip_file<R: AsyncRead + Unpin>(path: &Path, data: R) -> Result<(), Storage> {
+    async fn gzip_file<R: AsyncRead + Unpin>(
+        path: &Path,
+        data: R,
+    ) -> Result<Option<PathBuf>, Storage> {
         let ext: Option<&str> = path.extension().and_then(|ext| ext.to_str());
         // Skip compressing disk images
         if let Some("chd" | "img" | "iso" | "bin") = ext {
-            return Ok(());
+            return Ok(None);
         }
         let gz_path = if let Some(e) = ext {
             let mut s = e.to_string();
@@ -239,7 +266,7 @@ impl StorageHandler {
         } else {
             path.with_extension("gz")
         };
-        let gz_file = File::create(gz_path).await?;
+        let gz_file = File::create(&gz_path).await?;
         let mut gz_enc = async_compression::tokio::write::GzipEncoder::with_quality(
             gz_file,
             async_compression::Level::Best,
@@ -247,7 +274,7 @@ impl StorageHandler {
         let mut buf = tokio::io::BufReader::with_capacity(1024 * 1024, data);
         let _bytes_written = tokio::io::copy_buf(&mut buf, &mut gz_enc).await?;
         gz_enc.shutdown().await?;
-        Ok(())
+        Ok(Some(gz_path))
     }
 }
 

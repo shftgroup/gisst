@@ -60,6 +60,7 @@ pub struct File {
     pub file_size: i64, //PostgeSQL does not have native uint support
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub file_compressed_size: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -370,7 +371,7 @@ impl File {
     pub async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *
+            r#"INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
             "#,
             model.file_id,
             model.file_hash,
@@ -378,7 +379,8 @@ impl File {
             model.file_source_path,
             model.file_dest_path,
             model.file_size,
-            model.created_on
+            model.created_on,
+            model.file_compressed_size,
         )
         .fetch_one(conn)
         .await
@@ -1146,25 +1148,27 @@ pub async fn insert_file_object(
     }
     let file_name = filename_override.unwrap_or(file_name);
     let created_on = chrono::Utc::now();
-    let file_size = i64::try_from(std::fs::metadata(path)?.len())?;
     let hash = StorageHandler::get_file_hash(path)?;
+    let object_id = if let Duplicate::ForceUuid(object_id) = duplicate {
+        object_id
+    } else {
+        Uuid::new_v4()
+    };
+
     if let Some(file_info) = File::get_by_hash(conn, &hash).await? {
         let object_id = match duplicate {
-            Duplicate::ReuseData => {
+            Duplicate::ReuseData | Duplicate::ForceUuid(_) => {
                 // metric here
                 info!("adding duplicate file record for {path:?}");
                 let file_id = Uuid::new_v4();
                 let file_record = File {
                     file_id,
-                    file_hash: file_info.file_hash,
                     file_filename: file_name,
                     file_source_path,
-                    file_dest_path: file_info.file_dest_path,
-                    file_size: file_info.file_size,
                     created_on,
+                    ..file_info
                 };
                 File::insert(conn, file_record).await?;
-                let object_id = Uuid::new_v4();
                 let object = Object {
                     object_id,
                     file_id,
@@ -1204,11 +1208,11 @@ pub async fn insert_file_object(
             file_filename: file_info.source_filename,
             file_source_path,
             file_dest_path: file_info.dest_path,
-            file_size,
+            file_size: file_info.file_size,
+            file_compressed_size: file_info.file_compressed_size,
             created_on,
         };
         File::insert(conn, file_record).await?;
-        let object_id = Uuid::new_v4();
         let object = Object {
             object_id,
             file_id: file_uuid,
@@ -1218,11 +1222,11 @@ pub async fn insert_file_object(
         Object::insert(conn, object).await?;
         Ok(object_id)
     }
-    // metric here for successful insert probably
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Duplicate {
     ReuseObject,
     ReuseData,
+    ForceUuid(Uuid),
 }

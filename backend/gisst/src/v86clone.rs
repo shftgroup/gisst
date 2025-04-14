@@ -111,6 +111,7 @@ pub async fn clone_v86_machine(
             file_source_path: String::new(),
             file_dest_path: String::new(),
             file_size,
+            file_compressed_size: None,
             created_on: chrono::Utc::now(),
         };
         let object = Object {

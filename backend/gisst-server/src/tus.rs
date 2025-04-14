@@ -93,6 +93,7 @@ fn is_octet_stream(val: &str) -> bool {
     val == "application/offset+octet-stream"
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn patch(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -178,12 +179,17 @@ pub async fn patch(
             "Got to rename file with the following, temp_path: {}, root_path:{}, file_info: {:?}",
             &app_state.temp_storage_path, &app_state.root_storage_path, &file_info
         );
-        StorageHandler::rename_file_from_temp_to_storage(
+        let gz_length = StorageHandler::rename_file_from_temp_to_storage(
             &app_state.root_storage_path,
             &app_state.temp_storage_path,
             &file_info,
         )
-        .await?;
+        .await?
+        .and_then(|path| {
+            std::fs::metadata(path)
+                .ok()
+                .and_then(|md| i64::try_from(md.len()).ok())
+        });
         GFile::insert(
             &mut conn,
             GFile {
@@ -193,6 +199,7 @@ pub async fn patch(
                 file_source_path: file_info.source_path.clone(),
                 file_dest_path: file_info.dest_path.clone(),
                 file_size: i64::try_from(pu_length).map_err(ServerError::UploadTooBig)?,
+                file_compressed_size: gz_length,
                 created_on: chrono::Utc::now(),
             },
         )
@@ -257,6 +264,8 @@ pub async fn creation(
         dest_filename: StorageHandler::get_dest_filename(hash, filename),
         dest_path: dest_path.to_string_lossy().to_string(),
         file_hash: hash.to_string(),
+        file_compressed_size: None,
+        file_size: 0,
     };
 
     // Create temp file for PATCH

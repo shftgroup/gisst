@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *\n            ",
+  "query": "INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *\n            ",
   "describe": {
     "columns": [
       {
@@ -37,6 +37,11 @@
         "ordinal": 6,
         "name": "created_on",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "file_compressed_size",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
@@ -47,7 +52,8 @@
         "Text",
         "Text",
         "Int8",
-        "Timestamptz"
+        "Timestamptz",
+        "Int8"
       ]
     },
     "nullable": [
@@ -57,8 +63,9 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "df4bde9641316e8378681b31375d61d10e9c4a258acd6d7d4edc47abd9e3b522"
+  "hash": "27544d0a3542d45e9c182193af0a19db3b93b1b5f6f468751ea3d169bbcdaf92"
 }

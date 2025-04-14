@@ -8,8 +8,6 @@ use uuid::Uuid;
 pub enum GISSTCliError {
     #[error("create creator error")]
     CreateCreator(String),
-    #[error("create object error")]
-    CreateObject(String),
     #[error("create instance error")]
     CreateInstance(String),
     #[error("create environment error")]
@@ -46,6 +44,8 @@ pub enum GISSTCliError {
     InsertFileError(#[from] gisst::error::InsertFile),
     #[error("invalid role index {0}")]
     InvalidRoleIndex(std::num::TryFromIntError),
+    #[error("file size int conversion")]
+    FileSize(std::num::TryFromIntError),
 }
 
 #[derive(Debug, Parser)]
@@ -76,6 +76,9 @@ pub enum BaseSubcommand<C: clap::FromArgMatches + clap::Args> {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    /// Recalculate file sizes and compressed sizes
+    RecalcSizes,
+
     /// Link records together
     Link {
         /// Record type that is being linked to another record
@@ -126,25 +129,8 @@ pub enum Commands {
     },
 }
 
-#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Args)]
 pub struct CreateObject {
-    /// Create objects recursively if input file is directory
-    #[arg(short, long)]
-    pub recursive: bool,
-
-    /// Extract any archive files and create individual object records for each extracted file, this is recursive
-    #[arg(short, long)]
-    pub extract: bool,
-
-    /// Will skip requests for a description for an object and default to using the object's filename
-    #[arg(short, long = "ignore-description")]
-    pub ignore_description: bool,
-
-    /// Will answer yes "y" to all "y/n" prompts on record creation
-    #[arg(short = 'y', long = "skip-yes")]
-    pub skip_yes: bool,
-
     /// Link to a specific instance based on UUID
     #[arg(short, long)]
     pub link: Option<Uuid>,
@@ -166,7 +152,7 @@ pub struct CreateObject {
     pub force_uuid: Uuid,
 
     /// Paths of file(s) to create in the database, directories will be ignored unless -r/--recursive flag is enabled
-    pub file: Vec<String>,
+    pub file: String,
 
     /// Search for files in this directory, useful if you don't want deeply nested `file_source_paths`.
     #[arg(long)]
