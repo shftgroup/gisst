@@ -52,6 +52,7 @@ services:
       DATA_SOURCE_PASS_FILE: /var/pgx/dbpasswd
     command:
       - "--web.listen-address=0.0.0.0:9187"
+      - "--collector.stat_statements"
     ports:
       - "9187:9187"
 
