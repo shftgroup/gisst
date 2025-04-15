@@ -107,6 +107,7 @@ impl StorageHandler {
         depth - 1
     }
 
+    #[tracing::instrument]
     pub async fn delete_file_with_uuid(
         root_path: &str,
         folder_depth: u8,
@@ -133,6 +134,7 @@ impl StorageHandler {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn rename_file_from_temp_to_storage(
         root_path: &str,
         temp_path: &str,
@@ -155,6 +157,7 @@ impl StorageHandler {
         Self::gzip_file(&path, data).await
     }
 
+    #[tracing::instrument(skip(bytes))]
     pub async fn add_bytes_to_file(
         temp_path: &str,
         file_info: &FileInformation,
@@ -183,6 +186,7 @@ impl StorageHandler {
         .await?
     }
 
+    #[tracing::instrument]
     pub async fn create_temp_file(
         temp_path: &str,
         file_info: &FileInformation,
@@ -208,8 +212,24 @@ impl StorageHandler {
         filename: &str,
         file_path: impl AsRef<Path>,
     ) -> Result<FileInformation, Storage> {
+        Self::write_file_to_uuid_folder_mono(
+            root_path,
+            folder_depth,
+            uuid,
+            filename,
+            file_path.as_ref(),
+        )
+        .await
+    }
+    #[tracing::instrument]
+    async fn write_file_to_uuid_folder_mono(
+        root_path: &str,
+        folder_depth: u8,
+        uuid: Uuid,
+        filename: &str,
+        file_path: &Path,
+    ) -> Result<FileInformation, Storage> {
         // TODO dedupe if the hash is present somewhere in here?
-        let file_path = file_path.as_ref();
         let mut path =
             Path::new(root_path).join(Self::split_uuid_to_path_buf(uuid, folder_depth).as_path());
 
@@ -250,6 +270,7 @@ impl StorageHandler {
             file_compressed_size,
         })
     }
+    #[tracing::instrument(skip(data))]
     async fn gzip_file<R: AsyncRead + Unpin>(
         path: &Path,
         data: R,

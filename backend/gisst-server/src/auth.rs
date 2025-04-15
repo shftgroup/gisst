@@ -88,6 +88,7 @@ impl AuthUser for User {
 }
 
 impl User {
+    #[tracing::instrument(skip(conn))]
     async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
         sqlx::query_as!(
             Self,
@@ -123,6 +124,7 @@ impl User {
             .map_err( AuthError::Sql )
     }
 
+    #[tracing::instrument(skip(conn, token))]
     async fn update_token(
         conn: &mut PgConnection,
         user_iss: &str,
@@ -150,6 +152,7 @@ pub struct AuthRequest {
     state: CsrfToken,
 }
 
+#[tracing::instrument]
 pub async fn oauth_callback_handler(
     mut auth: axum_login::AuthSession<AuthBackend>,
     Query(query): Query<AuthRequest>,
@@ -270,7 +273,7 @@ pub fn build_oauth_client(
         .set_introspection_url(introspect_url)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Credentials {
     pub code: String,
     pub old_state: CsrfToken,
@@ -310,6 +313,7 @@ impl axum_login::AuthnBackend for AuthBackend {
     type Credentials = Credentials;
     type Error = AuthError;
 
+    #[tracing::instrument]
     async fn authenticate(
         &self,
         Credentials {

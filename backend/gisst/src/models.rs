@@ -331,26 +331,6 @@ impl Creator {
             source: e,
         })
     }
-
-    pub async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
-            Creator,
-            r#"UPDATE creator SET (creator_username, creator_full_name, created_on) = ($1, $2, $3)
-            WHERE creator_id = $4
-            RETURNING *"#,
-            creator.creator_username,
-            creator.creator_full_name,
-            creator.created_on,
-            creator.creator_id,
-        )
-        .fetch_one(conn)
-        .await
-        .map_err(|e| RecordSQL {
-            table: Table::Creator,
-            action: Action::Update,
-            source: e,
-        })
-    }
 }
 
 impl File {
@@ -1136,8 +1116,10 @@ pub async fn insert_file_object(
     duplicate: Duplicate,
 ) -> Result<Uuid, crate::error::InsertFile> {
     use crate::error::InsertFile;
+    use crate::inc_metric;
     use crate::storage::StorageHandler;
     use tracing::info;
+    inc_metric!(conn, ins_file_attempts, 1);
     let file_name = path
         .file_name()
         .ok_or_else(|| InsertFile::Path(path.to_path_buf()))?
@@ -1158,8 +1140,8 @@ pub async fn insert_file_object(
     if let Some(file_info) = File::get_by_hash(conn, &hash).await? {
         let object_id = match duplicate {
             Duplicate::ReuseData | Duplicate::ForceUuid(_) => {
-                // metric here
                 info!("adding duplicate file record for {path:?}");
+                inc_metric!(conn, ins_duplicate_reused_data, 1);
                 let file_id = Uuid::new_v4();
                 let file_record = File {
                     file_id,
@@ -1179,8 +1161,8 @@ pub async fn insert_file_object(
                 Some(object_id)
             }
             Duplicate::ReuseObject => {
-                // metric here
                 info!("skipping duplicate record for {path:?}, reusing object");
+                inc_metric!(conn, ins_duplicate_reused_object, 1);
                 Object::get_by_hash(conn, &file_info.file_hash)
                     .await?
                     .map(|o| o.object_id)
@@ -1197,11 +1179,11 @@ pub async fn insert_file_object(
             path,
         )
         .await?;
-        // metric here
         info!(
             "Wrote file {} to {}",
             file_info.dest_filename, file_info.dest_path
         );
+        inc_metric!(conn, ins_new_file, 1);
         let file_record = File {
             file_id: file_uuid,
             file_hash: file_info.file_hash,

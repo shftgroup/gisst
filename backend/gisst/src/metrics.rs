@@ -74,7 +74,7 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
                             obs.observe(size.to_u64().unwrap_or(0), &[]);
                         }
                     }
-                })
+                });
             });
     }
     {
@@ -96,7 +96,41 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
                             obs.observe(size.to_u64().unwrap_or(0), &[]);
                         }
                     }
-                })
+                });
             });
     }
+}
+
+#[macro_export]
+macro_rules! inc_metric {
+    ($conn:expr, $metname:ident, $amt:expr) => {
+        inc_metric!($conn, $metname, $amt, {})
+    };
+    ($conn:expr, $metname:ident, $amt:expr, $($k:ident)+ = $($fields:tt)* ) => {
+        inc_metric!($conn, $metname, $amt, { $($k)+ = $($fields)* })
+    };
+    ($conn:expr, $metname:ident, $amt:expr, { $($attrs:tt)* }) => {
+        {
+            let conn = $conn.as_mut();
+            let amt = $amt;
+            let name = stringify!($metname);
+            let now = chrono::Utc::now();
+            if let Some(metric) = sqlx::query_scalar!(
+                r#"INSERT INTO metrics VALUES ($1, NULL, $2, NULL, $3)
+                   ON CONFLICT(name) DO UPDATE SET int_value=metrics.int_value+$2, last_observed_time=$3
+                   RETURNING int_value"#,
+                name,
+                amt,
+                now
+            )
+                .fetch_one(conn)
+                .await
+                .ok()
+                .flatten() {
+                tracing::info!(monotonic_counter.$metname = metric, $($attrs)*);
+            } else {
+                tracing::warn!("error posting metric {name} by {amt}");
+            }
+        }
+    };
 }

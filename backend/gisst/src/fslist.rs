@@ -18,6 +18,7 @@ pub enum FSFileListingType {
     File,
 }
 
+#[tracing::instrument]
 fn get_partitions(image_file: &std::fs::File) -> Result<Vec<(usize, u64, u64)>, FSList> {
     use tracing::info;
     let file_len = image_file.metadata()?.len();
@@ -42,6 +43,7 @@ fn get_partitions(image_file: &std::fs::File) -> Result<Vec<(usize, u64, u64)>, 
     Ok(parts)
 }
 
+#[tracing::instrument]
 pub fn recursive_listing(mut image_file: std::fs::File) -> Result<Vec<FSFileListing>, FSList> {
     use tracing::info;
     let partitions = get_partitions(&image_file)?;
@@ -59,6 +61,7 @@ pub fn recursive_listing(mut image_file: std::fs::File) -> Result<Vec<FSFileList
     Ok(result)
 }
 
+#[tracing::instrument]
 fn recursive_listing_fat_partition(
     image: &mut std::fs::File,
     start_byte: u64,
@@ -87,7 +90,6 @@ fn recursive_listing_fat_partition(
         if idx.len() > DEPTH_LIMIT {
             return Err(FSList::TraversalDepth);
         }
-        // dbg!(&path, &idx);
         let lst = get_lst_mut(&mut root_lst, &idx)
             .ok_or(FSList::TraversalPath(path.to_string_lossy().into_owned()))?;
         for (eidx, entry) in dir
@@ -103,7 +105,6 @@ fn recursive_listing_fat_partition(
         {
             let entry = entry?;
             let filename = entry.file_name();
-            // dbg!(&filename, &idx, eidx, &path);
             // add a file entry or dir entry
             lst.children.push(FSFileListing {
                 path: path.join(&filename),
@@ -140,7 +141,6 @@ fn get_lst_mut<'a>(
     if idx_path.is_empty() {
         Some(lst)
     } else {
-        // dbg!(&lst.children, &lst.children.get(idx_path[0]));
         get_lst_mut(lst.children.get_mut(idx_path[0])?, &idx_path[1..])
     }
 }
@@ -150,6 +150,7 @@ pub fn file_to_path(storage_root: &str, file: &crate::models::File) -> std::path
     std::path::PathBuf::from(&format!("{storage_root}/{}", file.file_dest_path))
 }
 
+#[tracing::instrument]
 pub fn get_file_at_path(
     image_file: std::fs::File,
     path: &std::path::Path,
@@ -194,8 +195,10 @@ fn file_at_path_is_dir_fat(fs: &fatfs::FileSystem<FATStorage>, path: &std::path:
     path.parent().is_none() || root.open_dir(&path.to_string_lossy()).is_ok()
 }
 
+#[tracing::instrument(skip(fs))]
 fn get_file_at_path_fat(
     fs: &fatfs::FileSystem<FATStorage>,
+
     path: &std::path::Path,
 ) -> Result<Vec<u8>, FSList> {
     use fatfs::Read;
@@ -216,6 +219,7 @@ fn get_file_at_path_fat(
     }
 }
 
+#[tracing::instrument(skip(fs))]
 fn get_dir_at_path_fat(
     fs: &fatfs::FileSystem<FATStorage>,
     path: &std::path::Path,

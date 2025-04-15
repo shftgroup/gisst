@@ -10,10 +10,10 @@ use axum::{
 };
 use axum_login::login_required;
 use gisst::models::{
-    Creator, Environment, File, Instance, InstanceWork, Object, Replay, Save, State, Work,
+    Creator, CreatorReplayInfo, CreatorStateInfo, Environment, File, Instance, InstanceWork,
+    Object, ObjectLink, Replay, Save, State, Work,
 };
-use gisst::models::{CreatorReplayInfo, CreatorStateInfo};
-use gisst::{error::Table, models::ObjectLink};
+use gisst::{error::Table, inc_metric};
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
@@ -164,8 +164,11 @@ struct ScreenshotCreateInfo {
     screenshot_data: Vec<u8>,
 }
 
+#[allow(clippy::used_underscore_binding)]
+#[tracing::instrument(skip(app_state))]
 async fn create_screenshot(
     app_state: Extension<ServerState>,
+    _auth: axum_login::AuthSession<auth::AuthBackend>,
     Json(screenshot): Json<ScreenshotCreateInfo>,
 ) -> Result<Json<gisst::models::Screenshot>, ServerError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -374,11 +377,13 @@ async fn get_all_for_instance(
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct CloneParams {
     state: Option<Uuid>,
 }
 
+#[allow(clippy::used_underscore_binding)]
+#[tracing::instrument(skip(app_state))]
 async fn clone_v86_instance(
     app_state: Extension<ServerState>,
     Path(id): Path<Uuid>,
@@ -428,6 +433,7 @@ async fn get_single_object(
             // TODO reuse cookie instead of reloading every time
             let path = file_to_path(&app_state.root_storage_path, &file);
             let directory = if is_disk_image(&path) {
+                inc_metric!(conn, fslist_recursive_listing, 1, path = path.to_str());
                 let image = std::fs::File::open(path)?;
                 recursive_listing(image)?
             } else {
@@ -478,8 +484,18 @@ async fn get_subobject(
     let path = file_to_path(&app_state.root_storage_path, &file);
     let (mime, data) = {
         let subpath = subpath.clone();
+        let is_disk = is_disk_image(&path);
+        if is_disk {
+            inc_metric!(
+                conn,
+                fslist_get_file_at_path,
+                1,
+                path = path.to_str(),
+                subpath = &subpath
+            );
+        }
         tokio::task::spawn_blocking(move || {
-            if is_disk_image(&path) {
+            if is_disk {
                 get_file_at_path(std::fs::File::open(path)?, std::path::Path::new(&subpath))
                     .map_err(ServerError::from)
             } else {
@@ -525,6 +541,7 @@ pub struct CreateReplay {
     pub file_id: Uuid,
 }
 
+#[tracing::instrument(skip(app_state))]
 async fn create_replay(
     app_state: Extension<ServerState>,
     auth: axum_login::AuthSession<auth::AuthBackend>,
@@ -568,8 +585,11 @@ async fn get_single_save(
     Ok(Json(Save::get_by_id(&mut conn, id).await?.unwrap()))
 }
 
+#[allow(clippy::used_underscore_binding)]
+#[tracing::instrument(skip(app_state))]
 async fn create_save(
     app_state: Extension<ServerState>,
+    _auth: axum_login::AuthSession<auth::AuthBackend>,
     Query(save): Query<Save>,
 ) -> Result<Json<Save>, ServerError> {
     let mut conn = app_state.pool.acquire().await?;
@@ -606,7 +626,7 @@ pub struct CreateState {
     pub state_derived_from: Option<Uuid>,
 }
 
-#[tracing::instrument("create_state")]
+#[tracing::instrument(skip(app_state))]
 async fn create_state(
     app_state: Extension<ServerState>,
     auth: axum_login::AuthSession<crate::auth::AuthBackend>,

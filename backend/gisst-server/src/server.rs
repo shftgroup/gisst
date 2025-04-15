@@ -316,7 +316,7 @@ enum PlayerStartTemplateInfo {
     Replay(ReplayLink),
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct PlayerParams {
     state: Option<Uuid>,
     replay: Option<Uuid>,
@@ -335,7 +335,7 @@ async fn get_about(
     .into_response())
 }
 
-#[tracing::instrument(name = "get_homepage")]
+#[tracing::instrument(skip(app_state))]
 async fn get_homepage(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, ServerError> {
@@ -350,6 +350,7 @@ async fn get_homepage(
 }
 
 #[allow(clippy::too_many_lines)]
+#[tracing::instrument(skip(app_state))]
 async fn get_data(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -480,6 +481,7 @@ async fn get_data(
     .into_response())
 }
 
+#[tracing::instrument(skip(app_state))]
 async fn get_player(
     app_state: Extension<ServerState>,
     _headers: HeaderMap,
@@ -508,7 +510,8 @@ async fn get_player(
                 uuid: instance.work_id,
             })?;
     let user = LoggedInUserInfo::generate_from_user(&auth.user.unwrap());
-    let start = match dbg!((params.state, params.replay)) {
+    tracing::debug!("{:?}, {:?}", params.state, params.replay);
+    let start = match (params.state, params.replay) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
                 ServerError::RecordLinking {
@@ -528,8 +531,8 @@ async fn get_player(
         (None, None) => PlayerStartTemplateInfo::Cold,
         (_, _) => return Err(ServerError::Unreachable),
     };
-    let manifest =
-        dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
+    let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
+    tracing::debug!("manifest: {manifest:?}");
     Ok((
         [
             ("Access-Control-Allow-Origin", "*"),
