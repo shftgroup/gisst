@@ -1,5 +1,7 @@
 #![allow(clippy::missing_errors_doc)]
 
+use fatfs::FsOptions;
+
 use crate::error::FSList;
 
 const DEPTH_LIMIT: usize = 1024;
@@ -263,5 +265,18 @@ fn get_dir_at_path_fat(
 
 #[must_use]
 pub fn is_disk_image(file: &std::path::Path) -> bool {
-    std::fs::File::open(file).is_ok_and(|mut f| mbrman::MBR::read_from(&mut f, 512).is_ok())
+    std::fs::File::open(file)
+        .inspect_err(|e| tracing::warn!("missing file or other issue {e}"))
+        .is_ok_and(|mut f| {
+            mbrman::MBR::read_from(&mut f, 512).is_ok() || {
+                f.metadata().is_ok_and(|md| {
+                    use fatfs::FileSystem;
+                    use fscommon::{BufStream, StreamSlice};
+                    StreamSlice::new(f, 0, md.len()).is_ok_and(|slice| {
+                        let image = BufStream::new(slice);
+                        FileSystem::new(image, FsOptions::new()).is_ok()
+                    })
+                })
+            }
+        })
 }

@@ -152,12 +152,16 @@ pub struct AuthRequest {
     state: CsrfToken,
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(auth), fields(userid))]
 pub async fn oauth_callback_handler(
     mut auth: axum_login::AuthSession<AuthBackend>,
     Query(query): Query<AuthRequest>,
     session: axum_login::tower_sessions::Session,
 ) -> Result<Redirect, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
     debug!("Running oauth callback {query:?}, {:?}", auth.user);
     // This unwrap is fine since BASE_URL is initialized at launch
     let base_url = crate::server::BASE_URL.get().unwrap();
@@ -200,12 +204,16 @@ pub struct NextUrl {
 }
 
 #[cfg(not(feature = "dummy_auth"))]
-#[tracing::instrument(name = "standard_auth_login")]
+#[tracing::instrument(name = "standard_auth_login", skip(auth_session), fields(userid))]
 pub async fn login_handler(
     auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
     session: axum_login::tower_sessions::Session,
 ) -> Result<impl IntoResponse, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth_session.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
     info!("Login user {:?}", auth_session.user);
     let (auth_url, csrf_state) = auth_session.backend.authorize_url();
     session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
@@ -214,12 +222,16 @@ pub async fn login_handler(
 }
 
 #[cfg(feature = "dummy_auth")]
-#[tracing::instrument(name = "dummy_auth_login")]
+#[tracing::instrument(name = "dummy_auth_login", skip(auth_session), fields(userid))]
 pub async fn login_handler(
     mut auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
     session: axum_login::tower_sessions::Session,
 ) -> Result<impl IntoResponse, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth_session.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
     info!("Login user with dummy auth");
     let (_, csrf_state) = auth_session.backend.authorize_url();
     session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
@@ -240,10 +252,14 @@ pub async fn login_handler(
     }
 }
 
-#[tracing::instrument(name = "logout")]
+#[tracing::instrument(skip(auth), fields(userid))]
 pub async fn logout_handler(
     mut auth: axum_login::AuthSession<AuthBackend>,
 ) -> Result<impl IntoResponse, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
     auth.logout().await?;
     // This unwrap is fine since BASE_URL is initialized at launch
     let base_url = crate::server::BASE_URL.get().unwrap();

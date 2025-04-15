@@ -481,7 +481,7 @@ async fn get_data(
     .into_response())
 }
 
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(app_state, auth), fields(userid))]
 async fn get_player(
     app_state: Extension<ServerState>,
     _headers: HeaderMap,
@@ -489,6 +489,10 @@ async fn get_player(
     Query(params): Query<PlayerParams>,
     auth: axum_login::AuthSession<crate::auth::AuthBackend>,
 ) -> Result<axum::response::Response, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
         .await?
