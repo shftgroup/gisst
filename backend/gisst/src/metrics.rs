@@ -5,14 +5,10 @@
 // and others will be regular counters (times insert file or clone or file list called, along with which user did it??)
 // and others could be histograms (clone duration, file listing duration)
 
-// thread_local!(
-//     pub(crate) static COUNTS:OnceCell<>
-// )
-
 #[allow(clippy::unused_async)]
 pub async fn start_reporting(pool: sqlx::PgPool) {
-    use std::sync::Arc;
     use num_traits::cast::ToPrimitive;
+    use std::sync::Arc;
     const TABLES: [&str; 13] = [
         "creator",
         "environment",
@@ -64,30 +60,43 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
         let handle = handle.clone();
         let pool = Arc::clone(&pool);
         let files = files.clone();
-    files   .u64_observable_counter("file_size")
+        files
+            .u64_observable_counter("file_size")
             .with_callback(move |obs| {
                 handle.block_on(async {
                     if let Ok(mut conn) = pool.acquire().await {
-                      if let Some(size) = sqlx::query_scalar!("SELECT SUM(file_size) FROM file").fetch_one(conn.as_mut()).await.ok().flatten() {
-obs.observe(size.to_u64().unwrap_or(0), &[]);
-                      }
-                    }
-                })
-            });
-    }
-        {
-        let handle = handle.clone();
-        let pool = Arc::clone(&pool);
-        let files = files.clone();
-    files   .u64_observable_counter("file_size_compressed")
-            .with_callback(move |obs| {
-                handle.block_on(async {
-                    if let Ok(mut conn) = pool.acquire().await {
-                        if let Some(size) = sqlx::query_scalar!("SELECT SUM(file_compressed_size) FROM file").fetch_one(conn.as_mut()).await.ok().flatten() {
-obs.observe(size.to_u64().unwrap_or(0), &[]);
+                        if let Some(size) = sqlx::query_scalar!("SELECT SUM(file_size) FROM file")
+                            .fetch_one(conn.as_mut())
+                            .await
+                            .ok()
+                            .flatten()
+                        {
+                            obs.observe(size.to_u64().unwrap_or(0), &[]);
                         }
                     }
                 })
             });
-}
+    }
+    {
+        let handle = handle.clone();
+        let pool = Arc::clone(&pool);
+        let files = files.clone();
+        files
+            .u64_observable_counter("file_size_compressed")
+            .with_callback(move |obs| {
+                handle.block_on(async {
+                    if let Ok(mut conn) = pool.acquire().await {
+                        if let Some(size) =
+                            sqlx::query_scalar!("SELECT SUM(file_compressed_size) FROM file")
+                                .fetch_one(conn.as_mut())
+                                .await
+                                .ok()
+                                .flatten()
+                        {
+                            obs.observe(size.to_u64().unwrap_or(0), &[]);
+                        }
+                    }
+                })
+            });
+    }
 }
