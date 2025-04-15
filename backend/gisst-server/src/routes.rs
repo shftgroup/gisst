@@ -481,7 +481,7 @@ async fn get_single_object(
 #[tracing::instrument(skip(app_state, auth), fields(userid))]
 async fn get_subobject(
     app_state: Extension<ServerState>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Path((id, subpath)): Path<(Uuid, String)>,
     auth: axum_login::AuthSession<auth::AuthBackend>,
 ) -> Result<axum::response::Response, ServerError> {

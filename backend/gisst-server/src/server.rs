@@ -484,7 +484,7 @@ async fn get_data(
 #[tracing::instrument(skip(app_state, auth), fields(userid))]
 async fn get_player(
     app_state: Extension<ServerState>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
     auth: axum_login::AuthSession<crate::auth::AuthBackend>,
