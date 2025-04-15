@@ -34,6 +34,7 @@ jobs:
         cargo install sqlx-cli
         echo "DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb" >> .env
         echo "GISST_CONFIG=./" >> .env
+        source .env
         cargo sqlx database reset -y -f
     - name: Load example data into DB
       working-directory: backend
