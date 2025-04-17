@@ -60,6 +60,7 @@ pub struct File {
     pub file_size: i64, //PostgeSQL does not have native uint support
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub file_compressed_size: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -330,26 +331,6 @@ impl Creator {
             source: e,
         })
     }
-
-    pub async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
-            Creator,
-            r#"UPDATE creator SET (creator_username, creator_full_name, created_on) = ($1, $2, $3)
-            WHERE creator_id = $4
-            RETURNING *"#,
-            creator.creator_username,
-            creator.creator_full_name,
-            creator.created_on,
-            creator.creator_id,
-        )
-        .fetch_one(conn)
-        .await
-        .map_err(|e| RecordSQL {
-            table: Table::Creator,
-            action: Action::Update,
-            source: e,
-        })
-    }
 }
 
 impl File {
@@ -370,7 +351,7 @@ impl File {
     pub async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *
+            r#"INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
             "#,
             model.file_id,
             model.file_hash,
@@ -378,7 +359,8 @@ impl File {
             model.file_source_path,
             model.file_dest_path,
             model.file_size,
-            model.created_on
+            model.created_on,
+            model.file_compressed_size,
         )
         .fetch_one(conn)
         .await
@@ -1122,6 +1104,7 @@ impl StateLink {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[tracing::instrument(skip(conn))]
 pub async fn insert_file_object(
     conn: &mut sqlx::PgConnection,
     storage_root: &str,
@@ -1133,8 +1116,10 @@ pub async fn insert_file_object(
     duplicate: Duplicate,
 ) -> Result<Uuid, crate::error::InsertFile> {
     use crate::error::InsertFile;
+    use crate::inc_metric;
     use crate::storage::StorageHandler;
     use tracing::info;
+    inc_metric!(conn, ins_file_attempts, 1);
     let file_name = path
         .file_name()
         .ok_or_else(|| InsertFile::Path(path.to_path_buf()))?
@@ -1145,24 +1130,27 @@ pub async fn insert_file_object(
     }
     let file_name = filename_override.unwrap_or(file_name);
     let created_on = chrono::Utc::now();
-    let file_size = i64::try_from(std::fs::metadata(path)?.len())?;
     let hash = StorageHandler::get_file_hash(path)?;
+    let object_id = if let Duplicate::ForceUuid(object_id) = duplicate {
+        object_id
+    } else {
+        Uuid::new_v4()
+    };
+
     if let Some(file_info) = File::get_by_hash(conn, &hash).await? {
         let object_id = match duplicate {
-            Duplicate::ReuseData => {
+            Duplicate::ReuseData | Duplicate::ForceUuid(_) => {
                 info!("adding duplicate file record for {path:?}");
+                inc_metric!(conn, ins_duplicate_reused_data, 1);
                 let file_id = Uuid::new_v4();
                 let file_record = File {
                     file_id,
-                    file_hash: file_info.file_hash,
                     file_filename: file_name,
                     file_source_path,
-                    file_dest_path: file_info.file_dest_path,
-                    file_size: file_info.file_size,
                     created_on,
+                    ..file_info
                 };
                 File::insert(conn, file_record).await?;
-                let object_id = Uuid::new_v4();
                 let object = Object {
                     object_id,
                     file_id,
@@ -1174,6 +1162,7 @@ pub async fn insert_file_object(
             }
             Duplicate::ReuseObject => {
                 info!("skipping duplicate record for {path:?}, reusing object");
+                inc_metric!(conn, ins_duplicate_reused_object, 1);
                 Object::get_by_hash(conn, &file_info.file_hash)
                     .await?
                     .map(|o| o.object_id)
@@ -1182,7 +1171,6 @@ pub async fn insert_file_object(
         object_id.ok_or(InsertFile::ObjectMissing(hash))
     } else {
         let file_uuid = Uuid::new_v4();
-        info!("Do write file {file_name}");
         let file_info = StorageHandler::write_file_to_uuid_folder(
             storage_root,
             depth,
@@ -1195,17 +1183,18 @@ pub async fn insert_file_object(
             "Wrote file {} to {}",
             file_info.dest_filename, file_info.dest_path
         );
+        inc_metric!(conn, ins_new_file, 1);
         let file_record = File {
             file_id: file_uuid,
             file_hash: file_info.file_hash,
             file_filename: file_info.source_filename,
             file_source_path,
             file_dest_path: file_info.dest_path,
-            file_size,
+            file_size: file_info.file_size,
+            file_compressed_size: file_info.file_compressed_size,
             created_on,
         };
         File::insert(conn, file_record).await?;
-        let object_id = Uuid::new_v4();
         let object = Object {
             object_id,
             file_id: file_uuid,
@@ -1221,6 +1210,7 @@ pub async fn insert_file_object(
 pub enum Duplicate {
     ReuseObject,
     ReuseData,
+    ForceUuid(Uuid),
 }
 
 

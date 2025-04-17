@@ -5,6 +5,7 @@ use crate::{
 
 use crate::error::ServerError;
 use bytes::Bytes;
+use gisst::inc_metric;
 use gisst::models::File as GFile;
 use uuid::Uuid;
 
@@ -48,6 +49,7 @@ impl ServerStateExt for ServerState {
     }
 }
 
+#[tracing::instrument(skip(app_state))]
 pub async fn head(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -93,6 +95,8 @@ fn is_octet_stream(val: &str) -> bool {
     val == "application/offset+octet-stream"
 }
 
+#[allow(clippy::too_many_lines)]
+#[tracing::instrument(skip(app_state, body))]
 pub async fn patch(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -124,11 +128,20 @@ pub async fn patch(
         .get_pending_uploads()
         .and_then(|ups| ups.get(&id).map(|pu| (pu.offset, pu.length)))
     else {
+        inc_metric!(conn, tus_patch_failed_missing, 1, id = id.to_string());
         return Err(ServerError::FileNotFound);
     };
 
     // Check that offset is correct
     if pu_offset != offset {
+        inc_metric!(
+            conn,
+            tus_patch_failed_bad_offset,
+            1,
+            id = id.to_string(),
+            pu_offset = pu_offset,
+            offset = offset
+        );
         return Ok((
             StatusCode::CONFLICT,
             format!("Client offset ({pu_offset}) does not match server offset ({offset})",),
@@ -138,6 +151,14 @@ pub async fn patch(
 
     // Check that length is not equal to offset (otherwise there are no bytes to write)
     if pu_offset >= pu_length {
+        inc_metric!(
+            conn,
+            tus_patch_failed_offset_too_long,
+            1,
+            id = id.to_string(),
+            pu_offset = pu_offset,
+            pu_length = pu_length
+        );
         return Ok((
             StatusCode::FORBIDDEN,
             "Upload-Offset is greater than or equal to Upload-Length.",
@@ -147,6 +168,13 @@ pub async fn patch(
 
     // Check that upload size is not greater than chunk size
     if body.len() > app_state.default_chunk_size {
+        inc_metric!(
+            conn,
+            tus_patch_failed_upload_chunk_too_big,
+            1,
+            id = id.to_string(),
+            len = body.len()
+        );
         return Ok((
             StatusCode::FORBIDDEN,
             format!(
@@ -168,22 +196,38 @@ pub async fn patch(
         pu_offset += body.len();
         upload.file_information.clone()
     };
+    inc_metric!(
+        conn,
+        tus_patch_applied,
+        1,
+        id = id.to_string(),
+        pu_offset = pu_offset,
+        len = body.len()
+    );
 
     StorageHandler::add_bytes_to_file(&app_state.temp_storage_path, &file_info, body.clone())
         .await?;
 
     // Check if upload is complete and clean up
     if pu_offset == pu_length {
-        println!(
+        inc_metric!(conn, tus_completed, 1, file = file_info.dest_path);
+        tracing::info!(
             "Got to rename file with the following, temp_path: {}, root_path:{}, file_info: {:?}",
-            &app_state.temp_storage_path, &app_state.root_storage_path, &file_info
+            &app_state.temp_storage_path,
+            &app_state.root_storage_path,
+            &file_info
         );
-        StorageHandler::rename_file_from_temp_to_storage(
+        let gz_length = StorageHandler::rename_file_from_temp_to_storage(
             &app_state.root_storage_path,
             &app_state.temp_storage_path,
             &file_info,
         )
-        .await?;
+        .await?
+        .and_then(|path| {
+            std::fs::metadata(path)
+                .ok()
+                .and_then(|md| i64::try_from(md.len()).ok())
+        });
         GFile::insert(
             &mut conn,
             GFile {
@@ -193,6 +237,7 @@ pub async fn patch(
                 file_source_path: file_info.source_path.clone(),
                 file_dest_path: file_info.dest_path.clone(),
                 file_size: i64::try_from(pu_length).map_err(ServerError::UploadTooBig)?,
+                file_compressed_size: gz_length,
                 created_on: chrono::Utc::now(),
             },
         )
@@ -210,6 +255,7 @@ pub async fn patch(
         .into_response())
 }
 
+#[tracing::instrument(skip(app_state))]
 pub async fn creation(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -223,6 +269,7 @@ pub async fn creation(
     }
 
     let metadata = get_metadata(&headers);
+    let mut conn = app_state.pool.acquire().await?;
 
     // Upload-Metadata must supply a filename for the upload
     if metadata.is_none() {
@@ -251,12 +298,24 @@ pub async fn creation(
     let mut dest_path = StorageHandler::split_uuid_to_path_buf(new_uuid, app_state.folder_depth);
     dest_path.push(StorageHandler::get_dest_filename(hash, filename.as_str()));
 
+    inc_metric!(
+        conn,
+        tus_create,
+        1,
+        length = length,
+        filename = filename,
+        hash = hash,
+        dest_path = dest_path.to_str()
+    );
+
     let file_info = FileInformation {
         source_filename: filename.to_string(),
         source_path: String::new(),
         dest_filename: StorageHandler::get_dest_filename(hash, filename),
         dest_path: dest_path.to_string_lossy().to_string(),
         file_hash: hash.to_string(),
+        file_compressed_size: None,
+        file_size: 0,
     };
 
     // Create temp file for PATCH

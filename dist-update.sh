@@ -82,6 +82,7 @@ for f in *; do
     if [ $f = "v86" ]
     then
         # make clean
+        rustup target add wasm32-unknown-unknown
         WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
         cp build/libv86.js build/v86.wasm ../../frontend/frontend-web/public/v86
         popd
@@ -123,7 +124,7 @@ fi
 
 if [ ${BUILD_FRONTEND:-1} -eq 1 ]; then
 cd frontend
-npm i
+npm i --workspaces
 npm run build --workspaces --if-present
 npm run dist --workspaces --if-present
 cd ..

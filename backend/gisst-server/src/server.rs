@@ -100,9 +100,10 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .connect(config.database.database_url.expose_secret())
         .await
         .unwrap();
+    let metrics_pool = user_pool.clone();
 
     let user_store = auth::AuthBackend::new(
-        user_pool.clone(),
+        user_pool,
         auth::build_oauth_client(
             &config.http.base_url,
             config.auth.google_client_id.expose_secret(),
@@ -115,6 +116,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .with_same_site(SameSite::Lax)
         .with_name("gisst.sid");
     let auth_layer = axum_login::AuthManagerLayerBuilder::new(user_store, session_layer).build();
+
+    gisst::metrics::start_reporting(metrics_pool).await;
 
     let builder = ServiceBuilder::new()
         .layer(
@@ -313,7 +316,7 @@ enum PlayerStartTemplateInfo {
     Replay(ReplayLink),
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct PlayerParams {
     state: Option<Uuid>,
     replay: Option<Uuid>,
@@ -332,7 +335,7 @@ async fn get_about(
     .into_response())
 }
 
-#[tracing::instrument(name = "get_homepage")]
+#[tracing::instrument(skip(app_state))]
 async fn get_homepage(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, ServerError> {
@@ -347,6 +350,7 @@ async fn get_homepage(
 }
 
 #[allow(clippy::too_many_lines)]
+#[tracing::instrument(skip(app_state))]
 async fn get_data(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -477,13 +481,18 @@ async fn get_data(
     .into_response())
 }
 
+#[tracing::instrument(skip(app_state, auth), fields(userid))]
 async fn get_player(
     app_state: Extension<ServerState>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Path(id): Path<Uuid>,
     Query(params): Query<PlayerParams>,
     auth: axum_login::AuthSession<crate::auth::AuthBackend>,
 ) -> Result<axum::response::Response, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
         .await?
@@ -505,7 +514,8 @@ async fn get_player(
                 uuid: instance.work_id,
             })?;
     let user = LoggedInUserInfo::generate_from_user(&auth.user.unwrap());
-    let start = match dbg!((params.state, params.replay)) {
+    tracing::debug!("{:?}, {:?}", params.state, params.replay);
+    let start = match (params.state, params.replay) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
                 ServerError::RecordLinking {
@@ -525,8 +535,8 @@ async fn get_player(
         (None, None) => PlayerStartTemplateInfo::Cold,
         (_, _) => return Err(ServerError::Unreachable),
     };
-    let manifest =
-        dbg!(ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?);
+    let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
+    tracing::debug!("manifest: {manifest:?}");
     Ok((
         [
             ("Access-Control-Allow-Origin", "*"),

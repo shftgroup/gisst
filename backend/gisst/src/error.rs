@@ -68,6 +68,8 @@ pub struct RecordSQL {
 pub enum Storage {
     #[error("IO error")]
     IO(#[from] std::io::Error),
+    #[error("File size too big error")]
+    FileSize(#[from] std::num::TryFromIntError),
     #[error("tokio task error")]
     JoinError(#[from] tokio::task::JoinError),
     #[error("path prefix error")]
