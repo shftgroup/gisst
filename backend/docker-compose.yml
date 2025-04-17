@@ -27,6 +27,8 @@ services:
     container_name: prometheus
     networks:
       - backend
+      - frontend
+    command: [ "--web.enable-otlp-receiver", "--enable-feature=otlp-write-receiver", "--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus" ]
     volumes:
       - type: bind
         source: ./docker-configs/prometheus.yml
@@ -50,6 +52,7 @@ services:
       DATA_SOURCE_PASS_FILE: /var/pgx/dbpasswd
     command:
       - "--web.listen-address=0.0.0.0:9187"
+      - "--collector.stat_statements"
     ports:
       - "9187:9187"
 
