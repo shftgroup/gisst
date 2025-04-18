@@ -10,7 +10,9 @@
   - todo: also perms for prometheus exporter, and put password into password file that gets mounted into both the grafana container and prometheus exporter container
     - grant pg_monitor to grafanareader
 - Grafana: add prometheus datasource
+- create docker volumes for grafana-storage, jaeger-storage, prometheus-storage
+  - docker volume create --opt type=none --opt device=$(pwd)/jaeger-storage --opt o=bind --opt o=uid=root,gid=root jaeger-storage
 - Grafana: add dashboards, incl. node_exporter, postgres, prometheus
 - Nginx: make sure forwarding is set up right
 - Systemd: double check environment variables
-- local.toml: Add jaeger endpoint (probably 127.0.0.1:4317)
+- local.toml: Add jaeger endpoint (probably 127.0.0.1:4317) and prometheus endpoint
