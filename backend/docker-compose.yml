@@ -2,6 +2,7 @@ services:
   jaeger:
     image: jaegertracing/jaeger:${JAEGER_VERSION:-latest}
     container_name: jaeger
+    user: "${UID}:${GID}"
     environment:
       QUERY_BASE_PATH: $QUERY_BASE_PATH
     networks:
@@ -14,6 +15,7 @@ services:
       - type: bind
         source: ./docker-configs/config-spm.yaml
         target: /etc/jaeger/config.yml
+      - "jaeger-storage:/jaeger:rw"
     command: ["--config", "/etc/jaeger/config.yml", "--set=extensions.jaeger_query.base_path=${QUERY_BASE_PATH}"]
     ports:
       - "16686:16686"
@@ -33,6 +35,7 @@ services:
       - type: bind
         source: ./docker-configs/prometheus.yml
         target: /etc/prometheus/prometheus.yml
+      - "prometheus-storage:/prometheus:rw"
     ports:
       - "9090:9090"
 
@@ -91,12 +94,14 @@ services:
     extra_hosts:
       docker.host.internal: host-gateway
     volumes:
-      - "grafana-storage:/var/lib/grafana"
+      - "grafana-storage:/var/lib/grafana:rw"
     ports:
       - '3003:3000'
 
 volumes:
-  grafana-storage: {}
+  prometheus-storage:
+  jaeger-storage:
+  grafana-storage:
 
 networks:
   backend:
