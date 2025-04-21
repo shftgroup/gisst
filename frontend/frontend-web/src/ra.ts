@@ -9,7 +9,7 @@ const FS_CHECK_INTERVAL = 1000;
 const AUTO_STATE_INTERVAL = 5*60*1000;
 
 const state_dir = "/mem/states";
-// const saves_dir = "/mem/saves";
+const saves_dir = "/mem/saves";
 
 const retro_args = ["-v"];
 
@@ -154,13 +154,14 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     JSON.parse(document.getElementById("config")!.textContent!)
   );
   ui_state.setReplayMode(movie ? UIReplayMode.Playback : (boot_into_record ? UIReplayMode.Record : UIReplayMode.Inactive));
-  loadRetroArch(gisst_root, core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
+  loadRetroArch(gisst_root, core, {'OPFS_MOUNT':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
     true,
     async function (module:LibretroModule) {
       const enc = new TextEncoder();
       RA = module;
       RA.FS.createPath("/", "fetch/content", true, true);
       RA.FS.createPath("/", state_dir, true, true);
+      RA.FS.createPath("/", saves_dir, true, true);
       let fetch_manifest = `${gisst_root}/storage/\n`;
       /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
 
@@ -216,7 +217,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         if (core in overlays) {
           overlay = overlays[core as keyof typeof overlays];
         }
-        ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/bundle/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
+        ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
       }
       const lines_enc = enc.encode(ra_cfg_text);
       module.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);
@@ -236,6 +237,9 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     });
 }
 
+declare global {
+  interface Window { RA: LibretroModule; UI: UI<string>; DB: GISSTDBConnector; }
+}
 // TODO add clear button to call ui_state.clear()
 function retroReady(): void {
   const prev = document.getElementById("webplayer-preview")!;
@@ -249,6 +253,9 @@ function retroReady(): void {
         setInterval(checkChangedStatesAndSaves, FS_CHECK_INTERVAL);
         setInterval(autosave_state, AUTO_STATE_INTERVAL);
         canv.classList.remove("hidden");
+        window.RA = RA;
+        window.UI = ui_state;
+        window.DB = db;
       });
       return false;
     });

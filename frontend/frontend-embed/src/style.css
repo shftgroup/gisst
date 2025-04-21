@@ -1,10 +1,10 @@
 .gisst-embed-webplayer-container {
   line-height: 0;
-  container-type: inline-size;
+  container-type: size;
 }
 
 .gisst-embed-hidden {
-    display:none;
+    display:none !important;
 }
 
 .gisst-embed-webplayer-preview {
@@ -12,8 +12,9 @@
     cursor: wait;
     opacity: 0.2;
     transition: all 0.8s;
-    width: inherit;
-    height: inherit;
+    width: stretch;
+    height: stretch;
+    position: relative;
     -webkit-animation: gisst-loading 0.8s ease-in-out infinite alternate;
     -moz-animation: gisst-loading 0.8s ease-in-out infinite alternate;
     animation: gisst-loading 0.8s ease-in-out infinite alternate;
@@ -76,8 +77,9 @@
   }
 }
 canvas.gisst-embed-webplayer {
-  border: none;
-  outline: none;
+    border: none;
+    outline: none;
+    position:relative;
 }
 .gisst-embed-webplayer-textmode {
   white-space: pre;

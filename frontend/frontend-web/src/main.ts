@@ -19,12 +19,10 @@ window.onload = async function() {
     const h = canv.height;
     if (w == 0 || h == 0) { return; }
     const target_w = container.offsetWidth;
-    let target_h;
+    let target_h = container.offsetHeight;
     if (kind == "v86") {
       const aspect = w / h;
       target_h = target_w / aspect;
-    } else {
-      target_h = container.offsetHeight;
     }
     const new_w = `${target_w}px`;
     const new_h = `${target_h}px`;
