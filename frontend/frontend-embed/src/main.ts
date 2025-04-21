@@ -99,7 +99,7 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
   );
 
   const ro = new ResizeObserver((entries, _observer) => {
-    let entry = entries.find(i => i.target == container);
+    const entry = entries.find(i => i.target == container);
     if (!entry) return;
     let target_w, target_h;
     if (entry.devicePixelContentBoxSize) {

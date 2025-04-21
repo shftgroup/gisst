@@ -18,7 +18,7 @@ window.onload = async function() {
     const w = canv.width;
     const h = canv.height;
     if (w == 0 || h == 0) { return; }
-    let target_w = container.offsetWidth;
+    const target_w = container.offsetWidth;
     let target_h = container.offsetHeight;
     if (kind == "v86") {
       const aspect = w / h;
