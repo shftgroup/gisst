@@ -26,10 +26,10 @@ interface LibretroModuleDef {
 
 const cores:Record<string,(mod:LibretroModuleDef) => Promise<LibretroModule>> = {};
 
-async function downloadScript(src:string) : Promise<Blob> {
+async function downloadScript(src:string) : Promise<string> {
   const resp = await fetch(src);
   const blob = await resp.blob();
-  return blob;
+  return URL.createObjectURL(blob);
 }
 
 let setupWorker:Worker|null = null;
@@ -42,7 +42,7 @@ export interface SetupResponse {
 
 export function loadRetroArch(gisst_root:string, core:string, env:Environment, download_asset_bundle:boolean, loaded_cb:(mod:LibretroModule) => void) {
   if(download_asset_bundle) {
-    if('OPFS' in env) {
+    if('OPFS_MOUNT' in env) {
       if(!setupWorker) {
         setupWorker = new Worker(new URL('./libretro.worker.ts', import.meta.url), {type:"module"});
         setupWorker.onmessage = (msg:MessageEvent<SetupResponse>) => {
@@ -103,7 +103,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
     }
     check();
   });
-  let promise:Promise<Blob|string>;
+  let promise:Promise<string>;
   if (gisst_root.startsWith("https://")) {
     promise = downloadScript(gisst_root+'/cores/'+core+'_libretro.js');
   } else {
@@ -169,12 +169,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
     if (core in cores) {
       instantiate(cores[core]);
     } else {
-      let importPromise;
-      if (scriptUrlOrBlob instanceof Blob) {
-        importPromise = import(/* @vite-ignore */ URL.createObjectURL(scriptUrlOrBlob));
-      } else {
-        importPromise = import(/* @vite-ignore */ (new URL(scriptUrlOrBlob, import.meta.url)).toString());
-      }
+      const importPromise = import(/* @vite-ignore */ (new URL(scriptUrlOrBlob, import.meta.url)).toString());
       importPromise.then(fac => {
         cores[core] = fac.default;
         instantiate(cores[core]);

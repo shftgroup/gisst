@@ -68,15 +68,18 @@ onmessage = async (msg:MessageEvent<SetupMessage>) => {
     let old_timestamp = msg.data.time;
     try {
       const root = await navigator.storage.getDirectory();
-      await root.getDirectoryHandle("bundle");
+      await root.getDirectoryHandle("overlays");
     } catch (_) {
       old_timestamp = "";
     }
-    const resp = await fetch(gisst_root+"/assets/frontend/bundle.zip", {
+    const resp = await fetch(gisst_root+"/assets/frontend/assets_minimal.zip", {
       headers: {
         "If-Modified-Since": old_timestamp
       }
     });
+    // last-modified will be NULL if we get a 304
+    const last_modified = resp.headers.get("last-modified") ?? old_timestamp;
+    console.log("resp.status",resp.status,"l-m",last_modified);
     if (resp.status == 200) {
       await setupZipFS(new Uint8Array(await resp.arrayBuffer()));
     } else if (resp.status < 400) {
@@ -84,7 +87,7 @@ onmessage = async (msg:MessageEvent<SetupMessage>) => {
     } else {
       throw resp;
     }
-    postMessage({command:"loaded_bundle", time:resp.headers.get("last-modified")});
+    postMessage({command:"loaded_bundle", time:last_modified});
     close();
   }
 }

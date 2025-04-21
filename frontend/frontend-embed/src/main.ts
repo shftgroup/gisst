@@ -11,7 +11,7 @@ async function createContainerUI(container: HTMLDivElement) {
   const element_string = `
     <canvas class="gisst-embed-webplayer gisst-embed-hidden" tabindex="1" id="embed_canvas_${which_canvas}"></canvas>
     <div class="gisst-embed-webplayer-textmode gisst-embed-hidden"></div>
-    <img class="gisst-embed-webplayer-perview" src="${imgUrl}" alt="Loading Icon"></img>
+    <img class="gisst-embed-webplayer-preview" src="${imgUrl}" alt="Loading Icon"></img>
     <a class="gisst-embed-webplayer-mute gisst-embed-webplayer-button gisst-embed-hidden" >🔇</a>
     <a class="gisst-embed-webplayer-halt gisst-embed-webplayer-button gisst-embed-hidden" >❌</a>
   `;
@@ -66,7 +66,8 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
   const mute_a = container.querySelector("a.gisst-embed-webplayer-mute")! as HTMLLinkElement;
   const halt_a = container.querySelector("a.gisst-embed-webplayer-halt")! as HTMLLinkElement;
   const canvas = container.querySelector("canvas.gisst-embed-webplayer")! as HTMLCanvasElement;
-
+  canvas.style.width = container.style.width;
+  canvas.style.height = container.style.height;
   const [gisst_http_proto, gisst_root, gisst_query] = parseGisstUrl(gisst)
 
   const config = await fetchConfig(gisst_http_proto, gisst_root, gisst_query);
@@ -97,26 +98,29 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
     }
   );
 
-  const ro = new ResizeObserver((_entries, _observer) => {
-    const w = canvas.width;
-    const h = canvas.height;
-    if (w == 0 || h == 0) { return; }
-    const target_w = container.offsetWidth;
-    let target_h;
+  const ro = new ResizeObserver((entries, _observer) => {
+    const entry = entries.find(i => i.target == container);
+    if (!entry) return;
+    let target_w, target_h;
+    if (entry.devicePixelContentBoxSize) {
+      target_w = entry.devicePixelContentBoxSize[0].inlineSize;
+      target_h = entry.devicePixelContentBoxSize[0].blockSize;
+    } else {
+      target_w = Math.round(entry.contentRect.width * window.devicePixelRatio);
+      target_h = Math.round(entry.contentRect.height * window.devicePixelRatio);
+    }
     if (kind == "v86") {
+      const w = canvas.width;
+      const h = canvas.height;
+      if (w == 0 || h == 0) { return; }
       const aspect = w / h;
       target_h = target_w / aspect;
-    } else {
-      target_h = container.offsetHeight;
     }
     const new_w = `${target_w}px`;
     const new_h = `${target_h}px`;
-    if (canvas.style.width != new_w || canvas.style.height != new_h) {
-      canvas.style.width = new_w;
-      canvas.style.height = new_h;
-    }
+    console.log("resize from ",canvas.style.width,canvas.style.height,"to",new_w,new_h);
+    canvas.style.width = new_w;
   })
-  ro.observe(canvas);
   ro.observe(container);
   canvas.style.touchAction = "none";
   canvas.addEventListener("touchstart", touchHandler, true);
