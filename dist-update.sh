@@ -21,13 +21,10 @@ rm -f ../assets_minimal.zip
 rm -rf assets overlays info
 curl -o assets.zip https://buildbot.libretro.com/assets/frontend/assets.zip
 curl -o overlays.zip https://buildbot.libretro.com/assets/frontend/overlays.zip
-curl -o info.zip https://buildbot.libretro.com/assets/frontend/info.zip
 unzip assets.zip -d assets
 rm assets.zip
 unzip overlays.zip -d overlays
 rm overlays.zip
-unzip info.zip -d info
-rm info.zip
 rm -rf overlays/{configure,borders,ctr,effects,ipad,Makefile,misc,wii}
 rm -rf overlays/gamepads/{720-med,arcade,arcade-anim,arcade-minimal,cdi_anim_portrait,example,flip_phone,gba-anim_landscape,gba-grey,gb_anim_portrait,genesis,lite,n64,neo-ds-portrait,nes-small,old,Piixel-gamepads,quadpad,rgpad,scummvm}
 rm -rf overlays/keyboards/{commodore,modular-keyboard}
