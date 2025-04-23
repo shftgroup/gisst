@@ -98,28 +98,26 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
     }
   );
 
-  const ro = new ResizeObserver((entries, _observer) => {
-    const entry = entries.find(i => i.target == container);
-    if (!entry) return;
+  const ro = new ResizeObserver((_entries, _observer) => {
     let target_w, target_h;
-    if (entry.devicePixelContentBoxSize) {
-      target_w = entry.devicePixelContentBoxSize[0].inlineSize;
-      target_h = entry.devicePixelContentBoxSize[0].blockSize;
-    } else {
-      target_w = Math.round(entry.contentRect.width * window.devicePixelRatio);
-      target_h = Math.round(entry.contentRect.height * window.devicePixelRatio);
-    }
     if (kind == "v86") {
       const w = canvas.width;
       const h = canvas.height;
       if (w == 0 || h == 0) { return; }
       const aspect = w / h;
+      target_w = container.offsetWidth;
       target_h = target_w / aspect;
+    } else {
+      target_w = container.offsetWidth;
+      target_h = container.offsetHeight;
     }
     const new_w = `${target_w}px`;
     const new_h = `${target_h}px`;
     console.log("resize from ",canvas.style.width,canvas.style.height,"to",new_w,new_h);
     canvas.style.width = new_w;
+    if (kind == "v86") {
+      canvas.style.height = new_h;
+    }
   })
   ro.observe(container);
   canvas.style.touchAction = "none";
