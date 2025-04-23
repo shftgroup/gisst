@@ -882,6 +882,7 @@ impl Save {
     }
 
     pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
+        let result =         // First, insert the new save
         sqlx::query_as!(
             Self,
             r#"INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *"#,
@@ -897,13 +898,56 @@ impl Save {
             model.replay_derived_from,
             model.version
         )
-        .fetch_one(conn)
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Save,
             action: Action::Insert,
             source: e,
-        })
+        })?;
+        /* ensure instance_save is updated! if this is derived from
+         * another save, copy over all the records, and also make sure
+         * this instance is linked to this save */
+        if let Some(save_parent_id) = model.save_derived_from {
+            let parent_instances: Vec<Uuid> = sqlx::query_scalar!(
+                r#"SELECT instance_id FROM save WHERE save_id=$1"#,
+                save_parent_id
+            )
+            .fetch_all(conn.as_mut())
+            .await
+            .map_err(|e| RecordSQL {
+                table: Table::Save,
+                action: Action::Insert,
+                source: e,
+            })?;
+            sqlx::query!(
+                r#"INSERT INTO instance_save (instance_id, save_id)
+                     SELECT * FROM UNNEST($1::uuid[], array_fill($2::uuid, array[$3]::integer[])::uuid[])"#,
+                &parent_instances,
+                model.save_id,
+                parent_instances.len() as i64
+            )
+            .execute(conn.as_mut())
+            .await
+            .map_err(|e| RecordSQL {
+                table: Table::Save,
+                action: Action::Insert,
+                source: e,
+            })?;
+        }
+        sqlx::query!(
+            r#"INSERT INTO instance_save (instance_id, save_id) VALUES ($1, $2)"#,
+            model.instance_id,
+            model.save_id
+        )
+        .execute(conn)
+        .await
+        .map_err(|e| RecordSQL {
+            table: Table::Save,
+            action: Action::Insert,
+            source: e,
+        })?;
+        Ok(result)
     }
 }
 
