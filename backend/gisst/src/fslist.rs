@@ -280,3 +280,20 @@ pub fn is_disk_image(file: &std::path::Path) -> bool {
             }
         })
 }
+
+#[cfg(test)]
+mod fslist {
+
+    use super::is_disk_image;
+    use assert_fs;
+
+    #[test]
+    fn is_valid_disk_image() {
+        let path = std::path::Path::new(&"../examples/data/v86/freedos722.img");
+        assert!(path.exists());
+        
+        // assert!(false, "pwd is {:?} and path is {:?}", std::env::current_dir(), path);
+        assert!(is_disk_image(path), "pwd is {:?} and func is {:?}", std::env::current_dir() ,is_disk_image(path));
+    }
+
+}

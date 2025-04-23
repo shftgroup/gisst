@@ -31,3 +31,6 @@ fscommon = "0.1.1"
 zip = "2.1.2"
 opentelemetry = "0.29.1"
 num-traits = "0.2.19"
+
+[dev-dependencies]
+assert_fs = "1.1.2"

@@ -27,3 +27,5 @@ md-5                    = "0.10"
 regex = "1.11.1"
 rayon = "1.10.0"
 chd = "0.3.2"
+config = {  version = "0.13.3", features = ["toml"], default-features = false }
+secrecy = { version = "0.8.0", features = ["serde"] }

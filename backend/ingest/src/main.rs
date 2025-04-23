@@ -15,6 +15,9 @@ use rdb_sys::{RDB, RVal};
 use sqlx::PgPool;
 use sqlx::pool::PoolOptions;
 use uuid::Uuid;
+use serde::Deserialize;
+use secrecy::Secret;
+use config::{Config, ConfigError, File};
 
 const DEPTH: u8 = 4;
 
@@ -24,13 +27,14 @@ struct Args {
     #[command(flatten)]
     pub verbose: Verbosity,
 
-    /// `GISST_CLI_DB_URL` environment variable must be set to database path
-    #[clap(env)]
-    pub gisst_cli_db_url: String,
+    // /// `GISST_CLI_DB_URL` environment variable must be set to database path
+    // #[clap(env)]
+    // pub gisst_cli_db_url: String,
 
-    /// `GISST_STORAGE_ROOT_PATH` environment variable must be set
-    #[clap(env)]
-    pub gisst_storage_root_path: String,
+    // /// `GISST_STORAGE_ROOT_PATH` environment variable must be set
+    // #[clap(env)]
+    // pub gisst_storage_root_path: String,
+
 
     #[clap(long)]
     pub rdb: String,
@@ -62,6 +66,8 @@ struct Args {
 
 #[derive(Debug, thiserror::Error)]
 pub enum IngestError {
+    #[error("config read error")]
+    CfgRead(#[from] config::ConfigError),
     #[error("file read error")]
     Io(#[from] std::io::Error),
     #[error("database error")]
@@ -88,6 +94,37 @@ pub enum IngestError {
     ChdNoChecksum(),
 }
 
+#[derive(Debug, Deserialize)]
+pub struct IngestConfig {
+    pub database: DatabaseConfig,
+    pub storage: StorageConfig,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+pub struct DatabaseConfig {
+    pub database_url: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+pub struct StorageConfig {
+    pub root_folder_path: String,
+}
+
+
+impl IngestConfig {
+    pub fn new() -> Result<Self, ConfigError> {
+        let env = std::env::var("GISST_ENV").unwrap_or_else(|_| "development".into());
+        let builder = Config::builder()
+            .add_source(File::with_name("config/default.toml"))
+            .add_source(File::with_name(&format!("config/{env}.toml")).required(false))
+            .add_source(File::with_name("config/local.toml").required(false))
+            .add_source(config::Environment::with_prefix("GISST").separator("__"));
+        builder.build()?.try_deserialize()
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<(), IngestError> {
@@ -98,21 +135,24 @@ async fn main() -> Result<(), IngestError> {
         core_name,
         core_version,
         ra_cfg,
-        gisst_cli_db_url,
         platform,
-        gisst_storage_root_path,
         verbose,
         deps,
         dep_paths,
         force,
     } = Args::parse();
+    let config: IngestConfig = IngestConfig::new()?;
+
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
         .init();
-    info!("Connecting to database: {gisst_cli_db_url}");
-    let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.to_string()).await?);
+    
+    let database_url = config.database.database_url;
+    info!("Connecting to database: {}", database_url);
+    let pool: Arc<PgPool> = Arc::new(get_db_by_url(database_url).await?);
     info!("DB connection successful.");
-    let storage_root = gisst_storage_root_path.to_string();
+    let storage_root = config.storage.root_folder_path;
+    
     info!("Storage root is set to: {}", &storage_root);
     let mut base_conn = pool.acquire().await?;
     let ra_cfg_object_id = insert_file_object(

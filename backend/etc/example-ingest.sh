@@ -1,1 +1,17 @@
-cargo build --bin ingest --release && GISST_STORAGE_ROOT_PATH=storage GISST_CLI_DB_URL=postgresql://postgres:postgres@localhost/gisstdb ./target/release/ingest --rdb rdb/Nintendo\ -\ Nintendo\ Entertainment\ System.rdb --dir roms-nes --core-name fceumm --core-version 1.51.0 --platform NES --ra-cfg test_content/retroarch.cfg ; GISST_STORAGE_ROOT_PATH=storage GISST_CLI_DB_URL=postgresql://postgres:postgres@localhost/gisstdb ./target/release/ingest --rdb rdb/Nintendo\ -\ Super\ Nintendo\ Entertainment\ System.rdb --dir roms-snes --core-name snes9x --core-version 1.61.0 --platform SNES --ra-cfg test_content/retroarch.cfg
+# cargo build --bin ingest --release && GISST_STORAGE_ROOT_PATH=storage GISST_CLI_DB_URL=postgresql://postgres:postgres@localhost/gisstdb ./target/release/ingest --rdb rdb/Nintendo\ -\ Nintendo\ Entertainment\ System.rdb --dir roms-nes --core-name fceumm --core-version 1.51.0 --platform NES --ra-cfg test_content/retroarch.cfg ; GISST_STORAGE_ROOT_PATH=storage GISST_CLI_DB_URL=postgresql://postgres:postgres@localhost/gisstdb ./target/release/ingest --rdb rdb/Nintendo\ -\ Super\ Nintendo\ Entertainment\ System.rdb --dir roms-snes --core-name snes9x --core-version 1.61.0 --platform SNES --ra-cfg test_content/retroarch.cfg
+
+cargo build --bin ingest --release && \
+    ./target/release/ingest \
+    --rdb rdb/Nintendo\ -\ Nintendo\ Entertainment\ System.rdb \
+    --dir roms-nes \
+    --core-name fceumm \
+    --core-version 1.51.0 \
+    --platform NES \
+    --ra-cfg examples/data/nes/retroarch.cfg ; \
+    # ./target/release/ingest \
+    # --rdb rdb/Nintendo\ -\ Super\ Nintendo\ Entertainment\ System.rdb \
+    # --dir roms-snes \
+    # --core-name snes9x \
+    # --core-version 1.61.0 \
+    # --platform SNES \
+    # --ra-cfg examples/data/nes/retroarch.cfg \
