@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM save WHERE save_id = $1",
+  "query": "SELECT save.* FROM instance_save JOIN save USING (instance_id)\n                       WHERE instance_save.instance_id = $1 AND creator_id = $2 AND\nf_unaccent(save_short_desc || save_description) ILIKE ('%' || f_unaccent($3) || '%')\n                       ORDER BY created_on DESC\n                       OFFSET $4\n                       LIMIT $5",
   "describe": {
     "columns": [
       {
@@ -61,7 +61,11 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -78,5 +82,5 @@
       false
     ]
   },
-  "hash": "033c104d538eb5247cc8b1f2b7d02d000806cfcce364a9c68ba0e57690dbe997"
+  "hash": "2182edb473a4faf4b4fa8f7a127b8c5d4666b4abf7f46535e993949ba9b976b0"
 }

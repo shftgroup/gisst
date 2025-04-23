@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM save WHERE save_id = $1",
+  "query": "INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *",
   "describe": {
     "columns": [
       {
@@ -61,7 +61,17 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Int8"
       ]
     },
     "nullable": [
@@ -78,5 +88,5 @@
       false
     ]
   },
-  "hash": "033c104d538eb5247cc8b1f2b7d02d000806cfcce364a9c68ba0e57690dbe997"
+  "hash": "1d97d5909e6fdf33df68300027de930c35cc3e0f9057e6031a380669ae99212f"
 }
