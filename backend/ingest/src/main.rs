@@ -145,6 +145,8 @@ async fn main() -> Result<(), IngestError> {
         .await?;
         dep_ids.push(dep_id);
     }
+
+    // base conn gets dropped
     drop(base_conn);
     let db = Arc::new(RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?);
     let roms = Arc::new(std::path::PathBuf::from(roms));
@@ -179,6 +181,8 @@ async fn main() -> Result<(), IngestError> {
                 // Skip this one
                 return Ok(());
             }
+
+
             let dep_ids = dep_ids.clone();
             let db = Arc::clone(&db);
             let roms = Arc::clone(&roms);
@@ -187,14 +191,21 @@ async fn main() -> Result<(), IngestError> {
             let core_version = core_version.clone();
             let storage_root = storage_root.clone();
 
+            
             let pool = Arc::clone(&pool);
             handle.block_on(async move {
-                let mut conn = pool.acquire().await?;
+
+                // let mut conn: sqlx::pool::PoolConnection<sqlx::Postgres> = pool.acquire().await?;
+                let mut tx = pool.begin().await?;
+
+                // acquire a connection pool -- start transaction here
+                // multi disc rom
                 if ext.eq_ignore_ascii_case("m3u") {
                     let mut found = false;
                     info!("playlist file {path:?}");
                     for file in files_of_playlist(&roms, &path)? {
-                        match find_entry(&mut conn, &db, &file).await? {
+                        // match find_entry(&mut conn, &db, &file).await? {
+                        match find_entry(&mut tx, &db, &file).await? {
                             FindResult::AlreadyHave => {
                                 found = true;
                                 break;
@@ -202,7 +213,7 @@ async fn main() -> Result<(), IngestError> {
                             FindResult::NotInRDB => {}
                             FindResult::InRDB(rval) => {
                                 let instance_id = create_metadata_records_from_rval(
-                                    &mut conn,
+                                    &mut tx,
                                     &file_name,
                                     &rval,
                                     &platform,
@@ -210,10 +221,10 @@ async fn main() -> Result<(), IngestError> {
                                     &core_version,
                                 )
                                 .await?;
-                                link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id)
+                                link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id)
                                     .await?;
                                 create_playlist_instance_objects(
-                                    &mut conn,
+                                    &mut tx,
                                     &storage_root,
                                     &roms,
                                     instance_id,
@@ -228,7 +239,7 @@ async fn main() -> Result<(), IngestError> {
                     }
                     if !found && force {
                         let instance_id = create_metadata_records(
-                            &mut conn,
+                            &mut tx,
                             &file_name,
                             &stem,
                             &file_name,
@@ -237,9 +248,9 @@ async fn main() -> Result<(), IngestError> {
                             &core_version,
                         )
                         .await?;
-                        link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                        link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
                         create_playlist_instance_objects(
-                            &mut conn,
+                            &mut tx,
                             &storage_root,
                             &roms,
                             instance_id,
@@ -249,12 +260,12 @@ async fn main() -> Result<(), IngestError> {
                         .await?;
                     }
 
-                    Ok(())
                 } else {
-                    match find_entry(&mut conn, &db, &path).await? {
+                    // normal rom
+                    match find_entry(&mut tx, &db, &path).await? {
                         FindResult::InRDB(rval) => {
                             let instance_id = create_metadata_records_from_rval(
-                                &mut conn,
+                                &mut tx,
                                 &file_name,
                                 &rval,
                                 &platform,
@@ -262,16 +273,17 @@ async fn main() -> Result<(), IngestError> {
                                 &core_version,
                             )
                             .await?;
-                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
                             create_single_file_instance_objects(
-                                &mut conn,
+                                &mut tx,
                                 &storage_root,
                                 &roms,
                                 instance_id,
                                 &path,
                                 rval.map_get("description"),
                             )
-                            .await
+                            .await.expect("Create_single_file_instance_objects failed in RDB")
+                            // ?? unwraps Result<(), Ingest Error>
                         }
                         FindResult::NotInRDB if force => {
                             let instance_id = create_metadata_records(
@@ -297,7 +309,7 @@ async fn main() -> Result<(), IngestError> {
                         }
                         FindResult::AlreadyHave if force => {
                             let instance_id = create_metadata_records(
-                                &mut conn,
+                                &mut tx,
                                 &file_name,
                                 &stem,
                                 &file_name,
@@ -306,20 +318,25 @@ async fn main() -> Result<(), IngestError> {
                                 &core_version,
                             )
                             .await?;
-                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
                             create_single_file_instance_objects(
-                                &mut conn,
+                                &mut tx,
                                 &storage_root,
                                 &roms,
                                 instance_id,
                                 &path,
                                 Some(stem.to_string()),
                             )
-                            .await
+                            .await.expect("Create_single_file_instance_objects failed not in RDB")
+                            // ?? unwraps Result<(), Ingest Error>
                         }
-                        _ => Ok(()),
+                        // _ => Ok(()),
+                        _ => {},
                     }
                 }
+                // commit transaction + ok
+                tx.commit().await.map_err(IngestError::Sql)?;
+                Ok(())
             })
         })
         .collect();
