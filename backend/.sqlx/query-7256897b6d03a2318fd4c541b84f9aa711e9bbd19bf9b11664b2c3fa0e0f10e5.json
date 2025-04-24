@@ -40,23 +40,23 @@
       },
       {
         "ordinal": 7,
-        "name": "state_derived_from",
+        "name": "associated_state",
         "type_info": "Uuid"
       },
       {
         "ordinal": 8,
-        "name": "save_derived_from",
+        "name": "state_derived_from",
         "type_info": "Uuid"
       },
       {
         "ordinal": 9,
-        "name": "replay_derived_from",
+        "name": "save_derived_from",
         "type_info": "Uuid"
       },
       {
         "ordinal": 10,
-        "name": "version",
-        "type_info": "Int8"
+        "name": "replay_derived_from",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -75,10 +75,10 @@
       false,
       false,
       false,
+      false,
       true,
       true,
-      true,
-      false
+      true
     ]
   },
   "hash": "7256897b6d03a2318fd4c541b84f9aa711e9bbd19bf9b11664b2c3fa0e0f10e5"

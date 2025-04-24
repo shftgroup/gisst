@@ -686,6 +686,7 @@ async fn create_state(
         creator_id,
         state_replay_index,
         state_derived_from,
+        save_derived_from: None,
     };
     State::insert(&mut conn, state).await?;
     Ok(())
@@ -697,6 +698,7 @@ async fn create_save(
         depth,
         force_uuid,
         file,
+        state,
         save_short_desc,
         save_description,
         state_derived_from,
@@ -704,7 +706,6 @@ async fn create_save(
         replay_derived_from,
         creator_id,
         created_on,
-        version,
     }: CreateSave,
     db: PgPool,
     storage_path: String,
@@ -769,10 +770,10 @@ async fn create_save(
         save_description: save_description.unwrap_or_else(|| save_short_desc.clone()),
         created_on,
         creator_id,
+        associated_state: state,
         state_derived_from,
         save_derived_from,
         replay_derived_from,
-        version: version.unwrap_or(0),
     };
     Save::insert(&mut conn, save).await?;
     Ok(())

@@ -146,10 +146,10 @@ pub struct Save {
     pub creator_id: Uuid,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub associated_state: Uuid,
     pub state_derived_from: Option<Uuid>,
     pub save_derived_from: Option<Uuid>,
     pub replay_derived_from: Option<Uuid>,
-    pub version: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -166,6 +166,7 @@ pub struct State {
     pub creator_id: Uuid,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
+    pub save_derived_from: Option<Uuid>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
@@ -880,7 +881,6 @@ impl Save {
             .fetch_optional(conn)
             .await
     }
-
     pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
         let result =         // First, insert the new save
         sqlx::query_as!(
@@ -893,10 +893,10 @@ impl Save {
             model.file_id,
             model.creator_id,
             model.created_on,
+            model.associated_state,
             model.state_derived_from,
             model.save_derived_from,
-            model.replay_derived_from,
-            model.version
+            model.replay_derived_from
         )
         .fetch_one(conn.as_mut())
         .await
@@ -920,20 +920,28 @@ impl Save {
                 action: Action::Insert,
                 source: e,
             })?;
-            sqlx::query!(
-                r#"INSERT INTO instance_save (instance_id, save_id)
+            let save_count = i32::try_from(parent_instances.len()).unwrap_or_else(|_e| {
+                tracing::error!(
+                    "Single sram has {} instances, which is more than 2^16; instances won't be copied over", parent_instances.len()
+                );
+                0
+            });
+            if save_count > 0 {
+                sqlx::query!(
+                    r#"INSERT INTO instance_save (instance_id, save_id)
                      SELECT * FROM UNNEST($1::uuid[], array_fill($2::uuid, array[$3]::integer[])::uuid[])"#,
-                &parent_instances,
-                model.save_id,
-                parent_instances.len() as i64
-            )
-            .execute(conn.as_mut())
-            .await
-            .map_err(|e| RecordSQL {
-                table: Table::Save,
-                action: Action::Insert,
-                source: e,
-            })?;
+                    &parent_instances,
+                    model.save_id,
+                    save_count
+                )
+                    .execute(conn.as_mut())
+                    .await
+                    .map_err(|e| RecordSQL {
+                        table: Table::Save,
+                        action: Action::Insert,
+                        source: e,
+                    })?;
+            }
         }
         sqlx::query!(
             r#"INSERT INTO instance_save (instance_id, save_id) VALUES ($1, $2)"#,
@@ -949,9 +957,6 @@ impl Save {
         })?;
         Ok(result)
     }
-}
-
-impl Save {
     pub async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -978,7 +983,7 @@ impl State {
     pub async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             State,
-            r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                RETURNING *"#,
             state.state_id,
             state.instance_id,
@@ -992,6 +997,7 @@ impl State {
             state.state_replay_index,
             state.state_derived_from,
             state.created_on,
+            state.save_derived_from,
         )
         .fetch_one(conn)
         .await
@@ -1269,6 +1275,7 @@ pub struct StateLink {
     pub creator_id: Option<Uuid>,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
+    pub save_derived_from: Option<Uuid>,
     pub created_on: Option<chrono::DateTime<chrono::Utc>>,
     pub file_id: Uuid,
     pub file_hash: String,
@@ -1300,10 +1307,10 @@ pub struct SaveLink {
     pub save_short_desc: String,
     pub save_description: String,
     pub creator_id: Uuid,
+    pub associated_state: Uuid,
     pub save_derived_from: Option<Uuid>,
     pub state_derived_from: Option<Uuid>,
     pub replay_derived_from: Option<Uuid>,
-    pub version: i64,
     pub created_on: Option<chrono::DateTime<chrono::Utc>>,
     pub file_id: Uuid,
     pub file_hash: String,

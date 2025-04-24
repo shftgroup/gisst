@@ -53,7 +53,7 @@ git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
 git clone --depth 1 -b emscripten-build https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
 git clone --depth 1 https://github.com/libretro/stella2014-libretro stella2014 || echo "already have stella2014"
-git clone --depth 1 -b emscripten-build-fixes https://github.com/JoeOsborn/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
+git clone --depth 1 https://github.com/libretro/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
 git clone --depth 1 -b fix-makefile-emscripten https://github.com/JoeOsborn/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
 git clone --depth 1 https://github.com/LIJI32/SameBoy sameboy || echo "already have sameboy"
@@ -113,7 +113,7 @@ for f in *; do
     fi
     pushd ../ra
     cp libretro_emscripten.bc libretro_emscripten.a
-    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EXTRA_WASMFS=1 HAVE_EGL=0 HAVE_AL=0 HAVE_AUDIOWORKLET=1 ASYNC=$ASYNC SYMBOLS=1 HAVE_OPENGLES3=1 HAVE_OZONE=0 HAVE_XMB=0 HAVE_GLUI=0 HAVE_MATERIALUI=0 -j all || die "could not build RA dist for ${f}"
+    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EXTRA_WASMFS=1 HAVE_EGL=0 HAVE_AL=0 HAVE_AUDIOWORKLET=1 ASYNC=$ASYNC SYMBOLS=0 HAVE_OPENGLES3=1 HAVE_OZONE=0 HAVE_XMB=0 HAVE_GLUI=0 HAVE_MATERIALUI=0 -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* ../cores
     popd
     popd

@@ -228,6 +228,9 @@ pub struct CreateSave {
     #[arg(long)]
     pub file: String,
 
+    #[arg(long = "state")]
+    pub state: Uuid,
+
     #[arg(long = "name")]
     pub save_short_desc: String,
     #[arg(long = "description")]
@@ -242,8 +245,6 @@ pub struct CreateSave {
     pub creator_id: Uuid,
     #[arg(long = "created-on")]
     pub created_on: Option<String>,
-    #[arg(long = "version")]
-    pub version: Option<i64>,
 }
 
 #[derive(Debug, Args)]

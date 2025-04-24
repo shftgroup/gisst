@@ -656,6 +656,7 @@ pub struct CreateState {
     pub replay_id: Option<Uuid>,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
+    pub save_derived_from: Option<Uuid>,
 }
 
 #[tracing::instrument(skip(app_state, auth), fields(userid))]
@@ -691,6 +692,7 @@ async fn create_state(
                     state_replay_index: state.state_replay_index,
                     state_derived_from: state.state_derived_from,
                     created_on: chrono::Utc::now(),
+                    save_derived_from: state.save_derived_from,
                 },
             )
             .await?,
