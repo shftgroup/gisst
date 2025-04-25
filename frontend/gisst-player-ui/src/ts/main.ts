@@ -1,10 +1,12 @@
 // Importing main scss file, vite will process and include bootstrap
 import {
   FrontendConfig,
+  generateSaveFields,
   generateStateFields,
-    generateReplayFields,
+  generateReplayFields,
+  Save,
   State,
-    Replay,
+  Replay,
   Metadata,
   ReplayFileLink,
   StateFileLink,
@@ -32,6 +34,9 @@ interface UIController<Evt> {
   toggle_mute: () => void;
   load_state: (state_num:number) => void;
   save_state: () => void;
+  // This should force the emulator to save and backup the current save, which may not be an "active" save in the list.
+  // The newly backed up save should be added to the UI with newSave() one way or another.
+  activate_save: (save_file:string) => void;
   play_replay: (replay_num:number) => void;
   start_replay:() => void;
   stop_and_save_replay:() => void;
@@ -122,8 +127,7 @@ export class UI<Evt> {
     this.emulator_div = <HTMLDivElement>document.getElementById("emulator_single_div")!;
 
     // Configure emulator manipulation toolbar
-    this.saves_elt = <HTMLOListElement>document.createElement("ol");
-    this.ui_root.appendChild(this.saves_elt);
+    this.saves_elt = <HTMLUListElement>document.getElementById("gisst-saves-list");
     this.replay_elt = <HTMLUListElement>document.getElementById("gisst-replays-list");
     this.entries_by_name = {};
     this.metadata_by_name = {};
@@ -159,15 +163,74 @@ export class UI<Evt> {
     this.current_config = config;
   }
 
-  newSave(save_file:string) {
-    console.log("found new save",save_file);
-    const a = <HTMLAnchorElement>document.createElement("a");
-    a.textContent=save_file;
-    a.addEventListener("click", () => this.control.download_file("save",save_file));
-    const li = <HTMLLIElement>document.createElement("li");
-    li.appendChild(a);
-    this.saves_elt.appendChild(li);
-    this.entries_by_name["sv__"+save_file] = li;
+  newSave(save_file:string, group_key?:string, metadata?:SaveFileLink) {
+    console.log("found new save",save_file,group_key);
+    const new_save_list_object = <HTMLDivElement>elementFromTemplates("card_list_object");
+    new_save_list_object.querySelector(".card-list-object")!
+        .setAttribute("id", valid_for_css(save_file));
+    const img = <HTMLImageElement>new_save_list_object.querySelector("img");
+    img.style.display = "none";
+    const save_object_title = <HTMLHeadElement>new_save_list_object.querySelector("h5");
+    save_object_title.textContent = save_file + (group_key !== undefined ? " - " + group_key : "");
+    save_object_title.addEventListener("click", () => {
+      console.log("Activate",save_file);
+      this.control["activate_save"](save_file);
+    });
+    const save_object_description = <HTMLElement>new_save_list_object.querySelector(".card-text");
+    save_object_description.textContent = save_file;
+    const save_object_timestamp = <HTMLElement>new_save_list_object.querySelector("small");
+    save_object_timestamp.textContent = `Created ${new Date().toLocaleDateString("en-US", this.ui_date_format)}`;
+    new_save_list_object.querySelector(".download-button")!.addEventListener("click", () => this.control.download_file("save", save_file));
+
+    new_save_list_object.querySelector(".upload-button")!.addEventListener("click", () => {
+      const metadata = this.metadata_by_name["sv__"+save_file];
+      if(metadata.editing) { this.toggleEditSave(save_file); }
+      if(!metadata.editing && !metadata.stored_on_server){
+        if((metadata.record as Save).save_id != NEVER_UPLOADED_ID) {
+          (metadata.record as Save).save_derived_from = (metadata.record as Save).save_id;
+          (metadata.record as Save).save_id = NEVER_UPLOADED_ID;
+        }
+        this.control.upload_file("save", save_file, metadata)
+          .then((md:Metadata) =>{
+            this.completeUpload("sv__"+save_file, md);
+          });
+      }
+    });
+
+    new_save_list_object.querySelector(".edit-button")!.addEventListener("click", (_e:Event) => {
+      this.toggleEditSave(save_file);
+    })
+
+    const gisst_save_tab = <HTMLDivElement>document.getElementById(UI.gisst_saves_list_content_id);
+    gisst_save_tab.appendChild(new_save_list_object);
+    this.entries_by_name["sv__"+save_file] = document.getElementById(valid_for_css(save_file))!;
+
+    nonnull(this.current_config);
+    const save_metadata:Metadata = {
+      record: {
+        save_id: metadata?.save_id || NEVER_UPLOADED_ID,
+        instance_id: this.current_config.instance.instance_id,
+        file_id: metadata?.file_id || NEVER_UPLOADED_ID,
+        save_description: metadata?.save_description || save_file,
+        save_short_desc: metadata?.save_short_desc || save_file,
+        save_derived_from: metadata?.save_derived_from || this.current_config.saves[0]?.save_id,
+        state_derived_from: metadata?.state_derived_from || (this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : null),
+        replay_derived_from: metadata?.replay_derived_from || (this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : null),
+        creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
+        created_on: metadata?.created_on || new Date()
+      },
+      screenshot: "",
+      stored_on_server: false,
+      editing: false,
+      group_key
+    }
+    if(save_metadata.stored_on_server){
+      this.entries_by_name["sv__"+save_file].querySelector(".bi-cloud-upload")!.classList.add("hidden");
+      this.entries_by_name["sv__"+save_file].querySelector(".bi-cloud-arrow-up-fill")!.classList.remove("hidden");
+    }
+
+    this.metadata_by_name["sv__"+save_file] = save_metadata;
+
   }
   newState(state_file:string, state_thumbnail:string, group_key?:string, metadata?:StateFileLink) {
     console.log("found new state", state_file, group_key, metadata);
@@ -430,6 +493,51 @@ export class UI<Evt> {
       }
     }
   }
+  toggleEditSave(save_file:string) {
+    const save_fields = generateSaveFields();
+    const save_list_object = <HTMLDivElement>this.entries_by_name["sv__"+save_file];
+    const save_metadata = this.metadata_by_name["sv__"+save_file];
+
+    if(save_metadata.stored_on_server){
+      return;
+    }
+    if(!save_metadata.editing) {
+      save_metadata.editing = true;
+
+      for (const field of save_fields) {
+        if(canEdit("save", field.field_name)){
+          const field_element:HTMLParagraphElement = document.createElement("p");
+          field_element.classList.add(valid_for_css(save_file) + "-edit-fields");
+          const ele_id = valid_for_css(save_file) + "_" + field.field_name;
+          if (field.value_type === "string"){
+            field_element.innerHTML = `<label for="${ele_id}">${field.field_name}</label><input type="text" class="${valid_for_css(save_file)}-field" id="${ele_id}" name="${ele_id}"/>`;
+            const input_element:HTMLInputElement = field_element.querySelector("#"+ele_id)!;
+            input_element.value = <string>(save_metadata.record as Save)[field.field_name as keyof Save];
+            input_element.addEventListener("change", (e:Event) => {
+              (save_metadata.record as Save)[field.field_name] = (e.currentTarget! as HTMLInputElement).value;
+            });
+          } else if (field.value_type === "boolean") {
+            field_element.innerHTML = `<input type="checkbox" class="${valid_for_css(save_file)}-field" id="${ele_id}" name="${ele_id}"/><label for="${ele_id}">${field.field_name.toUpperCase()}</label>`;
+            const input_element:HTMLInputElement = field_element.querySelector("#"+ele_id)!;
+            input_element.checked = <boolean>(save_metadata.record as Save)[field.field_name as keyof Save];
+            input_element.addEventListener("change", (e:Event) => {
+              (save_metadata.record as Save)[field.field_name] = (e.currentTarget! as HTMLInputElement).checked;
+            });
+          }
+          save_list_object.appendChild(field_element)
+        }
+      }
+    } else {
+      save_metadata.editing = false;
+      save_list_object.querySelector("h5")!.textContent = (save_metadata.record as Save).save_short_desc + (save_metadata.group_key !== undefined ? " - " + save_metadata.group_key : "");
+      save_list_object.querySelector(".card-text")!.textContent = (save_metadata.record as Save).save_description;
+      const edit_fields = save_list_object.querySelectorAll("." + valid_for_css(save_file) + "-edit-fields")!;
+      for(let i = 0; i < edit_fields.length; i++){
+        edit_fields[i].remove();
+      }
+    }
+  }
+
   completeUpload(item_name:string, md:Metadata){
     const item_object = this.entries_by_name[item_name];
     md.stored_on_server = true;
