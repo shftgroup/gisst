@@ -17,12 +17,14 @@ let RA:LibretroModule;
 let ui_state:UI<string>;
 let db:GISSTDBConnector;
 
-export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
+let content_base:string;
+
+export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, saves:GISSTModels.SaveFileLink[], manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
   db = new GISSTDBConnector(gisst_root);
 
   const content = manifest.find((o) => o.object_role=="content" && o.object_role_index == 0)!;
   const content_file = content.file_filename!;
-  const content_base = content_file.substring(0, content_file.lastIndexOf("."));
+  content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
   const source_path = content.file_source_path!.replace(content.file_filename!, "");
@@ -52,6 +54,10 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     retro_args.push("-R");
     retro_args.push(state_dir+"/"+content_base+".replay1");
   }
+  const save_data:[GISSTModels.SaveFileLink,Uint8Array][] = [];
+  for (const save of saves) {
+    save_data.push([save, new Uint8Array(await ((await fetch(gisst_root+"/storage/"+save.file_dest_path)).arrayBuffer()))]);
+  }
   retro_args.push("-c");
   retro_args.push("/mem/retroarch.cfg");
   const has_config = manifest.find((o) => o.object_role=="config")!;
@@ -71,6 +77,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         elt.innerText=evt;
         return elt;
       },
+      "activate_save": (savefile) => activate_save(savefile),
       "toggle_mute": () => send_message("MUTE"),
       "load_state": (num: number) => load_state_slot(num),
       "save_state": () => save_state(),
@@ -204,6 +211,14 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         module.FS.createPath("/", state_dir, true, true);
         RA.FS.createDataFile(state_dir, content_base + ".replay1", replay, true, true, false);
       }
+      for (const [data, savefile] of save_data) {
+        console.log(data, "/storage/"+data.file_dest_path,saves_dir + "/" + data.save_id + ".srm");
+        module.FS.createPath("/", saves_dir, true, true);
+        RA.FS.createDataFile(saves_dir, data.save_id + ".srm", savefile, true, true, false);
+      }
+      if (save_data.length > 0) {
+        RA.FS.createDataFile(saves_dir, content_base + ".srm", save_data[0][1], true, true, false);
+      }
       if (use_gamepad_overlay) {
         // gameboy, gba, nes, snes, retropad
         // gambatte, vba_next, fceumm, snes9x
@@ -232,6 +247,10 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         const replayUUID = ra_util.replay_info(new Uint8Array(replay)).id;
         seen_replays[content_base+".replay1"] = replayUUID;
         ui_state.newReplay(content_base+".replay1", "init", data);
+      }
+      for (const save of saves) {
+        seen_saves.push(save.save_id);
+        ui_state.newSave(save.save_id, "init", save);
       }
       retroReady();
     });
@@ -283,6 +302,25 @@ function record_replay() {
 
 function stop_replay() {
   send_message("HALT_REPLAY");
+}
+
+function copyFile(from:string, to:string) {
+  const contents = RA.FS.readFile(from, {encoding:'binary'});
+  RA.FS.writeFile(to, contents);
+}
+
+let save_counter = 0;
+function activate_save(savefile:string) {
+  send_message("SAVE_FILES");
+  setTimeout(() => {
+    const srm = `${saves_dir}/${content_base}.srm`;
+    const to = `${saves_dir}/autosave_${save_counter}.srm`;
+    const from = `${saves_dir}/${savefile}.srm`;
+    save_counter++;
+    copyFile(srm, to);
+    copyFile(from, srm);
+    send_message("LOAD_FILES");
+  }, 250);
 }
 
 async function play_replay_slot(n:number) {
@@ -384,7 +422,7 @@ interface Replay {
 
 let current_replay:Replay | null = null;
 const seen_states:Record<string,string> = {};
-// const seen_saves:Record<string,null> = {};
+const seen_saves:string[] = [];
 const seen_replays:Record<string,string> = {};
 function checkChangedStatesAndSaves() {
   const states = RA.FS.readdir(state_dir);
@@ -412,6 +450,11 @@ function checkChangedStatesAndSaves() {
         const replay = ra_util.replay_info(new Uint8Array(RA.FS.readFile(state_dir+"/"+state)));
         seen_replays[state] = replay.id;
         ui_state.newReplay(state, replay.id);
+      }
+    } else if(state.endsWith(".srm") && state != `${content_base}.srm`) {
+      if(!(seen_saves.includes(state))) {
+        seen_saves.push(state);
+        ui_state.newSave(state);
       }
     }
   }
