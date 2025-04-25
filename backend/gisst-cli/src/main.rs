@@ -698,7 +698,6 @@ async fn create_save(
         depth,
         force_uuid,
         file,
-        state,
         save_short_desc,
         save_description,
         state_derived_from,
@@ -729,11 +728,6 @@ async fn create_save(
     let mut source_path = PathBuf::from(file);
     source_path.pop();
     let hash = StorageHandler::get_file_hash(file)?;
-    if let Some(_file) = gisst::models::File::get_by_hash(&mut conn, &hash).await? {
-        return Err(GISSTCliError::CreateSave(
-            "File exists in DB already".to_string(),
-        ));
-    }
 
     let uuid = Uuid::new_v4();
 
@@ -770,7 +764,6 @@ async fn create_save(
         save_description: save_description.unwrap_or_else(|| save_short_desc.clone()),
         created_on,
         creator_id,
-        associated_state: state,
         state_derived_from,
         save_derived_from,
         replay_derived_from,

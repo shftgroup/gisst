@@ -146,7 +146,6 @@ pub struct Save {
     pub creator_id: Uuid,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
-    pub associated_state: Uuid,
     pub state_derived_from: Option<Uuid>,
     pub save_derived_from: Option<Uuid>,
     pub replay_derived_from: Option<Uuid>,
@@ -885,7 +884,7 @@ impl Save {
         let result =         // First, insert the new save
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *"#,
+            r#"INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *"#,
             model.save_id,
             model.instance_id,
             model.save_short_desc,
@@ -893,7 +892,6 @@ impl Save {
             model.file_id,
             model.creator_id,
             model.created_on,
-            model.associated_state,
             model.state_derived_from,
             model.save_derived_from,
             model.replay_derived_from
@@ -1307,7 +1305,6 @@ pub struct SaveLink {
     pub save_short_desc: String,
     pub save_description: String,
     pub creator_id: Uuid,
-    pub associated_state: Uuid,
     pub save_derived_from: Option<Uuid>,
     pub state_derived_from: Option<Uuid>,
     pub replay_derived_from: Option<Uuid>,
