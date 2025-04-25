@@ -9,6 +9,7 @@ import {
   Replay,
   Metadata,
   ReplayFileLink,
+  SaveFileLink,
   StateFileLink,
   canEdit,
   InputLogEvent,
@@ -62,7 +63,7 @@ export class UI<Evt> {
   headless:boolean;
 
   ui_root:HTMLDivElement;
-  saves_elt:HTMLOListElement;
+  saves_elt:HTMLUListElement;
   replay_elt:HTMLUListElement;
   evtlog_elt:HTMLUListElement;
 
@@ -292,6 +293,7 @@ export class UI<Evt> {
         file_id: metadata?.file_id || NEVER_UPLOADED_ID,
         state_description: metadata?.state_description || state_file,
         state_name: metadata?.state_name || state_file,
+        save_derived_from: metadata?.save_derived_from || this.current_config.saves[0]?.save_id,
         state_derived_from: metadata?.state_derived_from || (this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : null),
         screenshot_id: metadata?.screenshot_id || NEVER_UPLOADED_ID,
         replay_id: metadata?.replay_id || null,

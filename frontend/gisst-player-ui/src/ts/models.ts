@@ -74,6 +74,7 @@ export interface StateFileLink {
     creator_id?: string,
     state_replay_index?: number,
     state_derived_from?: string,
+    save_derived_from?: string,
     created_on?: Date,
     file_id: string,
     file_hash: string,
@@ -143,6 +144,7 @@ export interface Save {
     state_derived_from: string|null,
     save_derived_from: string|null,
     replay_derived_from: string|null,
+    [key:string]: string | boolean | Date | null
 }
 export function generateSaveFields():DBField[] {
     return [
@@ -186,6 +188,7 @@ export function generateStateFields():DBField[] {
         {field_name: "replay_id" , value_type:"string", editable: false},
         {field_name: "creator_id" , value_type:"string", editable: false},
         {field_name: "state_derived_from" , value_type:"string", editable: false},
+        {field_name: "save_derived_from" , value_type:"string", editable: false},
         {field_name: "created_on" , value_type:"Date", editable: false}
     ]
 }
