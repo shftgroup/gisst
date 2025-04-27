@@ -284,6 +284,9 @@ pub fn is_disk_image(file: &std::path::Path) -> bool {
 #[cfg(test)]
 mod fslist {
 
+
+    // Want to rebase with main to get the updates is_disk_image function and updated funtionality
+
     use super::is_disk_image;
     use assert_fs;
 
