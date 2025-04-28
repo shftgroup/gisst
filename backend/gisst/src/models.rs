@@ -1334,6 +1334,23 @@ impl SaveLink {
         .fetch_optional(conn)
         .await
     }
+    pub async fn get_by_ids(
+        conn: &mut sqlx::PgConnection,
+        save_ids: &[Uuid],
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT save.*,
+                      file.file_hash, file.file_filename,
+                      file.file_source_path, file.file_dest_path
+               FROM save
+               JOIN file USING(file_id)
+               WHERE save_id = ANY($1)"#,
+            save_ids,
+        )
+        .fetch_all(conn)
+        .await
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
