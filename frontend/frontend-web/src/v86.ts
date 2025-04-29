@@ -62,6 +62,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
         v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined);
       },
       "activate_save": (_savefile) => {},
+      "create_save": () => {},
       "load_state":(n:number) => {
         // get the replay of state n
         // if it's not the same as the active replay we have to do something

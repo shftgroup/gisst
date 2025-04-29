@@ -78,6 +78,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         return elt;
       },
       "activate_save": (savefile) => activate_save(savefile),
+      "create_save": () => create_save(),
       "toggle_mute": () => send_message("MUTE"),
       "load_state": (num: number) => load_state_slot(num),
       "save_state": () => save_state(),
@@ -309,18 +310,22 @@ function copyFile(from:string, to:string) {
   RA.FS.writeFile(to, contents);
 }
 
+async function activate_save(savefile:string) {
+  const srm = `${saves_dir}/${content_base}.srm`;
+  const from = `${saves_dir}/${savefile}.srm`;
+  await create_save();
+  copyFile(from, srm);
+  send_message("LOAD_FILES");
+}
+
 let save_counter = 0;
-function activate_save(savefile:string) {
+async function create_save() {
   send_message("SAVE_FILES");
-  setTimeout(() => {
-    const srm = `${saves_dir}/${content_base}.srm`;
-    const to = `${saves_dir}/autosave_${save_counter}.srm`;
-    const from = `${saves_dir}/${savefile}.srm`;
-    save_counter++;
-    copyFile(srm, to);
-    copyFile(from, srm);
-    send_message("LOAD_FILES");
-  }, 250);
+  await read_response(true);
+  const srm = `${saves_dir}/${content_base}.srm`;
+  const to = `${saves_dir}/autosave_${save_counter}.srm`;
+  save_counter++;
+  copyFile(srm, to);
 }
 
 async function play_replay_slot(n:number) {

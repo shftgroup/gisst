@@ -37,6 +37,8 @@ interface UIController<Evt> {
   save_state: () => void;
   // This should force the emulator to save and backup the current save, which may not be an "active" save in the list.
   // The newly backed up save should be added to the UI with newSave() one way or another.
+  create_save: () => void;
+  // This is called to load an existing save, but should also probably save and backup the current save as well.
   activate_save: (save_file:string) => void;
   play_replay: (replay_num:number) => void;
   start_replay:() => void;
@@ -121,6 +123,7 @@ export class UI<Evt> {
       
       this.ui_root.querySelector("#"+UIIDConst.EMU_TOGGLE_MUTE_BUTTON)!.addEventListener("click", this.control.toggle_mute);
       this.ui_root.querySelector("#"+UIIDConst.EMU_SAVE_STATE_BUTTON)!.addEventListener("click", this.control.save_state);
+      this.ui_root.querySelector("#"+UIIDConst.EMU_CREATE_SAVE_BUTTON)!.addEventListener("click", this.control.create_save);
       this.ui_root.querySelector("#"+UIIDConst.EMU_START_REPLAY_BUTTON)!.addEventListener("click", this.control.start_replay);
       this.ui_root.querySelector("#"+UIIDConst.EMU_FINISH_REPLAY_BUTTON)!.addEventListener("click", this.control.stop_and_save_replay);
     }
