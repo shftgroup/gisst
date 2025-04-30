@@ -28,6 +28,22 @@ export interface ObjectLink {
   file_source_path:string,
   file_hash:string,
 }
+export interface SaveFileLink {
+    save_id: string,
+    instance_id: string,
+    save_short_desc: string,
+    save_description: string,
+    creator_id?: string,
+    save_derived_from?: string,
+    state_derived_from?: string,
+    replay_derived_from?: string,
+    created_on?: Date,
+    file_id: string,
+    file_hash: string,
+    file_filename: string,
+    file_source_path: string,
+    file_dest_path: string
+}
 
 export interface ColdStart {
   type:string

@@ -14,7 +14,7 @@ addEventListener("load", () =>
       {
         toggle_mute: () => console.log("MUTE/UNMUTE"),
         activate_save: (save:string) => console.log("ACTIVATE",save),
-        create_save: () => console.log("MAKE SAVE",save),
+        create_save: () => console.log("MAKE SAVE"),
         load_state: (sn:number) => console.log("LOAD",sn),
         save_state: () => {
           ui_state.newState("state"+statenum.toString(), IMG_DATA);

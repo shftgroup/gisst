@@ -10,10 +10,11 @@ use gisst::models::{Environment, Instance, ObjectLink, ReplayLink, SaveLink, Sta
 
 use axum::{
     Extension,
-    extract::{OriginalUri, Path, Query},
+    extract::{OriginalUri, Path},
     http::HeaderMap,
     response::{Html, IntoResponse},
 };
+use axum_extra::extract::Query;
 use chrono::{DateTime, Local};
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -64,10 +65,11 @@ enum PlayerStartTemplateInfo {
     Replay(ReplayLink),
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct PlayerParams {
     state: Option<Uuid>,
     replay: Option<Uuid>,
+    #[serde(default)]
     save: Vec<Uuid>,
     boot_into_record: Option<bool>,
 }

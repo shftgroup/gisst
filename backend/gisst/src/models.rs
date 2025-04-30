@@ -1338,7 +1338,7 @@ impl SaveLink {
         conn: &mut sqlx::PgConnection,
         save_ids: &[Uuid],
     ) -> sqlx::Result<Vec<Self>> {
-        sqlx::query_as!(
+        let mut results = sqlx::query_as!(
             Self,
             r#"SELECT save.*,
                       file.file_hash, file.file_filename,
@@ -1349,7 +1349,9 @@ impl SaveLink {
             save_ids,
         )
         .fetch_all(conn)
-        .await
+        .await?;
+        results.sort_by_key(|save| save_ids.iter().position(|sid| *sid == save.save_id));
+        Ok(results)
     }
 }
 

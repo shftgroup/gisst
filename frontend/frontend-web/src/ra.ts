@@ -151,6 +151,14 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
                   })
                   .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
                 // upload all associated states too
+              } else if (category === "save") {
+                db.uploadRecord(metadata.record, category)
+                  .then((save:GISSTModels.DBRecord) => {
+                    (metadata.record as GISSTModels.Save).save_id = (save as GISSTModels.Save).save_id;
+                    resolve(metadata)
+                  })
+                  .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
+                // upload all associated states too
               }
             })
             .catch(() => reject("File upload from RA failed."));
@@ -250,8 +258,8 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         ui_state.newReplay(content_base+".replay1", "init", data);
       }
       for (const save of saves) {
-        seen_saves.push(save.save_id);
-        ui_state.newSave(save.save_id, "init", save);
+        seen_saves.push(save.save_id+".srm");
+        ui_state.newSave(save.save_id+".srm", "init", save);
       }
       retroReady();
     });
@@ -307,12 +315,17 @@ function stop_replay() {
 
 function copyFile(from:string, to:string) {
   const contents = RA.FS.readFile(from, {encoding:'binary'});
+  try {
+    RA.FS.unlink(to);
+  } catch(_e) {
+    console.log("Couldn't unlink file; is it new?",to);
+  }
   RA.FS.writeFile(to, contents);
 }
 
 async function activate_save(savefile:string) {
   const srm = `${saves_dir}/${content_base}.srm`;
-  const from = `${saves_dir}/${savefile}.srm`;
+  const from = `${saves_dir}/${savefile}`;
   await create_save();
   copyFile(from, srm);
   send_message("LOAD_FILES");
@@ -456,14 +469,18 @@ function checkChangedStatesAndSaves() {
         seen_replays[state] = replay.id;
         ui_state.newReplay(state, replay.id);
       }
-    } else if(state.endsWith(".srm") && state != `${content_base}.srm`) {
-      if(!(seen_saves.includes(state))) {
-        seen_saves.push(state);
-        ui_state.newSave(state);
-      }
     }
   }
   update_replay_state();
+  const saves = RA.FS.readdir(saves_dir);
+  for (const save of saves) {
+    if(save.endsWith(".srm") && save != `${content_base}.srm`) {
+      if(!(seen_saves.includes(save))) {
+        seen_saves.push(save);
+        ui_state.newSave(save);
+      }
+    }
+  }
 }
 function clear_current_replay() {
   current_replay = null;
