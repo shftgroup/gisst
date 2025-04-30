@@ -200,7 +200,6 @@ fn file_at_path_is_dir_fat(fs: &fatfs::FileSystem<FATStorage>, path: &std::path:
 #[tracing::instrument(skip(fs))]
 fn get_file_at_path_fat(
     fs: &fatfs::FileSystem<FATStorage>,
-
     path: &std::path::Path,
 ) -> Result<Vec<u8>, FSList> {
     use fatfs::Read;
@@ -284,19 +283,134 @@ pub fn is_disk_image(file: &std::path::Path) -> bool {
 #[cfg(test)]
 mod fslist {
 
-
-    // Want to rebase with main to get the updates is_disk_image function and updated funtionality
-
-    use super::is_disk_image;
+    use crate::fslist::{is_disk_image, get_file_at_path_fat, get_file_at_path, get_partitions};
     use assert_fs;
 
     #[test]
     fn is_valid_disk_image() {
         let path = std::path::Path::new(&"../examples/data/v86/freedos722.img");
         assert!(path.exists());
-        
-        // assert!(false, "pwd is {:?} and path is {:?}", std::env::current_dir(), path);
-        assert!(is_disk_image(path), "pwd is {:?} and func is {:?}", std::env::current_dir() ,is_disk_image(path));
+        assert!(is_disk_image(path));
+    }
+
+    #[test]
+    fn is_not_disk_image() {
+        let path = std::path::Path::new(&"./bad/path.oops");
+        assert!(!path.exists());
+        assert!(!is_disk_image(path));
+    }
+
+    // #[test]
+    // fn is_file_at_path_dir_fat() {
+    //         let path = std::path::Path::new(&"../examples/data/v86/freedos722.img");
+    //     assert!(path.exists());
+    //     assert!(is_disk_image(path));
+    //     let image_file = std::fs::File::open(path)?;
+
+    //     let partitions = get_partitions(&image_file).unwrap();
+    //     let mut components = path.components();
+    //     let std::path::Component::Normal(partid) = components
+    //         .next()
+    //         .ok_or(FSList::TraversalPath(path.to_string_lossy().into_owned()))?
+    //     else {
+    //         return Err(FSList::TraversalPath(path.to_string_lossy().into_owned()));
+    //     };
+    //     let partid = partid
+    //         .to_string_lossy()
+    //         .strip_prefix("part")
+    //         .ok_or(FSList::Path)?
+    //         .parse::<usize>()?;
+    //     for (idx, start_byte, sz) in partitions {
+    //         use fatfs::{FileSystem, FsOptions};
+    //         use fscommon::{BufStream, StreamSlice};
+    //         if idx != partid {
+    //             continue;
+    //         }
+    //         let image = BufStream::new(StreamSlice::new(image_file, start_byte, start_byte + sz)?);
+    //         let fs = FileSystem::new(image, FsOptions::new())?;
+    //         let subpath = components.as_path();
+    //         if file_at_path_is_dir_fat(&fs, subpath) {
+    //             let dir_zipped = get_dir_at_path_fat(&fs, subpath)?;
+    //             return Ok(("application/zip".to_string(), dir_zipped));
+    //         }
+    //         let file = get_file_at_path_fat(&fs, subpath)?;
+    //     }
+    //     Ok(())
+    // }
+
+    // #[test]
+    // fn file_is_at_path_fat() -> std::io::Result<()> {
+    //     let path = std::path::Path::new(&"../examples/data/v86/freedos722.img");
+    //     assert!(path.exists());
+    //     assert!(is_disk_image(path));
+    //     let image_file = std::fs::File::open(path)?;
+
+    //     let partitions = get_partitions(&image_file).unwrap();
+    //     let mut components = path.components();
+    //     let std::path::Component::Normal(partid) = components
+    //         .next()
+    //         .ok_or(FSList::TraversalPath(path.to_string_lossy().into_owned()))?
+    //     else {
+    //         return Err(FSList::TraversalPath(path.to_string_lossy().into_owned()));
+    //     };
+    //     let partid = partid
+    //         .to_string_lossy()
+    //         .strip_prefix("part")
+    //         .ok_or(FSList::Path)?
+    //         .parse::<usize>()?;
+    //     for (idx, start_byte, sz) in partitions {
+    //         use fatfs::{FileSystem, FsOptions};
+    //         use fscommon::{BufStream, StreamSlice};
+    //         if idx != partid {
+    //             continue;
+    //         }
+    //         let image = BufStream::new(StreamSlice::new(image_file, start_byte, start_byte + sz)?);
+    //         let fs = FileSystem::new(image, FsOptions::new())?;
+    //         let subpath = components.as_path();
+    //         if file_at_path_is_dir_fat(&fs, subpath) {
+    //             let dir_zipped = get_dir_at_path_fat(&fs, subpath)?;
+    //             return Ok(("application/zip".to_string(), dir_zipped));
+    //         }
+    //         let file = get_file_at_path_fat(&fs, subpath)?;
+    //     }
+    //     Ok(())
+    // }
+
+    #[test]
+    fn file_is_at_path() -> std::io::Result<()> {
+        let image_path = std::path::Path::new(&"../examples/data/v86/freedos722.img");
+        assert!(image_path.exists());
+        assert!(is_disk_image(image_path));
+
+        // Test in root directory
+        let subpath = std::path::Path::new(&"part0/AUTOEXEC.BAT");
+        let (mime, file_data) = get_file_at_path(
+                std::fs::File::open(image_path)?, 
+                std::path::Path::new(&subpath))
+            .unwrap();
+    
+        let local_file_path = std::path::Path::new(&"../examples/tests/files/AUTOEXEC.BAT");
+        assert!(local_file_path.exists());
+        let local_file_data = std::fs::read(local_file_path)?;
+
+        assert_eq!(mime, "text/plain", "Incorrect MIME for file in subdirectory.");
+        assert_eq!(file_data, local_file_data, "Incorrect data for file in root directory.");
+
+
+        // Test in subdirectory
+        let subpath = std::path::Path::new(&"part0/games/tetris.com");
+        let result = get_file_at_path(
+                std::fs::File::open(image_path)?, 
+                std::path::Path::new(&subpath))
+                .unwrap();
+
+        let local_file_path = std::path::Path::new(&"../examples/tests/files/tetris.com");
+        assert!(local_file_path.exists());
+        let local_file_data = std::fs::read(local_file_path)?;
+
+        assert_eq!(mime, "application/octet-stream", "Incorrect MIME for file in subdirectory.");
+        assert_eq!(file_data, local_file_data, "Incorrect data for file in subdirectory.");
+        Ok(())
     }
 
 }
