@@ -278,7 +278,7 @@ async fn main() -> Result<(), IngestError> {
                                 &path,
                                 rval.map_get("description"),
                             )
-                            .await.expect("Create_single_file_instance_objects failed in RDB")
+                            .await.expect("Create_single_file_instance_objects failed in RDB");
                         }
                         FindResult::NotInRDB if force => {
                             let instance_id = create_metadata_records(
@@ -300,7 +300,7 @@ async fn main() -> Result<(), IngestError> {
                                 &path,
                                 Some(stem.to_string()),
                             )
-                            .await.expect("Create_single_file_instance_objects failed not in RDB")
+                            .await.expect("Create_single_file_instance_objects failed not in RDB");
                             // ?? unwraps Result<(), Ingest Error>
                         }
                         FindResult::AlreadyHave if force => {
@@ -323,7 +323,7 @@ async fn main() -> Result<(), IngestError> {
                                 &path,
                                 Some(stem.to_string()),
                             )
-                            .await.expect("Create_single_file_instance_objects failed not in RDB")
+                            .await.expect("Create_single_file_instance_objects failed not in RDB");
                             // ?? unwraps Result<(), Ingest Error>
                         }
                         // _ => Ok(()),
