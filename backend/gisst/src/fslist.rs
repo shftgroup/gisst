@@ -399,7 +399,7 @@ mod fslist {
 
         // Test in subdirectory
         let subpath = std::path::Path::new(&"part0/games/tetris.com");
-        let result = get_file_at_path(
+        let (mime, file_data) = get_file_at_path(
                 std::fs::File::open(image_path)?, 
                 std::path::Path::new(&subpath))
                 .unwrap();
