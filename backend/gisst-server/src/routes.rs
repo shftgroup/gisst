@@ -25,6 +25,9 @@ struct StateReplayPageQueryParams {
     replay_page_num: Option<u32>,
     replay_limit: Option<u32>,
     replay_contains: Option<String>,
+    save_page_num: Option<u32>,
+    save_limit: Option<u32>,
+    save_contains: Option<String>,
     creator_id: Option<uuid::Uuid>,
 }
 

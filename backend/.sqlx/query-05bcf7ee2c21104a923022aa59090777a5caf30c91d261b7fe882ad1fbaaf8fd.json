@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT save.* FROM instance_save JOIN save USING (instance_id)\n                       WHERE instance_save.instance_id = $1 AND save.creator_id = $2\n                       ORDER BY created_on DESC\n                       OFFSET $3\n                       LIMIT $4",
+  "query": "SELECT save.* FROM instance_save JOIN save USING (save_id)\n                       WHERE instance_save.instance_id = $1 AND save.creator_id = $2\n                       ORDER BY created_on DESC\n                       OFFSET $3\n                       LIMIT $4",
   "describe": {
     "columns": [
       {
@@ -75,5 +75,5 @@
       true
     ]
   },
-  "hash": "7256897b6d03a2318fd4c541b84f9aa711e9bbd19bf9b11664b2c3fa0e0f10e5"
+  "hash": "05bcf7ee2c21104a923022aa59090777a5caf30c91d261b7fe882ad1fbaaf8fd"
 }

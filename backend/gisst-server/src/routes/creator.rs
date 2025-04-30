@@ -9,7 +9,7 @@ use axum::{
     routing::get,
 };
 use gisst::error::Table;
-use gisst::models::{Creator, CreatorReplayInfo, CreatorStateInfo};
+use gisst::models::{Creator, CreatorReplayInfo, CreatorSaveInfo, CreatorStateInfo};
 use minijinja::context;
 use serde::Serialize;
 use uuid::Uuid;
@@ -22,6 +22,7 @@ pub fn router() -> Router {
 struct GetAllCreatorResult {
     states: Vec<CreatorStateInfo>,
     replays: Vec<CreatorReplayInfo>,
+    saves: Vec<CreatorSaveInfo>,
     creator: Creator,
 }
 
@@ -40,6 +41,9 @@ async fn get_single_creator(
         let replay_page_num = params.replay_page_num.unwrap_or(0);
         let replay_limit = params.replay_limit.unwrap_or(100).min(100);
         let replay_offset = replay_page_num * replay_limit;
+        let save_page_num = params.save_page_num.unwrap_or(0);
+        let save_limit = params.save_limit.unwrap_or(100).min(100);
+        let save_offset = save_page_num * save_limit;
         let creator_results = GetAllCreatorResult {
             states: Creator::get_all_state_info(
                 &mut conn,
@@ -57,10 +61,19 @@ async fn get_single_creator(
                 replay_limit,
             )
             .await?,
+            saves: Creator::get_all_save_info(
+                &mut conn,
+                creator.creator_id,
+                params.save_contains.clone(),
+                save_offset,
+                save_limit,
+            )
+            .await?,
             creator,
         };
         let state_has_more = creator_results.states.len() >= state_limit as usize;
         let replay_has_more = creator_results.replays.len() >= replay_limit as usize;
+        let save_has_more = creator_results.replays.len() >= save_limit as usize;
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
@@ -75,12 +88,16 @@ async fn get_single_creator(
                     base_url => BASE_URL.get(),
                     state_has_more => state_has_more,
                     replay_has_more => replay_has_more,
+                    save_has_more => save_has_more,
                     state_page_num => state_page_num,
                     state_limit => state_limit,
                     state_contains => params.state_contains,
                     replay_page_num => replay_page_num,
                     replay_limit => replay_limit,
                     replay_contains => params.replay_contains,
+                    save_page_num => save_page_num,
+                    save_limit => save_limit,
+                    save_contains => params.save_contains,
                     creator => creator_results,
                     user => user,
                 ))?)

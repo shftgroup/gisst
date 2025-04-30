@@ -647,7 +647,7 @@ f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%
             (None, None) => {
                 sqlx::query_as!(
                     Save,
-                    r#"SELECT save.* FROM instance_save JOIN save USING (instance_id)
+                    r#"SELECT save.* FROM instance_save JOIN save USING (save_id)
                        WHERE instance_save.instance_id = $1
                        ORDER BY created_on DESC
                        OFFSET $2
@@ -662,7 +662,7 @@ f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%
             (None, Some(user)) => {
                 sqlx::query_as!(
                     Save,
-                    r#"SELECT save.* FROM instance_save JOIN save USING (instance_id)
+                    r#"SELECT save.* FROM instance_save JOIN save USING (save_id)
                        WHERE instance_save.instance_id = $1 AND save.creator_id = $2
                        ORDER BY created_on DESC
                        OFFSET $3
@@ -678,7 +678,7 @@ f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%
             (Some(contains), None) => {
                 sqlx::query_as!(
                     Save,
-                    r#"SELECT save.* FROM instance_save JOIN save USING (instance_id)
+                    r#"SELECT save.* FROM instance_save JOIN save USING (save_id)
                        WHERE instance_save.instance_id = $1 AND
 f_unaccent(save_short_desc || save_description) ILIKE ('%' || f_unaccent($2) || '%')
                        ORDER BY created_on DESC
@@ -695,7 +695,7 @@ f_unaccent(save_short_desc || save_description) ILIKE ('%' || f_unaccent($2) || 
             (Some(contains), Some(user)) => {
                 sqlx::query_as!(
                     Save,
-                    r#"SELECT save.* FROM instance_save JOIN save USING (instance_id)
+                    r#"SELECT save.* FROM instance_save JOIN save USING (save_id)
                        WHERE instance_save.instance_id = $1 AND creator_id = $2 AND
 f_unaccent(save_short_desc || save_description) ILIKE ('%' || f_unaccent($3) || '%')
                        ORDER BY created_on DESC

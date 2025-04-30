@@ -11,7 +11,7 @@ use axum::{
 };
 use axum_login::login_required;
 use gisst::error::Table;
-use gisst::models::{Environment, Instance, InstanceWork, ObjectLink, Replay, State, Work};
+use gisst::models::{Environment, Instance, InstanceWork, ObjectLink, Replay, Save, State, Work};
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -90,7 +90,7 @@ struct FullInstance {
     environment: Environment,
     states: Vec<State>,
     replays: Vec<Replay>,
-    //saves: Vec<Save>,
+    saves: Vec<Save>,
     objects: Vec<ObjectLink>,
 }
 
@@ -142,8 +142,22 @@ async fn get_all_for_instance(
         )
         .await?;
 
+        let save_page_num = params.save_page_num.unwrap_or(0);
+        let save_limit = params.save_limit.unwrap_or(100).min(100);
+        let save_offset = save_page_num * save_limit;
+        let saves = Instance::get_all_saves(
+            &mut conn,
+            instance.instance_id,
+            params.creator_id,
+            params.save_contains.clone(),
+            save_offset,
+            save_limit,
+        )
+        .await?;
+
         let objects = ObjectLink::get_all_for_instance_id(&mut conn, id).await?;
         let state_has_more = states.len() >= state_limit as usize;
+        let save_has_more = saves.len() >= save_limit as usize;
         let replay_has_more = replays.len() >= replay_limit as usize;
         tracing::debug!(
             "{} - {state_has_more} - {} - {replay_has_more}",
@@ -156,6 +170,7 @@ async fn get_all_for_instance(
             environment,
             objects,
             states,
+            saves,
             replays,
         };
 
@@ -171,6 +186,7 @@ async fn get_all_for_instance(
                 Html(instance_all_listing.render(context!(
                     base_url => BASE_URL.get(),
                     state_has_more => state_has_more,
+                    save_has_more => save_has_more,
                     replay_has_more => replay_has_more,
                     state_page_num => state_page_num,
                     state_limit => state_limit,
@@ -178,10 +194,12 @@ async fn get_all_for_instance(
                     replay_page_num => replay_page_num,
                     replay_limit => replay_limit,
                     replay_contains => params.replay_contains,
+                    save_page_num => save_page_num,
+                    save_limit => save_limit,
+                    save_contains => params.save_contains,
                     creator_id => params.creator_id,
                     instance => full_instance,
                     user => user,
-
                 ))?)
                 .into_response()
             } else if accept
