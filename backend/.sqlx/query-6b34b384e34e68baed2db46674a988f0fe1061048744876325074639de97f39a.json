@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO instance_save (instance_id, save_id)\n                     SELECT * FROM UNNEST($1::uuid[], array_fill($2::uuid, array[$3]::integer[])::uuid[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6b34b384e34e68baed2db46674a988f0fe1061048744876325074639de97f39a"
+}

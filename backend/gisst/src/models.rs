@@ -146,6 +146,9 @@ pub struct Save {
     pub creator_id: Uuid,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub state_derived_from: Option<Uuid>,
+    pub save_derived_from: Option<Uuid>,
+    pub replay_derived_from: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -162,6 +165,7 @@ pub struct State {
     pub creator_id: Uuid,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
+    pub save_derived_from: Option<Uuid>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
@@ -200,6 +204,19 @@ pub struct CreatorReplayInfo {
     pub replay_id: Uuid,
     pub replay_name: String,
     pub replay_description: String,
+    pub file_id: Uuid,
+    pub instance_id: Uuid,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreatorSaveInfo {
+    pub work_id: Uuid,
+    pub work_name: String,
+    pub work_version: String,
+    pub work_platform: String,
+    pub save_id: Uuid,
+    pub save_short_desc: String,
+    pub save_description: String,
     pub file_id: Uuid,
     pub instance_id: Uuid,
 }
@@ -289,6 +306,53 @@ f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unacc
                    FROM work JOIN instance USING (work_id)
                    JOIN replay USING (instance_id)
                    WHERE replay.creator_id = $1
+                   OFFSET $2
+                   LIMIT $3"#,
+                id,
+                i64::from(offset),
+                i64::from(limit)
+            )
+            .fetch_all(conn)
+            .await
+        }
+    }
+
+    pub async fn get_all_save_info(
+        conn: &mut PgConnection,
+        id: Uuid,
+        contains: Option<String>,
+        offset: u32,
+        limit: u32,
+    ) -> sqlx::Result<Vec<CreatorSaveInfo>> {
+        if let Some(contains) = contains {
+            sqlx::query_as!(
+                CreatorSaveInfo,
+                r#"SELECT work_id, work_name, work_version, work_platform,
+                          save_id, save_short_desc, save_description,
+                          file_id, instance_id
+                   FROM work JOIN instance USING (work_id)
+                   JOIN save USING (instance_id)
+                   WHERE save.creator_id = $1 AND
+f_unaccent(work_name || save_short_desc || save_description) ILIKE ('%' || f_unaccent($2) || '%')
+                   ORDER BY save.created_on DESC
+                   OFFSET $3
+                   LIMIT $4"#,
+                id,
+                contains,
+                i64::from(offset),
+                i64::from(limit)
+            )
+            .fetch_all(conn)
+            .await
+        } else {
+            sqlx::query_as!(
+                CreatorSaveInfo,
+                r#"SELECT work_id, work_name, work_version, work_platform,
+                          save_id, save_short_desc, save_description,
+                          file_id, instance_id
+                   FROM work JOIN instance USING (work_id)
+                   JOIN save USING (instance_id)
+                   WHERE save.creator_id = $1
                    OFFSET $2
                    LIMIT $3"#,
                 id,
@@ -570,6 +634,84 @@ f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%
             }
         }
     }
+
+    pub async fn get_all_saves(
+        conn: &mut PgConnection,
+        instance_id: Uuid,
+        for_user: Option<Uuid>,
+        contains: Option<String>,
+        offset: u32,
+        limit: u32,
+    ) -> sqlx::Result<Vec<Save>> {
+        match (contains, for_user) {
+            (None, None) => {
+                sqlx::query_as!(
+                    Save,
+                    r#"SELECT save.* FROM instance_save JOIN save USING (save_id)
+                       WHERE instance_save.instance_id = $1
+                       ORDER BY created_on DESC
+                       OFFSET $2
+                       LIMIT $3"#,
+                    instance_id,
+                    i64::from(offset),
+                    i64::from(limit)
+                )
+                .fetch_all(conn)
+                .await
+            }
+            (None, Some(user)) => {
+                sqlx::query_as!(
+                    Save,
+                    r#"SELECT save.* FROM instance_save JOIN save USING (save_id)
+                       WHERE instance_save.instance_id = $1 AND save.creator_id = $2
+                       ORDER BY created_on DESC
+                       OFFSET $3
+                       LIMIT $4"#,
+                    instance_id,
+                    user,
+                    i64::from(offset),
+                    i64::from(limit)
+                )
+                .fetch_all(conn)
+                .await
+            }
+            (Some(contains), None) => {
+                sqlx::query_as!(
+                    Save,
+                    r#"SELECT save.* FROM instance_save JOIN save USING (save_id)
+                       WHERE instance_save.instance_id = $1 AND
+f_unaccent(save_short_desc || save_description) ILIKE ('%' || f_unaccent($2) || '%')
+                       ORDER BY created_on DESC
+                       OFFSET $3
+                       LIMIT $4"#,
+                    instance_id,
+                    contains,
+                    i64::from(offset),
+                    i64::from(limit)
+                )
+                .fetch_all(conn)
+                .await
+            }
+            (Some(contains), Some(user)) => {
+                sqlx::query_as!(
+                    Save,
+                    r#"SELECT save.* FROM instance_save JOIN save USING (save_id)
+                       WHERE instance_save.instance_id = $1 AND creator_id = $2 AND
+f_unaccent(save_short_desc || save_description) ILIKE ('%' || f_unaccent($3) || '%')
+                       ORDER BY created_on DESC
+                       OFFSET $4
+                       LIMIT $5"#,
+                    instance_id,
+                    user,
+                    contains,
+                    i64::from(offset),
+                    i64::from(limit)
+                )
+                .fetch_all(conn)
+                .await
+            }
+        }
+    }
 }
 
 impl Environment {
@@ -738,11 +880,11 @@ impl Save {
             .fetch_optional(conn)
             .await
     }
-
     pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
+        let result =         // First, insert the new save
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"#,
+            r#"INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *"#,
             model.save_id,
             model.instance_id,
             model.save_short_desc,
@@ -750,18 +892,69 @@ impl Save {
             model.file_id,
             model.creator_id,
             model.created_on,
+            model.state_derived_from,
+            model.save_derived_from,
+            model.replay_derived_from
         )
-        .fetch_one(conn)
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Save,
             action: Action::Insert,
             source: e,
-        })
+        })?;
+        /* ensure instance_save is updated! if this is derived from
+         * another save, copy over all the records, and also make sure
+         * this instance is linked to this save */
+        if let Some(save_parent_id) = model.save_derived_from {
+            let parent_instances: Vec<Uuid> = sqlx::query_scalar!(
+                r#"SELECT instance_id FROM save WHERE save_id=$1"#,
+                save_parent_id
+            )
+            .fetch_all(conn.as_mut())
+            .await
+            .map_err(|e| RecordSQL {
+                table: Table::Save,
+                action: Action::Insert,
+                source: e,
+            })?;
+            let save_count = i32::try_from(parent_instances.len()).unwrap_or_else(|_e| {
+                tracing::error!(
+                    "Single sram has {} instances, which is more than 2^16; instances won't be copied over", parent_instances.len()
+                );
+                0
+            });
+            if save_count > 0 {
+                sqlx::query!(
+                    r#"INSERT INTO instance_save (instance_id, save_id)
+                     SELECT * FROM UNNEST($1::uuid[], array_fill($2::uuid, array[$3]::integer[])::uuid[])"#,
+                    &parent_instances,
+                    model.save_id,
+                    save_count
+                )
+                    .execute(conn.as_mut())
+                    .await
+                    .map_err(|e| RecordSQL {
+                        table: Table::Save,
+                        action: Action::Insert,
+                        source: e,
+                    })?;
+            }
+        }
+        sqlx::query!(
+            r#"INSERT INTO instance_save (instance_id, save_id) VALUES ($1, $2)"#,
+            model.instance_id,
+            model.save_id
+        )
+        .execute(conn)
+        .await
+        .map_err(|e| RecordSQL {
+            table: Table::Save,
+            action: Action::Insert,
+            source: e,
+        })?;
+        Ok(result)
     }
-}
-
-impl Save {
     pub async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -788,7 +981,7 @@ impl State {
     pub async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, RecordSQL> {
         sqlx::query_as!(
             State,
-            r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                RETURNING *"#,
             state.state_id,
             state.instance_id,
@@ -802,6 +995,7 @@ impl State {
             state.state_replay_index,
             state.state_derived_from,
             state.created_on,
+            state.save_derived_from,
         )
         .fetch_one(conn)
         .await
@@ -1079,6 +1273,7 @@ pub struct StateLink {
     pub creator_id: Option<Uuid>,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
+    pub save_derived_from: Option<Uuid>,
     pub created_on: Option<chrono::DateTime<chrono::Utc>>,
     pub file_id: Uuid,
     pub file_hash: String,
@@ -1100,6 +1295,63 @@ impl StateLink {
         )
         .fetch_optional(conn)
         .await
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SaveLink {
+    pub save_id: Uuid,
+    pub instance_id: Uuid,
+    pub save_short_desc: String,
+    pub save_description: String,
+    pub creator_id: Uuid,
+    pub save_derived_from: Option<Uuid>,
+    pub state_derived_from: Option<Uuid>,
+    pub replay_derived_from: Option<Uuid>,
+    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
+    pub file_id: Uuid,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+
+impl SaveLink {
+    pub async fn get_by_id(
+        conn: &mut sqlx::PgConnection,
+        save_id: Uuid,
+    ) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT save.*,
+                      file.file_hash, file.file_filename,
+                      file.file_source_path, file.file_dest_path
+               FROM save
+               JOIN file USING(file_id)
+               WHERE save_id = $1"#,
+            save_id,
+        )
+        .fetch_optional(conn)
+        .await
+    }
+    pub async fn get_by_ids(
+        conn: &mut sqlx::PgConnection,
+        save_ids: &[Uuid],
+    ) -> sqlx::Result<Vec<Self>> {
+        let mut results = sqlx::query_as!(
+            Self,
+            r#"SELECT save.*,
+                      file.file_hash, file.file_filename,
+                      file.file_source_path, file.file_dest_path
+               FROM save
+               JOIN file USING(file_id)
+               WHERE save_id = ANY($1)"#,
+            save_ids,
+        )
+        .fetch_all(conn)
+        .await?;
+        results.sort_by_key(|save| save_ids.iter().position(|sid| *sid == save.save_id));
+        Ok(results)
     }
 }
 

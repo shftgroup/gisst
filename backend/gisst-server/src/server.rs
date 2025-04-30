@@ -1,13 +1,12 @@
 use crate::error::ServerError;
-use gisst::models::{Environment, Instance, ObjectLink, ReplayLink, Save, StateLink, Work};
-use std::collections::HashMap;
 use tower::ServiceBuilder;
 
 use crate::{
-    auth, db,
+    auth::{self, AuthBackend},
+    db,
     routes::{
-        creator_router, instance_router, object_router, replay_router, save_router, state_router,
-        work_router,
+        creator_router, instance_router, object_router, players, replay_router, save_router,
+        screenshot_router, state_router, work_router,
     },
     serverconfig::ServerConfig,
     tus,
@@ -16,29 +15,22 @@ use anyhow::Result;
 use axum::{
     Extension, Router,
     error_handling::HandleErrorLayer,
-    extract::{DefaultBodyLimit, Path, Query},
-    http::HeaderMap,
+    extract::DefaultBodyLimit,
     response::{Html, IntoResponse},
     routing::method_routing::{get, patch, post},
 };
 
-use crate::auth::{AuthBackend, User};
-use crate::routes::screenshot_router;
-use crate::utils::parse_header;
-use axum::extract::OriginalUri;
 use axum_login::tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
-use chrono::{DateTime, Local};
-use gisst::error::Table;
 use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::context;
 use secrecy::ExposeSecret;
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use tracing::{debug, info};
+use tracing::info;
 use uuid::Uuid;
 
 pub static BASE_URL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
@@ -142,7 +134,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         // This map_err is needed to get the types to work out after handleerror and before servedir.
         .map_err(|e| unreachable!("somehow a handled error wasn't actually handled {e:?}"));
     let app = Router::new()
-        .route("/play/{instance_id}", get(get_player))
+        .route("/play/{instance_id}", get(players::get_player))
         .route("/resources/{id}", patch(tus::patch).head(tus::head))
         .route("/resources", post(tus::creation))
         .nest("/objects", object_router())
@@ -159,7 +151,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             // because BASE_URL was initialized earlier in this function.
             axum_login::login_required!(AuthBackend, login_url=&{format!("{}/login", BASE_URL.get().unwrap())})
         )
-        .route("/data/{instance_id}", get(get_data))
+        .route("/data/{instance_id}", get(players::get_data))
         .route("/login", get(auth::login_handler))
         .route("/auth/google/callback", get(auth::oauth_callback_handler))
         .nest_service(
@@ -248,81 +240,6 @@ async fn handle_error(error: axum::BoxError) -> impl axum::response::IntoRespons
     )
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-pub struct LoggedInUserInfo {
-    email: Option<String>,
-    name: Option<String>,
-    given_name: Option<String>,
-    family_name: Option<String>,
-    username: Option<String>,
-    creator_id: Uuid,
-}
-
-impl LoggedInUserInfo {
-    pub fn generate_from_user(user: &User) -> LoggedInUserInfo {
-        LoggedInUserInfo {
-            email: user.email.clone(),
-            name: user.name.clone(),
-            given_name: user.given_name.clone(),
-            family_name: user.family_name.clone(),
-            username: user.preferred_username.clone(),
-            creator_id: user.creator_id,
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct PlayerTemplateInfo {
-    gisst_root: String,
-    instance: Instance,
-    work: Work,
-    environment: Environment,
-    user: LoggedInUserInfo,
-    save: Option<Save>,
-    start: PlayerStartTemplateInfo,
-    manifest: Vec<ObjectLink>,
-    boot_into_record: bool,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct EmbedDataInfo {
-    gisst_root: String,
-    instance: Instance,
-    work: Work,
-    environment: Environment,
-    save: Option<Save>,
-    start: PlayerStartTemplateInfo,
-    manifest: Vec<ObjectLink>,
-    host_url: String,
-    host_protocol: String,
-    citation_data: Option<CitationDataInfo>,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct CitationDataInfo {
-    website_title: String,
-    url: String,
-    gs_page_view_date: String,
-    mla_page_view_date: String,
-    bibtex_page_view_date: String,
-    site_published_year: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(tag = "type", content = "data", rename_all = "lowercase")]
-enum PlayerStartTemplateInfo {
-    Cold,
-    State(StateLink),
-    Replay(ReplayLink),
-}
-
-#[derive(Deserialize, Debug)]
-struct PlayerParams {
-    state: Option<Uuid>,
-    replay: Option<Uuid>,
-    boot_into_record: Option<bool>,
-}
-
 async fn get_about(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, ServerError> {
@@ -349,223 +266,6 @@ async fn get_homepage(
     .into_response())
 }
 
-#[allow(clippy::too_many_lines)]
-#[tracing::instrument(skip(app_state))]
-async fn get_data(
-    app_state: Extension<ServerState>,
-    headers: HeaderMap,
-    Path(id): Path<Uuid>,
-    OriginalUri(uri): OriginalUri,
-    Query(params): Query<PlayerParams>,
-) -> Result<axum::response::Response, ServerError> {
-    let mut conn = app_state.pool.acquire().await?;
-    let instance = Instance::get_by_id(&mut conn, id)
-        .await?
-        .ok_or(ServerError::RecordMissing {
-            table: Table::Instance,
-            uuid: id,
-        })?;
-    let environment = Environment::get_by_id(&mut conn, instance.environment_id)
-        .await?
-        .ok_or(ServerError::RecordMissing {
-            table: Table::Environment,
-            uuid: instance.environment_id,
-        })?;
-    let work =
-        Work::get_by_id(&mut conn, instance.work_id)
-            .await?
-            .ok_or(ServerError::RecordMissing {
-                table: Table::Work,
-                uuid: instance.work_id,
-            })?;
-    let start = match (params.state, params.replay) {
-        (Some(id), None) => {
-            PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
-                ServerError::RecordLinking {
-                    table: Table::State,
-                    uuid: id,
-                },
-            )?)
-        }
-        (None, Some(id)) => {
-            PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
-                ServerError::RecordLinking {
-                    table: Table::Replay,
-                    uuid: id,
-                },
-            )?)
-        }
-        (None, None) => PlayerStartTemplateInfo::Cold,
-        (_, _) => return Err(ServerError::Unreachable),
-    };
-    let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
-    debug!("{manifest:?}");
-
-    // This unwrap is safe since BASE_URL is initialized at launch
-    let url_string = BASE_URL.get().unwrap();
-
-    let url_parts: Vec<&str> = url_string.split("//").collect();
-    let current_date: DateTime<Local> = Local::now();
-
-    let citation_website_title: String = match &start {
-        PlayerStartTemplateInfo::State(s) => {
-            format!("GISST Citation of {} in {}", s.state_name, work.work_name)
-        }
-        PlayerStartTemplateInfo::Replay(r) => {
-            format!("GISST Citation of {} in {}", r.replay_name, work.work_name)
-        }
-        PlayerStartTemplateInfo::Cold => String::new(),
-    };
-
-    let citation_data: CitationDataInfo = CitationDataInfo {
-        website_title: citation_website_title,
-        url: uri.to_string(),
-        gs_page_view_date: current_date.format("%Y, %B %d").to_string(),
-        mla_page_view_date: current_date.format("%d %b. %Y").to_string(),
-        bibtex_page_view_date: current_date.format("%Y-%m-%d").to_string(),
-        site_published_year: current_date.format("%Y").to_string(),
-    };
-
-    let embed_data = EmbedDataInfo {
-        gisst_root: BASE_URL.get().unwrap().clone(),
-        environment,
-        instance,
-        work,
-        save: None,
-        start,
-        manifest,
-        host_url: url_parts[1].to_string(),
-        host_protocol: url_parts[0].to_string(),
-        citation_data: Some(citation_data),
-    };
-
-    let accept: Option<String> = parse_header(&headers, "Accept");
-    Ok((if accept.is_none()
-        || accept.as_ref().is_some_and(|hv| hv.contains("text/html"))
-        || accept.as_ref().is_some_and(|hv| hv.contains("*/*"))
-    {
-        let citation_page = app_state
-            .templates
-            .get_template("single_citation_page.html")?;
-        (
-            [
-                ("Access-Control-Allow-Origin", "*"),
-                ("Cross-Origin-Opener-Policy", "same-origin"),
-                ("Cross-Origin-Resource-Policy", "same-origin"),
-                ("Cross-Origin-Embedder-Policy", "require-corp"),
-            ],
-            Html(citation_page.render(context! {
-                base_url => BASE_URL.get(),
-                embed_data => embed_data,
-            })?),
-        )
-            .into_response()
-    } else if accept
-        .as_ref()
-        .is_some_and(|hv| hv.contains("application/json"))
-    {
-        (
-            [
-                ("Access-Control-Allow-Origin", "*"),
-                ("Cross-Origin-Opener-Policy", "cross-origin"),
-                ("Cross-Origin-Resource-Policy", "cross-origin"),
-                ("Cross-Origin-Embedder-Policy", "require-corp"),
-            ],
-            axum::Json(embed_data),
-        )
-            .into_response()
-    } else {
-        tracing::error!("unrecognized accept header {accept:?}");
-        Err(ServerError::MimeType)?
-    })
-    .into_response())
-}
-
-#[tracing::instrument(skip(app_state, auth), fields(userid))]
-async fn get_player(
-    app_state: Extension<ServerState>,
-    headers: HeaderMap,
-    Path(id): Path<Uuid>,
-    Query(params): Query<PlayerParams>,
-    auth: axum_login::AuthSession<crate::auth::AuthBackend>,
-) -> Result<axum::response::Response, ServerError> {
-    tracing::Span::current().record(
-        "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
-    );
-    let mut conn = app_state.pool.acquire().await?;
-    let instance = Instance::get_by_id(&mut conn, id)
-        .await?
-        .ok_or(ServerError::RecordMissing {
-            table: Table::Instance,
-            uuid: id,
-        })?;
-    let environment = Environment::get_by_id(&mut conn, instance.environment_id)
-        .await?
-        .ok_or(ServerError::RecordMissing {
-            table: Table::Environment,
-            uuid: instance.environment_id,
-        })?;
-    let work =
-        Work::get_by_id(&mut conn, instance.work_id)
-            .await?
-            .ok_or(ServerError::RecordMissing {
-                table: Table::Work,
-                uuid: instance.work_id,
-            })?;
-    let user = LoggedInUserInfo::generate_from_user(&auth.user.unwrap());
-    tracing::debug!("{:?}, {:?}", params.state, params.replay);
-    let start = match (params.state, params.replay) {
-        (Some(id), None) => {
-            PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
-                ServerError::RecordLinking {
-                    table: Table::State,
-                    uuid: id,
-                },
-            )?)
-        }
-        (None, Some(id)) => {
-            PlayerStartTemplateInfo::Replay(ReplayLink::get_by_id(&mut conn, id).await?.ok_or(
-                ServerError::RecordLinking {
-                    table: Table::Replay,
-                    uuid: id,
-                },
-            )?)
-        }
-        (None, None) => PlayerStartTemplateInfo::Cold,
-        (_, _) => return Err(ServerError::Unreachable),
-    };
-    let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
-    tracing::debug!("manifest: {manifest:?}");
-    Ok((
-        [
-            ("Access-Control-Allow-Origin", "*"),
-            ("Cross-Origin-Opener-Policy", "same-origin"),
-            ("Cross-Origin-Resource-Policy", "same-origin"),
-            ("Cross-Origin-Embedder-Policy", "require-corp"),
-        ],
-        Html(
-            app_state
-                .templates
-                .get_template("player.html")?
-                .render(context!(
-                    base_url => BASE_URL.get(),
-                    player_params => PlayerTemplateInfo {
-                        gisst_root: BASE_URL.get().unwrap().clone(),
-                        environment,
-                        instance,
-                        work,
-                        save: None,
-                        user,
-                        start,
-                        manifest,
-                        boot_into_record: params.boot_into_record.unwrap_or_default(),
-                    }
-                ))?,
-        ),
-    )
-        .into_response())
-}
 async fn set_embeddable_headers<B>(
     mut response: axum::response::Response<B>,
 ) -> axum::response::Response<B> {

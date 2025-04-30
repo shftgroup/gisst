@@ -37,6 +37,9 @@ jobs:
     - name: build
       run: npm run build --workspaces --if-present
       working-directory: frontend
+    - name: test
+      run: npm run test --workspaces --if-present
+      working-directory: frontend
     - name: dist
       run: npm run dist --workspaces --if-present
       working-directory: frontend

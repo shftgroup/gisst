@@ -16,6 +16,8 @@ pub enum GISSTCliError {
     CreateWork(String),
     #[error("create state error")]
     CreateState(String),
+    #[error("create save error")]
+    CreateSave(String),
     #[error("create replay error")]
     CreateReplay(String),
     #[error("create screenshot error")]
@@ -209,7 +211,38 @@ pub struct CreateWork {
 }
 
 #[derive(Debug, Args)]
-pub struct CreateSave {}
+pub struct CreateSave {
+    /// Link to a specific instance based on UUID
+    #[arg(short, long)]
+    pub link: Uuid,
+
+    /// Folder depth to use for input file to path based off of characters in assigned UUID
+    #[arg(short, long, default_value_t = 4)]
+    pub depth: u8,
+
+    /// (DEBUG) Force the use of specific save UUID
+    #[arg(long = "force-uuid")]
+    pub force_uuid: Option<Uuid>,
+
+    /// Paths of file to create in the database, must be a regular file
+    #[arg(long)]
+    pub file: String,
+
+    #[arg(long = "name")]
+    pub save_short_desc: String,
+    #[arg(long = "description")]
+    pub save_description: Option<String>,
+    #[arg(long = "from-state")]
+    pub state_derived_from: Option<Uuid>,
+    #[arg(long = "from-save")]
+    pub save_derived_from: Option<Uuid>,
+    #[arg(long = "from-replay")]
+    pub replay_derived_from: Option<Uuid>,
+    #[arg(long = "creator-id")]
+    pub creator_id: Uuid,
+    #[arg(long = "created-on")]
+    pub created_on: Option<String>,
+}
 
 #[derive(Debug, Args)]
 pub struct CreateState {
