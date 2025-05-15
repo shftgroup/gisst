@@ -416,7 +416,7 @@ async fn create_environment(
         (None, Some(json_str)) => {
             Some(serde_json::from_str(json_str).map_err(GISSTCliError::JsonParse)?)
         }
-        (_, _) => None,
+        (_, _) => environment.environment_config.clone(),
     };
     let mut conn = db.acquire().await?;
     Environment::insert(
