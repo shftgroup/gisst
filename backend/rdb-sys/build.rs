@@ -12,6 +12,7 @@ fn main() {
         format!("{LC_DIR}/string/stdstring.c"),
         format!("{LC_DIR}/streams/file_stream.c"),
         format!("{LC_DIR}/compat/compat_strcasestr.c"),
+        format!("{LC_DIR}/compat/compat_posix_string.c"),
         format!("{LC_DIR}/time/rtime.c"),
         format!("{LC_DIR}/file/file_path.c"),
         format!("{LC_DIR}/file/file_path_io.c"),
@@ -26,8 +27,6 @@ fn main() {
         .files(files)
         .static_flag(true)
         .warnings(false)
-        .flag("-g")
         .define("NDEBUG", None)
-        .flag("-O0")
         .compile("retro-db");
 }

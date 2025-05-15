@@ -1,0 +1,8 @@
+{
+    "version": "1.0",
+    "name": "Cool ROM hack",
+    "description": "Changes the donuts into churros",
+    "files": [
+      "thisfile_doesntexist.nes"
+    ]
+  }
