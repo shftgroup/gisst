@@ -11,7 +11,7 @@ use args::{
 use clap::Parser;
 use gisst::{
     models::{
-        Creator, Environment, Instance, Object, ObjectRole, Replay, Screenshot, State, Work,
+        Creator, Environment, Instance, Object, ObjectRole, Replay, Save, Screenshot, State, Work,
         insert_file_object,
     },
     storage::StorageHandler,
@@ -75,7 +75,7 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Create(create) => create_state(create, db, storage_root).await?,
         },
         Commands::Save(save) => match save.command {
-            BaseSubcommand::Create(create) => create_save(create, db).await?,
+            BaseSubcommand::Create(create) => create_save(create, db, storage_root).await?,
         },
         Commands::Replay(replay) => match replay.command {
             BaseSubcommand::Create(create) => create_replay(create, db, storage_root).await?,
@@ -416,7 +416,7 @@ async fn create_environment(
         (None, Some(json_str)) => {
             Some(serde_json::from_str(json_str).map_err(GISSTCliError::JsonParse)?)
         }
-        (_, _) => None,
+        (_, _) => environment.environment_config.clone(),
     };
     let mut conn = db.acquire().await?;
     Environment::insert(
@@ -686,14 +686,90 @@ async fn create_state(
         creator_id,
         state_replay_index,
         state_derived_from,
+        save_derived_from: None,
     };
     State::insert(&mut conn, state).await?;
     Ok(())
 }
 
-async fn create_save(_c: CreateSave, db: PgPool) -> Result<(), GISSTCliError> {
-    let _ = db.acquire().await?;
-    todo!();
+async fn create_save(
+    CreateSave {
+        link,
+        depth,
+        force_uuid,
+        file,
+        save_short_desc,
+        save_description,
+        state_derived_from,
+        save_derived_from,
+        replay_derived_from,
+        creator_id,
+        created_on,
+    }: CreateSave,
+    db: PgPool,
+    storage_path: String,
+) -> Result<(), GISSTCliError> {
+    let file = Path::new(&file);
+    if !file.exists() || !file.is_file() {
+        return Err(GISSTCliError::CreateSave(format!(
+            "File not found: {}",
+            file.to_string_lossy()
+        )));
+    }
+    let created_on = created_on
+        .and_then(|s| {
+            chrono::DateTime::parse_from_rfc3339(&s)
+                .map_err(|e| GISSTCliError::CreateReplay(e.to_string()))
+                .ok()
+        })
+        .map_or(chrono::Utc::now(), chrono::DateTime::<chrono::Utc>::from);
+
+    let mut conn = db.acquire().await?;
+    let mut source_path = PathBuf::from(file);
+    source_path.pop();
+    let hash = StorageHandler::get_file_hash(file)?;
+
+    let uuid = Uuid::new_v4();
+
+    let filename = file.file_name().unwrap().to_string_lossy().to_string();
+
+    let file_info =
+        StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, file)
+            .await?;
+    info!(
+        "Wrote file {} to {}",
+        file_info.dest_filename, file_info.dest_path
+    );
+
+    let mut source_path = PathBuf::from(file);
+    source_path.pop();
+
+    let file_record = gisst::models::File {
+        file_id: uuid,
+        file_hash: hash,
+        file_filename: filename,
+        file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
+        file_dest_path: file_info.dest_path,
+        file_size: file_info.file_size,
+        file_compressed_size: file_info.file_compressed_size,
+        created_on,
+    };
+    gisst::models::File::insert(&mut conn, file_record).await?;
+
+    let save = Save {
+        save_id: force_uuid.unwrap_or_else(Uuid::new_v4),
+        instance_id: link,
+        file_id: uuid,
+        save_short_desc: save_short_desc.clone(),
+        save_description: save_description.unwrap_or_else(|| save_short_desc.clone()),
+        created_on,
+        creator_id,
+        state_derived_from,
+        save_derived_from,
+        replay_derived_from,
+    };
+    Save::insert(&mut conn, save).await?;
+    Ok(())
 }
 
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {

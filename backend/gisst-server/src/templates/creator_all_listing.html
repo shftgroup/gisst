@@ -63,7 +63,7 @@
         </table>
     </div>
     <div class="row">
-        <h2>Performances</h2>
+      <h2>Performances</h2>
       <form method="get" action="">
         <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="replay_contains" {% if replay_contains %}value="{{replay_contains}}"{% endif %}/>
         <input type="submit" value="Search"/>
@@ -101,5 +101,48 @@
             {% endfor %}
         </table>
     </div>
+  <div class="row">
+    <h2>Saves</h2>
+    <form method="get" action="">
+      <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="save_contains" {% if save_contains %}value="{{save_contains}}"{% endif %}/>
+      <input type="submit" value="Search"/>
+    </form>
+    {% if save_page_num > 0 %}
+    <a class="results-prev" href="?save_page_num={{save_page_num-1}}{% if save_contains %}&save_contains={{save_contains|urlencode}}{% endif %}&save_limit={{save_limit}}">Prev</a>
+    {% endif %}
+      {% if save_has_more %}
+    <a class="results-prev" href="?save_page_num={{save_page_num+1}}{% if save_contains %}&save_contains={{save_contains|urlencode}}{% endif %}&save_limit={{save_limit}}">Next</a>
+    {% endif %}
+    <table class="table">
+      <tr>
+        <th scope="col">Work</th>
+        <th scope="col">Version</th>
+        <th scope="col">Platform</th>
+        <th scope="col">Name</th>
+        <th scope="col">Description</th>
+        <th scope="col">ID</th>
+      </tr>
+      {% for save in creator.saves %}
+      <tr>
+        <td>{{ save.work_name }}</td>
+        <td>{{ save.work_version }}</td>
+        <td>{{ save.work_platform }}</td>
+        <td>{{ save.save_short_desc }}</td>
+        <td>{{ save.save_description }}</td>
+        <td>{{ save.save_id }}</td>
+        <td>
+          <a class="btn btn-primary" href="{{ base_url }}/play/{{ save.instance_id }}?save={{ save.save_id }}" target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
+              <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
+            </svg>
+            Boot
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
 </div>
 {% endblock content %}

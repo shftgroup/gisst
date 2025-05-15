@@ -1,7 +1,7 @@
-import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls, EmbedOptions, ControllerOverlayMode} from './types.d';
+import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls, EmbedOptions, ControllerOverlayMode, SaveFileLink} from './types.d';
 import {loadRetroArch,LibretroModule} from './libretro_adapter';
 
-export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement, embed_options:EmbedOptions):Promise<EmuControls> {
+export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, saves:SaveFileLink[], manifest:ObjectLink[], container:HTMLDivElement, embed_options:EmbedOptions):Promise<EmuControls> {
   const state_dir = "/mem/states";
   const saves_dir = "/mem/saves";
   const retro_args = ["-v"];
@@ -26,6 +26,10 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     retro_args.push(state_dir+"/"+content_base+".replay1");
     const data = (start as ReplayStart).data;
     replay = new Uint8Array(await ((await fetch(gisst_root+"/storage/"+data.file_dest_path)).arrayBuffer()));
+  }
+  const save_data:[SaveFileLink,Uint8Array][] = [];
+  for (const save of saves) {
+    save_data.push([save, new Uint8Array(await ((await fetch(gisst_root+"/storage/"+save.file_dest_path)).arrayBuffer()))]);
   }
   retro_args.push("--config=/mem/retroarch.cfg");
   const has_config = manifest.find((o) => o.object_role=="config")!;
@@ -82,6 +86,14 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         if (movie) {
           module.FS.createPath("/", state_dir, true, true);
           module.FS.createDataFile(state_dir, content_base + ".replay1", replay, true, true, true);
+        }
+        for (const [data, savefile] of save_data) {
+          console.log(data, "/storage/"+data.file_dest_path,saves_dir + "/" + data.save_id + ".srm");
+          module.FS.createPath("/", saves_dir, true, true);
+          module.FS.createDataFile(saves_dir, data.save_id + ".srm", savefile, true, true, false);
+        }
+        if (save_data.length > 0) {
+          module.FS.createDataFile(saves_dir, content_base + ".srm", save_data[0][1], true, true, false);
         }
         if (use_gamepad_overlay) {
           // gameboy, gba, nes, snes, retropad

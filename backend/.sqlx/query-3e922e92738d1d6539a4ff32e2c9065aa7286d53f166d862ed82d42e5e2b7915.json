@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)\n               RETURNING *",
+  "query": "INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)\n               RETURNING *",
   "describe": {
     "columns": [
       {
@@ -62,6 +62,11 @@
         "ordinal": 11,
         "name": "created_on",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "save_derived_from",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -77,7 +82,8 @@
         "Uuid",
         "Int4",
         "Uuid",
-        "Timestamptz"
+        "Timestamptz",
+        "Uuid"
       ]
     },
     "nullable": [
@@ -92,8 +98,9 @@
       false,
       true,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "2dfaa93b3f81495e50fa3dc00af4b058134be025e40b56401e7ce1f811eca6c1"
+  "hash": "3e922e92738d1d6539a4ff32e2c9065aa7286d53f166d862ed82d42e5e2b7915"
 }

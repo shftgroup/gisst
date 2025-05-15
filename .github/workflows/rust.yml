@@ -41,20 +41,22 @@ jobs:
     - name: Check DB contents
       working-directory: backend
       run: |
-        sudo -u postgres psql gisstdb -c "select count(*) from instance;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "54"
-        sudo -u postgres psql gisstdb -c "select count(*) from work;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "42"
-        sudo -u postgres psql gisstdb -c "select count(*) from instancework;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "54"
+        sudo -u postgres psql gisstdb -c "select count(*) from instance;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "56"
+        sudo -u postgres psql gisstdb -c "select count(*) from work;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "44"
+        sudo -u postgres psql gisstdb -c "select count(*) from instancework;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "56"
         sudo -u postgres psql gisstdb -c "select count(*) from state;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from save;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "4"
+        sudo -u postgres psql gisstdb -c "select count(*) from instance_save;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "6"
         sudo -u postgres psql gisstdb -c "select count(*) from replay;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
         sudo -u postgres psql gisstdb -c "select count(*) from screenshot;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
         sudo -u postgres psql gisstdb -c "select count(*) from creator;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
         sudo -u postgres psql gisstdb -c "select count(*) from environment;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "8"
-        sudo -u postgres psql gisstdb -c "select count(*) from file;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "62"
-        sudo -u postgres psql gisstdb -c "select count(*) from object;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "60"
-        sudo -u postgres psql gisstdb -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "82"
+        sudo -u postgres psql gisstdb -c "select count(*) from file;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "70"
+        sudo -u postgres psql gisstdb -c "select count(*) from object;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "64"
+        sudo -u postgres psql gisstdb -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "94"
         echo "All DB table counts OK"
         find storage -type f -print0 | du -a --files0-from=- --total | sort -k 2 > du-out.txt
-        grep -x "57200\s*total" du-out.txt
+        grep -x "60496\s*total" du-out.txt
         echo "Total byte count OK"
-        wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "95"
+        wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "110"
         echo "Total file count OK"
