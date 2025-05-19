@@ -48,6 +48,8 @@ pub enum GISSTCliError {
     InvalidRoleIndex(std::num::TryFromIntError),
     #[error("file size int conversion")]
     FileSize(std::num::TryFromIntError),
+    #[error("search index error")]
+    SearchIndex(#[from] meilisearch_sdk::errors::Error)
 }
 
 #[derive(Debug, Parser)]
@@ -80,6 +82,12 @@ pub enum BaseSubcommand<C: clap::FromArgMatches + clap::Args> {
 pub enum Commands {
     /// Recalculate file sizes and compressed sizes
     RecalcSizes,
+
+    /// Dump all works, states, saves, etc into meilisearch
+    PopulateMeili {
+        url: String,
+        api_key: String
+    },
 
     /// Link records together
     Link {

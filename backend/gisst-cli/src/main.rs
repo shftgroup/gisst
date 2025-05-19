@@ -1,5 +1,6 @@
 mod args;
 mod cliconfig;
+mod meili;
 
 use crate::args::CreateScreenshot;
 use crate::cliconfig::CLIConfig;
@@ -48,6 +49,7 @@ async fn main() -> Result<(), GISSTCliError> {
     );
 
     match dbg!(args).command {
+        Commands::PopulateMeili {url, api_key} => meili::populate(db, &url, &api_key).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
         Commands::Link {
             record_type,

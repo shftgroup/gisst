@@ -1,3 +1,5 @@
+*~
+*.swp
 retroarch-web/
 simple/content/
 .idea/
@@ -30,3 +32,11 @@ backend/examples/data/v86/local
 backend/examples/records/v86/local
 backend/examples/log.txt
 backend/examples/data/v86/win31.img
+backend/meili/meilisearch
+backend/meili/db
+backend/meili/master.key
+dbpasswd
+nohup.out
+tmp
+/assets
+/assets_minimal.zip
