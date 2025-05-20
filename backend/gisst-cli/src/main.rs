@@ -1,6 +1,5 @@
 mod args;
 mod cliconfig;
-mod meili;
 
 use crate::args::CreateScreenshot;
 use crate::cliconfig::CLIConfig;
@@ -47,9 +46,10 @@ async fn main() -> Result<(), GISSTCliError> {
         "Storage root is set to: {}",
         cli_config.storage.root_folder_path
     );
+    let indexer = gisst::search::MeiliIndexer::new(&args.meili_url, &args.meili_api_key)?;
 
     match dbg!(args).command {
-        Commands::PopulateMeili {url, api_key} => meili::populate(db, &url, &api_key).await?,
+        Commands::Reindex => reindex(db, &indexer).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
         Commands::Link {
             record_type,
@@ -62,7 +62,7 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
         },
         Commands::Creator(creator) => match creator.command {
-            BaseSubcommand::Create(create) => create_creator(create, db).await?,
+            BaseSubcommand::Create(create) => create_creator(create, db, &indexer).await?,
         },
         Commands::Environment(environment) => match environment.command {
             BaseSubcommand::Create(create) => create_environment(create, db).await?,
@@ -100,6 +100,16 @@ async fn main() -> Result<(), GISSTCliError> {
             add_patched_instance(db, instance, data, storage_root, depth).await?;
         }
     }
+    Ok(())
+}
+
+async fn reindex(
+    db: PgPool,
+    indexer: &impl gisst::search::SearchIndexer,
+) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    let status = indexer.reindex(&mut conn).await;
+    log::info!("{:?}", status);
     Ok(())
 }
 
@@ -440,6 +450,7 @@ async fn create_creator(
         ..
     }: CreateCreator,
     db: PgPool,
+    indexer: &impl gisst::search::SearchIndexer,
 ) -> Result<(), GISSTCliError> {
     let creator_from_json: Option<Creator> = match (json_file, json_string) {
         (Some(file_path), None) => {
@@ -455,7 +466,7 @@ async fn create_creator(
     match creator_from_json {
         Some(creator) => {
             let mut conn = db.acquire().await?;
-            Creator::insert(&mut conn, creator).await?;
+            Creator::insert(&mut conn, creator, indexer).await?;
             Ok(())
         }
         None => Err(GISSTCliError::CreateCreator(

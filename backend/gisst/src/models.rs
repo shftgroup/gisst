@@ -1,17 +1,17 @@
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 
+use futures::TryFutureExt;
 use serde::{Deserialize, Deserializer, Serialize, de};
-
 use std::{fmt, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use sqlx::postgres::{PgConnection, PgQueryResult};
 
-use crate::model_enums::Framework;
+use crate::{model_enums::Framework, search::SearchIndexer};
 use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
 
-use crate::error::{Action, RecordSQL, Table};
+use crate::error::{self, Action, RecordSQL, Table};
 
 // empty_string_as_none taken from axum docs here: https://github.com/tokio-rs/axum/blob/main/examples/query-params-with-empty-strings/src/main.rs
 /// Serde deserialization decorator to map empty Strings to None,
@@ -193,6 +193,10 @@ pub struct CreatorStateInfo {
     pub screenshot_id: Uuid,
     pub file_id: Uuid,
     pub instance_id: Uuid,
+    pub created_on: DateTime<Utc>,
+    pub creator_id: Uuid,
+    pub creator_username: String,
+    pub creator_full_name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -206,6 +210,10 @@ pub struct CreatorReplayInfo {
     pub replay_description: String,
     pub file_id: Uuid,
     pub instance_id: Uuid,
+    pub created_on: DateTime<Utc>,
+    pub creator_id: Uuid,
+    pub creator_username: String,
+    pub creator_full_name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -219,6 +227,10 @@ pub struct CreatorSaveInfo {
     pub save_description: String,
     pub file_id: Uuid,
     pub instance_id: Uuid,
+    pub created_on: DateTime<Utc>,
+    pub creator_id: Uuid,
+    pub creator_username: String,
+    pub creator_full_name: String,
 }
 
 impl Creator {
@@ -235,8 +247,9 @@ impl Creator {
                 CreatorStateInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           state_id, state_name, state_description, screenshot_id,
-                          file_id, instance_id
-                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id)
+                          file_id, instance_id, state.created_on, creator.creator_id,
+                          creator.creator_username, creator.creator_full_name
+                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)
                    WHERE state.creator_id = $1 AND
 f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
                    ORDER BY state.created_on DESC
@@ -254,8 +267,9 @@ f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccen
                 CreatorStateInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           state_id, state_name, state_description, screenshot_id,
-                          file_id, instance_id
-                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id)
+                          file_id, instance_id, state.created_on, creator.creator_id,
+                          creator.creator_username, creator.creator_full_name
+                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)
                    WHERE state.creator_id = $1
                    ORDER BY state.created_on DESC
                    OFFSET $2
@@ -282,9 +296,11 @@ f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccen
                 CreatorReplayInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           replay_id, replay_name, replay_description,
-                          file_id, instance_id
+                          file_id, instance_id, replay.created_on,
+                          creator.creator_id, creator.creator_username, creator.creator_full_name
                    FROM work JOIN instance USING (work_id)
                    JOIN replay USING (instance_id)
+                   JOIN creator ON (creator.creator_id = replay.creator_id)
                    WHERE replay.creator_id = $1 AND
 f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
                    ORDER BY replay.created_on DESC
@@ -302,9 +318,11 @@ f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unacc
                 CreatorReplayInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           replay_id, replay_name, replay_description,
-                          file_id, instance_id
+                          file_id, instance_id, replay.created_on,
+                          creator.creator_id, creator.creator_username, creator.creator_full_name
                    FROM work JOIN instance USING (work_id)
                    JOIN replay USING (instance_id)
+                   JOIN creator ON (creator.creator_id = replay.creator_id)
                    WHERE replay.creator_id = $1
                    OFFSET $2
                    LIMIT $3"#,
@@ -329,9 +347,11 @@ f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unacc
                 CreatorSaveInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           save_id, save_short_desc, save_description,
-                          file_id, instance_id
+                          file_id, instance_id, save.created_on,
+                          creator.creator_id, creator.creator_username, creator.creator_full_name
                    FROM work JOIN instance USING (work_id)
                    JOIN save USING (instance_id)
+                   JOIN creator ON (creator.creator_id = save.creator_id)
                    WHERE save.creator_id = $1 AND
 f_unaccent(work_name || save_short_desc || save_description) ILIKE ('%' || f_unaccent($2) || '%')
                    ORDER BY save.created_on DESC
@@ -349,9 +369,11 @@ f_unaccent(work_name || save_short_desc || save_description) ILIKE ('%' || f_una
                 CreatorSaveInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           save_id, save_short_desc, save_description,
-                          file_id, instance_id
+                          file_id, instance_id, save.created_on,
+                          creator.creator_id, creator.creator_username, creator.creator_full_name
                    FROM work JOIN instance USING (work_id)
                    JOIN save USING (instance_id)
+                   JOIN creator ON (creator.creator_id = save.creator_id)
                    WHERE save.creator_id = $1
                    OFFSET $2
                    LIMIT $3"#,
@@ -362,6 +384,82 @@ f_unaccent(work_name || save_short_desc || save_description) ILIKE ('%' || f_una
             .fetch_all(conn)
             .await
         }
+    }
+}
+
+impl CreatorSaveInfo {
+    pub async fn get_for_save(conn: &mut PgConnection, save: &Save) -> sqlx::Result<Self> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      save_id, save_short_desc, save_description,
+                      file_id, instance_id, save.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN save USING (instance_id) JOIN creator ON (save.creator_id = creator.creator_id)
+               WHERE save.save_id = $1"#,
+            save.save_id
+        ).fetch_one(conn).await
+    }
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      save_id, save_short_desc, save_description,
+                      file_id, instance_id, save.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN save USING (instance_id) JOIN creator ON (save.creator_id = creator.creator_id)"#
+        ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
+    }
+}
+impl CreatorStateInfo {
+    pub async fn get_for_state(conn: &mut PgConnection, state: &State) -> sqlx::Result<Self> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      state_id, state_name, state_description, state.screenshot_id,
+                      file_id, instance_id, state.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)
+               WHERE state.state_id = $1"#,
+            state.state_id
+        ).fetch_one(conn).await
+    }
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      state_id, state_name, state_description, state.screenshot_id,
+                      file_id, instance_id, state.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)"#
+        ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
+    }
+}
+impl CreatorReplayInfo {
+    pub async fn get_for_replay(conn: &mut PgConnection, replay: &Replay) -> sqlx::Result<Self> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      replay_id, replay_name, replay_description,
+                      file_id, instance_id, replay.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN replay USING (instance_id) JOIN creator ON (replay.creator_id = creator.creator_id)
+               WHERE replay.replay_id = $1"#,
+            replay.replay_id
+        ).fetch_one(conn).await
+    }
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      replay_id, replay_name, replay_description,
+                      file_id, instance_id, replay.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN replay USING (instance_id) JOIN creator ON (replay.creator_id = creator.creator_id)"#
+        ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
     }
 }
 
@@ -376,9 +474,18 @@ impl Creator {
         .fetch_optional(conn)
         .await
     }
-
-    pub async fn insert(conn: &mut PgConnection, model: Creator) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(Self, r#"SELECT * FROM creator"#)
+            .fetch(conn)
+            .filter_map(|f| futures::future::ready(f.ok()))
+    }
+    pub async fn insert(
+        conn: &mut PgConnection,
+        model: Creator,
+        indexer: &impl SearchIndexer,
+    ) -> Result<Self, error::Insert> {
+        let record = sqlx::query_as!(
             Self,
             r#"INSERT INTO creator VALUES($1, $2, $3, $4) RETURNING *
             "#,
@@ -387,13 +494,15 @@ impl Creator {
             model.creator_full_name,
             model.created_on
         )
-        .fetch_one(conn)
-        .await
+        .fetch_one(conn.as_mut())
         .map_err(|e| RecordSQL {
             table: Table::Creator,
             action: Action::Insert,
             source: e,
         })
+        .await?;
+        indexer.upsert_creator(conn, &record).await?;
+        Ok(record)
     }
 }
 
@@ -1176,6 +1285,18 @@ macro_rules! instance_work_queries {
 }
 
 impl InstanceWork {
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id as "work_id!", work_name as "work_name!",
+                      work_version as "work_version!", work_platform as "work_platform!",
+                      instance_id as "instance_id!", row_num as "row_num!"
+               FROM instancework"#
+        )
+        .fetch(conn)
+        .filter_map(|f| futures::future::ready(f.ok()))
+    }
     pub async fn get_all(
         conn: &mut sqlx::PgConnection,
         containing: Option<String>,
@@ -1193,6 +1314,21 @@ impl InstanceWork {
             limit,
             conn
         )
+    }
+    pub async fn get_for_instance(
+        conn: &mut sqlx::PgConnection,
+        instance_id: Uuid,
+    ) -> sqlx::Result<Self> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id as "work_id!", work_name as "work_name!",
+               work_version as "work_version!", work_platform as "work_platform!",
+               instance_id as "instance_id!", row_num as "row_num!"
+               FROM instancework WHERE instance_id=$1"#,
+            instance_id
+        )
+        .fetch_one(conn)
+        .await
     }
 }
 

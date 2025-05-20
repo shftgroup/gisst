@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          replay_id, replay_name, replay_description,\n                          file_id, instance_id\n                   FROM work JOIN instance USING (work_id)\n                   JOIN replay USING (instance_id)\n                   WHERE replay.creator_id = $1 AND\nf_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')\n                   ORDER BY replay.created_on DESC\n                   OFFSET $3\n                   LIMIT $4",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                      replay_id, replay_name, replay_description,\n                      file_id, instance_id, replay.created_on, creator.creator_id,\n                      creator.creator_username, creator.creator_full_name\n               FROM work JOIN instance USING (work_id) JOIN replay USING (instance_id) JOIN creator ON (replay.creator_id = creator.creator_id)\n               WHERE replay.replay_id = $1",
   "describe": {
     "columns": [
       {
@@ -47,14 +47,31 @@
         "ordinal": 8,
         "name": "instance_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "creator_full_name",
+        "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text",
-        "Int8",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -66,8 +83,12 @@
       false,
       false,
       false,
+      false,
+      false,
+      false,
+      false,
       false
     ]
   },
-  "hash": "ac0f14c9717c07f8374e45ae27b26cb8539eb94f4a3af4fbefef6ff51593c9ae"
+  "hash": "6dc47b1c6b0d3f9573fb717ff21fc0b60d367457a7c89219657debc5320b5820"
 }

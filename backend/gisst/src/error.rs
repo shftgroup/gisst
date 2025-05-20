@@ -63,6 +63,13 @@ pub struct RecordSQL {
     pub action: Action,
     pub source: sqlx::Error,
 }
+#[derive(thiserror::Error, Debug)]
+pub enum Insert {
+    #[error("SQL error {0}")]
+    Sql(#[from] RecordSQL),
+    #[error("Indexing error {0}")]
+    Idx(#[from] SearchIndex),
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Storage {
@@ -166,4 +173,12 @@ pub enum InsertFile {
     Record(#[from] RecordSQL),
     #[error("storage error")]
     Storage(#[from] crate::error::Storage),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SearchIndex {
+    #[error("SQL error {0}")]
+    Sql(#[from] sqlx::Error),
+    #[error("Meilisearch error {0}")]
+    Meili(#[from] meilisearch_sdk::errors::Error),
 }

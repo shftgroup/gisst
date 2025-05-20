@@ -191,7 +191,6 @@ async fn main() -> Result<(), IngestError> {
             let storage_root = storage_root.clone();
             let pool = Arc::clone(&pool);
             handle.block_on(async move {
-
                 let mut tx = pool.begin().await?;
 
                 // acquire a connection pool -- start transaction here
@@ -217,8 +216,7 @@ async fn main() -> Result<(), IngestError> {
                                     &core_version,
                                 )
                                 .await?;
-                                link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id)
-                                    .await?;
+                                link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
                                 create_playlist_instance_objects(
                                     &mut tx,
                                     &storage_root,
@@ -255,7 +253,6 @@ async fn main() -> Result<(), IngestError> {
                         )
                         .await?;
                     }
-
                 } else {
                     // normal rom
                     match find_entry(&mut tx, &db, &path).await? {
@@ -278,7 +275,8 @@ async fn main() -> Result<(), IngestError> {
                                 &path,
                                 rval.map_get("description"),
                             )
-                            .await.expect("Create_single_file_instance_objects failed in RDB");
+                            .await
+                            .expect("Create_single_file_instance_objects failed in RDB");
                         }
                         FindResult::NotInRDB if force => {
                             let instance_id = create_metadata_records(
@@ -300,7 +298,8 @@ async fn main() -> Result<(), IngestError> {
                                 &path,
                                 Some(stem.to_string()),
                             )
-                            .await.expect("Create_single_file_instance_objects failed not in RDB");
+                            .await
+                            .expect("Create_single_file_instance_objects failed not in RDB");
                             // ?? unwraps Result<(), Ingest Error>
                         }
                         FindResult::AlreadyHave if force => {
@@ -323,11 +322,12 @@ async fn main() -> Result<(), IngestError> {
                                 &path,
                                 Some(stem.to_string()),
                             )
-                            .await.expect("Create_single_file_instance_objects failed not in RDB");
+                            .await
+                            .expect("Create_single_file_instance_objects failed not in RDB");
                             // ?? unwraps Result<(), Ingest Error>
                         }
                         // _ => Ok(()),
-                        _ => {},
+                        _ => {}
                     }
                 }
                 // commit transaction + ok

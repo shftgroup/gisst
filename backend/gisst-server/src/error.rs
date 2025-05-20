@@ -184,6 +184,8 @@ impl IntoResponse for ServerError {
 pub enum AuthError {
     #[error("database error")]
     Sql(#[from] sqlx::Error),
+    #[error("creator insert error")]
+    Insert(#[from] gisst::error::Insert),
     #[error("csrf error")]
     CsrfMissing,
     #[error("user not allowed to access resource")]

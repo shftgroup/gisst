@@ -93,7 +93,8 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .await
         .unwrap();
     let metrics_pool = user_pool.clone();
-
+    let indexer =
+        gisst::search::MeiliIndexer::new(&config.search.meili_url, &config.search.meili_api_key)?;
     let user_store = auth::AuthBackend::new(
         user_pool,
         auth::build_oauth_client(
@@ -102,6 +103,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             config.auth.google_client_secret.expose_secret(),
         ),
         user_whitelist_sorted,
+        indexer.clone(),
     );
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)

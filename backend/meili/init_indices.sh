@@ -5,14 +5,6 @@ curl \
   -H "Authorization: Bearer $MEILI_API_KEY" \
   -H 'Content-Type: application/json' \
   --data-binary '{
-    "uid": "work",
-    "primaryKey": "work_id"
-  }'
-curl \
-  -X POST 'localhost:7700/indexes' \
-  -H "Authorization: Bearer $MEILI_API_KEY" \
-  -H 'Content-Type: application/json' \
-  --data-binary '{
     "uid": "instance",
     "primaryKey": "instance_id"
   }'

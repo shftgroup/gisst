@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          replay_id, replay_name, replay_description,\n                          file_id, instance_id\n                   FROM work JOIN instance USING (work_id)\n                   JOIN replay USING (instance_id)\n                   WHERE replay.creator_id = $1\n                   OFFSET $2\n                   LIMIT $3",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          replay_id, replay_name, replay_description,\n                          file_id, instance_id, replay.created_on,\n                          creator.creator_id, creator.creator_username, creator.creator_full_name\n                   FROM work JOIN instance USING (work_id)\n                   JOIN replay USING (instance_id)\n                   JOIN creator ON (creator.creator_id = replay.creator_id)\n                   WHERE replay.creator_id = $1\n                   OFFSET $2\n                   LIMIT $3",
   "describe": {
     "columns": [
       {
@@ -47,6 +47,26 @@
         "ordinal": 8,
         "name": "instance_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "creator_full_name",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -65,8 +85,12 @@
       false,
       false,
       false,
+      false,
+      false,
+      false,
+      false,
       false
     ]
   },
-  "hash": "03f2545dc2543b32943b495d894fa891cdc5de22d2a09a896f2d39b5617ad81d"
+  "hash": "d99db3ca66f8311fe1f9a78fc970e0862786e209fc889b90fc65b6f07f81904d"
 }

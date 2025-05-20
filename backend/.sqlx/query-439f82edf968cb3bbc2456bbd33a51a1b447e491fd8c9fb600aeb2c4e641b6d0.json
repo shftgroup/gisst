@@ -1,0 +1,103 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          state_id, state_name, state_description, screenshot_id,\n                          file_id, instance_id, state.created_on, creator.creator_id,\n                          creator.creator_username, creator.creator_full_name\n                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)\n                   WHERE state.creator_id = $1 AND\nf_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')\n                   ORDER BY state.created_on DESC\n                   OFFSET $3\n                   LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "work_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "work_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "work_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "work_platform",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "state_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "state_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "state_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "screenshot_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "creator_full_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "439f82edf968cb3bbc2456bbd33a51a1b447e491fd8c9fb600aeb2c4e641b6d0"
+}

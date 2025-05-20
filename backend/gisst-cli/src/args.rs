@@ -28,6 +28,8 @@ pub enum GISSTCliError {
     Io(#[from] std::io::Error),
     #[error("database error")]
     Sql(#[from] sqlx::Error),
+    #[error("insertion error {0}")]
+    Insert(#[from] gisst::error::Insert),
     #[error("gisst new model error")]
     NewModel(#[from] gisst::error::RecordSQL),
     #[error("json parse error")]
@@ -49,7 +51,7 @@ pub enum GISSTCliError {
     #[error("file size int conversion")]
     FileSize(std::num::TryFromIntError),
     #[error("search index error")]
-    SearchIndex(#[from] meilisearch_sdk::errors::Error)
+    SearchIndex(#[from] gisst::error::SearchIndex),
 }
 
 #[derive(Debug, Parser)]
@@ -64,6 +66,12 @@ pub struct GISSTCli {
     /// `GISST_CONFIG_PATH` environment variable must be set
     #[clap(env)]
     pub gisst_config_path: String,
+    /// `MEILI_URL` environment variable must be set
+    #[clap(env)]
+    pub meili_url: String,
+    /// `MEILI_API_KEY` environment variable must be set
+    #[clap(env)]
+    pub meili_api_key: String,
 }
 
 #[derive(Debug, Args)]
@@ -83,11 +91,8 @@ pub enum Commands {
     /// Recalculate file sizes and compressed sizes
     RecalcSizes,
 
-    /// Dump all works, states, saves, etc into meilisearch
-    PopulateMeili {
-        url: String,
-        api_key: String
-    },
+    /// Dump all works, states, saves, etc into search indexer
+    Reindex,
 
     /// Link records together
     Link {

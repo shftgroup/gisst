@@ -299,6 +299,7 @@ pub struct Credentials {
 pub struct AuthBackend {
     pool: PgPool,
     client: OAuthClient,
+    indexer: gisst::search::MeiliIndexer,
     #[allow(dead_code)]
     email_whitelist: Vec<String>,
 }
@@ -308,11 +309,17 @@ impl std::fmt::Debug for AuthBackend {
     }
 }
 impl AuthBackend {
-    pub fn new(pool: PgPool, client: OAuthClient, email_whitelist: Vec<String>) -> Self {
+    pub fn new(
+        pool: PgPool,
+        client: OAuthClient,
+        email_whitelist: Vec<String>,
+        indexer: gisst::search::MeiliIndexer,
+    ) -> Self {
         Self {
             pool,
             client,
             email_whitelist,
+            indexer,
         }
     }
     pub fn authorize_url(&self) -> (oauth2::url::Url, CsrfToken) {
@@ -411,6 +418,7 @@ impl axum_login::AuthnBackend for AuthBackend {
                         .clone(),
                     created_on: Utc::now(),
                 },
+                &self.indexer,
             )
             .await?;
             info!("Creator record created: {creator:?}.");
