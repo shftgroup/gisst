@@ -29,11 +29,10 @@ jobs:
       with:
         run: |
           ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development &
-        wait-on: |
-          http://localhost:7700/
+        wait-on: '{"resources":["http://localhost:7700/tasks"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
         tail: true # true = stderr,stdout
         log-output-resume: stderr
-        wait-for: 5m
+        wait-for: 1m
         log-output: stderr,stdout # same as true
         log-output-if: failure
         working-directory: backend/meili
