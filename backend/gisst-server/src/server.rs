@@ -45,6 +45,8 @@ pub struct ServerState {
     pub default_chunk_size: usize,
     pub pending_uploads: Arc<RwLock<HashMap<Uuid, PendingUpload>>>,
     pub templates: minijinja::Environment<'static>,
+    pub indexer: gisst::search::MeiliIndexer,
+    pub search: gisst::search::MeiliSearch,
 }
 impl ServerState {
     async fn with_config(config: &ServerConfig) -> Result<Self, ServerError> {
@@ -56,6 +58,14 @@ impl ServerState {
         user_whitelist_sorted.sort();
         let mut template_environment = minijinja::Environment::new();
         template_environment.set_loader(minijinja::path_loader("gisst-server/src/templates"));
+        let indexer = gisst::search::MeiliIndexer::new(
+            &config.search.meili_url,
+            &config.search.meili_api_key,
+        )?;
+        let search = gisst::search::MeiliSearch::new(
+            &config.search.meili_url,
+            &config.search.meili_search_key,
+        )?;
         Ok(Self {
             pool: db::new_pool(config).await?,
             root_storage_path: config.storage.root_folder_path.clone(),
@@ -64,6 +74,8 @@ impl ServerState {
             default_chunk_size: config.storage.chunk_size,
             pending_uploads: Arc::default(),
             templates: template_environment,
+            indexer,
+            search,
         })
     }
 }
@@ -93,7 +105,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .await
         .unwrap();
     let metrics_pool = user_pool.clone();
-
     let user_store = auth::AuthBackend::new(
         user_pool,
         auth::build_oauth_client(
@@ -102,6 +113,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             config.auth.google_client_secret.expose_secret(),
         ),
         user_whitelist_sorted,
+        gisst::search::MeiliIndexer::new(&config.search.meili_url, &config.search.meili_api_key)?,
     );
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)

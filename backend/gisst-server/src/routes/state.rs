@@ -74,6 +74,7 @@ async fn create_state(
                     created_on: chrono::Utc::now(),
                     save_derived_from: state.save_derived_from,
                 },
+                &app_state.indexer,
             )
             .await?,
         ))

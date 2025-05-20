@@ -4,7 +4,16 @@
 #  https://archive.org/details/magic-castle-2021-07-may
 #  https://nitroyuash.itch.io/petscop-restored
 
+source .env
+
 export GISST_CONFIG_PATH=./config
+export MEILI_URL=$MEILI_URL
+export MEILI_API_KEY=$MEILI_API_KEY
+export MEILI_MASTER_KEY=$MEILI_MASTER_KEY
+
+pushd meili
+./init_indices.sh
+popd
 
 # To ensure we don't get different results at different times, touch every file to ensure it has the same ATIME/MTIME
 find examples/data/ -type f -exec touch -t 202401010101.01 '{}' ';'

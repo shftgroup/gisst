@@ -7,7 +7,7 @@ Type=exec
 Restart=always
 ExecStart=/home/jcoa2018/.cargo/bin/cargo run --bin gisst-server
 User=jcoa2018
-WorkingDirectory=/home/jcoa2018/gisst/backend
+WorkingDirectory=/home/jcoa2018/Projects/gisst/backend
 
 [Install]
 WantedBy=multi-user.target

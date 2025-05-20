@@ -62,6 +62,7 @@ async fn create_replay(
                     file_id: replay.file_id,
                     created_on: chrono::Utc::now(),
                 },
+                &app_state.indexer,
             )
             .await?,
         ))

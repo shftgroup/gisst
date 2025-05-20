@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM creator",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_full_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "16d617c5baae6e1fc0021ce2b411adc226997785bb92d60e21c4d624a9d66f6b"
+}

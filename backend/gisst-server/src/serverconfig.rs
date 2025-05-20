@@ -21,6 +21,9 @@ pub struct ServerConfig {
 
     #[serde(default)]
     pub env: EnvConfig,
+
+    #[serde(default)]
+    pub search: SearchConfig,
 }
 
 impl ServerConfig {
@@ -35,6 +38,13 @@ impl ServerConfig {
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Default)]
+#[allow(clippy::struct_field_names)]
+pub struct SearchConfig {
+    pub meili_url: String,
+    pub meili_api_key: String,
+    pub meili_search_key: String,
+}
 #[derive(Debug, Clone, Deserialize)]
 pub struct EnvConfig {
     // RUST_LOG env variable as parsed by EnvFilter in tracing_subscriber

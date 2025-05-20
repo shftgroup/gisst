@@ -28,8 +28,8 @@ pub enum GISSTCliError {
     Io(#[from] std::io::Error),
     #[error("database error")]
     Sql(#[from] sqlx::Error),
-    #[error("gisst new model error")]
-    NewModel(#[from] gisst::error::RecordSQL),
+    #[error("gisst new indexed model error")]
+    NewModel(#[from] gisst::error::Insert),
     #[error("json parse error")]
     JsonParse(#[from] serde_json::Error),
     #[error("storage error")]
@@ -48,6 +48,8 @@ pub enum GISSTCliError {
     InvalidRoleIndex(std::num::TryFromIntError),
     #[error("file size int conversion")]
     FileSize(std::num::TryFromIntError),
+    #[error("search index error")]
+    SearchIndex(#[from] gisst::error::SearchIndex),
 }
 
 #[derive(Debug, Parser)]
@@ -62,6 +64,12 @@ pub struct GISSTCli {
     /// `GISST_CONFIG_PATH` environment variable must be set
     #[clap(env)]
     pub gisst_config_path: String,
+    /// `MEILI_URL` environment variable must be set
+    #[clap(env)]
+    pub meili_url: String,
+    /// `MEILI_API_KEY` environment variable must be set
+    #[clap(env)]
+    pub meili_api_key: String,
 }
 
 #[derive(Debug, Args)]
@@ -80,6 +88,9 @@ pub enum BaseSubcommand<C: clap::FromArgMatches + clap::Args> {
 pub enum Commands {
     /// Recalculate file sizes and compressed sizes
     RecalcSizes,
+
+    /// Dump all works, states, saves, etc into search indexer
+    Reindex,
 
     /// Link records together
     Link {

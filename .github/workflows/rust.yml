@@ -15,12 +15,27 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Rust Cache
-      uses: Swatinem/rust-cache@v2.5.1
+      uses: Swatinem/rust-cache@v2.7.7
       with:
         workspaces: "backend"
         cache-all-crates: "true"
     - name: Install zshell
       run: sudo apt install -y zsh
+    - name: Set up meili
+      run: curl -L https://install.meilisearch.com | sh
+      working-directory: backend/meili
+    - uses: JarvusInnovations/background-action@v1
+      name: Run meili
+      with:
+        run: |
+          ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development &
+        wait-on: '{"resources":["http-get://localhost:7700/version"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
+        tail: true # true = stderr,stdout
+        log-output-resume: stderr
+        wait-for: 1m
+        log-output: stderr,stdout # same as true
+        log-output-if: failure
+        working-directory: backend/meili
     - name: Clippy
       working-directory: backend
       run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
@@ -35,9 +50,30 @@ jobs:
         echo "DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb" >> .env
         echo "GISST_CONFIG=./" >> .env
         DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb cargo sqlx database reset -y -f
+    - name: Create meili index
+      working-directory: backend/meili
+      run: |
+        echo "MEILI_URL=http://localhost:7700" >> ../.env
+        echo "MEILI_MASTER_KEY=test-api-key-github-actions" >> ../.env
+        echo "MEILI_API_KEY=test-api-key-github-actions" >> ../.env
+        echo "MEILI_SEARCH_KEY=test-api-key-github-actions" >> ../.env
+        source ../.env
+        export MEILI_URL
+        export MEILI_MASTER_KEY
+        export MEILI_API_KEY
+        ./init_indices.sh
     - name: Load example data into DB
       working-directory: backend
-      run: rm -rf storage; mkdir storage; LOAD_WIN=0 zsh -e ./load_examples.sh
+      run: |
+        rm -rf storage
+        mkdir storage
+        source .env
+        export GISST_CONFIG
+        export MEILI_URL
+        export MEILI_MASTER_KEY
+        export MEILI_API_KEY
+        export MEILI_SEARCH_KEY
+        LOAD_WIN=0 zsh -e ./load_examples.sh
     - name: Check DB contents
       working-directory: backend
       run: |

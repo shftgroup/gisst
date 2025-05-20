@@ -121,8 +121,8 @@ fn recursive_listing_fat_partition(
                     FSFileListingType::File
                 } else {
                     return Err(FSList::FATError(format!(
-                        "fat file entry is neither dir nor file {:?}",
-                        path.join(filename),
+                        "fat file entry is neither dir nor file {}",
+                        path.join(filename).display(),
                     )));
                 },
                 name: filename,

@@ -12,7 +12,7 @@
         </form>
     </div>
     <div class="row">
-      {% if page_num > 0 %}
+      {% if page_num > 1 %}
       <a class="results-prev" href="instances?page_num={{page_num-1}}{% if contains %}&contains={{contains|urlencode}}{% endif %}&limit={{limit}}{% if platform %}&platform={{platform|urlencode}}{% endif %}">Prev</a>
       {% endif %}
       {% if has_more %}

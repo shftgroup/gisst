@@ -1,3 +1,5 @@
+#![allow(unknown_lints,clippy::unnecessary_debug_formatting)]
+
 mod args;
 mod cliconfig;
 
@@ -46,8 +48,10 @@ async fn main() -> Result<(), GISSTCliError> {
         "Storage root is set to: {}",
         cli_config.storage.root_folder_path
     );
+    let indexer = gisst::search::MeiliIndexer::new(&args.meili_url, &args.meili_api_key)?;
 
     match dbg!(args).command {
+        Commands::Reindex => reindex(db, &indexer).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
         Commands::Link {
             record_type,
@@ -60,25 +64,31 @@ async fn main() -> Result<(), GISSTCliError> {
             BaseSubcommand::Create(create) => create_object(create, db, storage_root).await?,
         },
         Commands::Creator(creator) => match creator.command {
-            BaseSubcommand::Create(create) => create_creator(create, db).await?,
+            BaseSubcommand::Create(create) => create_creator(create, db, &indexer).await?,
         },
         Commands::Environment(environment) => match environment.command {
             BaseSubcommand::Create(create) => create_environment(create, db).await?,
         },
         Commands::Instance(instance) => match instance.command {
-            BaseSubcommand::Create(create) => create_instance(create, db).await?,
+            BaseSubcommand::Create(create) => create_instance(create, db, &indexer).await?,
         },
         Commands::Work(work) => match work.command {
             BaseSubcommand::Create(create) => create_work(create, db).await?,
         },
         Commands::State(state) => match state.command {
-            BaseSubcommand::Create(create) => create_state(create, db, storage_root).await?,
+            BaseSubcommand::Create(create) => {
+                create_state(create, db, storage_root, &indexer).await?;
+            }
         },
         Commands::Save(save) => match save.command {
-            BaseSubcommand::Create(create) => create_save(create, db, storage_root).await?,
+            BaseSubcommand::Create(create) => {
+                create_save(create, db, storage_root, &indexer).await?;
+            }
         },
         Commands::Replay(replay) => match replay.command {
-            BaseSubcommand::Create(create) => create_replay(create, db, storage_root).await?,
+            BaseSubcommand::Create(create) => {
+                create_replay(create, db, storage_root, &indexer).await?;
+            }
         },
         Commands::Screenshot(screenshot) => match screenshot.command {
             BaseSubcommand::Create(create) => create_screenshot(create, db).await?,
@@ -88,16 +98,26 @@ async fn main() -> Result<(), GISSTCliError> {
             state,
             depth,
         } => {
-            clone_v86_machine(db, instance, state, storage_root, depth).await?;
+            clone_v86_machine(db, instance, state, storage_root, depth, &indexer).await?;
         }
         Commands::AddPatch {
             instance,
             data,
             depth,
         } => {
-            add_patched_instance(db, instance, data, storage_root, depth).await?;
+            add_patched_instance(db, instance, data, storage_root, depth, &indexer).await?;
         }
     }
+    Ok(())
+}
+
+async fn reindex(
+    db: PgPool,
+    indexer: &impl gisst::search::SearchIndexer,
+) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    let status = indexer.reindex(&mut conn).await;
+    log::info!("{status:?}");
     Ok(())
 }
 
@@ -167,11 +187,18 @@ async fn clone_v86_machine(
     state_id: Uuid,
     storage_root: String,
     depth: u8,
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<Uuid, GISSTCliError> {
     let mut conn = db.acquire().await?;
-    let uuid =
-        gisst::v86clone::clone_v86_machine(&mut conn, instance_id, state_id, &storage_root, depth)
-            .await?;
+    let uuid = gisst::v86clone::clone_v86_machine(
+        &mut conn,
+        instance_id,
+        state_id,
+        &storage_root,
+        depth,
+        indexer,
+    )
+    .await?;
     Ok(uuid)
 }
 
@@ -182,6 +209,7 @@ async fn add_patched_instance(
     patch_file: String,
     storage_root: String,
     depth: u8,
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<(Uuid, Uuid), GISSTCliError> {
     let mut tx = db.begin().await?;
     let inst = Instance::get_by_id(&mut tx, instance_id)
@@ -213,7 +241,7 @@ async fn add_patched_instance(
         work_platform: work.work_platform,
     };
     Work::insert(&mut tx, new_work).await?;
-    Instance::insert(&mut tx, new_inst).await?;
+    Instance::insert(&mut tx, new_inst, indexer).await?;
     let patch_root = Path::new(&patch_file).parent().unwrap_or(Path::new(""));
     for link in gisst::models::ObjectLink::get_all_for_instance_id(&mut tx, instance_id).await? {
         let role_index =
@@ -336,6 +364,7 @@ async fn create_instance(
         ..
     }: CreateInstance,
     db: PgPool,
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<(), GISSTCliError> {
     let instance_from_json: Option<Instance> = match (json_file, json_string) {
         (Some(file_path), None) => {
@@ -369,6 +398,7 @@ async fn create_instance(
                     instance_config,
                     ..instance
                 },
+                indexer,
             )
             .await
             .map_err(GISSTCliError::NewModel)?;
@@ -438,6 +468,7 @@ async fn create_creator(
         ..
     }: CreateCreator,
     db: PgPool,
+    indexer: &impl gisst::search::SearchIndexer,
 ) -> Result<(), GISSTCliError> {
     let creator_from_json: Option<Creator> = match (json_file, json_string) {
         (Some(file_path), None) => {
@@ -453,7 +484,7 @@ async fn create_creator(
     match creator_from_json {
         Some(creator) => {
             let mut conn = db.acquire().await?;
-            Creator::insert(&mut conn, creator).await?;
+            Creator::insert(&mut conn, creator, indexer).await?;
             Ok(())
         }
         None => Err(GISSTCliError::CreateCreator(
@@ -507,6 +538,7 @@ async fn create_replay(
     }: CreateReplay,
     db: PgPool,
     storage_path: String,
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<(), GISSTCliError> {
     let file = Path::new(&file);
     if !file.exists() || !file.is_file() {
@@ -568,7 +600,7 @@ async fn create_replay(
         file_id,
         created_on,
     };
-    Replay::insert(&mut conn, replay)
+    Replay::insert(&mut conn, replay, indexer)
         .await
         .map(|_| ())
         .map_err(GISSTCliError::NewModel)
@@ -620,6 +652,7 @@ async fn create_state(
     }: CreateState,
     db: PgPool,
     storage_path: String,
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<(), GISSTCliError> {
     let file = Path::new(&file);
     if !file.exists() || !file.is_file() {
@@ -688,7 +721,7 @@ async fn create_state(
         state_derived_from,
         save_derived_from: None,
     };
-    State::insert(&mut conn, state).await?;
+    State::insert(&mut conn, state, indexer).await?;
     Ok(())
 }
 
@@ -708,6 +741,7 @@ async fn create_save(
     }: CreateSave,
     db: PgPool,
     storage_path: String,
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<(), GISSTCliError> {
     let file = Path::new(&file);
     if !file.exists() || !file.is_file() {
@@ -768,7 +802,7 @@ async fn create_save(
         save_derived_from,
         replay_derived_from,
     };
-    Save::insert(&mut conn, save).await?;
+    Save::insert(&mut conn, save, indexer).await?;
     Ok(())
 }
 

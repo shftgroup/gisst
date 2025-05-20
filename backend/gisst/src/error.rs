@@ -63,6 +63,13 @@ pub struct RecordSQL {
     pub action: Action,
     pub source: sqlx::Error,
 }
+#[derive(thiserror::Error, Debug)]
+pub enum Insert {
+    #[error("SQL error {0}")]
+    Sql(#[from] RecordSQL),
+    #[error("Indexing error {0}")]
+    Idx(#[from] SearchIndex),
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Storage {
@@ -140,6 +147,8 @@ pub enum V86Clone {
     Sql(#[from] sqlx::Error),
     #[error("record error")]
     Record(#[from] RecordSQL),
+    #[error("couldn't insert new record {0}")]
+    Insert(#[from] crate::error::Insert),
     #[error("v86dump error: {0}")]
     V86Dump(String),
     #[error("IO error")]
@@ -162,8 +171,24 @@ pub enum InsertFile {
     ObjectMissing(String),
     #[error("database error")]
     Sql(#[from] sqlx::Error),
+    #[error("insertion error")]
+    Insert(#[from] Insert),
     #[error("record error")]
     Record(#[from] RecordSQL),
     #[error("storage error")]
-    Storage(#[from] crate::error::Storage),
+    Storage(#[from] Storage),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SearchIndex {
+    #[error("SQL error {0}")]
+    Sql(#[from] sqlx::Error),
+    #[error("Meilisearch error {0}")]
+    Meili(#[from] meilisearch_sdk::errors::Error),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum Search {
+    #[error("Meilisearch error {0}")]
+    Meili(#[from] meilisearch_sdk::errors::Error),
 }
