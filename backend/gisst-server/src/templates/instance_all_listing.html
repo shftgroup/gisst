@@ -29,7 +29,7 @@
                 </svg>
                 Start Recording on Boot
             </a>
-          <a class="btn btn-primary" href="?{% if not creator_id %}creator_id={{user.creator_id}}&{% endif %}{% if state_contains %}state_contains={{state_contains|urlencode}}{% endif %}{% if replay_contains %}replay_contains={{replay_contains|urlencode}}{% endif %}{% if save_contains %}save_contains={{save_contains|urlencode}}{% endif %}">Show all users' states/performances</a>
+          <a class="btn btn-primary" href="?{% if not creator_id %}creator_id={{user.creator_id}}&{% endif %}{% if state_contains %}state_contains={{state_contains|urlencode}}{% endif %}{% if replay_contains %}replay_contains={{replay_contains|urlencode}}{% endif %}{% if save_contains %}save_contains={{save_contains|urlencode}}{% endif %}">{% if creator_id %}Show all users' states/performances{% else %}Show only my states/performances{% endif %}</a>
         </div>
     </div>
     <div class="row">
