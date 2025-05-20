@@ -114,7 +114,7 @@ async fn main() -> Result<(), IngestError> {
         dep_paths,
         force,
         meili_url,
-        meili_api_key
+        meili_api_key,
     } = Args::parse();
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
@@ -135,7 +135,7 @@ async fn main() -> Result<(), IngestError> {
         String::new(),
         Duplicate::ReuseObject,
     )
-        .await?;
+    .await?;
     let indexer = gisst::search::MeiliIndexer::new(&meili_url, &meili_api_key)?;
     let mut dep_ids = Vec::with_capacity(deps.len());
     for (i, dep) in deps.iter().enumerate() {
@@ -253,7 +253,7 @@ async fn main() -> Result<(), IngestError> {
                             &platform,
                             &core_name,
                             &core_version,
-                            &indexer
+                            &indexer,
                         )
                         .await?;
                         link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
@@ -278,7 +278,7 @@ async fn main() -> Result<(), IngestError> {
                                 &platform,
                                 &core_name,
                                 &core_version,
-                                &indexer
+                                &indexer,
                             )
                             .await?;
                             link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
@@ -302,7 +302,7 @@ async fn main() -> Result<(), IngestError> {
                                 &platform,
                                 &core_name,
                                 &core_version,
-                                &indexer
+                                &indexer,
                             )
                             .await?;
                             link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
@@ -413,7 +413,7 @@ async fn create_metadata_records_from_rval(
     platform: &str,
     core_name: &str,
     core_version: &str,
-    indexer: &gisst::search::MeiliIndexer
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<Uuid, IngestError> {
     create_metadata_records(
         conn,
@@ -427,7 +427,7 @@ async fn create_metadata_records_from_rval(
         platform,
         core_name,
         core_version,
-        indexer
+        indexer,
     )
     .await
 }
@@ -440,7 +440,7 @@ async fn create_metadata_records(
     platform: &str,
     core_name: &str,
     core_version: &str,
-    indexer: &gisst::search::MeiliIndexer
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<Uuid, IngestError> {
     // TODO: merge entries from result on libretrodb_query_compile(db, "{\"rom_name\":nom}", strlen query exp, error) cursor
     let created_on = chrono::Utc::now();

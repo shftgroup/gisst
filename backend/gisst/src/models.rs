@@ -402,7 +402,9 @@ impl CreatorSaveInfo {
                WHERE save.save_id = $1
                LIMIT 1000"#,
             save.save_id
-        ).fetch_all(conn).await
+        )
+        .fetch_all(conn)
+        .await
     }
     pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
         use futures::StreamExt;
@@ -499,12 +501,12 @@ impl Creator {
             model.created_on
         )
         .fetch_one(conn.as_mut())
-            .await
-            .map_err(|e| RecordSQL {
+        .await
+        .map_err(|e| RecordSQL {
             table: Table::Creator,
             action: Action::Insert,
             source: e,
-            })?;
+        })?;
         indexer.upsert_creator(conn, &record).await?;
         Ok(record)
     }
@@ -541,11 +543,13 @@ impl File {
         )
         .fetch_one(conn)
         .await
-            .map_err(|e| Insert::Sql(RecordSQL {
-            table: Table::File,
-            action: Action::Insert,
-            source: e,
-            }))
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::File,
+                action: Action::Insert,
+                source: e,
+            })
+        })
     }
 }
 
@@ -556,7 +560,11 @@ impl Instance {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Instance, indexer:&impl crate::search::SearchIndexer) -> Result<Self, Insert> {
+    pub async fn insert(
+        conn: &mut PgConnection,
+        model: Instance,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<Self, Insert> {
         let record = sqlx::query_as!(
             Instance,
             r#"INSERT INTO instance VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *"#,
@@ -568,7 +576,7 @@ impl Instance {
             model.derived_from_instance,
             model.derived_from_state
         )
-            .fetch_one(conn.as_mut())
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Instance,
@@ -865,11 +873,13 @@ impl Environment {
         )
         .fetch_one(conn)
         .await
-            .map_err(|e| Insert::Sql(RecordSQL {
-            table: Table::Environment,
-            action: Action::Insert,
-            source: e,
-            }))
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Environment,
+                action: Action::Insert,
+                source: e,
+            })
+        })
     }
 }
 
@@ -904,11 +914,13 @@ impl Object {
         )
         .fetch_one(conn)
         .await
-            .map_err(|e| Insert::Sql(RecordSQL {
-            table: Table::Object,
-            action: Action::Insert,
-            source: e,
-            }))
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Object,
+                action: Action::Insert,
+                source: e,
+            })
+        })
     }
 }
 
@@ -966,7 +978,11 @@ impl Replay {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Self, indexer:&impl crate::search::SearchIndexer) -> Result<Self, Insert> {
+    pub async fn insert(
+        conn: &mut PgConnection,
+        model: Self,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<Self, Insert> {
         let record = sqlx::query_as!(
             Replay,
             r#"INSERT INTO replay VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"#,
@@ -979,7 +995,7 @@ impl Replay {
             model.file_id,
             model.created_on,
         )
-            .fetch_one(conn.as_mut())
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Replay,
@@ -997,7 +1013,11 @@ impl Save {
             .fetch_optional(conn)
             .await
     }
-    pub async fn insert(conn: &mut PgConnection, model: Self, indexer: &impl crate::search::SearchIndexer) -> Result<Self, Insert> {
+    pub async fn insert(
+        conn: &mut PgConnection,
+        model: Self,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<Self, Insert> {
         let result =         // First, insert the new save
         sqlx::query_as!(
             Self,
@@ -1063,7 +1083,7 @@ impl Save {
             model.instance_id,
             model.save_id
         )
-            .execute(conn.as_mut())
+        .execute(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Save,
@@ -1096,7 +1116,11 @@ impl State {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, state: Self, indexer:&impl crate::search::SearchIndexer) -> Result<Self, Insert> {
+    pub async fn insert(
+        conn: &mut PgConnection,
+        state: Self,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<Self, Insert> {
         let record = sqlx::query_as!(
             State,
             r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
@@ -1115,7 +1139,7 @@ impl State {
             state.created_on,
             state.save_derived_from,
         )
-            .fetch_one(conn.as_mut())
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::State,
@@ -1159,11 +1183,13 @@ impl Work {
         )
         .fetch_one(conn)
         .await
-            .map_err(|e| Insert::Sql( RecordSQL {
-            table: Table::Work,
-            action: Action::Insert,
-            source: e,
-            }))
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Work,
+                action: Action::Insert,
+                source: e,
+            })
+        })
     }
 }
 
@@ -1208,11 +1234,13 @@ impl Screenshot {
         )
         .fetch_one(conn)
         .await
-            .map_err(|e|Insert::Sql(RecordSQL {
-            table: Table::Screenshot,
-            action: Action::Insert,
-            source: e,
-            }))
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Screenshot,
+                action: Action::Insert,
+                source: e,
+            })
+        })
     }
 }
 

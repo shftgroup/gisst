@@ -71,7 +71,7 @@ async fn create_save(
                     replay_derived_from: save.replay_derived_from,
                     created_on: chrono::Utc::now(),
                 },
-                &app_state.indexer
+                &app_state.indexer,
             )
             .await?,
         ))

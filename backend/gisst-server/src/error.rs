@@ -111,59 +111,63 @@ impl IntoResponse for ServerError {
             ServerError::IO(_) => (StatusCode::INTERNAL_SERVER_ERROR, "IO error"),
             ServerError::Storage(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
             ServerError::RecordManipulation(_) => (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "record manipulation error",
-                    ),
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "record manipulation error",
+            ),
             ServerError::UploadTooBig(_) => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "file upload error")
-                    }
+                (StatusCode::INTERNAL_SERVER_ERROR, "file upload error")
+            }
             ServerError::RecordLinking { .. } => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "record creation error")
-                    }
+                (StatusCode::INTERNAL_SERVER_ERROR, "record creation error")
+            }
             ServerError::RecordMissing { .. } => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "record update error")
-                    }
+                (StatusCode::INTERNAL_SERVER_ERROR, "record update error")
+            }
             ServerError::PathPrefix(_) => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "file creation error")
-                    }
+                (StatusCode::INTERNAL_SERVER_ERROR, "file creation error")
+            }
             ServerError::Join(_) => (StatusCode::INTERNAL_SERVER_ERROR, "tokio task error"),
             ServerError::FileNotFound => (StatusCode::NOT_FOUND, "file not found"),
             ServerError::Reqwest(_) => (StatusCode::INTERNAL_SERVER_ERROR, "oauth reqwest error"),
             ServerError::AuthUserSerdeLogin(_) => (StatusCode::INTERNAL_SERVER_ERROR, "auth error"),
             ServerError::AuthUserNotAuthenticated => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "auth error")
-                    }
+                (StatusCode::INTERNAL_SERVER_ERROR, "auth error")
+            }
             ServerError::MiniJinja(_) => (StatusCode::INTERNAL_SERVER_ERROR, "minijinja error"),
             ServerError::MimeType => (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "incompatible mimetype for request",
-                    ),
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "incompatible mimetype for request",
+            ),
             ServerError::Multipart(_) => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "multipart request error")
-                    }
+                (StatusCode::INTERNAL_SERVER_ERROR, "multipart request error")
+            }
             ServerError::FSList(_) => (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "filesystem listing error",
-                    ),
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "filesystem listing error",
+            ),
             ServerError::Subobject(_) => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "subobject access error")
-                    }
+                (StatusCode::INTERNAL_SERVER_ERROR, "subobject access error")
+            }
             ServerError::StateRequired => (StatusCode::BAD_REQUEST, "need a state to make a clone"),
             ServerError::V86Clone(_) => (StatusCode::INTERNAL_SERVER_ERROR, "v86 clone failed"),
             ServerError::Unreachable => (StatusCode::INTERNAL_SERVER_ERROR, "uh oh error"),
             ServerError::AuthSession(_) => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "auth session error")
-                    }
+                (StatusCode::INTERNAL_SERVER_ERROR, "auth session error")
+            }
             ServerError::AuthBackend(_) => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "auth backend error")
-                    }
+                (StatusCode::INTERNAL_SERVER_ERROR, "auth backend error")
+            }
             ServerError::AuthBackendSystem(_) => (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "auth backend internal system error",
-                    ),
-            ServerError::SearchIndex(_) => (StatusCode::INTERNAL_SERVER_ERROR, "search index error"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "auth backend internal system error",
+            ),
+            ServerError::SearchIndex(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "search index error")
+            }
             ServerError::Search(_) => (StatusCode::INTERNAL_SERVER_ERROR, "search error"),
-            ServerError::Insert(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database or index error"),
+            ServerError::Insert(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "database or index error")
+            }
         };
 
         let base_url = crate::server::BASE_URL.get();
