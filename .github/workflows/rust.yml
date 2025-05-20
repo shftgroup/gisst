@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Rust Cache
-      uses: Swatinem/rust-cache@v2.5.1
+      uses: Swatinem/rust-cache@v2.7
       with:
         workspaces: "backend"
         cache-all-crates: "true"
