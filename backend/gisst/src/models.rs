@@ -1254,7 +1254,7 @@ fn utc_datetime_now() -> DateTime<Utc> {
     Utc::now()
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InstanceWork {
     pub work_id: Uuid,
     pub work_name: String,
@@ -1262,65 +1262,6 @@ pub struct InstanceWork {
     pub work_platform: String,
     pub instance_id: Uuid,
     pub row_num: i64,
-}
-
-#[rustfmt::skip]
-macro_rules! instance_work_queries {
-    ($fields:literal, $containing:expr, $platform:expr,
-     $offset:expr, $limit:expr,
-     $conn:expr) => {
-        match ($containing, $platform) {
-            (None, None) => {
-                sqlx::query_as!(Self,
-                    r#"SELECT "# + $fields + r#" FROM instanceWork
-                       WHERE row_num >= $1
-                       ORDER BY row_num ASC LIMIT $2"#,
-                    i64::from($offset),
-                    i64::from($limit)
-                )
-                .fetch_all($conn)
-                .await
-            }
-            (None, Some(plat)) => {
-                sqlx::query_as!(Self,
-                    r#"SELECT "# + $fields + r#" FROM instanceWork
-                       WHERE work_platform ILIKE ('%' || $1 || '%')
-                       ORDER BY row_num ASC OFFSET $2 LIMIT $3"#,
-                    plat,
-                    i64::from($offset),
-                    i64::from($limit)
-                )
-                .fetch_all($conn)
-                .await
-            }
-            (Some(contains), None) => {
-                sqlx::query_as!(Self,
-                    r#"SELECT "# + $fields + r#" FROM instanceWork
-                       WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%')
-                       ORDER BY row_num ASC OFFSET $2 LIMIT $3"#,
-                    contains,
-                    i64::from($offset),
-                    i64::from($limit)
-                )
-                .fetch_all($conn)
-                .await
-            }
-            (Some(contains), Some(plat)) => {
-                sqlx::query_as!(Self,
-                    r#"SELECT "# + $fields + r#" FROM instanceWork
-                       WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%') AND
-                          work_platform ILIKE ('%' || $2 || '%')
-                       ORDER BY row_num ASC OFFSET $3 LIMIT $4"#,
-                    contains,
-                    plat,
-                    i64::from($offset),
-                    i64::from($limit)
-                )
-                .fetch_all($conn)
-                .await
-            }
-        }
-    };
 }
 
 impl InstanceWork {
@@ -1335,24 +1276,6 @@ impl InstanceWork {
         )
         .fetch(conn)
         .filter_map(|f| futures::future::ready(f.ok()))
-    }
-    pub async fn get_all(
-        conn: &mut sqlx::PgConnection,
-        containing: Option<String>,
-        platform: Option<String>,
-        offset: u32,
-        limit: u32,
-    ) -> sqlx::Result<Vec<Self>> {
-        instance_work_queries!(
-            r#"work_id as "work_id!", work_name as "work_name!",
-               work_version as "work_version!", work_platform as "work_platform!",
-               instance_id as "instance_id!", row_num as "row_num!""#,
-            containing,
-            platform,
-            offset,
-            limit,
-            conn
-        )
     }
     pub async fn get_for_instance(
         conn: &mut sqlx::PgConnection,

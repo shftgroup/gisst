@@ -42,21 +42,22 @@ async fn get_instances(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let mut conn = app_state.pool.acquire().await?;
-    let page_num = params.page_num.unwrap_or(0);
+    let page_num = params.page_num.unwrap_or(1);
     let limit = params.limit.unwrap_or(100).min(100);
-    let offset = page_num * limit;
-    let instances: Vec<InstanceWork> = InstanceWork::get_all(
-        &mut conn,
-        params.contains.clone(),
-        params.platform.clone(),
-        offset,
-        limit,
-    )
-    .await?;
     let accept: Option<String> = parse_header(&headers, "Accept");
     let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
-
+    let search = app_state.search.instances();
+    let results: meilisearch_sdk::search::SearchResults<InstanceWork> = search
+        .search()
+        .with_facets(meilisearch_sdk::search::Selectors::Some(&["work_platform"]))
+        .with_hits_per_page(limit as usize)
+        .with_page(page_num as usize)
+        .with_filter(&params.platform.as_ref().map(|p| format!("work_platform = \"{p}\"")).unwrap_or_default())
+        .with_query(&params.contains.clone().unwrap_or_default())
+        .execute()
+        .await
+        .map_err(gisst::error::Search::from)?;
+    let instances: Vec<_> = results.hits.into_iter().map(|r| r.result).collect();
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             let instance_listing = app_state.templates.get_template("instance_listing.html")?;

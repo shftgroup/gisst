@@ -1,7 +1,7 @@
 #!/bin/sh
 
 curl \
-  -X POST 'localhost:7700/indexes' \
+  -X POST "$MEILI_URL/indexes" \
   -H "Authorization: Bearer $MEILI_API_KEY" \
   -H 'Content-Type: application/json' \
   --data-binary '{
@@ -9,7 +9,14 @@ curl \
     "primaryKey": "instance_id"
   }'
 curl \
-  -X POST 'localhost:7700/indexes' \
+  -X PUT "$MEILI_URL/indexes/instance/settings/filterable-attributes" \
+  -H "Authorization: Bearer $MEILI_API_KEY" \
+  -H 'Content-Type: application/json' \
+  --data-binary '[
+    "work_platform"
+  ]'
+curl \
+  -X POST "$MEILI_URL/indexes" \
   -H "Authorization: Bearer $MEILI_API_KEY" \
   -H 'Content-Type: application/json' \
   --data-binary '{
@@ -17,7 +24,16 @@ curl \
     "primaryKey": "state_id"
   }'
 curl \
-  -X POST 'localhost:7700/indexes' \
+  -X PUT "$MEILI_URL/indexes/state/settings/filterable-attributes" \
+  -H "Authorization: Bearer $MEILI_API_KEY" \
+  -H 'Content-Type: application/json' \
+  --data-binary '[
+    "work_platform",
+    "creator_id",
+    "instance_id"
+  ]'
+curl \
+  -X POST "$MEILI_URL/indexes" \
   -H "Authorization: Bearer $MEILI_API_KEY" \
   -H 'Content-Type: application/json' \
   --data-binary '{
@@ -25,7 +41,16 @@ curl \
     "primaryKey": "save_id"
   }'
 curl \
-  -X POST 'localhost:7700/indexes' \
+  -X PUT "$MEILI_URL/indexes/save/settings/filterable-attributes" \
+  -H "Authorization: Bearer $MEILI_API_KEY" \
+  -H 'Content-Type: application/json' \
+  --data-binary '[
+    "work_platform",
+    "creator_id",
+    "instance_id"
+  ]'
+curl \
+  -X POST "$MEILI_URL/indexes" \
   -H "Authorization: Bearer $MEILI_API_KEY" \
   -H 'Content-Type: application/json' \
   --data-binary '{
@@ -33,7 +58,16 @@ curl \
     "primaryKey": "replay_id"
   }'
 curl \
-  -X POST 'localhost:7700/indexes' \
+  -X PUT "$MEILI_URL/indexes/replay/settings/filterable-attributes" \
+  -H "Authorization: Bearer $MEILI_API_KEY" \
+  -H 'Content-Type: application/json' \
+  --data-binary '[
+    "work_platform",
+    "creator_id",
+    "instance_id"
+  ]'
+curl \
+  -X PUT "$MEILI_URL/indexes" \
   -H "Authorization: Bearer $MEILI_API_KEY" \
   -H 'Content-Type: application/json' \
   --data-binary '{

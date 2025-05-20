@@ -1318,6 +1318,7 @@ dependencies = [
  "gisst",
  "log",
  "md5",
+ "meilisearch-sdk",
  "minijinja",
  "oauth2",
  "opentelemetry",
