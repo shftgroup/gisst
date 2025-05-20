@@ -4,6 +4,11 @@ In this directory, run: =curl -L https://install.meilisearch.com | sh=
 
 Then, generate a master key using something like =openssl rand -base64 64 > master.key=.  You can copy that into your =.env= file in =backend= as =MEILI_MASTER_KEY=KEYDATA=, or set it up in the systemd unit.
 
+* Run manually
+
+#+BEGIN_src bash
+./meilisearch --no-analytics --master-key $MEILI_MASTER_KEY --env development
+#+END_src
 
 * Enable systemd unit
 
@@ -20,6 +25,8 @@ You can check with =systemctl status gisst-search.service=.
 * Add indices
 
 First, get your administration API key using =curl -H "Authorization: Bearer $MEILI_MASTER_KEY" http://localhost:7700/keys=.
+
+Put the API and search keys into your =../.env=, and while you're at it modify =../config/local.toml= based on =../config/default.toml='s =[search]= section.
 
 #+BEGIN_src bash
 export MEILI_API_KEY=key_from_that_curl_command

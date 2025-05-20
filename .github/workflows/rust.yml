@@ -47,6 +47,7 @@ jobs:
         echo "MEILI_MASTER_KEY=test-api-key-github-actions" >> ../.env
         echo "MEILI_API_KEY=test-api-key-github-actions" >> ../.env
         echo "MEILI_SEARCH_KEY=test-api-key-github-actions" >> ../.env
+        source ../.env
         export MEILI_URL
         export MEILI_MASTER_KEY
         export MEILI_API_KEY
