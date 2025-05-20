@@ -44,6 +44,7 @@ async fn get_single_creator(
             .with_hits_per_page(state_limit as usize)
             .with_page(state_page_num as usize)
             .with_filter(&creator_filter)
+            .with_sort(&["created_on:desc"])
             .with_query(&params.state_contains.clone().unwrap_or_default())
             .execute()
             .await
@@ -57,6 +58,7 @@ async fn get_single_creator(
             .with_hits_per_page(replay_limit as usize)
             .with_page(replay_page_num as usize)
             .with_filter(&creator_filter)
+            .with_sort(&["created_on:desc"])
             .with_query(&params.replay_contains.clone().unwrap_or_default())
             .execute()
             .await
@@ -70,6 +72,7 @@ async fn get_single_creator(
             .with_hits_per_page(save_limit as usize)
             .with_page(save_page_num as usize)
             .with_filter(&creator_filter)
+            .with_sort(&["created_on:desc"])
             .with_query(&params.save_contains.clone().unwrap_or_default())
             .execute()
             .await
