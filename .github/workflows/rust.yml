@@ -21,11 +21,13 @@ jobs:
         cache-all-crates: "true"
     - name: Install zshell
       run: sudo apt install -y zsh
+    - name: Set up meili
+      run: curl -L https://install.meilisearch.com | sh
+      working-directory: backend/meili
     - uses: JarvusInnovations/background-action@v1
       name: Bootstrap System Under Test (SUT)
       with:
         run: |
-          curl -L https://install.meilisearch.com | sh
           ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development
         wait-on: |
           http://localhost:7700/
