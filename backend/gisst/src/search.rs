@@ -50,6 +50,8 @@ pub struct MeiliIndexer {
 }
 
 impl MeiliIndexer {
+    /// # Errors
+    /// If the address is invalid, creating the client will fail
     pub fn new(url: &str, api_key: &str) -> Result<Self, crate::error::SearchIndex> {
         Ok(Self {
             meili: Meili::new(url, Some(api_key))?,
@@ -190,23 +192,30 @@ pub struct MeiliSearch {
     meili: Meili<meilisearch_sdk::reqwest::ReqwestClient>,
 }
 impl MeiliSearch {
+    /// # Errors
+    /// If the address is invalid, creating the client will fail
     pub fn new(url: &str, api_key: &str) -> Result<Self, crate::error::Search> {
         Ok(Self {
             meili: Meili::new(url, Some(api_key))?,
         })
     }
+    #[must_use]
     pub fn instances(&self) -> meilisearch_sdk::indexes::Index {
         self.meili.index("instance")
     }
+    #[must_use]
     pub fn saves(&self) -> meilisearch_sdk::indexes::Index {
         self.meili.index("save")
     }
+    #[must_use]
     pub fn states(&self) -> meilisearch_sdk::indexes::Index {
         self.meili.index("state")
     }
+    #[must_use]
     pub fn replays(&self) -> meilisearch_sdk::indexes::Index {
         self.meili.index("replay")
     }
+    #[must_use]
     pub fn creators(&self) -> meilisearch_sdk::indexes::Index {
         self.meili.index("creator")
     }
