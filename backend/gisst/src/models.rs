@@ -1,6 +1,5 @@
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 
-use futures::TryFutureExt;
 use serde::{Deserialize, Deserializer, Serialize, de};
 use std::{fmt, str::FromStr};
 
@@ -11,7 +10,7 @@ use crate::{model_enums::Framework, search::SearchIndexer};
 use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
 
-use crate::error::{self, Action, RecordSQL, Table};
+use crate::error::{Action, Insert, RecordSQL, Table};
 
 // empty_string_as_none taken from axum docs here: https://github.com/tokio-rs/axum/blob/main/examples/query-params-with-empty-strings/src/main.rs
 /// Serde deserialization decorator to map empty Strings to None,
@@ -388,17 +387,22 @@ f_unaccent(work_name || save_short_desc || save_description) ILIKE ('%' || f_una
 }
 
 impl CreatorSaveInfo {
-    pub async fn get_for_save(conn: &mut PgConnection, save: &Save) -> sqlx::Result<Self> {
+    pub async fn get_for_save(conn: &mut PgConnection, save: &Save) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform,
+            r#"SELECT work.work_id, work.work_name, work.work_version, work.work_platform,
                       save_id, save_short_desc, save_description,
-                      file_id, instance_id, save.created_on, creator.creator_id,
+                      file_id, instance_save.instance_id, save.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name
-               FROM work JOIN instance USING (work_id) JOIN save USING (instance_id) JOIN creator ON (save.creator_id = creator.creator_id)
-               WHERE save.save_id = $1"#,
+               FROM instance_save
+                    JOIN save USING (save_id)
+                    JOIN instance ON (instance_save.instance_id = instance.instance_id)
+                    JOIN work ON (work.work_id = instance.work_id)
+                    JOIN creator ON (save.creator_id = creator.creator_id)
+               WHERE save.save_id = $1
+               LIMIT 1000"#,
             save.save_id
-        ).fetch_one(conn).await
+        ).fetch_all(conn).await
     }
     pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
         use futures::StreamExt;
@@ -484,7 +488,7 @@ impl Creator {
         conn: &mut PgConnection,
         model: Creator,
         indexer: &impl SearchIndexer,
-    ) -> Result<Self, error::Insert> {
+    ) -> Result<Self, Insert> {
         let record = sqlx::query_as!(
             Self,
             r#"INSERT INTO creator VALUES($1, $2, $3, $4) RETURNING *
@@ -495,12 +499,12 @@ impl Creator {
             model.created_on
         )
         .fetch_one(conn.as_mut())
-        .map_err(|e| RecordSQL {
+            .await
+            .map_err(|e| RecordSQL {
             table: Table::Creator,
             action: Action::Insert,
             source: e,
-        })
-        .await?;
+            })?;
         indexer.upsert_creator(conn, &record).await?;
         Ok(record)
     }
@@ -521,7 +525,7 @@ impl File {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, Insert> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
@@ -537,11 +541,11 @@ impl File {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
+            .map_err(|e| Insert::Sql(RecordSQL {
             table: Table::File,
             action: Action::Insert,
             source: e,
-        })
+            }))
     }
 }
 
@@ -552,8 +556,8 @@ impl Instance {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Instance) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
+    pub async fn insert(conn: &mut PgConnection, model: Instance, indexer:&impl crate::search::SearchIndexer) -> Result<Self, Insert> {
+        let record = sqlx::query_as!(
             Instance,
             r#"INSERT INTO instance VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *"#,
             model.instance_id,
@@ -564,13 +568,15 @@ impl Instance {
             model.derived_from_instance,
             model.derived_from_state
         )
-        .fetch_one(conn)
+            .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Instance,
             action: Action::Insert,
             source: e,
-        })
+        })?;
+        indexer.upsert_instance(conn, &record).await?;
+        Ok(record)
     }
 }
 
@@ -839,7 +845,7 @@ impl Environment {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, Insert> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO environment
@@ -859,11 +865,11 @@ impl Environment {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
+            .map_err(|e| Insert::Sql(RecordSQL {
             table: Table::Environment,
             action: Action::Insert,
             source: e,
-        })
+            }))
     }
 }
 
@@ -886,7 +892,7 @@ impl Object {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, Insert> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
@@ -898,11 +904,11 @@ impl Object {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
+            .map_err(|e| Insert::Sql(RecordSQL {
             table: Table::Object,
             action: Action::Insert,
             source: e,
-        })
+            }))
     }
 }
 
@@ -960,8 +966,8 @@ impl Replay {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
+    pub async fn insert(conn: &mut PgConnection, model: Self, indexer:&impl crate::search::SearchIndexer) -> Result<Self, Insert> {
+        let record = sqlx::query_as!(
             Replay,
             r#"INSERT INTO replay VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"#,
             model.replay_id,
@@ -973,13 +979,15 @@ impl Replay {
             model.file_id,
             model.created_on,
         )
-        .fetch_one(conn)
+            .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Replay,
             action: Action::Insert,
             source: e,
-        })
+        })?;
+        indexer.upsert_replay(conn, &record).await?;
+        Ok(record)
     }
 }
 
@@ -989,7 +997,7 @@ impl Save {
             .fetch_optional(conn)
             .await
     }
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, model: Self, indexer: &impl crate::search::SearchIndexer) -> Result<Self, Insert> {
         let result =         // First, insert the new save
         sqlx::query_as!(
             Self,
@@ -1055,13 +1063,14 @@ impl Save {
             model.instance_id,
             model.save_id
         )
-        .execute(conn)
+            .execute(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Save,
             action: Action::Insert,
             source: e,
         })?;
+        indexer.upsert_save(conn, &result).await?;
         Ok(result)
     }
     pub async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
@@ -1087,8 +1096,8 @@ impl State {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
+    pub async fn insert(conn: &mut PgConnection, state: Self, indexer:&impl crate::search::SearchIndexer) -> Result<Self, Insert> {
+        let record = sqlx::query_as!(
             State,
             r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                RETURNING *"#,
@@ -1106,13 +1115,15 @@ impl State {
             state.created_on,
             state.save_derived_from,
         )
-        .fetch_one(conn)
+            .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::State,
             action: Action::Insert,
             source: e,
-        })
+        })?;
+        indexer.upsert_state(conn, &record).await?;
+        Ok(record)
     }
 }
 
@@ -1135,7 +1146,7 @@ impl Work {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, Insert> {
         sqlx::query_as!(
             Work,
             r#"INSERT INTO work VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"#,
@@ -1148,11 +1159,11 @@ impl Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
+            .map_err(|e| Insert::Sql( RecordSQL {
             table: Table::Work,
             action: Action::Insert,
             source: e,
-        })
+            }))
     }
 }
 
@@ -1188,7 +1199,7 @@ impl Screenshot {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, Insert> {
         sqlx::query_as!(
             Screenshot,
             r#"INSERT INTO screenshot VALUES ($1, $2) RETURNING *"#,
@@ -1197,11 +1208,11 @@ impl Screenshot {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
+            .map_err(|e|Insert::Sql(RecordSQL {
             table: Table::Screenshot,
             action: Action::Insert,
             source: e,
-        })
+            }))
     }
 }
 

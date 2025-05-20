@@ -31,6 +31,10 @@ struct Args {
     /// `GISST_STORAGE_ROOT_PATH` environment variable must be set
     #[clap(env)]
     pub gisst_storage_root_path: String,
+    #[clap(env)]
+    pub meili_url: String,
+    #[clap(env)]
+    pub meili_api_key: String,
 
     #[clap(long)]
     pub rdb: String,
@@ -66,6 +70,10 @@ pub enum IngestError {
     Io(#[from] std::io::Error),
     #[error("database error")]
     Sql(#[from] sqlx::Error),
+    #[error("insert error {0}")]
+    Insert(#[from] gisst::error::Insert),
+    #[error("search index error {0}")]
+    Index(#[from] gisst::error::SearchIndex),
     #[error("nul error")]
     Nul(#[from] std::ffi::NulError),
     #[error("storage error")]
@@ -105,6 +113,8 @@ async fn main() -> Result<(), IngestError> {
         deps,
         dep_paths,
         force,
+        meili_url,
+        meili_api_key
     } = Args::parse();
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
@@ -125,7 +135,8 @@ async fn main() -> Result<(), IngestError> {
         String::new(),
         Duplicate::ReuseObject,
     )
-    .await?;
+        .await?;
+    let indexer = gisst::search::MeiliIndexer::new(&meili_url, &meili_api_key)?;
     let mut dep_ids = Vec::with_capacity(deps.len());
     for (i, dep) in deps.iter().enumerate() {
         let dep = std::path::Path::new(dep);
@@ -190,6 +201,7 @@ async fn main() -> Result<(), IngestError> {
             let core_version = core_version.clone();
             let storage_root = storage_root.clone();
             let pool = Arc::clone(&pool);
+            let indexer = indexer.clone();
             handle.block_on(async move {
                 let mut tx = pool.begin().await?;
 
@@ -214,6 +226,7 @@ async fn main() -> Result<(), IngestError> {
                                     &platform,
                                     &core_name,
                                     &core_version,
+                                    &indexer,
                                 )
                                 .await?;
                                 link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
@@ -240,6 +253,7 @@ async fn main() -> Result<(), IngestError> {
                             &platform,
                             &core_name,
                             &core_version,
+                            &indexer
                         )
                         .await?;
                         link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
@@ -264,6 +278,7 @@ async fn main() -> Result<(), IngestError> {
                                 &platform,
                                 &core_name,
                                 &core_version,
+                                &indexer
                             )
                             .await?;
                             link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
@@ -287,6 +302,7 @@ async fn main() -> Result<(), IngestError> {
                                 &platform,
                                 &core_name,
                                 &core_version,
+                                &indexer
                             )
                             .await?;
                             link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
@@ -311,6 +327,7 @@ async fn main() -> Result<(), IngestError> {
                                 &platform,
                                 &core_name,
                                 &core_version,
+                                &indexer,
                             )
                             .await?;
                             link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
@@ -396,6 +413,7 @@ async fn create_metadata_records_from_rval(
     platform: &str,
     core_name: &str,
     core_version: &str,
+    indexer: &gisst::search::MeiliIndexer
 ) -> Result<Uuid, IngestError> {
     create_metadata_records(
         conn,
@@ -409,9 +427,11 @@ async fn create_metadata_records_from_rval(
         platform,
         core_name,
         core_version,
+        indexer
     )
     .await
 }
+#[allow(clippy::too_many_arguments)]
 async fn create_metadata_records(
     conn: &mut sqlx::PgConnection,
     file_name: &str,
@@ -420,6 +440,7 @@ async fn create_metadata_records(
     platform: &str,
     core_name: &str,
     core_version: &str,
+    indexer: &gisst::search::MeiliIndexer
 ) -> Result<Uuid, IngestError> {
     // TODO: merge entries from result on libretrodb_query_compile(db, "{\"rom_name\":nom}", strlen query exp, error) cursor
     let created_on = chrono::Utc::now();
@@ -455,7 +476,7 @@ async fn create_metadata_records(
     };
     Work::insert(conn, work).await?;
     Environment::insert(conn, env).await?;
-    Instance::insert(conn, instance).await?;
+    Instance::insert(conn, instance, indexer).await?;
     Ok(instance_id)
 }
 

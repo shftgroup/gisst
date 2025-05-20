@@ -28,10 +28,8 @@ pub enum GISSTCliError {
     Io(#[from] std::io::Error),
     #[error("database error")]
     Sql(#[from] sqlx::Error),
-    #[error("insertion error {0}")]
-    Insert(#[from] gisst::error::Insert),
-    #[error("gisst new model error")]
-    NewModel(#[from] gisst::error::RecordSQL),
+    #[error("gisst new indexed model error")]
+    NewModel(#[from] gisst::error::Insert),
     #[error("json parse error")]
     JsonParse(#[from] serde_json::Error),
     #[error("storage error")]

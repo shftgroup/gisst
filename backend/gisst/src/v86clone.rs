@@ -8,13 +8,14 @@ use std::path::Path;
 use uuid::Uuid;
 
 #[allow(clippy::too_many_lines, clippy::missing_errors_doc)]
-#[tracing::instrument(skip(conn))]
+#[tracing::instrument(skip(conn,indexer))]
 pub async fn clone_v86_machine(
     conn: &mut PgConnection,
     instance_id: Uuid,
     state_id: Uuid,
     storage_root: &str,
     depth: u8,
+    indexer: &impl crate::search::SearchIndexer
 ) -> Result<Uuid, V86Clone> {
     use crate::inc_metric;
     use std::process::Command;
@@ -82,7 +83,7 @@ pub async fn clone_v86_machine(
     instance.instance_id = Uuid::new_v4();
     let new_id = instance.instance_id;
     let mut temp_folder = None;
-    Instance::insert(conn, instance).await?;
+    Instance::insert(conn, instance, indexer).await?;
     // add the requisite objects and link them
     // TODO: the ? inside of this loop should get caught and I should delete the outFGSFDS/ folder either way after.
     let mut content_index = 0;

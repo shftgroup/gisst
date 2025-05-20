@@ -241,7 +241,7 @@ async fn clone_v86_instance(
     let storage_path = &app_state.root_storage_path;
     let storage_depth = app_state.folder_depth;
     let new_instance =
-        gisst::v86clone::clone_v86_machine(&mut conn, id, state_id, storage_path, storage_depth)
+        gisst::v86clone::clone_v86_machine(&mut conn, id, state_id, storage_path, storage_depth, &app_state.indexer)
             .await?;
     Ok(axum::response::Redirect::permanent(&format!("/instances/{new_instance}")).into_response())
 }

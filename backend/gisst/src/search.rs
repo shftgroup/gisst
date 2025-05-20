@@ -77,10 +77,10 @@ impl SearchIndexer for MeiliIndexer {
         conn: &mut PgConnection,
         save: &Save,
     ) -> Result<Self::IndexOut, error::SearchIndex> {
-        let info = CreatorSaveInfo::get_for_save(conn, save).await?;
+        let infos = CreatorSaveInfo::get_for_save(conn, save).await?;
         self.meili
             .index("save")
-            .add_or_update(&[info], Some("save_id"))
+            .add_or_update(&infos, Some("save_id"))
             .await
             .map_err(crate::error::SearchIndex::from)
     }
@@ -190,10 +190,10 @@ pub struct MeiliSearch {
     meili: Meili<meilisearch_sdk::reqwest::ReqwestClient>,
 }
 impl MeiliSearch {
-    pub fn new(url: &str, api_key: &str) -> Self {
-        Self {
-            meili: Meili::new(url, Some(api_key)).unwrap(),
-        }
+    pub fn new(url: &str, api_key: &str) -> Result<Self, crate::error::Search> {
+        Ok(Self {
+            meili: Meili::new(url, Some(api_key))?,
+        })
     }
     pub fn instances(&self) -> meilisearch_sdk::indexes::Index {
         self.meili.index("instance")
