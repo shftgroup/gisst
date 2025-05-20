@@ -52,7 +52,13 @@ async fn get_instances(
         .with_facets(meilisearch_sdk::search::Selectors::Some(&["work_platform"]))
         .with_hits_per_page(limit as usize)
         .with_page(page_num as usize)
-        .with_filter(&params.platform.as_ref().map(|p| format!("work_platform = \"{p}\"")).unwrap_or_default())
+        .with_filter(
+            &params
+                .platform
+                .as_ref()
+                .map(|p| format!("work_platform = \"{p}\""))
+                .unwrap_or_default(),
+        )
         .with_query(&params.contains.clone().unwrap_or_default())
         .execute()
         .await
