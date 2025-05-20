@@ -21,6 +21,11 @@ jobs:
         cache-all-crates: "true"
     - name: Install zshell
       run: sudo apt install -y zsh
+    - name: Start Meilisearch
+      uses: moy2010/meilisearch-github-action@0.1
+      with:
+        meilisearch-version: v1.14.0
+        meilisearch-api-key: test-api-key-github-actions
     - name: Clippy
       working-directory: backend
       run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
@@ -35,9 +40,29 @@ jobs:
         echo "DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb" >> .env
         echo "GISST_CONFIG=./" >> .env
         DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb cargo sqlx database reset -y -f
+    - name: Create meili index
+      working-directory: backend/meili
+      run: |
+        echo "MEILI_URL=http://localhost:7700" >> ../.env
+        echo "MEILI_MASTER_KEY=test-api-key-github-actions" >> ../.env
+        echo "MEILI_API_KEY=test-api-key-github-actions" >> ../.env
+        echo "MEILI_SEARCH_KEY=test-api-key-github-actions" >> ../.env
+        export MEILI_URL
+        export MEILI_MASTER_KEY
+        export MEILI_API_KEY
+        ./init_indices.sh
     - name: Load example data into DB
       working-directory: backend
-      run: rm -rf storage; mkdir storage; LOAD_WIN=0 zsh -e ./load_examples.sh
+      run: |
+        rm -rf storage
+        mkdir storage
+        source .env
+        export GISST_CONFIG
+        export MEILI_URL
+        export MEILI_MASTER_KEY
+        export MEILI_API_KEY
+        export MEILI_SEARCH_KEY
+        LOAD_WIN=0 zsh -e ./load_examples.sh
     - name: Check DB contents
       working-directory: backend
       run: |
