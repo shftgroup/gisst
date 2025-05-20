@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_debug_formatting)]
+
 mod args;
 mod cliconfig;
 
@@ -75,17 +77,17 @@ async fn main() -> Result<(), GISSTCliError> {
         },
         Commands::State(state) => match state.command {
             BaseSubcommand::Create(create) => {
-                create_state(create, db, storage_root, &indexer).await?
+                create_state(create, db, storage_root, &indexer).await?;
             }
         },
         Commands::Save(save) => match save.command {
             BaseSubcommand::Create(create) => {
-                create_save(create, db, storage_root, &indexer).await?
+                create_save(create, db, storage_root, &indexer).await?;
             }
         },
         Commands::Replay(replay) => match replay.command {
             BaseSubcommand::Create(create) => {
-                create_replay(create, db, storage_root, &indexer).await?
+                create_replay(create, db, storage_root, &indexer).await?;
             }
         },
         Commands::Screenshot(screenshot) => match screenshot.command {
@@ -115,7 +117,7 @@ async fn reindex(
 ) -> Result<(), GISSTCliError> {
     let mut conn = db.acquire().await?;
     let status = indexer.reindex(&mut conn).await;
-    log::info!("{:?}", status);
+    log::info!("{status:?}");
     Ok(())
 }
 
