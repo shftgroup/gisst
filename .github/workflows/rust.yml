@@ -25,10 +25,10 @@ jobs:
       run: curl -L https://install.meilisearch.com | sh
       working-directory: backend/meili
     - uses: JarvusInnovations/background-action@v1
-      name: Bootstrap System Under Test (SUT)
+      name: Run meili
       with:
         run: |
-          ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development
+          ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development &
         wait-on: |
           http://localhost:7700/
         tail: true # true = stderr,stdout
