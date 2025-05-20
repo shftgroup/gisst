@@ -35,40 +35,50 @@ async fn get_single_creator(
 ) -> Result<axum::response::Response, ServerError> {
     let mut conn = app_state.pool.acquire().await?;
     if let Some(creator) = Creator::get_by_id(&mut conn, id).await? {
-        let state_page_num = params.state_page_num.unwrap_or(0);
+        let creator_filter = format!("creator_id = \"{id}\"");
+        let state_page_num = params.state_page_num.unwrap_or(1);
         let state_limit = params.state_limit.unwrap_or(100).min(100);
-        let state_offset = state_page_num * state_limit;
-        let replay_page_num = params.replay_page_num.unwrap_or(0);
+        let search = app_state.search.states();
+        let state_results: meilisearch_sdk::search::SearchResults<CreatorStateInfo> = search
+            .search()
+            .with_hits_per_page(state_limit as usize)
+            .with_page(state_page_num as usize)
+            .with_filter(&creator_filter)
+            .with_query(&params.state_contains.clone().unwrap_or_default())
+            .execute()
+            .await
+            .map_err(gisst::error::Search::from)?;
+        let states: Vec<_> = state_results.hits.into_iter().map(|r| r.result).collect();
+        let replay_page_num = params.replay_page_num.unwrap_or(1);
         let replay_limit = params.replay_limit.unwrap_or(100).min(100);
-        let replay_offset = replay_page_num * replay_limit;
-        let save_page_num = params.save_page_num.unwrap_or(0);
+        let search = app_state.search.replays();
+        let replay_results: meilisearch_sdk::search::SearchResults<CreatorReplayInfo> = search
+            .search()
+            .with_hits_per_page(replay_limit as usize)
+            .with_page(replay_page_num as usize)
+            .with_filter(&creator_filter)
+            .with_query(&params.replay_contains.clone().unwrap_or_default())
+            .execute()
+            .await
+            .map_err(gisst::error::Search::from)?;
+        let replays: Vec<_> = replay_results.hits.into_iter().map(|r| r.result).collect();
+        let save_page_num = params.save_page_num.unwrap_or(1);
         let save_limit = params.save_limit.unwrap_or(100).min(100);
-        let save_offset = save_page_num * save_limit;
+        let search = app_state.search.saves();
+        let save_results: meilisearch_sdk::search::SearchResults<CreatorSaveInfo> = search
+            .search()
+            .with_hits_per_page(save_limit as usize)
+            .with_page(save_page_num as usize)
+            .with_filter(&creator_filter)
+            .with_query(&params.save_contains.clone().unwrap_or_default())
+            .execute()
+            .await
+            .map_err(gisst::error::Search::from)?;
+        let saves: Vec<_> = save_results.hits.into_iter().map(|r| r.result).collect();
         let creator_results = GetAllCreatorResult {
-            states: Creator::get_all_state_info(
-                &mut conn,
-                creator.creator_id,
-                params.state_contains.clone(),
-                state_offset,
-                state_limit,
-            )
-            .await?,
-            replays: Creator::get_all_replay_info(
-                &mut conn,
-                creator.creator_id,
-                params.replay_contains.clone(),
-                replay_offset,
-                replay_limit,
-            )
-            .await?,
-            saves: Creator::get_all_save_info(
-                &mut conn,
-                creator.creator_id,
-                params.save_contains.clone(),
-                save_offset,
-                save_limit,
-            )
-            .await?,
+            states,
+            replays,
+            saves,
             creator,
         };
         let state_has_more = creator_results.states.len() >= state_limit as usize;
