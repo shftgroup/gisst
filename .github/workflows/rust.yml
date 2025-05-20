@@ -24,7 +24,6 @@ jobs:
     - name: Start Meilisearch
       uses: moy2010/meilisearch-github-action@0.1
       with:
-        meilisearch-version: v1.14.0
         meilisearch-api-key: test-api-key-github-actions
     - name: Clippy
       working-directory: backend
