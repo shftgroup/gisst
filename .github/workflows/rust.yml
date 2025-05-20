@@ -21,10 +21,20 @@ jobs:
         cache-all-crates: "true"
     - name: Install zshell
       run: sudo apt install -y zsh
-    - name: Start Meilisearch
-      uses: moy2010/meilisearch-github-action@0.1
+    - uses: JarvusInnovations/background-action@v1
+      name: Bootstrap System Under Test (SUT)
       with:
-        meilisearch-api-key: test-api-key-github-actions
+        run: |
+          curl -L https://install.meilisearch.com | sh
+          ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development
+        wait-on: |
+          http://localhost:7700/
+        tail: true # true = stderr,stdout
+        log-output-resume: stderr
+        wait-for: 5m
+        log-output: stderr,stdout # same as true
+        log-output-if: failure
+        working-directory: backend/meili
     - name: Clippy
       working-directory: backend
       run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
