@@ -318,8 +318,8 @@ impl AuthBackend {
         Self {
             pool,
             client,
-            email_whitelist,
             indexer,
+            email_whitelist,
         }
     }
     pub fn authorize_url(&self) -> (oauth2::url::Url, CsrfToken) {

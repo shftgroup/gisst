@@ -80,6 +80,7 @@ impl Debug for ServerError {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
         let mut env = Environment::new();
