@@ -1,4 +1,4 @@
-#![allow(clippy::unnecessary_debug_formatting)]
+#![allow(unknown_lints,clippy::unnecessary_debug_formatting)]
 
 mod args;
 mod cliconfig;
