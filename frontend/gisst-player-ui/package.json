@@ -24,7 +24,7 @@
     "check": "tsc && eslint src",
     "build": "tsc && vite build && shx cp dist/gisst-player.d.ts dist/gisst-player.umd.d.ts",
     "preview": "vite preview",
-    "test:e2e": "playwright test"
+    "test": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
