@@ -2,49 +2,12 @@
 
 {% block title %}GISST{% endblock %}
 
+{% block js_preload %}
+<script type="module" src="{{ base_url | safe }}/ui/ui.js"></script>
+{% endblock js_preload %}
+
 {% block content %}
 <div class="container">
-    <div class="row">
-      <h1>Instances</h1>
-      <div id="searchbox" focus></div>
-    </div>
-    <div class="row">
-      <div class="search_wrapper">
-        <div id="hits"></div>
-        <div id="pagination"></div>
-      </div>
-    </div>
+  <gisst-instance-search base_url="{{ base_url | safe }}" search_url="{{ search_url | safe }}" search_key="{{ search_key }}"></gisst-instance-search>
 </div>
-<script type="module">
-import * as ui from '{{ base_url | safe }}/ui/ui.js';
-
-const style = document.createElement('style');
-style.innerHTML = ui.styles;
-document.head.appendChild(style);
-
-const search = ui.search_instances("{{ search_url | safe }}", "{{ search_key | safe }}", {});
-search.addWidgets([
-  ui.widgets.searchBox({
-    container: "#searchbox"
-  }),
-  ui.widgets.configure({ hitsPerPage: 10 }),
-  ui.widgets.pagination({ container: "#pagination" }),
-  ui.widgets.hits({
-    container: "#hits",
-    templates: {
-      item: (hit, { html, components }) => html`
-        <div>
-          <div class="hit-name">
-            <a href="{{ base_url | safe }}/instances/${hit.instance_id}">${components.Highlight({ hit, attribute: "work_name"})}</a>
-          </div>
-          <div class="hit-">
-            ${hit.work_version}--${components.Highlight({ hit, attribute: "work_platform"})}--<a class="btn btn-primary instance-boot-button" href="{{ base_url | safe }}/play/${hit.instance_id}">Play</a>
-          </div>
-        </div>
-          `
-    }
-  })
-]);
-search.start();
-</script>
 {% endblock %}
