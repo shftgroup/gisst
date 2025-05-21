@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          state_id, state_name, state_description, screenshot_id,\n                          file_id, instance_id\n                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id)\n                   WHERE state.creator_id = $1\n                   ORDER BY state.created_on DESC\n                   OFFSET $2\n                   LIMIT $3",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                      state_id, state_name, state_description, state.screenshot_id,\n                      file_id, instance_id, state.created_on, creator.creator_id,\n                      creator.creator_username, creator.creator_full_name\n               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)",
   "describe": {
     "columns": [
       {
@@ -52,16 +52,36 @@
         "ordinal": 9,
         "name": "instance_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "creator_full_name",
+        "type_info": "Text"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid",
-        "Int8",
-        "Int8"
-      ]
+      "Left": []
     },
     "nullable": [
+      false,
+      false,
+      false,
+      false,
       false,
       false,
       false,
@@ -74,5 +94,5 @@
       false
     ]
   },
-  "hash": "cb39a6231a05d861c9ca036c70e4b731997169cb89d9cd6011d911b4ec6ac7be"
+  "hash": "1dc82d17aaf1b7fff67c1e7fa622f93e9e678358318b98bb24e12cd1381f4ac3"
 }

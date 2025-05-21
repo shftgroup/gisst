@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          state_id, state_name, state_description, screenshot_id,\n                          file_id, instance_id\n                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id)\n                   WHERE state.creator_id = $1 AND\nf_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')\n                   ORDER BY state.created_on DESC\n                   OFFSET $3\n                   LIMIT $4",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                      state_id, state_name, state_description, state.screenshot_id,\n                      file_id, instance_id, state.created_on, creator.creator_id,\n                      creator.creator_username, creator.creator_full_name\n               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)\n               WHERE state.state_id = $1",
   "describe": {
     "columns": [
       {
@@ -52,14 +52,31 @@
         "ordinal": 9,
         "name": "instance_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "creator_full_name",
+        "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text",
-        "Int8",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -72,8 +89,12 @@
       false,
       false,
       false,
+      false,
+      false,
+      false,
+      false,
       false
     ]
   },
-  "hash": "ff5c28f70a0a70b3b5c5bd51f00f177b578c763027d0031d1dffbd80adbc67ee"
+  "hash": "b393ed0e43f2d9fdcbc2333c3fb822a397ff83353878099d4bccb7d2a4985d77"
 }

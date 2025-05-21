@@ -10,7 +10,7 @@ window.onload = async function() {
   if(kind == "v86") {
     await v86.init(gisst_root, config.environment, config.start, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
   } else {
-    await ra.init(gisst_root, config.environment.environment_core_name, config.start, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
+    await ra.init(gisst_root, config.environment.environment_core_name, config.start, config.saves, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
   }
   const container = <HTMLCanvasElement>document.getElementById("canvas_div")!;
   const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
@@ -19,12 +19,10 @@ window.onload = async function() {
     const h = canv.height;
     if (w == 0 || h == 0) { return; }
     const target_w = container.offsetWidth;
-    let target_h;
+    let target_h = container.offsetHeight;
     if (kind == "v86") {
       const aspect = w / h;
       target_h = target_w / aspect;
-    } else {
-      target_h = container.offsetHeight;
     }
     const new_w = `${target_w}px`;
     const new_h = `${target_h}px`;

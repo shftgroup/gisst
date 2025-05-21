@@ -1,0 +1,92 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                      replay_id, replay_name, replay_description,\n                      file_id, instance_id, replay.created_on, creator.creator_id,\n                      creator.creator_username, creator.creator_full_name\n               FROM work JOIN instance USING (work_id) JOIN replay USING (instance_id) JOIN creator ON (replay.creator_id = creator.creator_id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "work_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "work_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "work_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "work_platform",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "replay_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "replay_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "replay_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "creator_full_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "032fe1d2804c5491daa1317112c361e4135884e99426f191dab70260510be43a"
+}

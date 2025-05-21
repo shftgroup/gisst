@@ -30,8 +30,11 @@ extensions:
   jaeger_storage:
     backends:
       some_storage:
-        memory:
-          max_traces: 100000
+        badger:
+          directories:
+            keys: "/jaeger/"
+            values: "/jaeger/"
+          ephemeral: false 
     metric_backends:
       some_metrics_storage:
         prometheus:

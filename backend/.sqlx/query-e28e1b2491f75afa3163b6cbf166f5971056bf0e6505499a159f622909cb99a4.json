@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE file SET file_size=$1, file_compressed_size=$2 WHERE file_id=$3 ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e28e1b2491f75afa3163b6cbf166f5971056bf0e6505499a159f622909cb99a4"
+}

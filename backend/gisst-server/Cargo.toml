@@ -49,3 +49,5 @@ opentelemetry-otlp = { version = "0.29.0", features = [ "grpc-tonic", "default" 
 opentelemetry-stdout = { version = "0.29.0" }
 opentelemetry-semantic-conventions = { version="0.29.0", features=["default", "semconv_experimental"] }
 tracing-opentelemetry = "0.30.0"
+axum-extra = { version = "0.10.1", features = ["query", "tracing"] }
+meilisearch-sdk = "0.28.0"

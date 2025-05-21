@@ -16,6 +16,12 @@ use uuid::Uuid;
 pub enum ServerError {
     #[error("database error")]
     Sql(#[from] sqlx::Error),
+    #[error("search index error")]
+    SearchIndex(#[from] gisst::error::SearchIndex),
+    #[error("search error")]
+    Search(#[from] gisst::error::Search),
+    #[error("insert error")]
+    Insert(#[from] gisst::error::Insert),
     #[error("storage error")]
     Storage(#[from] gisst::error::Storage),
     #[error("file not found")]
@@ -74,6 +80,7 @@ impl Debug for ServerError {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
         let mut env = Environment::new();
@@ -155,6 +162,13 @@ impl IntoResponse for ServerError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "auth backend internal system error",
             ),
+            ServerError::SearchIndex(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "search index error")
+            }
+            ServerError::Search(_) => (StatusCode::INTERNAL_SERVER_ERROR, "search error"),
+            ServerError::Insert(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "database or index error")
+            }
         };
 
         let base_url = crate::server::BASE_URL.get();
@@ -184,6 +198,8 @@ impl IntoResponse for ServerError {
 pub enum AuthError {
     #[error("database error")]
     Sql(#[from] sqlx::Error),
+    #[error("creator insert error")]
+    Insert(#[from] gisst::error::Insert),
     #[error("csrf error")]
     CsrfMissing,
     #[error("user not allowed to access resource")]

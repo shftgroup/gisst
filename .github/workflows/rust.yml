@@ -15,12 +15,27 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Rust Cache
-      uses: Swatinem/rust-cache@v2.5.1
+      uses: Swatinem/rust-cache@v2.7.7
       with:
         workspaces: "backend"
         cache-all-crates: "true"
     - name: Install zshell
       run: sudo apt install -y zsh
+    - name: Set up meili
+      run: curl -L https://install.meilisearch.com | sh
+      working-directory: backend/meili
+    - uses: JarvusInnovations/background-action@v1
+      name: Run meili
+      with:
+        run: |
+          ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development &
+        wait-on: '{"resources":["http-get://localhost:7700/version"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
+        tail: true # true = stderr,stdout
+        log-output-resume: stderr
+        wait-for: 1m
+        log-output: stderr,stdout # same as true
+        log-output-if: failure
+        working-directory: backend/meili
     - name: Clippy
       working-directory: backend
       run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
@@ -34,27 +49,50 @@ jobs:
         cargo install sqlx-cli
         echo "DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb" >> .env
         echo "GISST_CONFIG=./" >> .env
-        cargo sqlx database reset -y -f
+        DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb cargo sqlx database reset -y -f
+    - name: Create meili index
+      working-directory: backend/meili
+      run: |
+        echo "MEILI_URL=http://localhost:7700" >> ../.env
+        echo "MEILI_MASTER_KEY=test-api-key-github-actions" >> ../.env
+        echo "MEILI_API_KEY=test-api-key-github-actions" >> ../.env
+        echo "MEILI_SEARCH_KEY=test-api-key-github-actions" >> ../.env
+        source ../.env
+        export MEILI_URL
+        export MEILI_MASTER_KEY
+        export MEILI_API_KEY
+        ./init_indices.sh
     - name: Load example data into DB
       working-directory: backend
-      run: rm -rf storage; mkdir storage; LOAD_WIN=0 zsh -e ./load_examples.sh
+      run: |
+        rm -rf storage
+        mkdir storage
+        source .env
+        export GISST_CONFIG
+        export MEILI_URL
+        export MEILI_MASTER_KEY
+        export MEILI_API_KEY
+        export MEILI_SEARCH_KEY
+        LOAD_WIN=0 zsh -e ./load_examples.sh
     - name: Check DB contents
       working-directory: backend
       run: |
-        sudo -u postgres psql gisstdb -c "select count(*) from instance;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "54"
-        sudo -u postgres psql gisstdb -c "select count(*) from work;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "42"
-        sudo -u postgres psql gisstdb -c "select count(*) from instancework;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "54"
+        sudo -u postgres psql gisstdb -c "select count(*) from instance;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "56"
+        sudo -u postgres psql gisstdb -c "select count(*) from work;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "44"
+        sudo -u postgres psql gisstdb -c "select count(*) from instancework;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "56"
         sudo -u postgres psql gisstdb -c "select count(*) from state;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        sudo -u postgres psql gisstdb -c "select count(*) from save;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "4"
+        sudo -u postgres psql gisstdb -c "select count(*) from instance_save;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "6"
         sudo -u postgres psql gisstdb -c "select count(*) from replay;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
         sudo -u postgres psql gisstdb -c "select count(*) from screenshot;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
         sudo -u postgres psql gisstdb -c "select count(*) from creator;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
         sudo -u postgres psql gisstdb -c "select count(*) from environment;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "8"
-        sudo -u postgres psql gisstdb -c "select count(*) from file;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "62"
-        sudo -u postgres psql gisstdb -c "select count(*) from object;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "60"
-        sudo -u postgres psql gisstdb -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "82"
+        sudo -u postgres psql gisstdb -c "select count(*) from file;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "70"
+        sudo -u postgres psql gisstdb -c "select count(*) from object;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "64"
+        sudo -u postgres psql gisstdb -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "94"
         echo "All DB table counts OK"
         find storage -type f -print0 | du -a --files0-from=- --total | sort -k 2 > du-out.txt
-        grep -x "61908\s*total" du-out.txt
+        grep -x "60496\s*total" du-out.txt
         echo "Total byte count OK"
-        wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "117"
+        wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "110"
         echo "Total file count OK"

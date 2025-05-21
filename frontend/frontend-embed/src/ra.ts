@@ -1,8 +1,9 @@
-import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls, EmbedOptions, ControllerOverlayMode} from './types.d';
+import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls, EmbedOptions, ControllerOverlayMode, SaveFileLink} from './types.d';
 import {loadRetroArch,LibretroModule} from './libretro_adapter';
 
-export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], container:HTMLDivElement, embed_options:EmbedOptions):Promise<EmuControls> {
+export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, saves:SaveFileLink[], manifest:ObjectLink[], container:HTMLDivElement, embed_options:EmbedOptions):Promise<EmuControls> {
   const state_dir = "/mem/states";
+  const saves_dir = "/mem/saves";
   const retro_args = ["-v"];
   const content = manifest.find((o) => o.object_role=="content" && o.object_role_index == 0)!;
   const content_file = content.file_filename!;
@@ -26,6 +27,10 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     const data = (start as ReplayStart).data;
     replay = new Uint8Array(await ((await fetch(gisst_root+"/storage/"+data.file_dest_path)).arrayBuffer()));
   }
+  const save_data:[SaveFileLink,Uint8Array][] = [];
+  for (const save of saves) {
+    save_data.push([save, new Uint8Array(await ((await fetch(gisst_root+"/storage/"+save.file_dest_path)).arrayBuffer()))]);
+  }
   retro_args.push("--config=/mem/retroarch.cfg");
   const has_config = manifest.find((o) => o.object_role=="config")!;
   if(has_config) {
@@ -36,12 +41,13 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   console.log(retro_args);
   let ra_cfg_text:string = await ((await fetch(gisst_root+"/assets/retroarch_web_base.cfg")).text());
   return new Promise((res) => {
-    loadRetroArch(gisst_root, core, {'OPFS':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
+    loadRetroArch(gisst_root, core, {'OPFS_MOUNT':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
       true,
       async function (module:LibretroModule) {
         const enc = new TextEncoder();
         module.FS.createPath("/", "fetch/content", true, true);
         module.FS.createPath("/", state_dir, true, true);
+        module.FS.createPath("/", saves_dir, true, true);
         let fetch_manifest = `${gisst_root}/storage/\n`;
         /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
         for(const file of manifest) {
@@ -81,6 +87,14 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
           module.FS.createPath("/", state_dir, true, true);
           module.FS.createDataFile(state_dir, content_base + ".replay1", replay, true, true, true);
         }
+        for (const [data, savefile] of save_data) {
+          console.log(data, "/storage/"+data.file_dest_path,saves_dir + "/" + data.save_id + ".srm");
+          module.FS.createPath("/", saves_dir, true, true);
+          module.FS.createDataFile(saves_dir, data.save_id + ".srm", savefile, true, true, false);
+        }
+        if (save_data.length > 0) {
+          module.FS.createDataFile(saves_dir, content_base + ".srm", save_data[0][1], true, true, false);
+        }
         if (use_gamepad_overlay) {
           // gameboy, gba, nes, snes, retropad
           // gambatte, vba_next, fceumm, snes9x
@@ -94,7 +108,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
           if (core in overlays) {
             overlay = overlays[core as keyof typeof overlays];
           }
-          ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/bundle/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
+          ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
         }
         const lines_enc = enc.encode(ra_cfg_text);
         module.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);

@@ -37,6 +37,11 @@
         "ordinal": 6,
         "name": "created_on",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "file_compressed_size",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
@@ -51,7 +56,8 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
   "hash": "27eafec6ba8a162414d1390232c3893a30a7f1bb97ffa328e3824559ff2a7f00"

@@ -8,8 +8,6 @@ use uuid::Uuid;
 pub enum GISSTCliError {
     #[error("create creator error")]
     CreateCreator(String),
-    #[error("create object error")]
-    CreateObject(String),
     #[error("create instance error")]
     CreateInstance(String),
     #[error("create environment error")]
@@ -18,6 +16,8 @@ pub enum GISSTCliError {
     CreateWork(String),
     #[error("create state error")]
     CreateState(String),
+    #[error("create save error")]
+    CreateSave(String),
     #[error("create replay error")]
     CreateReplay(String),
     #[error("create screenshot error")]
@@ -28,8 +28,8 @@ pub enum GISSTCliError {
     Io(#[from] std::io::Error),
     #[error("database error")]
     Sql(#[from] sqlx::Error),
-    #[error("gisst new model error")]
-    NewModel(#[from] gisst::error::RecordSQL),
+    #[error("gisst new indexed model error")]
+    NewModel(#[from] gisst::error::Insert),
     #[error("json parse error")]
     JsonParse(#[from] serde_json::Error),
     #[error("storage error")]
@@ -46,6 +46,10 @@ pub enum GISSTCliError {
     InsertFileError(#[from] gisst::error::InsertFile),
     #[error("invalid role index {0}")]
     InvalidRoleIndex(std::num::TryFromIntError),
+    #[error("file size int conversion")]
+    FileSize(std::num::TryFromIntError),
+    #[error("search index error")]
+    SearchIndex(#[from] gisst::error::SearchIndex),
 }
 
 #[derive(Debug, Parser)]
@@ -60,6 +64,12 @@ pub struct GISSTCli {
     /// `GISST_CONFIG_PATH` environment variable must be set
     #[clap(env)]
     pub gisst_config_path: String,
+    /// `MEILI_URL` environment variable must be set
+    #[clap(env)]
+    pub meili_url: String,
+    /// `MEILI_API_KEY` environment variable must be set
+    #[clap(env)]
+    pub meili_api_key: String,
 }
 
 #[derive(Debug, Args)]
@@ -76,6 +86,12 @@ pub enum BaseSubcommand<C: clap::FromArgMatches + clap::Args> {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    /// Recalculate file sizes and compressed sizes
+    RecalcSizes,
+
+    /// Dump all works, states, saves, etc into search indexer
+    Reindex,
+
     /// Link records together
     Link {
         /// Record type that is being linked to another record
@@ -126,25 +142,8 @@ pub enum Commands {
     },
 }
 
-#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Args)]
 pub struct CreateObject {
-    /// Create objects recursively if input file is directory
-    #[arg(short, long)]
-    pub recursive: bool,
-
-    /// Extract any archive files and create individual object records for each extracted file, this is recursive
-    #[arg(short, long)]
-    pub extract: bool,
-
-    /// Will skip requests for a description for an object and default to using the object's filename
-    #[arg(short, long = "ignore-description")]
-    pub ignore_description: bool,
-
-    /// Will answer yes "y" to all "y/n" prompts on record creation
-    #[arg(short = 'y', long = "skip-yes")]
-    pub skip_yes: bool,
-
     /// Link to a specific instance based on UUID
     #[arg(short, long)]
     pub link: Option<Uuid>,
@@ -166,7 +165,7 @@ pub struct CreateObject {
     pub force_uuid: Uuid,
 
     /// Paths of file(s) to create in the database, directories will be ignored unless -r/--recursive flag is enabled
-    pub file: Vec<String>,
+    pub file: String,
 
     /// Search for files in this directory, useful if you don't want deeply nested `file_source_paths`.
     #[arg(long)]
@@ -223,7 +222,38 @@ pub struct CreateWork {
 }
 
 #[derive(Debug, Args)]
-pub struct CreateSave {}
+pub struct CreateSave {
+    /// Link to a specific instance based on UUID
+    #[arg(short, long)]
+    pub link: Uuid,
+
+    /// Folder depth to use for input file to path based off of characters in assigned UUID
+    #[arg(short, long, default_value_t = 4)]
+    pub depth: u8,
+
+    /// (DEBUG) Force the use of specific save UUID
+    #[arg(long = "force-uuid")]
+    pub force_uuid: Option<Uuid>,
+
+    /// Paths of file to create in the database, must be a regular file
+    #[arg(long)]
+    pub file: String,
+
+    #[arg(long = "name")]
+    pub save_short_desc: String,
+    #[arg(long = "description")]
+    pub save_description: Option<String>,
+    #[arg(long = "from-state")]
+    pub state_derived_from: Option<Uuid>,
+    #[arg(long = "from-save")]
+    pub save_derived_from: Option<Uuid>,
+    #[arg(long = "from-replay")]
+    pub replay_derived_from: Option<Uuid>,
+    #[arg(long = "creator-id")]
+    pub creator_id: Uuid,
+    #[arg(long = "created-on")]
+    pub created_on: Option<String>,
+}
 
 #[derive(Debug, Args)]
 pub struct CreateState {

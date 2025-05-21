@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE creator SET (creator_username, creator_full_name, created_on) = ($1, $2, $3)\n            WHERE creator_id = $4\n            RETURNING *",
+  "query": "SELECT * FROM creator",
   "describe": {
     "columns": [
       {
@@ -25,12 +25,7 @@
       }
     ],
     "parameters": {
-      "Left": [
-        "Text",
-        "Text",
-        "Timestamptz",
-        "Uuid"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -39,5 +34,5 @@
       false
     ]
   },
-  "hash": "db9c9c3cc7d4f87c352932ac2d086f0331f3f9ffa388b2cabab9904535324ff1"
+  "hash": "16d617c5baae6e1fc0021ce2b411adc226997785bb92d60e21c4d624a9d66f6b"
 }

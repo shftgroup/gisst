@@ -21,6 +21,9 @@ pub struct ServerConfig {
 
     #[serde(default)]
     pub env: EnvConfig,
+
+    #[serde(default)]
+    pub search: SearchConfig,
 }
 
 impl ServerConfig {
@@ -35,6 +38,13 @@ impl ServerConfig {
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Default)]
+#[allow(clippy::struct_field_names)]
+pub struct SearchConfig {
+    pub meili_url: String,
+    pub meili_api_key: String,
+    pub meili_search_key: String,
+}
 #[derive(Debug, Clone, Deserialize)]
 pub struct EnvConfig {
     // RUST_LOG env variable as parsed by EnvFilter in tracing_subscriber
@@ -43,6 +53,7 @@ pub struct EnvConfig {
     pub trace_include_headers: bool,
     // Jaeger endpoint is the address and port to which the tracer will export traces
     pub jaeger_endpoint: String,
+    pub prometheus_endpoint: String,
 }
 
 impl Default for EnvConfig {
@@ -50,7 +61,8 @@ impl Default for EnvConfig {
         Self {
             rust_log: "warn,gisst_server=debug,gisst=debug".to_string(),
             trace_include_headers: false,
-            jaeger_endpoint: "http://127.0.0.1:4317/".to_string(),
+            jaeger_endpoint: String::new(),
+            prometheus_endpoint: String::new(),
         }
     }
 }

@@ -6,7 +6,7 @@ Requires=gisst.service docker.service
 [Service]
 Type=simple
 User=jcoa2018
-WorkingDirectory=/home/jcoa2018/gisst/backend
+WorkingDirectory=/home/jcoa2018/Projects/gisst/backend
 Environment="GF_SERVER_PROTOCOL=http"
 Environment="GF_SERVER_SERVE_FROM_SUB_PATH=false"
 Environment="GF_SERVER_ROOT_URL=https://ultra64.cs.pomona.edu/dash/"

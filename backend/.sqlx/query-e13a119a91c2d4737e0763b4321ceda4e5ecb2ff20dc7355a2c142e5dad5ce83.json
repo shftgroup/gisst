@@ -1,0 +1,97 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                          save_id, save_short_desc, save_description,\n                          file_id, instance_id, save.created_on,\n                          creator.creator_id, creator.creator_username, creator.creator_full_name\n                   FROM work JOIN instance USING (work_id)\n                   JOIN save USING (instance_id)\n                   JOIN creator ON (creator.creator_id = save.creator_id)\n                   WHERE save.creator_id = $1 AND\nf_unaccent(work_name || save_short_desc || save_description) ILIKE ('%' || f_unaccent($2) || '%')\n                   ORDER BY save.created_on DESC\n                   OFFSET $3\n                   LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "work_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "work_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "work_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "work_platform",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "save_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "save_short_desc",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "save_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "creator_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "creator_full_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e13a119a91c2d4737e0763b4321ceda4e5ecb2ff20dc7355a2c142e5dad5ce83"
+}

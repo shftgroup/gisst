@@ -65,21 +65,26 @@
       },
       {
         "ordinal": 12,
+        "name": "save_derived_from",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 13,
         "name": "file_hash",
         "type_info": "Bpchar"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "file_filename",
         "type_info": "Text"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "file_source_path",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "file_dest_path",
         "type_info": "Text"
       }
@@ -102,6 +107,7 @@
       true,
       true,
       false,
+      true,
       false,
       false,
       false,

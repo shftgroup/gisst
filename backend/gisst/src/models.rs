@@ -1,17 +1,16 @@
 #![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 
 use serde::{Deserialize, Deserializer, Serialize, de};
-
 use std::{fmt, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use sqlx::postgres::{PgConnection, PgQueryResult};
 
-use crate::model_enums::Framework;
+use crate::{model_enums::Framework, search::SearchIndexer};
 use serde_with::{base64::Base64, serde_as};
 use uuid::Uuid;
 
-use crate::error::{Action, RecordSQL, Table};
+use crate::error::{Action, Insert, RecordSQL, Table};
 
 // empty_string_as_none taken from axum docs here: https://github.com/tokio-rs/axum/blob/main/examples/query-params-with-empty-strings/src/main.rs
 /// Serde deserialization decorator to map empty Strings to None,
@@ -60,6 +59,7 @@ pub struct File {
     pub file_size: i64, //PostgeSQL does not have native uint support
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub file_compressed_size: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -145,6 +145,9 @@ pub struct Save {
     pub creator_id: Uuid,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub state_derived_from: Option<Uuid>,
+    pub save_derived_from: Option<Uuid>,
+    pub replay_derived_from: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,6 +164,7 @@ pub struct State {
     pub creator_id: Uuid,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
+    pub save_derived_from: Option<Uuid>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
 }
@@ -188,6 +192,10 @@ pub struct CreatorStateInfo {
     pub screenshot_id: Uuid,
     pub file_id: Uuid,
     pub instance_id: Uuid,
+    pub created_on: DateTime<Utc>,
+    pub creator_id: Uuid,
+    pub creator_username: String,
+    pub creator_full_name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -201,6 +209,27 @@ pub struct CreatorReplayInfo {
     pub replay_description: String,
     pub file_id: Uuid,
     pub instance_id: Uuid,
+    pub created_on: DateTime<Utc>,
+    pub creator_id: Uuid,
+    pub creator_username: String,
+    pub creator_full_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreatorSaveInfo {
+    pub work_id: Uuid,
+    pub work_name: String,
+    pub work_version: String,
+    pub work_platform: String,
+    pub save_id: Uuid,
+    pub save_short_desc: String,
+    pub save_description: String,
+    pub file_id: Uuid,
+    pub instance_id: Uuid,
+    pub created_on: DateTime<Utc>,
+    pub creator_id: Uuid,
+    pub creator_username: String,
+    pub creator_full_name: String,
 }
 
 impl Creator {
@@ -217,8 +246,9 @@ impl Creator {
                 CreatorStateInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           state_id, state_name, state_description, screenshot_id,
-                          file_id, instance_id
-                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id)
+                          file_id, instance_id, state.created_on, creator.creator_id,
+                          creator.creator_username, creator.creator_full_name
+                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)
                    WHERE state.creator_id = $1 AND
 f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
                    ORDER BY state.created_on DESC
@@ -236,8 +266,9 @@ f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccen
                 CreatorStateInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           state_id, state_name, state_description, screenshot_id,
-                          file_id, instance_id
-                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id)
+                          file_id, instance_id, state.created_on, creator.creator_id,
+                          creator.creator_username, creator.creator_full_name
+                   FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)
                    WHERE state.creator_id = $1
                    ORDER BY state.created_on DESC
                    OFFSET $2
@@ -264,9 +295,11 @@ f_unaccent(work_name || state_name || state_description) ILIKE ('%' || f_unaccen
                 CreatorReplayInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           replay_id, replay_name, replay_description,
-                          file_id, instance_id
+                          file_id, instance_id, replay.created_on,
+                          creator.creator_id, creator.creator_username, creator.creator_full_name
                    FROM work JOIN instance USING (work_id)
                    JOIN replay USING (instance_id)
+                   JOIN creator ON (creator.creator_id = replay.creator_id)
                    WHERE replay.creator_id = $1 AND
 f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
                    ORDER BY replay.created_on DESC
@@ -284,9 +317,11 @@ f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unacc
                 CreatorReplayInfo,
                 r#"SELECT work_id, work_name, work_version, work_platform,
                           replay_id, replay_name, replay_description,
-                          file_id, instance_id
+                          file_id, instance_id, replay.created_on,
+                          creator.creator_id, creator.creator_username, creator.creator_full_name
                    FROM work JOIN instance USING (work_id)
                    JOIN replay USING (instance_id)
+                   JOIN creator ON (creator.creator_id = replay.creator_id)
                    WHERE replay.creator_id = $1
                    OFFSET $2
                    LIMIT $3"#,
@@ -297,6 +332,140 @@ f_unaccent(work_name || replay_name || replay_description) ILIKE ('%' || f_unacc
             .fetch_all(conn)
             .await
         }
+    }
+
+    pub async fn get_all_save_info(
+        conn: &mut PgConnection,
+        id: Uuid,
+        contains: Option<String>,
+        offset: u32,
+        limit: u32,
+    ) -> sqlx::Result<Vec<CreatorSaveInfo>> {
+        if let Some(contains) = contains {
+            sqlx::query_as!(
+                CreatorSaveInfo,
+                r#"SELECT work_id, work_name, work_version, work_platform,
+                          save_id, save_short_desc, save_description,
+                          file_id, instance_id, save.created_on,
+                          creator.creator_id, creator.creator_username, creator.creator_full_name
+                   FROM work JOIN instance USING (work_id)
+                   JOIN save USING (instance_id)
+                   JOIN creator ON (creator.creator_id = save.creator_id)
+                   WHERE save.creator_id = $1 AND
+f_unaccent(work_name || save_short_desc || save_description) ILIKE ('%' || f_unaccent($2) || '%')
+                   ORDER BY save.created_on DESC
+                   OFFSET $3
+                   LIMIT $4"#,
+                id,
+                contains,
+                i64::from(offset),
+                i64::from(limit)
+            )
+            .fetch_all(conn)
+            .await
+        } else {
+            sqlx::query_as!(
+                CreatorSaveInfo,
+                r#"SELECT work_id, work_name, work_version, work_platform,
+                          save_id, save_short_desc, save_description,
+                          file_id, instance_id, save.created_on,
+                          creator.creator_id, creator.creator_username, creator.creator_full_name
+                   FROM work JOIN instance USING (work_id)
+                   JOIN save USING (instance_id)
+                   JOIN creator ON (creator.creator_id = save.creator_id)
+                   WHERE save.creator_id = $1
+                   OFFSET $2
+                   LIMIT $3"#,
+                id,
+                i64::from(offset),
+                i64::from(limit)
+            )
+            .fetch_all(conn)
+            .await
+        }
+    }
+}
+
+impl CreatorSaveInfo {
+    pub async fn get_for_save(conn: &mut PgConnection, save: &Save) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work.work_id, work.work_name, work.work_version, work.work_platform,
+                      save_id, save_short_desc, save_description,
+                      file_id, instance_save.instance_id, save.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM instance_save
+                    JOIN save USING (save_id)
+                    JOIN instance ON (instance_save.instance_id = instance.instance_id)
+                    JOIN work ON (work.work_id = instance.work_id)
+                    JOIN creator ON (save.creator_id = creator.creator_id)
+               WHERE save.save_id = $1
+               LIMIT 1000"#,
+            save.save_id
+        )
+        .fetch_all(conn)
+        .await
+    }
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      save_id, save_short_desc, save_description,
+                      file_id, instance_id, save.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN save USING (instance_id) JOIN creator ON (save.creator_id = creator.creator_id)"#
+        ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
+    }
+}
+impl CreatorStateInfo {
+    pub async fn get_for_state(conn: &mut PgConnection, state: &State) -> sqlx::Result<Self> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      state_id, state_name, state_description, state.screenshot_id,
+                      file_id, instance_id, state.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)
+               WHERE state.state_id = $1"#,
+            state.state_id
+        ).fetch_one(conn).await
+    }
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      state_id, state_name, state_description, state.screenshot_id,
+                      file_id, instance_id, state.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)"#
+        ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
+    }
+}
+impl CreatorReplayInfo {
+    pub async fn get_for_replay(conn: &mut PgConnection, replay: &Replay) -> sqlx::Result<Self> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      replay_id, replay_name, replay_description,
+                      file_id, instance_id, replay.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN replay USING (instance_id) JOIN creator ON (replay.creator_id = creator.creator_id)
+               WHERE replay.replay_id = $1"#,
+            replay.replay_id
+        ).fetch_one(conn).await
+    }
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform,
+                      replay_id, replay_name, replay_description,
+                      file_id, instance_id, replay.created_on, creator.creator_id,
+                      creator.creator_username, creator.creator_full_name
+               FROM work JOIN instance USING (work_id) JOIN replay USING (instance_id) JOIN creator ON (replay.creator_id = creator.creator_id)"#
+        ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
     }
 }
 
@@ -311,9 +480,18 @@ impl Creator {
         .fetch_optional(conn)
         .await
     }
-
-    pub async fn insert(conn: &mut PgConnection, model: Creator) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(Self, r#"SELECT * FROM creator"#)
+            .fetch(conn)
+            .filter_map(|f| futures::future::ready(f.ok()))
+    }
+    pub async fn insert(
+        conn: &mut PgConnection,
+        model: Creator,
+        indexer: &impl SearchIndexer,
+    ) -> Result<Self, Insert> {
+        let record = sqlx::query_as!(
             Self,
             r#"INSERT INTO creator VALUES($1, $2, $3, $4) RETURNING *
             "#,
@@ -322,33 +500,15 @@ impl Creator {
             model.creator_full_name,
             model.created_on
         )
-        .fetch_one(conn)
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Creator,
             action: Action::Insert,
             source: e,
-        })
-    }
-
-    pub async fn update(conn: &mut PgConnection, creator: Creator) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
-            Creator,
-            r#"UPDATE creator SET (creator_username, creator_full_name, created_on) = ($1, $2, $3)
-            WHERE creator_id = $4
-            RETURNING *"#,
-            creator.creator_username,
-            creator.creator_full_name,
-            creator.created_on,
-            creator.creator_id,
-        )
-        .fetch_one(conn)
-        .await
-        .map_err(|e| RecordSQL {
-            table: Table::Creator,
-            action: Action::Update,
-            source: e,
-        })
+        })?;
+        indexer.upsert_creator(conn, &record).await?;
+        Ok(record)
     }
 }
 
@@ -367,10 +527,10 @@ impl File {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, Insert> {
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *
+            r#"INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
             "#,
             model.file_id,
             model.file_hash,
@@ -378,14 +538,17 @@ impl File {
             model.file_source_path,
             model.file_dest_path,
             model.file_size,
-            model.created_on
+            model.created_on,
+            model.file_compressed_size,
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
-            table: Table::File,
-            action: Action::Insert,
-            source: e,
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::File,
+                action: Action::Insert,
+                source: e,
+            })
         })
     }
 }
@@ -397,8 +560,12 @@ impl Instance {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Instance) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
+    pub async fn insert(
+        conn: &mut PgConnection,
+        model: Instance,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<Self, Insert> {
+        let record = sqlx::query_as!(
             Instance,
             r#"INSERT INTO instance VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *"#,
             model.instance_id,
@@ -409,13 +576,15 @@ impl Instance {
             model.derived_from_instance,
             model.derived_from_state
         )
-        .fetch_one(conn)
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Instance,
             action: Action::Insert,
             source: e,
-        })
+        })?;
+        indexer.upsert_instance(conn, &record).await?;
+        Ok(record)
     }
 }
 
@@ -431,162 +600,6 @@ impl Instance {
         )
         .fetch_all(conn)
         .await
-    }
-    #[allow(clippy::too_many_lines)]
-    pub async fn get_all_states(
-        conn: &mut PgConnection,
-        instance_id: Uuid,
-        for_user: Option<Uuid>,
-        contains: Option<String>,
-        offset: u32,
-        limit: u32,
-    ) -> sqlx::Result<Vec<State>> {
-        match (contains, for_user) {
-            (None, None) => {
-                sqlx::query_as!(
-                    State,
-                    r#"SELECT * FROM state
-                       WHERE instance_id = $1
-                       ORDER BY state.created_on DESC
-                       OFFSET $2
-                       LIMIT $3"#,
-                    instance_id,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-            (None, Some(user)) => {
-                sqlx::query_as!(
-                    State,
-                    r#"SELECT * FROM state
-                       WHERE instance_id = $1 AND creator_id = $2
-                       ORDER BY state.created_on DESC
-                       OFFSET $3
-                       LIMIT $4"#,
-                    instance_id,
-                    user,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-            (Some(contains), None) => {
-                sqlx::query_as!(
-                    State,
-                    r#"SELECT * FROM state
-                       WHERE instance_id = $1 AND
-f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($2) || '%')
-                       ORDER BY state.created_on DESC
-                       OFFSET $3
-                       LIMIT $4"#,
-                    instance_id,
-                    contains,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-            (Some(contains), Some(user)) => {
-                sqlx::query_as!(
-                    State,
-                    r#"SELECT * FROM state
-                       WHERE instance_id = $1 AND creator_id = $2 AND
-f_unaccent(state_name || state_description) ILIKE ('%' || f_unaccent($3) || '%')
-                       ORDER BY state.created_on DESC
-                       OFFSET $4
-                       LIMIT $5"#,
-                    instance_id,
-                    user,
-                    contains,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-        }
-    }
-
-    pub async fn get_all_replays(
-        conn: &mut PgConnection,
-        instance_id: Uuid,
-        for_user: Option<Uuid>,
-        contains: Option<String>,
-        offset: u32,
-        limit: u32,
-    ) -> sqlx::Result<Vec<Replay>> {
-        match (contains, for_user) {
-            (None, None) => {
-                sqlx::query_as!(
-                    Replay,
-                    r#"SELECT * FROM replay
-                       WHERE instance_id = $1
-                       ORDER BY created_on DESC
-                       OFFSET $2
-                       LIMIT $3"#,
-                    instance_id,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-            (None, Some(user)) => {
-                sqlx::query_as!(
-                    Replay,
-                    r#"SELECT * FROM replay
-                       WHERE instance_id = $1 AND creator_id = $2
-                       ORDER BY created_on DESC
-                       OFFSET $3
-                       LIMIT $4"#,
-                    instance_id,
-                    user,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-            (Some(contains), None) => {
-                sqlx::query_as!(
-                    Replay,
-                    r#"SELECT * FROM replay
-                       WHERE instance_id = $1 AND
-f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($2) || '%')
-                       ORDER BY created_on DESC
-                       OFFSET $3
-                       LIMIT $4"#,
-                    instance_id,
-                    contains,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-            (Some(contains), Some(user)) => {
-                sqlx::query_as!(
-                    Replay,
-                    r#"SELECT * FROM replay
-                       WHERE instance_id = $1 AND creator_id = $2 AND
-f_unaccent(replay_name || replay_description) ILIKE ('%' || f_unaccent($3) || '%')
-                       ORDER BY created_on DESC
-                       OFFSET $4
-                       LIMIT $5"#,
-                    instance_id,
-                    user,
-                    contains,
-                    i64::from(offset),
-                    i64::from(limit)
-                )
-                .fetch_all(conn)
-                .await
-            }
-        }
     }
 }
 
@@ -606,7 +619,7 @@ impl Environment {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, Insert> {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO environment
@@ -626,10 +639,12 @@ impl Environment {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
-            table: Table::Environment,
-            action: Action::Insert,
-            source: e,
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Environment,
+                action: Action::Insert,
+                source: e,
+            })
         })
     }
 }
@@ -653,7 +668,7 @@ impl Object {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, object: Object) -> Result<Self, Insert> {
         // Note: the "!" following the AS statements after RETURNING are forcing not-null status on those fields
         // from: https://docs.rs/sqlx/latest/sqlx/macro.query.html#type-overrides-output-columns
         sqlx::query_as!(
@@ -665,10 +680,12 @@ impl Object {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
-            table: Table::Object,
-            action: Action::Insert,
-            source: e,
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Object,
+                action: Action::Insert,
+                source: e,
+            })
         })
     }
 }
@@ -727,8 +744,12 @@ impl Replay {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
+    pub async fn insert(
+        conn: &mut PgConnection,
+        model: Self,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<Self, Insert> {
+        let record = sqlx::query_as!(
             Replay,
             r#"INSERT INTO replay VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"#,
             model.replay_id,
@@ -740,13 +761,15 @@ impl Replay {
             model.file_id,
             model.created_on,
         )
-        .fetch_one(conn)
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Replay,
             action: Action::Insert,
             source: e,
-        })
+        })?;
+        indexer.upsert_replay(conn, &record).await?;
+        Ok(record)
     }
 }
 
@@ -756,11 +779,15 @@ impl Save {
             .fetch_optional(conn)
             .await
     }
-
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
+    pub async fn insert(
+        conn: &mut PgConnection,
+        model: Self,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<Self, Insert> {
+        let result =         // First, insert the new save
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"#,
+            r#"INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *"#,
             model.save_id,
             model.instance_id,
             model.save_short_desc,
@@ -768,18 +795,70 @@ impl Save {
             model.file_id,
             model.creator_id,
             model.created_on,
+            model.state_derived_from,
+            model.save_derived_from,
+            model.replay_derived_from
         )
-        .fetch_one(conn)
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::Save,
             action: Action::Insert,
             source: e,
-        })
+        })?;
+        /* ensure instance_save is updated! if this is derived from
+         * another save, copy over all the records, and also make sure
+         * this instance is linked to this save */
+        if let Some(save_parent_id) = model.save_derived_from {
+            let parent_instances: Vec<Uuid> = sqlx::query_scalar!(
+                r#"SELECT instance_id FROM save WHERE save_id=$1"#,
+                save_parent_id
+            )
+            .fetch_all(conn.as_mut())
+            .await
+            .map_err(|e| RecordSQL {
+                table: Table::Save,
+                action: Action::Insert,
+                source: e,
+            })?;
+            let save_count = i32::try_from(parent_instances.len()).unwrap_or_else(|_e| {
+                tracing::error!(
+                    "Single sram has {} instances, which is more than 2^16; instances won't be copied over", parent_instances.len()
+                );
+                0
+            });
+            if save_count > 0 {
+                sqlx::query!(
+                    r#"INSERT INTO instance_save (instance_id, save_id)
+                     SELECT * FROM UNNEST($1::uuid[], array_fill($2::uuid, array[$3]::integer[])::uuid[])"#,
+                    &parent_instances,
+                    model.save_id,
+                    save_count
+                )
+                    .execute(conn.as_mut())
+                    .await
+                    .map_err(|e| RecordSQL {
+                        table: Table::Save,
+                        action: Action::Insert,
+                        source: e,
+                    })?;
+            }
+        }
+        sqlx::query!(
+            r#"INSERT INTO instance_save (instance_id, save_id) VALUES ($1, $2)"#,
+            model.instance_id,
+            model.save_id
+        )
+        .execute(conn.as_mut())
+        .await
+        .map_err(|e| RecordSQL {
+            table: Table::Save,
+            action: Action::Insert,
+            source: e,
+        })?;
+        indexer.upsert_save(conn, &result).await?;
+        Ok(result)
     }
-}
-
-impl Save {
     pub async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
@@ -803,10 +882,14 @@ impl State {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, state: Self) -> Result<Self, RecordSQL> {
-        sqlx::query_as!(
+    pub async fn insert(
+        conn: &mut PgConnection,
+        state: Self,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<Self, Insert> {
+        let record = sqlx::query_as!(
             State,
-            r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                RETURNING *"#,
             state.state_id,
             state.instance_id,
@@ -820,14 +903,17 @@ impl State {
             state.state_replay_index,
             state.state_derived_from,
             state.created_on,
+            state.save_derived_from,
         )
-        .fetch_one(conn)
+        .fetch_one(conn.as_mut())
         .await
         .map_err(|e| RecordSQL {
             table: Table::State,
             action: Action::Insert,
             source: e,
-        })
+        })?;
+        indexer.upsert_state(conn, &record).await?;
+        Ok(record)
     }
 }
 
@@ -850,7 +936,7 @@ impl Work {
             .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, Insert> {
         sqlx::query_as!(
             Work,
             r#"INSERT INTO work VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"#,
@@ -863,10 +949,12 @@ impl Work {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
-            table: Table::Work,
-            action: Action::Insert,
-            source: e,
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Work,
+                action: Action::Insert,
+                source: e,
+            })
         })
     }
 }
@@ -903,7 +991,7 @@ impl Screenshot {
         .await
     }
 
-    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, RecordSQL> {
+    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, Insert> {
         sqlx::query_as!(
             Screenshot,
             r#"INSERT INTO screenshot VALUES ($1, $2) RETURNING *"#,
@@ -912,10 +1000,12 @@ impl Screenshot {
         )
         .fetch_one(conn)
         .await
-        .map_err(|e| RecordSQL {
-            table: Table::Screenshot,
-            action: Action::Insert,
-            source: e,
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Screenshot,
+                action: Action::Insert,
+                source: e,
+            })
         })
     }
 }
@@ -930,7 +1020,7 @@ fn utc_datetime_now() -> DateTime<Utc> {
     Utc::now()
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InstanceWork {
     pub work_id: Uuid,
     pub work_name: String,
@@ -940,83 +1030,33 @@ pub struct InstanceWork {
     pub row_num: i64,
 }
 
-#[rustfmt::skip]
-macro_rules! instance_work_queries {
-    ($fields:literal, $containing:expr, $platform:expr,
-     $offset:expr, $limit:expr,
-     $conn:expr) => {
-        match ($containing, $platform) {
-            (None, None) => {
-                sqlx::query_as!(Self,
-                    r#"SELECT "# + $fields + r#" FROM instanceWork
-                       WHERE row_num >= $1
-                       ORDER BY row_num ASC LIMIT $2"#,
-                    i64::from($offset),
-                    i64::from($limit)
-                )
-                .fetch_all($conn)
-                .await
-            }
-            (None, Some(plat)) => {
-                sqlx::query_as!(Self,
-                    r#"SELECT "# + $fields + r#" FROM instanceWork
-                       WHERE work_platform ILIKE ('%' || $1 || '%')
-                       ORDER BY row_num ASC OFFSET $2 LIMIT $3"#,
-                    plat,
-                    i64::from($offset),
-                    i64::from($limit)
-                )
-                .fetch_all($conn)
-                .await
-            }
-            (Some(contains), None) => {
-                sqlx::query_as!(Self,
-                    r#"SELECT "# + $fields + r#" FROM instanceWork
-                       WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%')
-                       ORDER BY row_num ASC OFFSET $2 LIMIT $3"#,
-                    contains,
-                    i64::from($offset),
-                    i64::from($limit)
-                )
-                .fetch_all($conn)
-                .await
-            }
-            (Some(contains), Some(plat)) => {
-                sqlx::query_as!(Self,
-                    r#"SELECT "# + $fields + r#" FROM instanceWork
-                       WHERE f_unaccent(work_name) ILIKE ('%' || f_unaccent($1) || '%') AND
-                          work_platform ILIKE ('%' || $2 || '%')
-                       ORDER BY row_num ASC OFFSET $3 LIMIT $4"#,
-                    contains,
-                    plat,
-                    i64::from($offset),
-                    i64::from($limit)
-                )
-                .fetch_all($conn)
-                .await
-            }
-        }
-    };
-}
-
 impl InstanceWork {
-    pub async fn get_all(
-        conn: &mut sqlx::PgConnection,
-        containing: Option<String>,
-        platform: Option<String>,
-        offset: u32,
-        limit: u32,
-    ) -> sqlx::Result<Vec<Self>> {
-        instance_work_queries!(
-            r#"work_id as "work_id!", work_name as "work_name!",
-               work_version as "work_version!", work_platform as "work_platform!",
-               instance_id as "instance_id!", row_num as "row_num!""#,
-            containing,
-            platform,
-            offset,
-            limit,
-            conn
+    pub fn get_stream(conn: &mut sqlx::PgConnection) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id as "work_id!", work_name as "work_name!",
+                      work_version as "work_version!", work_platform as "work_platform!",
+                      instance_id as "instance_id!", row_num as "row_num!"
+               FROM instancework"#
         )
+        .fetch(conn)
+        .filter_map(|f| futures::future::ready(f.ok()))
+    }
+    pub async fn get_for_instance(
+        conn: &mut sqlx::PgConnection,
+        instance_id: Uuid,
+    ) -> sqlx::Result<Self> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id as "work_id!", work_name as "work_name!",
+               work_version as "work_version!", work_platform as "work_platform!",
+               instance_id as "instance_id!", row_num as "row_num!"
+               FROM instancework WHERE instance_id=$1"#,
+            instance_id
+        )
+        .fetch_one(conn)
+        .await
     }
 }
 
@@ -1097,6 +1137,7 @@ pub struct StateLink {
     pub creator_id: Option<Uuid>,
     pub state_replay_index: Option<i32>,
     pub state_derived_from: Option<Uuid>,
+    pub save_derived_from: Option<Uuid>,
     pub created_on: Option<chrono::DateTime<chrono::Utc>>,
     pub file_id: Uuid,
     pub file_hash: String,
@@ -1121,7 +1162,65 @@ impl StateLink {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SaveLink {
+    pub save_id: Uuid,
+    pub instance_id: Uuid,
+    pub save_short_desc: String,
+    pub save_description: String,
+    pub creator_id: Uuid,
+    pub save_derived_from: Option<Uuid>,
+    pub state_derived_from: Option<Uuid>,
+    pub replay_derived_from: Option<Uuid>,
+    pub created_on: Option<chrono::DateTime<chrono::Utc>>,
+    pub file_id: Uuid,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+
+impl SaveLink {
+    pub async fn get_by_id(
+        conn: &mut sqlx::PgConnection,
+        save_id: Uuid,
+    ) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT save.*,
+                      file.file_hash, file.file_filename,
+                      file.file_source_path, file.file_dest_path
+               FROM save
+               JOIN file USING(file_id)
+               WHERE save_id = $1"#,
+            save_id,
+        )
+        .fetch_optional(conn)
+        .await
+    }
+    pub async fn get_by_ids(
+        conn: &mut sqlx::PgConnection,
+        save_ids: &[Uuid],
+    ) -> sqlx::Result<Vec<Self>> {
+        let mut results = sqlx::query_as!(
+            Self,
+            r#"SELECT save.*,
+                      file.file_hash, file.file_filename,
+                      file.file_source_path, file.file_dest_path
+               FROM save
+               JOIN file USING(file_id)
+               WHERE save_id = ANY($1)"#,
+            save_ids,
+        )
+        .fetch_all(conn)
+        .await?;
+        results.sort_by_key(|save| save_ids.iter().position(|sid| *sid == save.save_id));
+        Ok(results)
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
+#[tracing::instrument(skip(conn))]
 pub async fn insert_file_object(
     conn: &mut sqlx::PgConnection,
     storage_root: &str,
@@ -1133,8 +1232,10 @@ pub async fn insert_file_object(
     duplicate: Duplicate,
 ) -> Result<Uuid, crate::error::InsertFile> {
     use crate::error::InsertFile;
+    use crate::inc_metric;
     use crate::storage::StorageHandler;
     use tracing::info;
+    inc_metric!(conn, ins_file_attempts, 1);
     let file_name = path
         .file_name()
         .ok_or_else(|| InsertFile::Path(path.to_path_buf()))?
@@ -1145,24 +1246,27 @@ pub async fn insert_file_object(
     }
     let file_name = filename_override.unwrap_or(file_name);
     let created_on = chrono::Utc::now();
-    let file_size = i64::try_from(std::fs::metadata(path)?.len())?;
     let hash = StorageHandler::get_file_hash(path)?;
+    let object_id = if let Duplicate::ForceUuid(object_id) = duplicate {
+        object_id
+    } else {
+        Uuid::new_v4()
+    };
+
     if let Some(file_info) = File::get_by_hash(conn, &hash).await? {
         let object_id = match duplicate {
-            Duplicate::ReuseData => {
+            Duplicate::ReuseData | Duplicate::ForceUuid(_) => {
                 info!("adding duplicate file record for {path:?}");
+                inc_metric!(conn, ins_duplicate_reused_data, 1);
                 let file_id = Uuid::new_v4();
                 let file_record = File {
                     file_id,
-                    file_hash: file_info.file_hash,
                     file_filename: file_name,
                     file_source_path,
-                    file_dest_path: file_info.file_dest_path,
-                    file_size: file_info.file_size,
                     created_on,
+                    ..file_info
                 };
                 File::insert(conn, file_record).await?;
-                let object_id = Uuid::new_v4();
                 let object = Object {
                     object_id,
                     file_id,
@@ -1174,6 +1278,7 @@ pub async fn insert_file_object(
             }
             Duplicate::ReuseObject => {
                 info!("skipping duplicate record for {path:?}, reusing object");
+                inc_metric!(conn, ins_duplicate_reused_object, 1);
                 Object::get_by_hash(conn, &file_info.file_hash)
                     .await?
                     .map(|o| o.object_id)
@@ -1182,7 +1287,6 @@ pub async fn insert_file_object(
         object_id.ok_or(InsertFile::ObjectMissing(hash))
     } else {
         let file_uuid = Uuid::new_v4();
-        info!("Do write file {file_name}");
         let file_info = StorageHandler::write_file_to_uuid_folder(
             storage_root,
             depth,
@@ -1195,17 +1299,18 @@ pub async fn insert_file_object(
             "Wrote file {} to {}",
             file_info.dest_filename, file_info.dest_path
         );
+        inc_metric!(conn, ins_new_file, 1);
         let file_record = File {
             file_id: file_uuid,
             file_hash: file_info.file_hash,
             file_filename: file_info.source_filename,
             file_source_path,
             file_dest_path: file_info.dest_path,
-            file_size,
+            file_size: file_info.file_size,
+            file_compressed_size: file_info.file_compressed_size,
             created_on,
         };
         File::insert(conn, file_record).await?;
-        let object_id = Uuid::new_v4();
         let object = Object {
             object_id,
             file_id: file_uuid,
@@ -1221,4 +1326,5 @@ pub async fn insert_file_object(
 pub enum Duplicate {
     ReuseObject,
     ReuseData,
+    ForceUuid(Uuid),
 }

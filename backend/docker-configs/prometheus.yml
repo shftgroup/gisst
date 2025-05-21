@@ -15,3 +15,12 @@ scrape_configs:
     static_configs:
       - targets: ["psql_exporter:9187"]
 
+otlp:
+    promote_resource_attributes:
+        - service.instance.id
+        - service.name
+        - service.namespace
+        - deployment.environment
+        - k8s.namespace.name
+        - k8s.pod.name
+    keep_identifying_resource_attributes: true

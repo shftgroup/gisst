@@ -26,3 +26,9 @@ trace_include_headers = false
 # If you want to use jaeger/tracing, be sure to set up the docker compose/tracing infra!
 # see etc/provisioning.txt
 jaeger_endpoint = ""
+prometheus_endpoint = ""
+
+[search]
+meili_url = "http://localhost:7700"
+meili_api_key = ""
+meili_search_key = ""

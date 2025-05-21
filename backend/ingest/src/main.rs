@@ -31,6 +31,10 @@ struct Args {
     /// `GISST_STORAGE_ROOT_PATH` environment variable must be set
     #[clap(env)]
     pub gisst_storage_root_path: String,
+    #[clap(env)]
+    pub meili_url: String,
+    #[clap(env)]
+    pub meili_api_key: String,
 
     #[clap(long)]
     pub rdb: String,
@@ -66,6 +70,10 @@ pub enum IngestError {
     Io(#[from] std::io::Error),
     #[error("database error")]
     Sql(#[from] sqlx::Error),
+    #[error("insert error {0}")]
+    Insert(#[from] gisst::error::Insert),
+    #[error("search index error {0}")]
+    Index(#[from] gisst::error::SearchIndex),
     #[error("nul error")]
     Nul(#[from] std::ffi::NulError),
     #[error("storage error")]
@@ -105,6 +113,8 @@ async fn main() -> Result<(), IngestError> {
         deps,
         dep_paths,
         force,
+        meili_url,
+        meili_api_key,
     } = Args::parse();
     env_logger::Builder::new()
         .filter_level(verbose.log_level_filter())
@@ -126,6 +136,7 @@ async fn main() -> Result<(), IngestError> {
         Duplicate::ReuseObject,
     )
     .await?;
+    let indexer = gisst::search::MeiliIndexer::new(&meili_url, &meili_api_key)?;
     let mut dep_ids = Vec::with_capacity(deps.len());
     for (i, dep) in deps.iter().enumerate() {
         let dep = std::path::Path::new(dep);
@@ -145,6 +156,8 @@ async fn main() -> Result<(), IngestError> {
         .await?;
         dep_ids.push(dep_id);
     }
+
+    // base conn gets dropped
     drop(base_conn);
     let db = Arc::new(RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?);
     let roms = Arc::new(std::path::PathBuf::from(roms));
@@ -179,6 +192,7 @@ async fn main() -> Result<(), IngestError> {
                 // Skip this one
                 return Ok(());
             }
+
             let dep_ids = dep_ids.clone();
             let db = Arc::clone(&db);
             let roms = Arc::clone(&roms);
@@ -186,15 +200,19 @@ async fn main() -> Result<(), IngestError> {
             let core_name = core_name.clone();
             let core_version = core_version.clone();
             let storage_root = storage_root.clone();
-
             let pool = Arc::clone(&pool);
+            let indexer = indexer.clone();
             handle.block_on(async move {
-                let mut conn = pool.acquire().await?;
+                let mut tx = pool.begin().await?;
+
+                // acquire a connection pool -- start transaction here
+                // multi disc rom
                 if ext.eq_ignore_ascii_case("m3u") {
                     let mut found = false;
                     info!("playlist file {path:?}");
                     for file in files_of_playlist(&roms, &path)? {
-                        match find_entry(&mut conn, &db, &file).await? {
+                        // match find_entry(&mut conn, &db, &file).await? {
+                        match find_entry(&mut tx, &db, &file).await? {
                             FindResult::AlreadyHave => {
                                 found = true;
                                 break;
@@ -202,18 +220,18 @@ async fn main() -> Result<(), IngestError> {
                             FindResult::NotInRDB => {}
                             FindResult::InRDB(rval) => {
                                 let instance_id = create_metadata_records_from_rval(
-                                    &mut conn,
+                                    &mut tx,
                                     &file_name,
                                     &rval,
                                     &platform,
                                     &core_name,
                                     &core_version,
+                                    &indexer,
                                 )
                                 .await?;
-                                link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id)
-                                    .await?;
+                                link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
                                 create_playlist_instance_objects(
-                                    &mut conn,
+                                    &mut tx,
                                     &storage_root,
                                     &roms,
                                     instance_id,
@@ -228,18 +246,19 @@ async fn main() -> Result<(), IngestError> {
                     }
                     if !found && force {
                         let instance_id = create_metadata_records(
-                            &mut conn,
+                            &mut tx,
                             &file_name,
                             &stem,
                             &file_name,
                             &platform,
                             &core_name,
                             &core_version,
+                            &indexer,
                         )
                         .await?;
-                        link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                        link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
                         create_playlist_instance_objects(
-                            &mut conn,
+                            &mut tx,
                             &storage_root,
                             &roms,
                             instance_id,
@@ -248,23 +267,23 @@ async fn main() -> Result<(), IngestError> {
                         )
                         .await?;
                     }
-
-                    Ok(())
                 } else {
-                    match find_entry(&mut conn, &db, &path).await? {
+                    // normal rom
+                    match find_entry(&mut tx, &db, &path).await? {
                         FindResult::InRDB(rval) => {
                             let instance_id = create_metadata_records_from_rval(
-                                &mut conn,
+                                &mut tx,
                                 &file_name,
                                 &rval,
                                 &platform,
                                 &core_name,
                                 &core_version,
+                                &indexer,
                             )
                             .await?;
-                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
                             create_single_file_instance_objects(
-                                &mut conn,
+                                &mut tx,
                                 &storage_root,
                                 &roms,
                                 instance_id,
@@ -272,21 +291,23 @@ async fn main() -> Result<(), IngestError> {
                                 rval.map_get("description"),
                             )
                             .await
+                            .expect("Create_single_file_instance_objects failed in RDB");
                         }
                         FindResult::NotInRDB if force => {
                             let instance_id = create_metadata_records(
-                                &mut conn,
+                                &mut tx,
                                 &file_name,
                                 &stem,
                                 &file_name,
                                 &platform,
                                 &core_name,
                                 &core_version,
+                                &indexer,
                             )
                             .await?;
-                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
                             create_single_file_instance_objects(
-                                &mut conn,
+                                &mut tx,
                                 &storage_root,
                                 &roms,
                                 instance_id,
@@ -294,21 +315,24 @@ async fn main() -> Result<(), IngestError> {
                                 Some(stem.to_string()),
                             )
                             .await
+                            .expect("Create_single_file_instance_objects failed not in RDB");
+                            // ?? unwraps Result<(), Ingest Error>
                         }
                         FindResult::AlreadyHave if force => {
                             let instance_id = create_metadata_records(
-                                &mut conn,
+                                &mut tx,
                                 &file_name,
                                 &stem,
                                 &file_name,
                                 &platform,
                                 &core_name,
                                 &core_version,
+                                &indexer,
                             )
                             .await?;
-                            link_deps(&mut conn, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                            link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
                             create_single_file_instance_objects(
-                                &mut conn,
+                                &mut tx,
                                 &storage_root,
                                 &roms,
                                 instance_id,
@@ -316,10 +340,16 @@ async fn main() -> Result<(), IngestError> {
                                 Some(stem.to_string()),
                             )
                             .await
+                            .expect("Create_single_file_instance_objects failed not in RDB");
+                            // ?? unwraps Result<(), Ingest Error>
                         }
-                        _ => Ok(()),
+                        // _ => Ok(()),
+                        _ => {}
                     }
                 }
+                // commit transaction + ok
+                tx.commit().await.map_err(IngestError::Sql)?;
+                Ok(())
             })
         })
         .collect();
@@ -383,6 +413,7 @@ async fn create_metadata_records_from_rval(
     platform: &str,
     core_name: &str,
     core_version: &str,
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<Uuid, IngestError> {
     create_metadata_records(
         conn,
@@ -396,9 +427,11 @@ async fn create_metadata_records_from_rval(
         platform,
         core_name,
         core_version,
+        indexer,
     )
     .await
 }
+#[allow(clippy::too_many_arguments)]
 async fn create_metadata_records(
     conn: &mut sqlx::PgConnection,
     file_name: &str,
@@ -407,6 +440,7 @@ async fn create_metadata_records(
     platform: &str,
     core_name: &str,
     core_version: &str,
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<Uuid, IngestError> {
     // TODO: merge entries from result on libretrodb_query_compile(db, "{\"rom_name\":nom}", strlen query exp, error) cursor
     let created_on = chrono::Utc::now();
@@ -442,7 +476,7 @@ async fn create_metadata_records(
     };
     Work::insert(conn, work).await?;
     Environment::insert(conn, env).await?;
-    Instance::insert(conn, instance).await?;
+    Instance::insert(conn, instance, indexer).await?;
     Ok(instance_id)
 }
 

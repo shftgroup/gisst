@@ -62,6 +62,11 @@
         "ordinal": 11,
         "name": "created_on",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "save_derived_from",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -83,7 +88,8 @@
       false,
       true,
       true,
-      false
+      false,
+      true
     ]
   },
   "hash": "58131490208e7500253c9cef0e1483f43a21f620f1c63fe069f0683b0a6e3b54"

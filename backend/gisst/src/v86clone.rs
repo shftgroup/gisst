@@ -8,14 +8,18 @@ use std::path::Path;
 use uuid::Uuid;
 
 #[allow(clippy::too_many_lines, clippy::missing_errors_doc)]
+#[tracing::instrument(skip(conn, indexer))]
 pub async fn clone_v86_machine(
     conn: &mut PgConnection,
     instance_id: Uuid,
     state_id: Uuid,
     storage_root: &str,
     depth: u8,
+    indexer: &impl crate::search::SearchIndexer,
 ) -> Result<Uuid, V86Clone> {
+    use crate::inc_metric;
     use std::process::Command;
+    inc_metric!(conn, v86_clones, 1);
     let instance = Instance::get_by_id(conn, instance_id)
         .await?
         .ok_or(V86Clone::InstanceNotFound(instance_id))?;
@@ -51,11 +55,19 @@ pub async fn clone_v86_machine(
     env_json = env_json.replace("seabios.bin", "web-dist/v86/bios/seabios.bin");
     env_json = env_json.replace("vgabios.bin", "web-dist/v86/bios/vgabios.bin");
     info!("Input {env_json}\n{state_file_path}");
+    let now = std::time::Instant::now();
     let proc_output = Command::new("node")
         .arg("v86dump/index.js")
         .arg(env_json)
         .arg(state_file_path)
         .output()?;
+    let delta = now.elapsed().as_secs();
+    if delta > 0 {
+        // This is fine since delta is > 0 and smaller than 2^63
+        #[allow(clippy::cast_possible_wrap)]
+        let delta = delta as i64;
+        inc_metric!(conn, v86_clone_dump_time, delta);
+    }
     let err = String::from_utf8(proc_output.stderr)?;
     info!("{err}");
     let output = String::from_utf8(proc_output.stdout)?;
@@ -71,7 +83,7 @@ pub async fn clone_v86_machine(
     instance.instance_id = Uuid::new_v4();
     let new_id = instance.instance_id;
     let mut temp_folder = None;
-    Instance::insert(conn, instance).await?;
+    Instance::insert(conn, instance, indexer).await?;
     // add the requisite objects and link them
     // TODO: the ? inside of this loop should get caught and I should delete the outFGSFDS/ folder either way after.
     let mut content_index = 0;
@@ -111,6 +123,7 @@ pub async fn clone_v86_machine(
             file_source_path: String::new(),
             file_dest_path: String::new(),
             file_size,
+            file_compressed_size: None,
             created_on: chrono::Utc::now(),
         };
         let object = Object {

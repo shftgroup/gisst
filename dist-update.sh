@@ -21,21 +21,21 @@ rm -f ../assets_minimal.zip
 rm -rf assets overlays info
 curl -o assets.zip https://buildbot.libretro.com/assets/frontend/assets.zip
 curl -o overlays.zip https://buildbot.libretro.com/assets/frontend/overlays.zip
-curl -o info.zip https://buildbot.libretro.com/assets/frontend/info.zip
 unzip assets.zip -d assets
 rm assets.zip
 unzip overlays.zip -d overlays
 rm overlays.zip
-unzip info.zip -d info
-rm info.zip
-rm -rf overlays/{borders,ctr,effects,ipad,misc,wii}
-rm -rf overlays/gamepads/{720-med,arcade,arcade-anim,arcade-minimal,cdi_anim_portrait,example,flat,flip_phone,gba-anim_landscape,gba-grey,gb_anim_portrait,genesis,lite,n64,old,rgpad,scummvm}
-rm -f assets/ozone/png/icons/*\ -\ *
+rm -rf overlays/{configure,borders,ctr,effects,ipad,Makefile,misc,wii}
+rm -rf overlays/gamepads/{720-med,arcade,arcade-anim,arcade-minimal,cdi_anim_portrait,example,flip_phone,gba-anim_landscape,gba-grey,gb_anim_portrait,genesis,lite,n64,neo-ds-portrait,nes-small,old,Piixel-Gamepads,quadpad,rgpad,scummvm}
+rm -rf overlays/keyboards/{commodore,modular-keyboard}
 rm -f assets/sounds/*.wav
+rm -f assets/sounds/bgm.ogg
 rm -f assets/pkg/chinese-*
 rm -f assets/pkg/korean-*
 rm -rf assets/pkg/wiiu
-rm -rf assets/{xmb,switch,rgui,glui}
+rm -rf assets/{xmb,switch,glui,nxrgui,ozone}
+rm -f assets/rgui/*.cfg
+rm -rf assets/rgui/wallpaper
 zip -r -l ../assets_minimal.zip *
 cp ../assets_minimal.zip ../frontend/frontend-web/public/assets/frontend/
 popd
@@ -45,15 +45,15 @@ if [ ${FETCH_CORES:-1} -eq 1 ] ; then
 mkdir -p ra-build
 pushd ra-build
 mkdir -p cores
-emsdk install 4.0.6
-emsdk activate 4.0.6
+emsdk install 4.0.7
+emsdk activate 4.0.7
 git clone --depth 1 -b tick-event https://github.com/JoeOsborn/v86 v86 || echo "already have v86"
-git clone --depth 1 https://github.com/libretro/retroarch ra || echo "already have RA"
+git clone --depth 1 -b add-save-load-sram-commands https://github.com/JoeOsborn/retroarch ra || echo "already have RA"
 git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "already have fceumm"
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
 git clone --depth 1 -b emscripten-build https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
 git clone --depth 1 https://github.com/libretro/stella2014-libretro stella2014 || echo "already have stella2014"
-git clone --depth 1 -b emscripten-build-fixes https://github.com/JoeOsborn/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
+git clone --depth 1 https://github.com/libretro/pcsx_rearmed pcsx_rearmed || echo "already have pcsx"
 git clone --depth 1 -b fix-makefile-emscripten https://github.com/JoeOsborn/vba-next vba_next || echo "already have vba"
 git clone --depth 1 https://github.com/libretro/gambatte-libretro gambatte || echo "already have gambatte"
 git clone --depth 1 https://github.com/LIJI32/SameBoy sameboy || echo "already have sameboy"
@@ -82,6 +82,7 @@ for f in *; do
     if [ $f = "v86" ]
     then
         # make clean
+        rustup target add wasm32-unknown-unknown
         WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
         cp build/libv86.js build/v86.wasm ../../frontend/frontend-web/public/v86
         popd
@@ -112,7 +113,7 @@ for f in *; do
     fi
     pushd ../ra
     cp libretro_emscripten.bc libretro_emscripten.a
-    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EXTRA_WASMFS=1 HAVE_EGL=0 HAVE_AL=0 HAVE_AUDIOWORKLET=1 ASYNC=$ASYNC SYMBOLS=1 HAVE_OPENGLES3=1 -j all || die "could not build RA dist for ${f}"
+    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EXTRA_WASMFS=1 HAVE_EGL=0 HAVE_AL=0 HAVE_AUDIOWORKLET=1 ASYNC=$ASYNC SYMBOLS=0 HAVE_OPENGLES3=1 HAVE_OZONE=0 HAVE_XMB=0 HAVE_GLUI=0 HAVE_MATERIALUI=0 -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* ../cores
     popd
     popd
@@ -123,7 +124,7 @@ fi
 
 if [ ${BUILD_FRONTEND:-1} -eq 1 ]; then
 cd frontend
-npm i
+npm i --workspaces
 npm run build --workspaces --if-present
 npm run dist --workspaces --if-present
 cd ..
