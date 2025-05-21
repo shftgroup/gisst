@@ -43,7 +43,7 @@ jobs:
     - run: npx playwright install --with-deps
       if: steps.playwright-cache.outputs.cache-hit != 'true'
     - run: npx playwright install-deps
-      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
     - name: build
       run: npm run build --workspaces --if-present
       working-directory: frontend
