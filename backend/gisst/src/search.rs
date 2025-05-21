@@ -188,16 +188,27 @@ impl SearchIndexer for MeiliIndexer {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct MeiliSearch {
+    url: String,
+    external_url: String,
+    key: String,
     meili: Meili<meilisearch_sdk::reqwest::ReqwestClient>,
 }
 impl MeiliSearch {
     /// # Errors
     /// If the address is invalid, creating the client will fail
-    pub fn new(url: &str, api_key: &str) -> Result<Self, crate::error::Search> {
+    pub fn new(url: &str, external_url:&str, search_key: &str) -> Result<Self, crate::error::Search> {
         Ok(Self {
-            meili: Meili::new(url, Some(api_key))?,
+            url: url.to_string(),
+            external_url: external_url.to_string(),
+            key: search_key.to_string(),
+            meili: Meili::new(url, Some(search_key))?,
         })
+    }
+    #[must_use]
+    pub fn frontend_data(&self) -> (&str, &str) {
+        (&self.external_url, &self.key)
     }
     #[must_use]
     pub fn instances(&self) -> meilisearch_sdk::indexes::Index {

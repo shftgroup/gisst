@@ -5,7 +5,8 @@
     "embedv86",
     "gisst-player-ui",
     "frontend-web",
-    "frontend-embed"
+    "frontend-embed",
+    "server-ui"
   ],
   "scripts": {
     "check": "npm run check --workspaces",

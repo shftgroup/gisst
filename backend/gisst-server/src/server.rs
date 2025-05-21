@@ -64,6 +64,7 @@ impl ServerState {
         )?;
         let search = gisst::search::MeiliSearch::new(
             &config.search.meili_url,
+            &config.search.meili_external_url,
             &config.search.meili_search_key,
         )?;
         Ok(Self {
@@ -166,6 +167,11 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/data/{instance_id}", get(players::get_data))
         .route("/login", get(auth::login_handler))
         .route("/auth/google/callback", get(auth::oauth_callback_handler))
+        .nest_service(
+            "/ui",
+            builder.clone()
+                .service(selective_serve_dir::SelectiveServeDir::new("ui-dist")),
+        )
         .nest_service(
             "/storage",
             builder.clone()

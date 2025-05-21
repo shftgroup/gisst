@@ -6,52 +6,45 @@
 <div class="container">
     <div class="row">
       <h1>Instances</h1>
-      <form method="get" action="instances">
-        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="contains" {% if contains %}value="{{contains}}"{% endif %}/>
-        <input type="submit" value="Search"/>
-        </form>
+      <div id="searchbox" focus></div>
     </div>
     <div class="row">
-      {% if page_num > 1 %}
-      <a class="results-prev" href="instances?page_num={{page_num-1}}{% if contains %}&contains={{contains|urlencode}}{% endif %}&limit={{limit}}{% if platform %}&platform={{platform|urlencode}}{% endif %}">Prev</a>
-      {% endif %}
-      {% if has_more %}
-      <a class="results-next" href="instances?page_num={{page_num+1}}{% if contains %}&contains={{contains|urlencode}}{% endif %}&limit={{limit}}{% if platform %}&platform={{platform|urlencode}}{% endif %}">Next</a>
-      {% endif %}
-        <table id="instanceTable" class="table">
-            <tr>
-                <th scope="col">Work</th>
-                <th scope="col">Version</th>
-                <th scope="col">Platform</th>
-                <th scope="col">Link</th>
-                <th scope="col"></th>
-                <th scope="col"></th>
-            </tr>
-            {% for instance_entry in instances %}
-            <tr>
-                <td>{{ instance_entry.work_name}}</td>
-                <td>{{ instance_entry.work_version}}</td>
-                <td>{{ instance_entry.work_platform}}</td>
-                <td><a href="{{ base_url }}/instances/{{ instance_entry.instance_id }}">Link</a></td>
-                <td>
-                    <a class="btn btn-primary instance-boot-button" href="{{ base_url }}/play/{{instance_entry.instance_id}}">
-                      <!-- <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16"> -->
-                      <!--   <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/> -->
-                      <!-- </svg> -->
-                      Boot
-                    </a>
-                </td>
-                <td style="text-align: center;">
-                  <a class="btn btn-primary instance-boot-button" href="{{ base_url }}/play/{{instance_entry.instance_id}}?boot_into_record=true">
-                    <!-- <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16"> -->
-                    <!--   <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/> -->
-                    <!-- </svg> -->
-                    Boot and Record
-                  </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
+      <div class="search_wrapper">
+        <div id="hits"></div>
+        <div id="pagination"></div>
+      </div>
     </div>
 </div>
+<script type="module">
+import * as ui from './ui/ui.js';
+
+const style = document.createElement('style');
+style.innerHTML = ui.styles;
+document.head.appendChild(style);
+
+const search = ui.search_instances("{{ search_url | safe }}", "{{ search_key | safe }}", {});
+search.addWidgets([
+  ui.widgets.searchBox({
+    container: "#searchbox"
+  }),
+  ui.widgets.configure({ hitsPerPage: 10 }),
+  ui.widgets.pagination({ container: "#pagination" }),
+  ui.widgets.hits({
+    container: "#hits",
+    templates: {
+      item: (hit, { html, components }) => html`
+        <div>
+          <div class="hit-name">
+            <a href="{{ base_url | safe }}/instances/${hit.instance_id}">${components.Highlight({ hit, attribute: "work_name"})}</a>
+          </div>
+          <div class="hit-">
+            ${hit.work_version}--${components.Highlight({ hit, attribute: "work_platform"})}--<a class="btn btn-primary instance-boot-button" href="{{ base_url | safe }}/play/${hit.instance_id}">Play</a>
+          </div>
+        </div>
+          `
+    }
+  })
+]);
+search.start();
+</script>
 {% endblock %}
