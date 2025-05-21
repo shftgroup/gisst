@@ -13,24 +13,24 @@ addEventListener("load", () =>
       {
         toggle_mute: () => console.log("MUTE/UNMUTE"),
         load_state: (sn:number) => console.log("LOAD",sn),
-          save_state: () => {
-              ui_state.newState("state"+statenum.toString(), IMG_DATA);
-              statenum += 1;
-          },
-          start_replay: () => {
-              ui_state.newReplay("yet another replay.replay"+replaynum.toString());
-              replaynum +=1;
-          },
+        save_state: () => {
+            ui_state.newState("state"+statenum.toString(), IMG_DATA);
+            statenum += 1;
+        },
+        start_replay: () => {
+            ui_state.newReplay("yet another replay.replay"+replaynum.toString());
+            replaynum +=1;
+        },
         stop_and_save_replay: () => {},
         play_replay: (sn:number) => console.log("PLAY",sn),
         download_file: (category:"save"|"state"|"replay", file_name:string) => console.log("Save file",category,file_name),
-          upload_file: (category:"save"|"state"|"replay", file_name:string, metadata:Metadata) => {
-            console.log("Upload file", category, file_name, metadata);
-            return new Promise((resolve, reject) => {
-              if (metadata) { resolve(metadata); }
-              else { reject("metadata is null"); }
-            });
-          },
+        upload_file: (category:"save"|"state"|"replay", file_name:string, metadata:Metadata) => {
+          console.log("Upload file", category, file_name, metadata);
+          return new Promise((resolve, reject) => {
+            if (metadata) { resolve(metadata); }
+            else { reject("metadata is null"); }
+          });
+        },
         checkpoints_of: (_replay:number) => {return []},
         evt_to_html: (evt:string) => {
           const elt = document.createElement("span");
