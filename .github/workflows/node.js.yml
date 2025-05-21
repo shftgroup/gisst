@@ -34,6 +34,9 @@ jobs:
     - name: ci
       run: npm ci
       working-directory: frontend
+    - name: Set up Playwright
+      run: npx playwright install --with-deps
+      working-directory: frontend
     - name: build
       run: npm run build --workspaces --if-present
       working-directory: frontend
