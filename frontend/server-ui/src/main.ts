@@ -16,3 +16,30 @@ export function search_instances(search_host:string, search_key:string, params:S
   });
 }
 
+export function search_states(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  const { searchClient } = instantMeiliSearch(search_host, search_key, params);
+  return instantsearch({
+    indexName: 'state',
+    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
+    searchClient
+  });
+}
+
+export function search_saves(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  const { searchClient } = instantMeiliSearch(search_host, search_key, params);
+  return instantsearch({
+    indexName: 'save',
+    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
+    searchClient
+  });
+}
+
+export function search_replays(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  const { searchClient } = instantMeiliSearch(search_host, search_key, params);
+  return instantsearch({
+    indexName: 'replay',
+    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
+    searchClient
+  });
+}
+

@@ -9,140 +9,117 @@
 {% block content %}
 <div class="container">
     <div class="row">
-        <h1>{{user.name}}'s Citations</h1>
+        <h1>{{creator.creator_username}}'s Citations</h1>
     </div>
     <div class="row">
-        <h2>States</h2>
-      <form method="get" action="">
-        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="state_contains" {% if state_contains %}value="{{state_contains}}"{% endif %}/>
-        <input type="submit" value="Search"/>
-        </form>
-      {% if state_page_num > 1 %}
-      <a class="results-prev" href="?state_page_num={{state_page_num-1}}{% if state_contains %}&state_contains={{state_contains|urlencode}}{% endif %}&state_limit={{state_limit}}">Prev</a>
-      {% endif %}
-      {% if state_has_more %}
-      <a class="results-prev" href="?state_page_num={{state_page_num+1}}{% if state_contains %}&state_contains={{state_contains|urlencode}}{% endif %}&state_limit={{state_limit}}">Next</a>
-      {% endif %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th scope="col">Work</th>
-                    <th scope="col">Version</th>
-                    <th scope="col">Platform</th>
-                    <th scope="col">Name</th>
-                    <th scope="col">Description</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for state in creator.states %}
-            <tr>
-                <td>{{ state.work_name }}</td>
-                <td>{{ state.work_version }}</td>
-                <td>{{ state.work_platform }}</td>
-                <td>{{ state.state_name}}</td>
-                <td>{{ state.state_description}}</td>
-                <td>
-                    <a class="btn btn-primary" href="{{ base_url }}/play/{{ state.instance_id }}?state={{ state.state_id }}" target="_blank">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
-                            <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
-                        </svg>
-                        Boot
-                    </a>
-                </td>
-                <td>
-                    <a class="btn btn-primary" href="{{ base_url }}/play/{{ state.instance_id }}?state={{ state.state_id }}&?boot_into_record=true" target="_blank">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-record" viewBox="0 0 16 16">
-                            <path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0 1A5 5 0 1 0 8 3a5 5 0 0 0 0 10z"/>
-                        </svg>
-                        Record on Boot
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="row">
-      <h2>Performances</h2>
-      <form method="get" action="">
-        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="replay_contains" {% if replay_contains %}value="{{replay_contains}}"{% endif %}/>
-        <input type="submit" value="Search"/>
-        </form>
-      {% if replay_page_num > 1 %}
-      <a class="results-prev" href="?replay_page_num={{replay_page_num-1}}{% if replay_contains %}&replay_contains={{replay_contains|urlencode}}{% endif %}&replay_limit={{replay_limit}}">Prev</a>
-      {% endif %}
-      {% if replay_has_more %}
-      <a class="results-prev" href="?replay_page_num={{replay_page_num+1}}{% if replay_contains %}&replay_contains={{replay_contains|urlencode}}{% endif %}&replay_limit={{replay_limit}}">Next</a>
-      {% endif %}
-        <table class="table">
-            <tr>
-                <th scope="col">Work</th>
-                <th scope="col">Version</th>
-                <th scope="col">Platform</th>
-                <th scope="col">Name</th>
-                <th scope="col">Description</th>
-            </tr>
-            {% for replay in creator.replays %}
-            <tr>
-                <td>{{ replay.work_name }}</td>
-                <td>{{ replay.work_version }}</td>
-                <td>{{ replay.work_platform }}</td>
-                <td>{{ replay.replay_name}}</td>
-                <td>{{ replay.replay_description}}</td>
-                <td>
-                    <a class="btn btn-primary" href="{{ base_url }}/play/{{ replay.instance_id }}?replay={{ replay.replay_id }}" target="_blank">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
-                            <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
-                        </svg>
-                        Boot
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
+      <h2>States</h2>
+      <div id="state_searchbox"></div>
+      <div id="state_hits"></div>
+      <div id="state_pagination"></div>
     </div>
   <div class="row">
+    <h2>Performances</h2>
+    <div id="performance_searchbox"></div>
+    <div id="performance_hits"></div>
+    <div id="performance_pagination"></div>
+  </div>
+  <div class="row">
     <h2>Saves</h2>
-    <form method="get" action="">
-      <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="save_contains" {% if save_contains %}value="{{save_contains}}"{% endif %}/>
-      <input type="submit" value="Search"/>
-    </form>
-    {% if save_page_num > 1 %}
-    <a class="results-prev" href="?save_page_num={{save_page_num-1}}{% if save_contains %}&save_contains={{save_contains|urlencode}}{% endif %}&save_limit={{save_limit}}">Prev</a>
-    {% endif %}
-      {% if save_has_more %}
-    <a class="results-prev" href="?save_page_num={{save_page_num+1}}{% if save_contains %}&save_contains={{save_contains|urlencode}}{% endif %}&save_limit={{save_limit}}">Next</a>
-    {% endif %}
-    <table class="table">
-      <tr>
-        <th scope="col">Work</th>
-        <th scope="col">Version</th>
-        <th scope="col">Platform</th>
-        <th scope="col">Name</th>
-        <th scope="col">Description</th>
-        <th scope="col">ID</th>
-      </tr>
-      {% for save in creator.saves %}
-      <tr>
-        <td>{{ save.work_name }}</td>
-        <td>{{ save.work_version }}</td>
-        <td>{{ save.work_platform }}</td>
-        <td>{{ save.save_short_desc }}</td>
-        <td>{{ save.save_description }}</td>
-        <td>{{ save.save_id }}</td>
-        <td>
-          <a class="btn btn-primary" href="{{ base_url }}/play/{{ save.instance_id }}?save={{ save.save_id }}" target="_blank">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
-              <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
-            </svg>
-            Boot
-          </a>
-        </td>
-      </tr>
-      {% endfor %}
-    </table>
+    <div id="save_searchbox"></div>
+    <div id="save_hits"></div>
+    <div id="save_pagination"></div>
   </div>
 </div>
 
 </div>
+
+<script type="module">
+import * as ui from '{{ base_url | safe }}/ui/ui.js';
+
+const style = document.createElement('style');
+style.innerHTML = ui.styles;
+document.head.appendChild(style);
+
+const state_search = ui.search_states("{{ search_url | safe }}", "{{ search_key | safe }}", {});
+state_search.addWidgets([
+  ui.widgets.searchBox({
+    container: "#state_searchbox"
+  }),
+  ui.widgets.configure({ hitsPerPage: 10, filters:"creator_id = \"{{ creator.creator_id }}\"" }),
+  ui.widgets.pagination({ container: "#state_pagination" }),
+  ui.widgets.hits({
+    container: "#state_hits",
+    templates: {
+      item: (hit, { html, components }) => html`
+        <div>
+          <div class="hit-name">
+            <a href="{{ base_url | safe }}/play/${hit.instance_id}?state=${hit.state_id}">${components.Highlight({ hit, attribute: "state_name"})} (Play)</a>--<a href="{{ base_url | safe }}/play/${hit.instance_id}?state=${hit.state_id}&boot_into_record=true">(Play and record)</a>
+          </div>
+          <div class="hit-more-info">
+            ${components.Highlight({ hit, attribute: "state_description"})}<br/>
+            <a href="{{ base_url | safe }}/instances/${hit.instance_id}">${components.Highlight({ hit, attribute: "work_name"})}</a>--
+            ${hit.work_version}--${components.Highlight({ hit, attribute: "work_platform"})}--<a class="btn btn-primary instance-boot-button" href="{{ base_url | safe }}/play/${hit.instance_id}">Play</a>
+          </div>
+        </div>
+          `
+    }
+  })
+]);
+state_search.start();
+
+const replay_search = ui.search_replays("{{ search_url | safe }}", "{{ search_key | safe }}", {});
+replay_search.addWidgets([
+  ui.widgets.searchBox({
+    container: "#performance_searchbox"
+  }),
+  ui.widgets.configure({ hitsPerPage: 10, filters:"creator_id = \"{{ creator.creator_id }}\"" }),
+  ui.widgets.pagination({ container: "#performance_pagination" }),
+  ui.widgets.hits({
+    container: "#performance_hits",
+    templates: {
+      item: (hit, { html, components }) => html`
+        <div>
+          <div class="hit-name">
+            <a href="{{ base_url | safe }}/play/${hit.instance_id}?replay=${hit.replay_id}">${components.Highlight({ hit, attribute: "replay_name"})} (Play)</a>
+          </div>
+          <div class="hit-more-info">
+            ${components.Highlight({ hit, attribute: "replay_description"})}<br/>
+            <a href="{{ base_url | safe }}/instances/${hit.instance_id}">${components.Highlight({ hit, attribute: "work_name"})}</a>--
+            ${hit.work_version}--${components.Highlight({ hit, attribute: "work_platform"})}--<a class="btn btn-primary instance-boot-button" href="{{ base_url | safe }}/play/${hit.instance_id}">Play</a>
+          </div>
+        </div>
+          `
+    }
+  })
+]);
+replay_search.start();
+
+const save_search = ui.search_saves("{{ search_url | safe }}", "{{ search_key | safe }}", {});
+save_search.addWidgets([
+  ui.widgets.searchBox({
+    container: "#save_searchbox"
+  }),
+  ui.widgets.configure({ hitsPerPage: 10, filters:"creator_id = \"{{ creator.creator_id }}\"" }),
+  ui.widgets.pagination({ container: "#save_pagination" }),
+  ui.widgets.hits({
+    container: "#save_hits",
+    templates: {
+      item: (hit, { html, components }) => html`
+        <div>
+          <div class="hit-name">
+            <a href="{{ base_url | safe }}/play/${hit.instance_id}?save=${hit.save_id}">${components.Highlight({ hit, attribute: "save_short_desc"})} (Play)</a>
+          </div>
+          <div class="hit-more-info">
+            ${components.Highlight({ hit, attribute: "save_description"})}<br/>
+            <a href="{{ base_url | safe }}/instances/${hit.instance_id}">${components.Highlight({ hit, attribute: "work_name"})}</a>--
+            ${hit.work_version}--${components.Highlight({ hit, attribute: "work_platform"})}--<a class="btn btn-primary instance-boot-button" href="{{ base_url | safe }}/play/${hit.instance_id}">Play</a>
+          </div>
+        </div>
+          `
+    }
+  })
+]);
+save_search.start();
+</script>
+
 {% endblock content %}
