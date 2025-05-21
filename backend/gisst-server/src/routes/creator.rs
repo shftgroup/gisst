@@ -61,30 +61,32 @@ async fn get_single_creator(
                 let search = app_state.search.states();
                 let state_page_num = params.state_page_num.unwrap_or(1);
                 let state_limit = params.state_limit.unwrap_or(100).min(100);
-                let state_results: meilisearch_sdk::search::SearchResults<CreatorStateInfo> = search
-                    .search()
-                    .with_hits_per_page(state_limit as usize)
-                    .with_page(state_page_num as usize)
-                    .with_filter(&creator_filter)
-                    .with_sort(&["created_on:desc"])
-                    .with_query(&params.state_contains.clone().unwrap_or_default())
-                    .execute()
-                    .await
-                    .map_err(gisst::error::Search::from)?;
+                let state_results: meilisearch_sdk::search::SearchResults<CreatorStateInfo> =
+                    search
+                        .search()
+                        .with_hits_per_page(state_limit as usize)
+                        .with_page(state_page_num as usize)
+                        .with_filter(&creator_filter)
+                        .with_sort(&["created_on:desc"])
+                        .with_query(&params.state_contains.clone().unwrap_or_default())
+                        .execute()
+                        .await
+                        .map_err(gisst::error::Search::from)?;
                 let states: Vec<_> = state_results.hits.into_iter().map(|r| r.result).collect();
                 let replay_page_num = params.replay_page_num.unwrap_or(1);
                 let replay_limit = params.replay_limit.unwrap_or(100).min(100);
                 let search = app_state.search.replays();
-                let replay_results: meilisearch_sdk::search::SearchResults<CreatorReplayInfo> = search
-                    .search()
-                    .with_hits_per_page(replay_limit as usize)
-                    .with_page(replay_page_num as usize)
-                    .with_filter(&creator_filter)
-                    .with_sort(&["created_on:desc"])
-                    .with_query(&params.replay_contains.clone().unwrap_or_default())
-                    .execute()
-                    .await
-                    .map_err(gisst::error::Search::from)?;
+                let replay_results: meilisearch_sdk::search::SearchResults<CreatorReplayInfo> =
+                    search
+                        .search()
+                        .with_hits_per_page(replay_limit as usize)
+                        .with_page(replay_page_num as usize)
+                        .with_filter(&creator_filter)
+                        .with_sort(&["created_on:desc"])
+                        .with_query(&params.replay_contains.clone().unwrap_or_default())
+                        .execute()
+                        .await
+                        .map_err(gisst::error::Search::from)?;
                 let replays: Vec<_> = replay_results.hits.into_iter().map(|r| r.result).collect();
                 let save_page_num = params.save_page_num.unwrap_or(1);
                 let save_limit = params.save_limit.unwrap_or(100).min(100);

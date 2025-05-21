@@ -4,159 +4,51 @@
 {% block content %}
 <div class="container">
     <div class="row">
-        <h1>{{ instance.work.work_name }} Instance Information</h1>
+        <h1>{{ work.work_name }} Instance Information</h1>
         <div class="row">
             <p class="col-4">
-                Version: {{ instance.work.work_version }}
+                Version: {{ work.work_version }}
             </p>
             <p class="col-4">
-                Platform: {{ instance.work.work_platform }}
+                Platform: {{ work.work_platform }}
             </p>
             <p class="col-4">
-                Runtime: {{ instance.environment.environment_framework }} - {{ instance.environment.environment_core_name }} - {{ instance.environment.environment_core_version }}
+                Runtime: {{ environment.environment_framework }} - {{ environment.environment_core_name }} - {{ environment.environment_core_version }}
             </p>
         </div>
         <div>
-            <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.info.instance_id }}" target="_blank">
+            <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.instance_id }}" target="_blank">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
                     <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
                 </svg>
-                Fresh Boot
+                Play
             </a>
-            <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.info.instance_id }}?boot_into_record=true" target="_blank">
+            <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.instance_id }}?boot_into_record=true" target="_blank">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
                     <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
                 </svg>
-                Start Recording on Boot
+                Play and Record
             </a>
-          <a class="btn btn-primary" href="?{% if not creator_id %}creator_id={{user.creator_id}}&{% endif %}{% if state_contains %}state_contains={{state_contains|urlencode}}{% endif %}{% if replay_contains %}replay_contains={{replay_contains|urlencode}}{% endif %}{% if save_contains %}save_contains={{save_contains|urlencode}}{% endif %}">{% if creator_id %}Show all users' states/performances{% else %}Show only my states/performances{% endif %}</a>
+          <a class="btn btn-primary" href="?{% if not creator_id %}creator_id={{user.creator_id}}&{% endif %}">{% if creator_id %}Show all users' states/performances{% else %}Show only my states/performances{% endif %}</a>
         </div>
     </div>
     <div class="row">
-      <h1>States</h1>
-      <form method="get" action="">
-        {% if creator_id %}
-        <input type="hidden" name="creator_id" value="{{creator_id}}"/>
-        {% endif %}
-        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="state_contains" {% if state_contains %}value="{{state_contains}}"{% endif %}/>
-        <input type="submit" value="Search"/>
-      </form>
-      {% if state_page_num > 1 %}
-      <a class="results-prev" href="?state_page_num={{state_page_num-1}}{% if state_contains %}&state_contains={{state_contains|urlencode}}{% endif %}&state_limit={{state_limit}}{% if creator_id %}&creator_id={{creator_id}}{% endif %}">Prev</a>
-      {% endif %}
-      {% if state_has_more %}
-      <a class="results-prev" href="?state_page_num={{state_page_num+1}}{% if state_contains %}&state_contains={{state_contains|urlencode}}{% endif %}&state_limit={{state_limit}}{% if creator_id %}&creator_id={{creator_id}}{% endif %}">Next</a>
-      {% endif %}
-
-        <table class="table">
-            <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Description</th>
-            </tr>
-            {% for state in instance.states %}
-                <tr>
-                    <td>{{ state.state_name}}</td>
-                    <td>{{ state.state_description}}</td>
-                    <td>
-                        <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.info.instance_id }}?state={{ state.state_id }}" target="_blank">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
-                                <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
-                            </svg>
-                            Boot
-                        </a>
-                    </td>
-                    <td>
-                        <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.info.instance_id }}?state={{ state.state_id }}&?boot_into_record=true" target="_blank">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-record" viewBox="0 0 16 16">
-                                <path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0 1A5 5 0 1 0 8 3a5 5 0 0 0 0 10z"/>
-                            </svg>
-                            Record on Boot
-                        </a>
-                    </td>
-                    {% if instance.environment.environment_framework == "v86" %}
-                    <td>
-                        <a class="btn btn-primary" href="{{ instance.info.instance_id }}/clone?state={{ state.state_id }}" target="_blank">
-                            Clone
-                        </a>
-                    </td>
-                    {% endif %}
-                </tr>
-            {% endfor %}
-        </table>
+      <h2>States</h2>
+      <div id="state_searchbox"></div>
+      <div id="state_hits"></div>
+      <div id="state_pagination"></div>
     </div>
     <div class="row">
-        <h1>Performances</h1>
-      <form method="get" action="">
-        {% if creator_id %}
-        <input type="hidden" name="creator_id" value="{{creator_id}}"/>
-        {% endif %}
-        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="replay_contains" {% if replay_contains %}value="{{replay_contains}}"{% endif %}/>
-        <input type="submit" value="Search"/>
-        </form>
-      {% if replay_page_num > 1 %}
-      <a class="results-prev" href="?replay_page_num={{replay_page_num-1}}{% if replay_contains %}&replay_contains={{replay_contains|urlencode}}{% endif %}&replay_limit={{replay_limit}}{% if creator_id %}&creator_id={{creator_id}}{% endif %}">Prev</a>
-      {% endif %}
-      {% if replay_has_more %}
-      <a class="results-prev" href="?replay_page_num={{replay_page_num+1}}{% if replay_contains %}&replay_contains={{replay_contains|urlencode}}{% endif %}&replay_limit={{replay_limit}}{% if creator_id %}&creator_id={{creator_id}}{% endif %}">Next</a>
-      {% endif %}
-        <table class="table">
-            <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Description</th>
-            </tr>
-            {% for replay in instance.replays %}
-                <tr>
-                    <td>{{ replay.replay_name}}</td>
-                    <td>{{ replay.replay_description}}</td>
-                    <td>
-                        <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.info.instance_id }}?replay={{ replay.replay_id }}" target="_blank">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
-                                <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
-                            </svg>
-                            Boot
-                        </a>
-                    </td>
-                </tr>
-            {% endfor %}
-        </table>
+      <h2>Performances</h1>
+        <div id="performance_searchbox"></div>
+        <div id="performance_hits"></div>
+        <div id="performance_pagination"></div>
     </div>
     <div class="row">
-        <h1>Saves</h1>
-      <form method="get" action="">
-        {% if creator_id %}
-        <input type="hidden" name="creator_id" value="{{creator_id}}"/>
-        {% endif %}
-        <input id="instanceSearch" type="search" class="form-control" placeholder="Search..." aria-label="Search" name="save_contains" {% if save_contains %}value="{{save_contains}}"{% endif %}/>
-        <input type="submit" value="Search"/>
-        </form>
-      {% if save_page_num > 1 %}
-      <a class="results-prev" href="?save_page_num={{save_page_num-1}}{% if save_contains %}&save_contains={{save_contains|urlencode}}{% endif %}&save_limit={{save_limit}}{% if creator_id %}&creator_id={{creator_id}}{% endif %}">Prev</a>
-      {% endif %}
-      {% if save_has_more %}
-      <a class="results-prev" href="?save_page_num={{save_page_num+1}}{% if save_contains %}&save_contains={{save_contains|urlencode}}{% endif %}&save_limit={{save_limit}}{% if creator_id %}&creator_id={{creator_id}}{% endif %}">Next</a>
-      {% endif %}
-        <table class="table">
-            <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Description</th>
-                <th scope="col">ID</th>
-            </tr>
-            {% for save in instance.saves %}
-                <tr>
-                    <td>{{ save.save_short_desc}}</td>
-                    <td>{{ save.save_description}}</td>
-                    <td>{{ save.save_id}}</td>
-                    <td>
-                        <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.info.instance_id }}?save={{ save.save_id }}" target="_blank">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
-                                <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
-                            </svg>
-                            Boot
-                        </a>
-                    </td>
-                </tr>
-            {% endfor %}
-        </table>
+      <h1>Saves</h1>
+      <div id="save_searchbox"></div>
+      <div id="save_hits"></div>
+      <div id="save_pagination"></div>
     </div>
     <div class="row">
         <h1>Data Objects</h1>
@@ -167,7 +59,7 @@
                 <th scope="col">Index</th>
                 <th scope="col">Source Path</th>
             </tr>
-            {% for data in instance.objects %}
+            {% for data in objects %}
                 <tr>
                     <td><a href="{{ base_url }}/objects/{{ data.object_id }}">{{ data.file_filename }}</a></td>
                     <td>{{ data.object_role }}</td>
@@ -178,4 +70,94 @@
         </table>
     </div>
 </div>
+<script type="module">
+import * as ui from '{{ base_url | safe }}/ui/ui.js';
+
+const style = document.createElement('style');
+style.innerHTML = ui.styles;
+document.head.appendChild(style);
+{% if creator_id %}
+const filters = "instance_id = \"{{ instance.instance_id }}\" AND creator_id = \"{{ creator_id }}\"";
+{% else %}
+const filters = "instance_id = \"{{ instance.instance_id }}\"";
+{% endif %}
+const state_search = ui.search_states("{{ search_url | safe }}", "{{ search_key | safe }}", {});
+state_search.addWidgets([
+  ui.widgets.searchBox({
+    container: "#state_searchbox"
+  }),
+  ui.widgets.configure({ hitsPerPage: 10, filters }),
+  ui.widgets.pagination({ container: "#state_pagination" }),
+  ui.widgets.hits({
+    container: "#state_hits",
+    templates: {
+      item: (hit, { html, components }) => html`
+        <div>
+          <div class="hit-name">
+            <a href="{{ base_url | safe }}/play/${hit.instance_id}?state=${hit.state_id}">${components.Highlight({ hit, attribute: "state_name"})} (Play)</a>--<a href="{{ base_url | safe }}/play/${hit.instance_id}?state=${hit.state_id}&boot_into_record=true">(Play and record)</a>
+{% if environment.environment_framework == "v86" %}
+  --<a class="btn btn-primary" href="{{ instance.instance_id }}/clone?state=${ hit.state_id }" target="_blank">Clone as New Instance</a>
+{% endif %}
+          </div>
+          <div class="hit-more-info">
+            ${components.Highlight({ hit, attribute: "state_description"})}
+          </div>
+        </div>
+          `
+    }
+  })
+]);
+state_search.start();
+
+const replay_search = ui.search_replays("{{ search_url | safe }}", "{{ search_key | safe }}", {});
+replay_search.addWidgets([
+  ui.widgets.searchBox({
+    container: "#performance_searchbox"
+  }),
+  ui.widgets.configure({ hitsPerPage: 10, filters }),
+  ui.widgets.pagination({ container: "#performance_pagination" }),
+  ui.widgets.hits({
+    container: "#performance_hits",
+    templates: {
+      item: (hit, { html, components }) => html`
+        <div>
+          <div class="hit-name">
+            <a href="{{ base_url | safe }}/play/${hit.instance_id}?replay=${hit.replay_id}">${components.Highlight({ hit, attribute: "replay_name"})} (Play)</a>
+          </div>
+          <div class="hit-more-info">
+            ${components.Highlight({ hit, attribute: "replay_description"})}
+          </div>
+        </div>
+          `
+    }
+  })
+]);
+replay_search.start();
+
+const save_search = ui.search_saves("{{ search_url | safe }}", "{{ search_key | safe }}", {});
+save_search.addWidgets([
+  ui.widgets.searchBox({
+    container: "#save_searchbox"
+  }),
+  ui.widgets.configure({ hitsPerPage: 10, filters }),
+  ui.widgets.pagination({ container: "#save_pagination" }),
+  ui.widgets.hits({
+    container: "#save_hits",
+    templates: {
+      item: (hit, { html, components }) => html`
+        <div>
+          <div class="hit-name">
+            <a href="{{ base_url | safe }}/play/${hit.instance_id}?save=${hit.save_id}">${components.Highlight({ hit, attribute: "save_short_desc"})} (Play)</a>
+          </div>
+          <div class="hit-more-info">
+            ${components.Highlight({ hit, attribute: "save_description"})}
+          </div>
+        </div>
+          `
+    }
+  })
+]);
+save_search.start();
+</script>
+
 {% endblock content %}

@@ -115,82 +115,16 @@ async fn get_all_for_instance(
     );
     let mut conn = app_state.pool.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
-        let instance_filter = format!("instance_id = \"{id}\"");
-        let creator_filter = params
-            .creator_id
-            .map(|cid| format!("creator_id = \"{cid}\""))
-            .unwrap_or_default();
-        // TODO: at least instance-environment stuff should really come from a join query
+        // TODO: instance-environment-work stuff should really come from a join query
         tracing::debug!("get instance environment {params:?}");
+        let work = Work::get_by_id(&mut conn, instance.work_id).await?.unwrap();
         let environment = Environment::get_by_id(&mut conn, instance.environment_id)
             .await?
             .ok_or(ServerError::RecordMissing {
                 table: Table::Environment,
                 uuid: instance.environment_id,
             })?;
-        let state_page_num = params.state_page_num.unwrap_or(1);
-        let state_limit = params.state_limit.unwrap_or(100).min(100);
-        let search = app_state.search.states();
-        let state_results: meilisearch_sdk::search::SearchResults<CreatorStateInfo> = search
-            .search()
-            .with_hits_per_page(state_limit as usize)
-            .with_page(state_page_num as usize)
-            .with_array_filter(vec![&instance_filter, &creator_filter])
-            .with_sort(&["created_on:desc"])
-            .with_query(&params.state_contains.clone().unwrap_or_default())
-            .execute()
-            .await
-            .map_err(gisst::error::Search::from)?;
-        let states: Vec<_> = state_results.hits.into_iter().map(|r| r.result).collect();
-
-        let replay_page_num = params.replay_page_num.unwrap_or(1);
-        let replay_limit = params.replay_limit.unwrap_or(100).min(100);
-        let search = app_state.search.replays();
-        let replay_results: meilisearch_sdk::search::SearchResults<CreatorReplayInfo> = search
-            .search()
-            .with_hits_per_page(replay_limit as usize)
-            .with_page(replay_page_num as usize)
-            .with_array_filter(vec![&instance_filter, &creator_filter])
-            .with_sort(&["created_on:desc"])
-            .with_query(&params.replay_contains.clone().unwrap_or_default())
-            .execute()
-            .await
-            .map_err(gisst::error::Search::from)?;
-        let replays: Vec<_> = replay_results.hits.into_iter().map(|r| r.result).collect();
-
-        let save_page_num = params.save_page_num.unwrap_or(1);
-        let save_limit = params.save_limit.unwrap_or(100).min(100);
-        let search = app_state.search.saves();
-        let save_results: meilisearch_sdk::search::SearchResults<CreatorSaveInfo> = search
-            .search()
-            .with_hits_per_page(save_limit as usize)
-            .with_page(save_page_num as usize)
-            .with_array_filter(vec![&instance_filter, &creator_filter])
-            .with_sort(&["created_on:desc"])
-            .with_query(&params.save_contains.clone().unwrap_or_default())
-            .execute()
-            .await
-            .map_err(gisst::error::Search::from)?;
-        let saves: Vec<_> = save_results.hits.into_iter().map(|r| r.result).collect();
-
         let objects = ObjectLink::get_all_for_instance_id(&mut conn, id).await?;
-        let state_has_more = states.len() >= state_limit as usize;
-        let save_has_more = saves.len() >= save_limit as usize;
-        let replay_has_more = replays.len() >= replay_limit as usize;
-        tracing::debug!(
-            "{} - {state_has_more} - {} - {replay_has_more}",
-            states.len(),
-            replays.len()
-        );
-        let full_instance = FullInstance {
-            work: Work::get_by_id(&mut conn, instance.work_id).await?.unwrap(),
-            info: instance,
-            environment,
-            objects,
-            states,
-            saves,
-            replays,
-        };
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
@@ -198,25 +132,19 @@ async fn get_all_for_instance(
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
+                let (search_url, search_key) = app_state.search.frontend_data();
                 let instance_all_listing = app_state
                     .templates
                     .get_template("instance_all_listing.html")?;
                 Html(instance_all_listing.render(context!(
                     base_url => BASE_URL.get(),
-                    state_has_more => state_has_more,
-                    save_has_more => save_has_more,
-                    replay_has_more => replay_has_more,
-                    state_page_num => state_page_num,
-                    state_limit => state_limit,
-                    state_contains => params.state_contains,
-                    replay_page_num => replay_page_num,
-                    replay_limit => replay_limit,
-                    replay_contains => params.replay_contains,
-                    save_page_num => save_page_num,
-                    save_limit => save_limit,
-                    save_contains => params.save_contains,
+                    search_url => search_url,
+                    search_key => search_key,
                     creator_id => params.creator_id,
-                    instance => full_instance,
+                    instance => instance,
+                    work => work,
+                    environment => environment,
+                    objects => objects,
                     user => user,
                 ))?)
                 .into_response()
@@ -224,6 +152,66 @@ async fn get_all_for_instance(
                 .as_ref()
                 .is_some_and(|hv| hv.contains("application/json"))
             {
+                let instance_filter = format!("instance_id = \"{id}\"");
+                let creator_filter = params
+                    .creator_id
+                    .map(|cid| format!("creator_id = \"{cid}\""))
+                    .unwrap_or_default();
+                let state_page_num = params.state_page_num.unwrap_or(1);
+                let state_limit = params.state_limit.unwrap_or(100).min(100);
+                let search = app_state.search.states();
+                let state_results: meilisearch_sdk::search::SearchResults<CreatorStateInfo> =
+                    search
+                        .search()
+                        .with_hits_per_page(state_limit as usize)
+                        .with_page(state_page_num as usize)
+                        .with_array_filter(vec![&instance_filter, &creator_filter])
+                        .with_sort(&["created_on:desc"])
+                        .with_query(&params.state_contains.clone().unwrap_or_default())
+                        .execute()
+                        .await
+                        .map_err(gisst::error::Search::from)?;
+                let states: Vec<_> = state_results.hits.into_iter().map(|r| r.result).collect();
+
+                let replay_page_num = params.replay_page_num.unwrap_or(1);
+                let replay_limit = params.replay_limit.unwrap_or(100).min(100);
+                let search = app_state.search.replays();
+                let replay_results: meilisearch_sdk::search::SearchResults<CreatorReplayInfo> =
+                    search
+                        .search()
+                        .with_hits_per_page(replay_limit as usize)
+                        .with_page(replay_page_num as usize)
+                        .with_array_filter(vec![&instance_filter, &creator_filter])
+                        .with_sort(&["created_on:desc"])
+                        .with_query(&params.replay_contains.clone().unwrap_or_default())
+                        .execute()
+                        .await
+                        .map_err(gisst::error::Search::from)?;
+                let replays: Vec<_> = replay_results.hits.into_iter().map(|r| r.result).collect();
+
+                let save_page_num = params.save_page_num.unwrap_or(1);
+                let save_limit = params.save_limit.unwrap_or(100).min(100);
+                let search = app_state.search.saves();
+                let save_results: meilisearch_sdk::search::SearchResults<CreatorSaveInfo> = search
+                    .search()
+                    .with_hits_per_page(save_limit as usize)
+                    .with_page(save_page_num as usize)
+                    .with_array_filter(vec![&instance_filter, &creator_filter])
+                    .with_sort(&["created_on:desc"])
+                    .with_query(&params.save_contains.clone().unwrap_or_default())
+                    .execute()
+                    .await
+                    .map_err(gisst::error::Search::from)?;
+                let saves: Vec<_> = save_results.hits.into_iter().map(|r| r.result).collect();
+                let full_instance = FullInstance {
+                    work,
+                    info: instance,
+                    environment,
+                    objects,
+                    states,
+                    saves,
+                    replays,
+                };
                 Json(full_instance).into_response()
             } else {
                 Err(ServerError::MimeType)?

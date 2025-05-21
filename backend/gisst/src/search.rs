@@ -198,7 +198,11 @@ pub struct MeiliSearch {
 impl MeiliSearch {
     /// # Errors
     /// If the address is invalid, creating the client will fail
-    pub fn new(url: &str, external_url:&str, search_key: &str) -> Result<Self, crate::error::Search> {
+    pub fn new(
+        url: &str,
+        external_url: &str,
+        search_key: &str,
+    ) -> Result<Self, crate::error::Search> {
         Ok(Self {
             url: url.to_string(),
             external_url: external_url.to_string(),
