@@ -1,4 +1,4 @@
-use super::{LoggedInUserInfo, StateReplayPageQueryParams};
+use super::LoggedInUserInfo;
 use crate::auth::AuthBackend;
 use crate::server::BASE_URL;
 use crate::{auth, error::ServerError, server::ServerState, utils::parse_header};
@@ -11,10 +11,7 @@ use axum::{
 };
 use axum_login::login_required;
 use gisst::error::Table;
-use gisst::models::{
-    CreatorReplayInfo, CreatorSaveInfo, CreatorStateInfo, Environment, Instance, InstanceWork,
-    ObjectLink, Work,
-};
+use gisst::models::{Environment, Instance, InstanceWork, ObjectLink, Work};
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -26,7 +23,6 @@ pub fn router() -> Router {
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/{id}/clone", get(clone_v86_instance))
 }
-
 #[derive(Deserialize, Debug)]
 struct InstanceListQueryParams {
     page_num: Option<u32>,
@@ -38,7 +34,7 @@ struct InstanceListQueryParams {
 async fn get_instances(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
-    Query(params): Query<InstanceListQueryParams>,
+    params: Query<InstanceListQueryParams>,
     auth: axum_login::AuthSession<auth::AuthBackend>,
 ) -> Result<axum::response::Response, ServerError> {
     tracing::Span::current().record(
@@ -95,10 +91,12 @@ struct FullInstance {
     info: Instance,
     work: Work,
     environment: Environment,
-    states: Vec<CreatorStateInfo>,
-    replays: Vec<CreatorReplayInfo>,
-    saves: Vec<CreatorSaveInfo>,
     objects: Vec<ObjectLink>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct StateReplayPageQueryParams {
+    creator_id: Option<uuid::Uuid>,
 }
 
 #[tracing::instrument("instance-page", skip(app_state, auth), fields(userid))]
@@ -152,65 +150,11 @@ async fn get_all_for_instance(
                 .as_ref()
                 .is_some_and(|hv| hv.contains("application/json"))
             {
-                let instance_filter = format!("instance_id = \"{id}\"");
-                let creator_filter = params
-                    .creator_id
-                    .map(|cid| format!("creator_id = \"{cid}\""))
-                    .unwrap_or_default();
-                let state_page_num = params.state_page_num.unwrap_or(1);
-                let state_limit = params.state_limit.unwrap_or(100).min(100);
-                let search = app_state.search.states();
-                let state_results: meilisearch_sdk::search::SearchResults<CreatorStateInfo> =
-                    search
-                        .search()
-                        .with_hits_per_page(state_limit as usize)
-                        .with_page(state_page_num as usize)
-                        .with_array_filter(vec![&instance_filter, &creator_filter])
-                        .with_sort(&["created_on:desc"])
-                        .with_query(&params.state_contains.clone().unwrap_or_default())
-                        .execute()
-                        .await
-                        .map_err(gisst::error::Search::from)?;
-                let states: Vec<_> = state_results.hits.into_iter().map(|r| r.result).collect();
-
-                let replay_page_num = params.replay_page_num.unwrap_or(1);
-                let replay_limit = params.replay_limit.unwrap_or(100).min(100);
-                let search = app_state.search.replays();
-                let replay_results: meilisearch_sdk::search::SearchResults<CreatorReplayInfo> =
-                    search
-                        .search()
-                        .with_hits_per_page(replay_limit as usize)
-                        .with_page(replay_page_num as usize)
-                        .with_array_filter(vec![&instance_filter, &creator_filter])
-                        .with_sort(&["created_on:desc"])
-                        .with_query(&params.replay_contains.clone().unwrap_or_default())
-                        .execute()
-                        .await
-                        .map_err(gisst::error::Search::from)?;
-                let replays: Vec<_> = replay_results.hits.into_iter().map(|r| r.result).collect();
-
-                let save_page_num = params.save_page_num.unwrap_or(1);
-                let save_limit = params.save_limit.unwrap_or(100).min(100);
-                let search = app_state.search.saves();
-                let save_results: meilisearch_sdk::search::SearchResults<CreatorSaveInfo> = search
-                    .search()
-                    .with_hits_per_page(save_limit as usize)
-                    .with_page(save_page_num as usize)
-                    .with_array_filter(vec![&instance_filter, &creator_filter])
-                    .with_sort(&["created_on:desc"])
-                    .with_query(&params.save_contains.clone().unwrap_or_default())
-                    .execute()
-                    .await
-                    .map_err(gisst::error::Search::from)?;
-                let saves: Vec<_> = save_results.hits.into_iter().map(|r| r.result).collect();
                 let full_instance = FullInstance {
                     work,
                     info: instance,
                     environment,
                     objects,
-                    states,
-                    saves,
-                    replays,
                 };
                 Json(full_instance).into_response()
             } else {
