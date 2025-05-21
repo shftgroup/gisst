@@ -23,6 +23,7 @@ addEventListener("load", () =>
         start_replay: () => {
           ui_state.newReplay("yet another replay.replay"+replaynum.toString());
           replaynum +=1;
+
         },
         stop_and_save_replay: () => {},
         play_replay: (sn:number) => console.log("PLAY",sn),

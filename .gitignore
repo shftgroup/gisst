@@ -40,3 +40,4 @@ nohup.out
 tmp
 /assets
 /assets_minimal.zip
+playwright-report/

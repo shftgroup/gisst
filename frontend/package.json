@@ -8,6 +8,7 @@
     "frontend-embed"
   ],
   "scripts": {
-    "check": "npm run check --workspaces"
+    "check": "npm run check --workspaces",
+    "test": "npm run test --workspaces --if-present"
   }
 }
