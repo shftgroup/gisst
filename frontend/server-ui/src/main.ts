@@ -114,12 +114,12 @@ class GISSTStateSearch extends HTMLElement {
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
     const can_clone = (this.getAttribute("can-clone") ?? "false") === 'true';
-    let filters = [];
+    const filters = [];
     if (limit_to_instance && limit_to_instance != "") {
-      filters.push(`instance_id = \"${limit_to_instance}\"`);
+      filters.push(`instance_id = "${limit_to_instance}"`);
     }
     if (limit_to_creator && limit_to_creator != "") {
-      filters.push(`creator_id = \"${limit_to_creator}\"`);
+      filters.push(`creator_id = "${limit_to_creator}"`);
     }
     this.classList.add("gisst-state-search");
     const top_row = document.createElement("div");
@@ -187,12 +187,12 @@ class GISSTSaveSearch extends HTMLElement {
     const limit_to_creator = this.getAttribute("creator-id");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
-    let filters = [];
+    const filters = [];
     if (limit_to_instance && limit_to_instance != "") {
-      filters.push(`instance_id = \"${limit_to_instance}\"`);
+      filters.push(`instance_id = "${limit_to_instance}"`);
     }
     if (limit_to_creator && limit_to_creator != "") {
-      filters.push(`creator_id = \"${limit_to_creator}\"`);
+      filters.push(`creator_id = "${limit_to_creator}"`);
     }
     this.classList.add("gisst-save-search");
     const top_row = document.createElement("div");
@@ -259,12 +259,12 @@ class GISSTPerformanceSearch extends HTMLElement {
     const limit_to_creator = this.getAttribute("creator-id");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
-    let filters = [];
+    const filters = [];
     if (limit_to_instance && limit_to_instance != "") {
-      filters.push(`instance_id = \"${limit_to_instance}\"`);
+      filters.push(`instance_id = "${limit_to_instance}"`);
     }
     if (limit_to_creator && limit_to_creator != "") {
-      filters.push(`creator_id = \"${limit_to_creator}\"`);
+      filters.push(`creator_id = "${limit_to_creator}"`);
     }
     this.classList.add("gisst-performance-search");
     const top_row = document.createElement("div");
