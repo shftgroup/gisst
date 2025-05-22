@@ -37,6 +37,28 @@ jobs:
         cache-dependency-path: '**/package-lock.json'
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+    - name: Set up meili
+      run: curl -L https://install.meilisearch.com | sh
+      working-directory: backend/meili
+    - uses: JarvusInnovations/background-action@v1
+      name: Run meili
+      with:
+        run: |
+          ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development --db-path ./test --http-addr localhost:7701 &
+        wait-on: '{"resources":["http-get://localhost:7701/version"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
+        tail: true # true = stderr,stdout
+        log-output-resume: stderr
+        wait-for: 1m
+        log-output: stderr,stdout # same as true
+        log-output-if: failure
+        working-directory: backend/meili
+    - name: Create meili index
+      working-directory: backend/meili
+      run: |
+        export MEILI_URL=http://localhost:7701
+        export MEILI_MASTER_KEY=test-api-key-github-actions
+        export MEILI_API_KEY=test-api-key-github-actions
+        ./init_indices.sh
     - name: ci
       run: npm ci
       working-directory: frontend
@@ -44,6 +66,9 @@ jobs:
       if: steps.playwright-cache.outputs.cache-hit != 'true'
     - run: npx playwright install-deps
       if: steps.playwright-cache.outputs.cache-hit == 'true'
+    - name: Create test data
+      working-directory: frontend
+      run: npm run gendata --workspaces --if-present
     - name: build
       run: npm run build --workspaces --if-present
       working-directory: frontend

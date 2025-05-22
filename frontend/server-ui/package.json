@@ -12,6 +12,7 @@
     }
   },
   "scripts": {
+    "gendata": "node scripts/gendata.js http://localhost:7701",
     "dev": "shx mkdir -p ../../test-cert && vite",
     "check": "tsc && eslint src",
     "build": "shx mkdir -p ../../test-cert && tsc && vite build",
@@ -28,7 +29,8 @@
     "typescript": "^5.8.2",
     "vite": "^6.2.1",
     "vite-plugin-checker": "^0.9.0",
-    "vite-plugin-mkcert": "^1.17.7"
+    "vite-plugin-mkcert": "^1.17.7",
+    "meilisearch":"^0.50.0"
   },
   "dependencies": {
     "@meilisearch/instant-meilisearch": "^0.26.0",
