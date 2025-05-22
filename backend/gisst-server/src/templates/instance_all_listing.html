@@ -34,21 +34,45 @@
     </div>
     <div class="row">
       <h2>States</h2>
-      <div id="state_searchbox"></div>
-      <div id="state_hits"></div>
-      <div id="state_pagination"></div>
+      <gisst-state-search
+        base-url="{{ base_url | safe }}"
+        search-url="{{ search_url | safe }}"
+        search-key="{{ search_key }}"
+        instance-id="{{ instance.instance_id }}"
+        instance-info="false"
+        {% if creator_id %}
+        creator-id="{{ creator.creator_id }}"
+        {% endif %}
+        {% if environment.environment_framework == "v86" %}
+        can-clone="true"
+        {% endif %}
+      ></gisst-state-search>
     </div>
     <div class="row">
       <h2>Performances</h1>
-        <div id="performance_searchbox"></div>
-        <div id="performance_hits"></div>
-        <div id="performance_pagination"></div>
+      <gisst-performance-search
+        base-url="{{ base_url | safe }}"
+        search-url="{{ search_url | safe }}"
+        search-key="{{ search_key }}"
+        instance-id="{{ instance.instance_id }}"
+        instance-info="false"
+        {% if creator_id %}
+        creator-id="{{ creator.creator_id }}"
+        {% endif %}
+      ></gisst-performance-search>
     </div>
     <div class="row">
       <h1>Saves</h1>
-      <div id="save_searchbox"></div>
-      <div id="save_hits"></div>
-      <div id="save_pagination"></div>
+      <gisst-save-search
+        base-url="{{ base_url | safe }}"
+        search-url="{{ search_url | safe }}"
+        search-key="{{ search_key }}"
+        instance-id="{{ instance.instance_id }}"
+        instance-info="false"
+        {% if creator_id %}
+        creator-id="{{ creator.creator_id }}"
+        {% endif %}
+      ></gisst-save-search>
     </div>
     <div class="row">
         <h1>Data Objects</h1>
@@ -70,94 +94,4 @@
         </table>
     </div>
 </div>
-<script type="module">
-import * as ui from '{{ base_url | safe }}/ui/ui.js';
-
-const style = document.createElement('style');
-style.innerHTML = ui.styles;
-document.head.appendChild(style);
-{% if creator_id %}
-const filters = "instance_id = \"{{ instance.instance_id }}\" AND creator_id = \"{{ creator_id }}\"";
-{% else %}
-const filters = "instance_id = \"{{ instance.instance_id }}\"";
-{% endif %}
-const state_search = ui.search_states("{{ search_url | safe }}", "{{ search_key | safe }}", {});
-state_search.addWidgets([
-  ui.widgets.searchBox({
-    container: "#state_searchbox"
-  }),
-  ui.widgets.configure({ hitsPerPage: 10, filters }),
-  ui.widgets.pagination({ container: "#state_pagination" }),
-  ui.widgets.hits({
-    container: "#state_hits",
-    templates: {
-      item: (hit, { html, components }) => html`
-        <div>
-          <div class="hit-name">
-            <a href="{{ base_url | safe }}/play/${hit.instance_id}?state=${hit.state_id}">${components.Highlight({ hit, attribute: "state_name"})} (Play)</a>--<a href="{{ base_url | safe }}/play/${hit.instance_id}?state=${hit.state_id}&boot_into_record=true">(Play and record)</a>
-{% if environment.environment_framework == "v86" %}
-  --<a class="btn btn-primary" href="{{ instance.instance_id }}/clone?state=${ hit.state_id }" target="_blank">Clone as New Instance</a>
-{% endif %}
-          </div>
-          <div class="hit-more-info">
-            ${components.Highlight({ hit, attribute: "state_description"})}
-          </div>
-        </div>
-          `
-    }
-  })
-]);
-state_search.start();
-
-const replay_search = ui.search_replays("{{ search_url | safe }}", "{{ search_key | safe }}", {});
-replay_search.addWidgets([
-  ui.widgets.searchBox({
-    container: "#performance_searchbox"
-  }),
-  ui.widgets.configure({ hitsPerPage: 10, filters }),
-  ui.widgets.pagination({ container: "#performance_pagination" }),
-  ui.widgets.hits({
-    container: "#performance_hits",
-    templates: {
-      item: (hit, { html, components }) => html`
-        <div>
-          <div class="hit-name">
-            <a href="{{ base_url | safe }}/play/${hit.instance_id}?replay=${hit.replay_id}">${components.Highlight({ hit, attribute: "replay_name"})} (Play)</a>
-          </div>
-          <div class="hit-more-info">
-            ${components.Highlight({ hit, attribute: "replay_description"})}
-          </div>
-        </div>
-          `
-    }
-  })
-]);
-replay_search.start();
-
-const save_search = ui.search_saves("{{ search_url | safe }}", "{{ search_key | safe }}", {});
-save_search.addWidgets([
-  ui.widgets.searchBox({
-    container: "#save_searchbox"
-  }),
-  ui.widgets.configure({ hitsPerPage: 10, filters }),
-  ui.widgets.pagination({ container: "#save_pagination" }),
-  ui.widgets.hits({
-    container: "#save_hits",
-    templates: {
-      item: (hit, { html, components }) => html`
-        <div>
-          <div class="hit-name">
-            <a href="{{ base_url | safe }}/play/${hit.instance_id}?save=${hit.save_id}">${components.Highlight({ hit, attribute: "save_short_desc"})} (Play)</a>
-          </div>
-          <div class="hit-more-info">
-            ${components.Highlight({ hit, attribute: "save_description"})}
-          </div>
-        </div>
-          `
-    }
-  })
-]);
-save_search.start();
-</script>
-
 {% endblock content %}

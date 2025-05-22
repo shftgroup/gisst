@@ -349,6 +349,7 @@ async fn main() -> Result<(), IngestError> {
                 }
                 // commit transaction + ok
                 tx.commit().await.map_err(IngestError::Sql)?;
+                // TODO: index instance here
                 Ok(())
             })
         })

@@ -190,6 +190,7 @@ async fn clone_v86_machine(
     indexer: &gisst::search::MeiliIndexer,
 ) -> Result<Uuid, GISSTCliError> {
     let mut conn = db.acquire().await?;
+    // TODO: use transaction
     let uuid = gisst::v86clone::clone_v86_machine(
         &mut conn,
         instance_id,
@@ -286,6 +287,7 @@ async fn add_patched_instance(
         }
     }
     tx.commit().await.map_err(GISSTCliError::Sql)?;
+    // TODO: index instance here
     Ok((derived_work_id, derived_inst_id))
 }
 

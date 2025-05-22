@@ -196,6 +196,7 @@ pub struct CreatorStateInfo {
     pub creator_id: Uuid,
     pub creator_username: String,
     pub creator_full_name: String,
+    // TODO should include environment type here so we can show can-clone in creator view and not make it a UI setting
 }
 
 #[derive(Debug, Serialize, Deserialize)]
