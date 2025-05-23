@@ -16,6 +16,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2.7.7
+      with:
+        workspaces: "backend"
+        cache-all-crates: "true"
     - name: Cache node modules
       uses: actions/cache@v3
       env:
@@ -40,21 +45,47 @@ jobs:
     - name: ci
       run: npm ci
       working-directory: frontend
-    - run: npx playwright install --with-deps
-      if: steps.playwright-cache.outputs.cache-hit != 'true'
-    - run: npx playwright install-deps
-      if: steps.playwright-cache.outputs.cache-hit == 'true'
     - name: build
       run: npm run build --workspaces --if-present
       working-directory: frontend
-    - name: test
-      run: npm run test --workspaces --if-present
+    - name: tsc
+      run: npm run check --workspaces --if-present
       working-directory: frontend
     - name: dist
       run: npm run dist --workspaces --if-present
       working-directory: frontend
-    - name: tsc
-      run: npm run check --workspaces --if-present
+    - run: npx playwright install --with-deps
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+    - run: npx playwright install-deps
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
+    - name: Set up meili
+      run: curl -L https://install.meilisearch.com | sh
+      working-directory: backend/meili
+    - uses: JarvusInnovations/background-action@v1
+      name: Run meili
+      with:
+        run: |
+          ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development --db-path ./test --http-addr localhost:7701 &
+        wait-on: '{"resources":["http-get://localhost:7701/version"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
+        tail: true # true = stderr,stdout
+        log-output-resume: stderr
+        wait-for: 1m
+        log-output: stderr,stdout # same as true
+        log-output-if: failure
+        working-directory: backend/meili
+    - name: Create meili index # TODO: this should be factored into a different rust crate because it doesn't strictly need a lot of dependencies, but we'll pay the build time cost twice during CI
+      working-directory: backend
+      run: |
+        export GISST_CONFIG_PATH=./config
+        export MEILI_URL=http://localhost:7701
+        export MEILI_MASTER_KEY=test-api-key-github-actions
+        export MEILI_API_KEY=test-api-key-github-actions
+        cargo run --bin gisst-cli -- init-indices
+    - name: Create test data
+      working-directory: frontend
+      run: npm run gendata --workspaces --if-present
+    - name: test
+      run: npm run test --workspaces --if-present
       working-directory: frontend
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}

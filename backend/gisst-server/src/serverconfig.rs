@@ -42,6 +42,7 @@ impl ServerConfig {
 #[allow(clippy::struct_field_names)]
 pub struct SearchConfig {
     pub meili_url: String,
+    pub meili_external_url: String,
     pub meili_api_key: String,
     pub meili_search_key: String,
 }

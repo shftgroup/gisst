@@ -17,20 +17,6 @@ pub use screenshot::router as screenshot_router;
 pub use state::router as state_router;
 pub use work::router as work_router;
 
-#[derive(Debug, serde::Deserialize)]
-struct StateReplayPageQueryParams {
-    state_page_num: Option<u32>,
-    state_limit: Option<u32>,
-    state_contains: Option<String>,
-    replay_page_num: Option<u32>,
-    replay_limit: Option<u32>,
-    replay_contains: Option<String>,
-    save_page_num: Option<u32>,
-    save_limit: Option<u32>,
-    save_contains: Option<String>,
-    creator_id: Option<uuid::Uuid>,
-}
-
 #[derive(serde::Serialize, Debug)]
 pub struct LoggedInUserInfo {
     email: Option<String>,
