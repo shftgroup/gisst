@@ -19,6 +19,9 @@ jobs:
       with:
         workspaces: "backend"
         cache-all-crates: "true"
+    - name: Clippy
+      working-directory: backend
+      run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
     - name: Install zshell
       run: sudo apt install -y zsh
     - name: Set up meili
@@ -36,9 +39,6 @@ jobs:
         log-output: stderr,stdout # same as true
         log-output-if: failure
         working-directory: backend/meili
-    - name: Clippy
-      working-directory: backend
-      run: cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
     - name: Prep libv86
       run: mkdir -p backend/web-dist && cp -r frontend/frontend-web/public/v86 backend/web-dist/
     - name: Create DB
@@ -50,21 +50,13 @@ jobs:
         echo "DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb" >> .env
         echo "GISST_CONFIG=./" >> .env
         DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb cargo sqlx database reset -y -f
-    - name: Create meili index
-      working-directory: backend/meili
-      run: |
-        echo "MEILI_URL=http://localhost:7700" >> ../.env
-        echo "MEILI_MASTER_KEY=test-api-key-github-actions" >> ../.env
-        echo "MEILI_API_KEY=test-api-key-github-actions" >> ../.env
-        echo "MEILI_SEARCH_KEY=test-api-key-github-actions" >> ../.env
-        source ../.env
-        export MEILI_URL
-        export MEILI_MASTER_KEY
-        export MEILI_API_KEY
-        ./init_indices.sh
     - name: Load example data into DB
       working-directory: backend
       run: |
+        echo "MEILI_URL=http://localhost:7700" >> .env
+        echo "MEILI_MASTER_KEY=test-api-key-github-actions" >> .env
+        echo "MEILI_API_KEY=test-api-key-github-actions" >> .env
+        echo "MEILI_SEARCH_KEY=test-api-key-github-actions" >> .env
         rm -rf storage
         mkdir storage
         source .env

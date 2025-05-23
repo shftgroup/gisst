@@ -57,6 +57,29 @@ impl MeiliIndexer {
             meili: Meili::new(url, Some(api_key))?,
         })
     }
+    /// # Errors
+    /// If the configured search URL is no good or another meili API problem occurs
+    pub async fn init_indices(&self) -> Result<(), crate::error::SearchIndex> {
+        let mut instances = self.meili.index("instance");
+        instances.set_primary_key("instance_id").await?;
+        instances.set_filterable_attributes(["work_platform"]).await?;
+        instances.set_sortable_attributes(["work_name", "work_version", "work_platform"]).await?;
+        let mut states = self.meili.index("state");
+        states.set_primary_key("state_id").await?;
+        states.set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"]).await?;
+        states.set_sortable_attributes(["work_name", "work_version", "work_platform", "creator_username", "creator_full_name", "state_name", "created_on"]).await?;
+        let mut saves = self.meili.index("save");
+        saves.set_primary_key("save_id").await?;
+        saves.set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"]).await?;
+        saves.set_sortable_attributes(["work_name", "work_version", "work_platform", "creator_username", "creator_full_name", "save_short_desc", "created_on"]).await?;
+        let mut replays = self.meili.index("replay");
+        replays.set_primary_key("replay_id").await?;
+        replays.set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"]).await?;
+        replays.set_sortable_attributes(["work_name", "work_version", "work_platform", "creator_username", "creator_full_name", "replay_name", "created_on"]).await?;
+        let mut creators = self.meili.index("creator");
+        creators.set_primary_key("creator_id").await?;
+        Ok(())
+    }
 }
 
 impl SearchIndexer for MeiliIndexer {
@@ -129,7 +152,11 @@ impl SearchIndexer for MeiliIndexer {
         conn: &mut PgConnection,
     ) -> Vec<Result<Self::IndexOut, error::SearchIndex>> {
         use futures::StreamExt;
-        let mut instances: Vec<_> = InstanceWork::get_stream(conn)
+        if let Err(e) = self.init_indices().await {
+            return vec![Err(e)];
+        }
+        let mut outputs = Vec::with_capacity(128);
+        let instances: Vec<_> = InstanceWork::get_stream(conn)
             .chunks(CHUNK_SIZE)
             .then(async |chunk| {
                 let idx = self.meili.index("instance");
@@ -179,11 +206,12 @@ impl SearchIndexer for MeiliIndexer {
             })
             .collect()
             .await;
-        instances.extend(saves);
-        instances.extend(states);
-        instances.extend(replays);
-        instances.extend(creators);
-        instances
+        outputs.extend(instances);
+        outputs.extend(saves);
+        outputs.extend(states);
+        outputs.extend(replays);
+        outputs.extend(creators);
+        outputs
     }
 }
 

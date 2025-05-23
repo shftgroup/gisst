@@ -89,6 +89,8 @@ pub enum Commands {
     /// Recalculate file sizes and compressed sizes
     RecalcSizes,
 
+    /// Set up search index state in the search indexer
+    InitIndices,
     /// Dump all works, states, saves, etc into search indexer
     Reindex,
 

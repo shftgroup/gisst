@@ -34,6 +34,12 @@ async fn main() -> Result<(), GISSTCliError> {
         .filter_level(args.verbose.log_level_filter())
         .init();
 
+    let indexer = gisst::search::MeiliIndexer::new(&args.meili_url, &args.meili_api_key)?;
+    if let Commands::InitIndices = args.command {
+        info!("Not using DB or config, just initializing indices");
+        indexer.init_indices().await?;
+        return Ok(());
+    }
     info!("Found config file at path: {}", args.gisst_config_path);
     let cli_config: CLIConfig = CLIConfig::new(&args.gisst_config_path)?;
 
@@ -48,9 +54,9 @@ async fn main() -> Result<(), GISSTCliError> {
         "Storage root is set to: {}",
         cli_config.storage.root_folder_path
     );
-    let indexer = gisst::search::MeiliIndexer::new(&args.meili_url, &args.meili_api_key)?;
 
     match dbg!(args).command {
+        Commands::InitIndices => (),
         Commands::Reindex => reindex(db, &indexer).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
         Commands::Link {
