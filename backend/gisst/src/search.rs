@@ -60,6 +60,9 @@ impl MeiliIndexer {
     /// # Errors
     /// Fails if the API can't be accessed
     async fn create_index(&self, idx:&str, key:&str) -> Result<meilisearch_sdk::indexes::Index, crate::error::SearchIndex> {
+        if let Ok(idx) = self.meili.get_index(idx).await {
+            return Ok(idx);
+        }
         let task = self.meili.create_index(idx, Some(key)).await?;
 
         // Wait for the task to complete

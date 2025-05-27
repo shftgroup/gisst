@@ -30,5 +30,6 @@ prometheus_endpoint = ""
 
 [search]
 meili_url = "http://localhost:7700"
+meili_external_url = "http://localhost:7700"
 meili_api_key = ""
 meili_search_key = ""

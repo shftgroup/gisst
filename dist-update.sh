@@ -48,7 +48,7 @@ mkdir -p cores
 emsdk install 4.0.7
 emsdk activate 4.0.7
 git clone --depth 1 -b tick-event https://github.com/JoeOsborn/v86 v86 || echo "already have v86"
-git clone --depth 1 -b add-save-load-sram-commands https://github.com/JoeOsborn/retroarch ra || echo "already have RA"
+git clone --depth 1 https://github.com/libretro/retroarch ra || echo "already have RA"
 git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "already have fceumm"
 git clone --depth 1 https://github.com/libretro/snes9x snes9x || echo "already have snes9x"
 git clone --depth 1 -b emscripten-build https://github.com/JoeOsborn/hatari hatari || echo "already have hatari"
