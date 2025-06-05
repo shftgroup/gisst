@@ -26,9 +26,10 @@ You can check with =systemctl status gisst-search.service=.
 
 First, get your administration API key using =curl -H "Authorization: Bearer $MEILI_MASTER_KEY" http://localhost:7700/keys=.
 
-Put the API and search keys into your =../.env=, and while you're at it modify =../config/local.toml= based on =../config/default.toml='s =[search]= section.
+Put the API and search keys into your =backend/.env=, and while you're at it modify =backend/config/local.toml= based on =backend/config/default.toml='s =[search]= section.
 
 #+BEGIN_src bash
+export MEILI_URL=http://localhost:7700
 export MEILI_API_KEY=key_from_that_curl_command
-./init_indices.sh
+cargo run --bin gisst-cli -- reindex
 #+END_src

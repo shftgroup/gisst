@@ -57,6 +57,43 @@ impl MeiliIndexer {
             meili: Meili::new(url, Some(api_key))?,
         })
     }
+    /// # Errors
+    /// Fails if the API can't be accessed
+    async fn create_index(&self, idx:&str, key:&str) -> Result<meilisearch_sdk::indexes::Index, crate::error::SearchIndex> {
+        if let Ok(idx) = self.meili.get_index(idx).await {
+            return Ok(idx);
+        }
+        let task = self.meili.create_index(idx, Some(key)).await?;
+
+        // Wait for the task to complete
+        let task = task.wait_for_completion(&self.meili, None, None).await?;
+
+        // Try to get the inner index if the task succeeded
+        Ok(task.try_make_index(&self.meili).unwrap())
+    }
+    /// # Errors
+    /// If the configured search URL is no good or another meili API problem occurs
+    pub async fn init_indices(&self) -> Result<(), crate::error::SearchIndex> {
+        let mut instances = self.create_index("instance", "instance_id").await?;
+        instances.set_primary_key("instance_id").await?;
+        instances.set_filterable_attributes(["work_platform"]).await?;
+        instances.set_sortable_attributes(["work_name", "work_version", "work_platform"]).await?;
+        let mut states = self.create_index("state", "state_id").await?;
+        states.set_primary_key("state_id").await?;
+        states.set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"]).await?;
+        states.set_sortable_attributes(["work_name", "work_version", "work_platform", "creator_username", "creator_full_name", "state_name", "created_on"]).await?;
+        let mut saves = self.create_index("save", "save_id").await?;
+        saves.set_primary_key("save_id").await?;
+        saves.set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"]).await?;
+        saves.set_sortable_attributes(["work_name", "work_version", "work_platform", "creator_username", "creator_full_name", "save_short_desc", "created_on"]).await?;
+        let mut replays = self.create_index("replay", "replay_id").await?;
+        replays.set_primary_key("replay_id").await?;
+        replays.set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"]).await?;
+        replays.set_sortable_attributes(["work_name", "work_version", "work_platform", "creator_username", "creator_full_name", "replay_name", "created_on"]).await?;
+        let mut creators = self.create_index("creator", "creator_id").await?;
+        creators.set_primary_key("creator_id").await?;
+        Ok(())
+    }
 }
 
 impl SearchIndexer for MeiliIndexer {
@@ -129,7 +166,11 @@ impl SearchIndexer for MeiliIndexer {
         conn: &mut PgConnection,
     ) -> Vec<Result<Self::IndexOut, error::SearchIndex>> {
         use futures::StreamExt;
-        let mut instances: Vec<_> = InstanceWork::get_stream(conn)
+        if let Err(e) = self.init_indices().await {
+            return vec![Err(e)];
+        }
+        let mut outputs = Vec::with_capacity(128);
+        let instances: Vec<_> = InstanceWork::get_stream(conn)
             .chunks(CHUNK_SIZE)
             .then(async |chunk| {
                 let idx = self.meili.index("instance");
@@ -179,25 +220,41 @@ impl SearchIndexer for MeiliIndexer {
             })
             .collect()
             .await;
-        instances.extend(saves);
-        instances.extend(states);
-        instances.extend(replays);
-        instances.extend(creators);
-        instances
+        outputs.extend(instances);
+        outputs.extend(saves);
+        outputs.extend(states);
+        outputs.extend(replays);
+        outputs.extend(creators);
+        outputs
     }
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct MeiliSearch {
+    url: String,
+    external_url: String,
+    key: String,
     meili: Meili<meilisearch_sdk::reqwest::ReqwestClient>,
 }
 impl MeiliSearch {
     /// # Errors
     /// If the address is invalid, creating the client will fail
-    pub fn new(url: &str, api_key: &str) -> Result<Self, crate::error::Search> {
+    pub fn new(
+        url: &str,
+        external_url: &str,
+        search_key: &str,
+    ) -> Result<Self, crate::error::Search> {
         Ok(Self {
-            meili: Meili::new(url, Some(api_key))?,
+            url: url.to_string(),
+            external_url: external_url.to_string(),
+            key: search_key.to_string(),
+            meili: Meili::new(url, Some(search_key))?,
         })
+    }
+    #[must_use]
+    pub fn frontend_data(&self) -> (&str, &str) {
+        (&self.external_url, &self.key)
     }
     #[must_use]
     pub fn instances(&self) -> meilisearch_sdk::indexes::Index {

@@ -184,5 +184,6 @@ pub async fn clone_v86_machine(
     if let Some(temp) = temp_folder {
         std::fs::remove_dir_all(temp)?;
     }
+    // TODO: index instance here
     Ok(new_id)
 }
