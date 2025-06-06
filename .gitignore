@@ -23,7 +23,9 @@ target
 storage
 .env
 backend/config/local.toml
+backend/meili
 backend/test_content/
+backend/test
 backend/rdb-sys/libretro-util
 backend/rdb
 backend/web-dist
@@ -35,6 +37,7 @@ backend/examples/data/v86/win31.img
 backend/meili/meilisearch
 backend/meili/db
 backend/meili/master.key
+backend/ui-dist
 dbpasswd
 nohup.out
 tmp

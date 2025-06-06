@@ -207,8 +207,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             builder.clone()
                 .service(selective_serve_dir::SelectiveServeDir::new("embed-dist")),
         )
-        .route("/", get(get_homepage))
-        .route("/about", get(get_about))
+        .route("/", get(get_login_page))
         .layer(Extension(app_state))
         .layer(DefaultBodyLimit::max(33_554_432))
         .layer(TraceLayer::new_for_http()
@@ -258,27 +257,15 @@ async fn handle_error(error: axum::BoxError) -> impl axum::response::IntoRespons
     )
 }
 
-async fn get_about(
-    app_state: Extension<ServerState>,
-) -> Result<axum::response::Response, ServerError> {
-    Ok(Html(
-        app_state
-            .templates
-            .get_template("about.html")?
-            .render(context!(base_url => BASE_URL.get()))?,
-    )
-    .into_response())
-}
-
 #[tracing::instrument(skip(app_state))]
-async fn get_homepage(
+async fn get_login_page(
     app_state: Extension<ServerState>,
 ) -> Result<axum::response::Response, ServerError> {
-    info!("Generating homepage");
+    info!("Generating login page");
     Ok(Html(
         app_state
             .templates
-            .get_template("index.html")?
+            .get_template("login.html")?
             .render(context!(base_url => BASE_URL.get()))?,
     )
     .into_response())
