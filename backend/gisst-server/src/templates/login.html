@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GISST Login</title>
+    <!-- Styling is local to each page to allow for easier refactor of frontend UI in future updates -->
+    <style>
+        :root {
+            color-scheme: light dark;
+            /* Light theme */
+            --light-primary: #4f46e5;
+            --light-primary-dark: #4338ca;
+            --light-secondary: #059669;
+            --light-secondary-dark: #047857;
+            --light-dark: #1e1b4b;
+            --light-light: #f8fafc;
+            --light-accent: #e11d48;
+            --light-bg: #f0f5ff;
+            --light-card-bg: #ffffff;
+            --light-text-main: #334155;
+            --light-text-light: #64748b;
+            --light-particle-rgb-a: 79,70,229;
+            --light-particle-rgb-b: 5,150,105;
+            --light-particle-rgb-c: 225,29,72;
+            --light-input-bg: 240, 245, 255;
+            --light-border: 203, 213, 225;
+            /* Dark theme */
+            --dark-primary: #6366f1;
+            --dark-primary-dark: #4f46e5;
+            --dark-secondary: #10b981;
+            --dark-secondary-dark: #0ea5e9;
+            --dark-dark: #1e293b;
+            --dark-light: #f8fafc;
+            --dark-accent: #f43f5e;
+            --dark-card-bg: 30,41,59;
+            --dark-particle-rgb-a: 99,102,241;
+            --dark-particle-rgb-b: 16,185,129;
+            --dark-particle-rgb-c: 244,63,94;
+            --dark-input-bg: 248, 250, 252;
+            --dark-card-bg: 30, 41, 59;
+        }
+        /* Reset page CSS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: light-dark(var(--light-bg), var(--dark-dark));
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image:
+                radial-gradient(circle at 20% 35%, light-dark(rgba(var(--light-particle-rgb-a), 0.1), rgba(var(--dark-particle-rgb-a), 0.15)) 0%, transparent 40%),
+                radial-gradient(circle at 75% 80%, light-dark(rgba(var(--light-particle-rgb-b), 0.08), rgba(var(--dark-particle-rgb-a), 0.1)) 0%, transparent 40%);
+            position:relative;
+            overflow:hidden;
+        }
+
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background-color: light-dark(rgba(var(--light-particle-rgb-a), 0.4), rgba(var(--dark-particle-rgb-b), 0.5));
+            border-radius: 50%;
+            animation: float 10s infinite linear;
+        }
+
+        .particle:nth-child(2n) {
+            background-color: light-dark(rgba(var(--light-particle-rgb-b), 0.4), rgba(var(--dark-particle-rgb-a), 0.5));
+            animation-duration: 15s;
+        }
+
+        .particle:nth-child(3n) {
+            background-color: light-dark(rgba(var(--light-particle-rgb-c), 0.3), rgba(var(--dark-particle-rgb-b), 0.4));
+            animation-duration: 20s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) translateX(100px);
+                opacity: 0;
+            }
+        }
+
+        .login-container {
+            background-color: light-dark(var(--light-card-bg), rgba(var(--dark-card-bg), 0.8));
+            backdrop-filter: blur(10px);
+            width: 90%;
+            max-width: 400px;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid light-dark(rgba(var(--light-particle-rgb-a), 0.1), rgba(var(--dark-particle-rgb-a), 0.3));
+            z-index: 1;
+            position: relative;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+            background-color: light-dark(var(--light-primary), var(--dark-primary));
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 15px -3px light-dark(rgba(var(--light-particle-rgb-a), 0.3), rgba(var(--dark-particle-rgb-a), 0.3));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo svg {
+            width: 50px;
+            height: 50px;
+            fill:white;
+        }
+
+        h1 {
+            color: light-dark(var(--light-text-main), var(--dark-light));
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: light-dark(var(--light-text-light), rgba(var(--dark-input-bg), 0.5));
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .google-login {
+            margin-bottom: 2rem;
+        }
+
+        .google-btn {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background-color: light-dark(var(--light-card-bg), rgba(var(--dark-input-bg), 0.05));
+            border: 2px solid light-dark(rgba(var(--light-border), 0.8), rgba(var(--dark-input-bg), 0.1));
+            border-radius: 8px;
+            color: light-dark(var(--light-text-main), var(--dark-light));
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+        }
+
+        .google-btn::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: -100%;
+            background: linear-gradient(90deg, transparent, light-dark(rgba(var(--light-particle-rgb-a), 0.05), rgba(var(--dark-particle-rgb-a), 0.1), transparent));
+            transition: 0.5s;
+        }
+
+        .google-btn:hover {
+            border-color: light-dark(var(--light-primary), var(--dark-primary));
+            background-color: light-dark(var(--light-card-bg), rgba(var(--dark-input-bg), 0.1));
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px light-dark(rgba(0,0,0,0.1), rgba(var(--dark-particle-rgb-a), 0.3));
+        }
+
+        .google-btn:hover::before {
+            left: 100%;
+        }
+
+        .google-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+            fill: #4285f4;
+        }
+
+        .info-link a {
+            color: light-dark(var(--light-secondary), var(--dark-secondary));
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .info-link a:hover{
+            color: light-dark(var(--light-secondary-dark), var(--dark-secondary-dark));
+            text-decoration: underline;
+        }
+
+        .login-info {
+            text-align: center;
+            padding: 1rem;
+            background-color: light-dark(rgba(var(--light-input-bg), 0.5), rgba(var(--dark-particle-rgb-a), 0.6));
+            border-radius: 8px;
+            border: 1px solid light-dark(rgba(var(--light-border), 0.3), rgba(var(--dark-particle-rgb-a), 0.2));
+        }
+
+        .login-info p {
+            color: light-dark(var(--light-text-light), rgba(var(--dark-input-bg), 0.7));
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+<div class="particles">
+    <!-- Particles will be added with JavaScript -->
+</div>
+
+<div class="login-container">
+    <div class="login-header">
+        <div class="logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" fill="white" stroke="white"></polygon>
+            </svg>
+        </div>
+        <h1>Welcome to GISST</h1>
+        <p class="subtitle">Game and Interactive Software Scholarship Toolkit</p>
+        <p class="subtitle">For more information visit: <span class="info-link"><a href="https://gisst.dev">gisst.dev</a></span></p>
+    </div>
+
+        <div class="google-login">
+            <a class="google-btn" href="/login">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="google-icon">
+                    <path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"></path>
+                </svg>
+                <span>Continue with Google</span>
+            </a>
+        </div>
+
+        <div class="login-info">
+            <p>Access your GISST account securely using your Google credentials. Your information is protected and encrypted.</p>
+        </div>
+</div>
+
+<script>
+    // Create floating particles
+    function createParticles() {
+        const particles = document.querySelector('.particles');
+        const particleCount = 20;
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+
+            // Random positioning
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+
+            // Random size
+            const size = Math.random() * 4 + 2;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+
+            // Random animation delay
+            particle.style.animationDelay = `${Math.random() * 10}s`;
+
+            particles.appendChild(particle);
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        createParticles();
+    });
+</script>
+</body>
+</html>

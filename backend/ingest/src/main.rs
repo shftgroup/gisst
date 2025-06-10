@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_debug_formatting)]
 use std::sync::Arc;
 
 use anyhow::Result;
