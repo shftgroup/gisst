@@ -44,10 +44,6 @@ uuid_sameboy=00000000000000000000000000000067
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
 
-# Create retroarch.cfg for nes / snes / n64
-uuid_retro_cfg=00000000000000000000000000000100
-./target/debug/gisst-cli object create --cwd examples/data/nes --force-uuid $uuid_retro_cfg --role config --role-index 0 retroarch.cfg
-
 # Set up counter for work / instance UUID
 uuid_counter=1000
 
@@ -84,40 +80,36 @@ do
 
   if [ "$folder" = "nes" ]
   then
-    ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"$base\", \"work_version\":\"NTSC\",\"work_platform\":\"Nintendo Entertainment System\"}"
-    ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_nes_fceumm\", \"work_id\":\"$work_uuid\"}"
-    ./target/debug/gisst-cli link object $uuid_retro_cfg $work_uuid --role config
+      ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo Entertainment System" --work-version "NTSC" --work-name "$base" \
+                               --work-id "$work_uuid" --instance-id "$work_uuid" \
+                               --environment-id $uuid_nes_fceumm --cwd examples/data/nes/ \
+                               --content "$file"
   elif [ "$folder" = "snes" ]
   then
-    ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"$base\", \"work_version\":\"NTSC\",\"work_platform\":\"Super Nintendo Entertainment System\"}"
-    ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_snes9x\", \"work_id\":\"$work_uuid\"}"
+      ./target/debug/gisst-cli add-work-instance --platform-name "Super Nintendo Entertainment System" --work-version "NTSC" --work-name "$base" \
+                               --work-id "$work_uuid" --instance-id "$work_uuid" \
+                               --environment-id $uuid_snes9x --cwd examples/data/snes/ \
+                               --content "$file"
   elif [ "$folder" = "gb" ]
   then
-    ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"$base\", \"work_version\":\"NTSC\",\"work_platform\":\"Game Boy\"}"
-    ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_gambatte\", \"work_id\":\"$work_uuid\"}"
-    instance_uuid=$(get_uuid_from_counter)
-    uuid_counter=$((uuid_counter+1));
-    ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$instance_uuid\", \"environment_id\":\"$uuid_sameboy\", \"work_id\":\"$work_uuid\"}"
-    ./target/debug/gisst-cli object create --cwd "examples/data/$folder" --force-uuid "$instance_uuid" --link "$instance_uuid" --role content --role-index 0 "$file"
+      ./target/debug/gisst-cli add-work-instance --platform-name "Game Boy" --work-version "NTSC" --work-name "$base" \
+                               --work-id "$work_uuid" --instance-id "$work_uuid" \
+                               --environment-id $uuid_gambatte --cwd examples/data/gb/ \
+                               --content "$file"
+      instance_uuid=$(get_uuid_from_counter)
+      uuid_counter=$((uuid_counter+1));
+      ./target/debug/gisst-cli add-work-instance --platform-name "Super Nintendo Entertainment System" --work-version "NTSC" --work-name "$base" \
+                               --work-id "$work_uuid" --instance-id "$instance_uuid" \
+                               --environment-id $uuid_sameboy --cwd examples/data/gb/ \
+                               --content "$file"
   elif [ "$folder" = "n64" ]
   then
-    ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"$base\", \"work_version\":\"NTSC\",\"work_platform\":\"Nintendo 64\"}"
-    ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_n64\", \"work_id\":\"$work_uuid\"}"
+      ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo 64" --work-version "NTSC" --work-name "$base" \
+                               --work-id "$work_uuid" --instance-id "$work_uuid" \
+                               --environment-id $uuid_n64 --cwd examples/data/n64/ \
+                               --content "$file"
   fi
-
-  ./target/debug/gisst-cli object create --cwd "examples/data/$folder" --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 0 "$file"
 done
-
-# add bios files
-psx_bios_jp_uuid=$(get_uuid_from_counter)
-uuid_counter=$((uuid_counter+1))
-./target/debug/gisst-cli object create --role dependency --role-index 0 --force-uuid "$psx_bios_jp_uuid" --cwd examples/data/psx "scph5500.bin"
-psx_bios_us_uuid=$(get_uuid_from_counter)
-uuid_counter=$((uuid_counter+1))
-./target/debug/gisst-cli object create --role dependency --role-index 1 --force-uuid "$psx_bios_us_uuid" --cwd examples/data/psx "scph5501.bin"
-psx_bios_eu_uuid=$(get_uuid_from_counter)
-uuid_counter=$((uuid_counter+1))
-./target/debug/gisst-cli object create --role dependency --role-index 2 --force-uuid "$psx_bios_eu_uuid" --cwd examples/data/psx "scph5502.bin"
 
 uuid_counter=10000
 for work in ./examples/data/psx/*.m3u;
@@ -128,28 +120,22 @@ do
   ext=${file##*.};
   work_uuid=$(get_uuid_from_counter)
   uuid_counter=$((uuid_counter+1));
-  ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"$base\", \"work_version\":\"NTSC\",\"work_platform\":\"Sony Playstation\"}"
-  ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_pcsx\", \"work_id\":\"$work_uuid\"}"
-  ./target/debug/gisst-cli link object $uuid_retro_cfg $work_uuid --role config
-  ./target/debug/gisst-cli link object $psx_bios_jp_uuid $work_uuid --role dependency --role-index 0
-  ./target/debug/gisst-cli link object $psx_bios_us_uuid $work_uuid --role dependency --role-index 1
-  ./target/debug/gisst-cli link object $psx_bios_eu_uuid $work_uuid --role dependency --role-index 2
-  ./target/debug/gisst-cli object create --cwd examples/data/psx --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 0 "$file"
-  cidx=1
+  EXTRA_ARGS=
   for DISC_FILE in $(cat "$work"); do
-      ./target/debug/gisst-cli object create --cwd examples/data/psx --force-uuid $(get_uuid_from_counter) --link "$work_uuid" --role content --role-index $cidx "$DISC_FILE"
-      uuid_counter=$((uuid_counter+1));
-      cidx=$((cidx+1))
+      EXTRA_ARGS="${EXTRA_ARGS} --content \"${DISC_FILE}\""
       DISC_EXT=${DISC_FILE##*.}
       if [ $DISC_EXT = "cue" ]; then
           for bin in $(awk -F' ' '/^FILE/ {for (i=2; i < NF; i++) { printf "%s", $i; if (i < NF-1) { printf "%s", OFS; } else { printf "\n";}}}' "examples/data/psx/$DISC_FILE"); do
               bin=${bin:1: -1}
-              ./target/debug/gisst-cli object create --cwd examples/data/psx --force-uuid $(get_uuid_from_counter) --link "$work_uuid" --role content --role-index $cidx "$bin"
-              uuid_counter=$((uuid_counter+1));
-              cidx=$((cidx+1))
+              EXTRA_ARGS="${EXTRA_ARGS} --content \"${bin}\""
           done
       fi
   done
+  ./target/debug/gisst-cli add-work-instance --platform-name "Sony Playstation" --work-version "NTSC" --work-name "$base" \
+                           --work-id "$work_uuid" --instance-id "$work_uuid" \
+                           --environment-id $uuid_pcsx --cwd examples/data/psx/ \
+                           --dep scph5500.bin --dep scph5501.bin --dep scph5502.bin \
+                           --content "$file" $EXTRA_ARGS
 done
 for work in examples/data/psx/*.exe; do
   folder=$(basename `dirname "$work"`)
@@ -158,16 +144,14 @@ for work in examples/data/psx/*.exe; do
   ext=${file##*.};
   work_uuid=$(get_uuid_from_counter)
   uuid_counter=$((uuid_counter+1));
-  ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"$base\", \"work_version\":\"NTSC\",\"work_platform\":\"Sony Playstation\"}"
-  ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_pcsx\", \"work_id\":\"$work_uuid\"}"
-  ./target/debug/gisst-cli link object $uuid_retro_cfg $work_uuid --role config
-  ./target/debug/gisst-cli link object $psx_bios_jp_uuid $work_uuid --role dependency --role-index 0
-  ./target/debug/gisst-cli link object $psx_bios_us_uuid $work_uuid --role dependency --role-index 1
-  ./target/debug/gisst-cli link object $psx_bios_eu_uuid $work_uuid --role dependency --role-index 2
-  ./target/debug/gisst-cli object create --cwd examples/data/psx --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 0 "$file"
+  ./target/debug/gisst-cli add-work-instance --platform-name "Sony Playstation" --work-version "NTSC" --work-name "$base" \
+                           --work-id "$work_uuid" --instance-id "$work_uuid" \
+                           --environment-id $uuid_pcsx --cwd examples/data/psx/ \
+                           --dep scph5500.bin --dep scph5501.bin --dep scph5502.bin \
+                           --content "$file"
 done
 uuid_psx_1=00000000000000000000000000010000
-uuid_psx_2=00000000000000000000000000010003
+uuid_psx_2=00000000000000000000000000010001
 uuid_save_1=00000000000000000000000000011000
 uuid_save_2=00000000000000000000000000011001
 uuid_save_3=00000000000000000000000000011002
@@ -190,10 +174,12 @@ uuid_counter=$((uuid_counter+1));
 uuid_counter=12100
 work_uuid=$(get_uuid_from_counter)
 uuid_counter=$((uuid_counter+1));
-# Create v86 objects
-./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"Snake\", \"work_version\":\"FreeDOS\",\"work_platform\":\"FreeDOS\"}"
-./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_v86_freedos\", \"work_id\":\"$work_uuid\"}"
-./target/debug/gisst-cli object create --cwd examples/data/v86 --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 0 'freedos722.img'
+
+./target/debug/gisst-cli add-work-instance --platform-name "FreeDOS" --work-version "FreeDOS" --work-name "Snake" \
+                         --work-id "$work_uuid" --instance-id "$work_uuid" \
+                         --environment-id $uuid_v86_freedos --cwd examples/data/v86/ \
+                         --content "freedos722.img"
+
 ./target/debug/gisst-cli state create --force-uuid "$work_uuid" --link "$work_uuid" --file ./examples/data/v86/snake_state0.v86state --name "Snake Test State" --screenshot-id "$uuid_0" --creator-id "$uuid_0"
 ./target/debug/gisst-cli replay create --force-uuid "$work_uuid" --link "$work_uuid" --file ./examples/data/v86/snake_replay0.v86replay --name "Snake Test Replay" --creator-id "$uuid_0"
 
@@ -205,8 +191,9 @@ uuid_counter=$((uuid_counter+1));
 
 if [ ${LOAD_WIN:-1} -eq 1 ] ; then
 if [ -f examples/data/v86/win31.img ]; then
-  ./target/debug/gisst-cli work create --json-string "{\"work_id\":\"$work_uuid\", \"work_name\":\"Window 3.1\", \"work_version\":\"Windows 3.1\", \"work_platform\":\"Windows 3.1\"}"
-  ./target/debug/gisst-cli instance create --json-string "{\"instance_id\":\"$work_uuid\", \"environment_id\":\"$uuid_v86_win_31\", \"work_id\":\"$work_uuid\"}"
-  ./target/debug/gisst-cli object create --cwd examples/data/v86 --force-uuid "$work_uuid" --link "$work_uuid" --role content --role-index 0 'win31.img'
+./target/debug/gisst-cli add-work-instance --platform-name "Windows 3.1" --work-version "Windows 3.1" --work-name "Windows 3.1" \
+                         --work-id "$work_uuid" --instance-id "$work_uuid" \
+                         --environment-id $uuid_v86_win_31 --cwd examples/data/v86/ \
+                         --content "win31.img"
 fi
 fi

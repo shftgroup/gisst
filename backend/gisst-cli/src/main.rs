@@ -7,14 +7,12 @@ use crate::args::CreateScreenshot;
 use crate::cliconfig::CLIConfig;
 use anyhow::Result;
 use args::{
-    BaseSubcommand, Commands, CreateCreator, CreateEnvironment, CreateInstance, CreateObject,
-    CreateReplay, CreateSave, CreateState, CreateWork, GISSTCli, GISSTCliError, PatchData,
+    AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment, CreateInstance, CreateObject, CreateReplay, CreateSave, CreateState, CreateWork, GISSTCli, GISSTCliError, PatchData
 };
 use clap::Parser;
 use gisst::{
     models::{
-        Creator, Environment, Instance, Object, ObjectRole, Replay, Save, Screenshot, State, Work,
-        insert_file_object,
+        insert_file_object, Creator, Duplicate, Environment, Instance, Object, ObjectRole, Replay, Save, Screenshot, State, Work
     },
     storage::StorageHandler,
 };
@@ -59,6 +57,7 @@ async fn main() -> Result<(), GISSTCliError> {
         Commands::InitIndices => (),
         Commands::Reindex => reindex(db, &indexer).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
+        Commands::AddWorkInstance(cmd) => add_work_instance(cmd, db, &storage_root, &indexer).await?,
         Commands::Link {
             record_type,
             source_uuid,
@@ -114,6 +113,105 @@ async fn main() -> Result<(), GISSTCliError> {
             add_patched_instance(db, instance, data, storage_root, depth, &indexer).await?;
         }
     }
+    Ok(())
+}
+
+async fn add_work_instance(AddWorkInstanceData {
+    depth,
+    platform_name,
+    work_version,
+    work_name,
+    work_id,
+    instance_id,
+    environment_id,
+    configs,
+    deps,
+    content,
+    cwd
+}:AddWorkInstanceData, db:PgPool, storage_root:&str, indexer:&gisst::search::MeiliIndexer) -> Result<(), GISSTCliError> {
+    let mut tx = db.begin().await?;
+    let now = chrono::Utc::now();
+    let work_id = work_id.unwrap_or_else(Uuid::new_v4);
+    if Work::get_by_id(&mut tx, work_id).await?.is_none() {
+        let work = Work {
+            work_id,
+            work_name,
+            work_version,
+            work_platform:platform_name,
+            created_on:now,
+            work_derived_from:None
+        };
+        Work::insert(&mut tx, work).await?;
+    } else {
+        info!("Using existing work ID, ignoring work metadata");
+    }
+    let instance_id = instance_id.unwrap_or_else(Uuid::new_v4);
+    let instance = Instance {
+        instance_id,
+        work_id,
+        environment_id,
+        instance_config:None,
+        created_on: now,
+        derived_from_instance:None,
+        derived_from_state: None,
+    };
+    Instance::insert(&mut tx, instance, indexer).await?;
+    let cwd = cwd.as_deref().map_or(Path::new(""), Path::new);
+    for (idx, cfg) in configs.into_iter().enumerate() {
+        let path = cwd.join(Path::new(&cfg));
+        let file_name = path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(&path));
+        source_path.pop();
+        let obj_id = insert_file_object(
+            &mut tx, storage_root, depth,
+            &path,
+            Some(file_name.clone()), Some(file_name.clone()),
+            source_path.to_string_lossy().to_string().replace("./", ""),
+            Duplicate::ReuseObject
+        ).await?;
+        Object::link_object_to_instance(&mut tx, obj_id, instance_id, ObjectRole::Config, u16::try_from(idx)?).await?;
+    }
+    for (idx, dep) in deps.into_iter().enumerate() {
+        let path = cwd.join(Path::new(&dep));
+        let file_name = path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(&path));
+        source_path.pop();
+        let obj_id = insert_file_object(
+            &mut tx, storage_root, depth,
+            &path,
+            Some(file_name.clone()), Some(file_name.clone()),
+            source_path.to_string_lossy().to_string().replace("./", ""),
+            Duplicate::ReuseObject
+        ).await?;
+        Object::link_object_to_instance(&mut tx, obj_id, instance_id, ObjectRole::Dependency, u16::try_from(idx)?).await?;
+    }
+    for (idx, content) in content.into_iter().enumerate() {
+        let path = cwd.join(Path::new(&content));
+        let file_name = path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(&path));
+        source_path.pop();
+        let obj_id = insert_file_object(
+            &mut tx, storage_root, depth,
+            &path,
+            Some(file_name.clone()), Some(file_name.clone()),
+            source_path.to_string_lossy().to_string().replace("./", ""),
+            Duplicate::ReuseObject
+        ).await?;
+        Object::link_object_to_instance(&mut tx, obj_id, instance_id, ObjectRole::Content, u16::try_from(idx)?).await?;
+    }
+    tx.commit().await?;
     Ok(())
 }
 
@@ -336,7 +434,7 @@ async fn create_object(
     storage_path: String,
 ) -> Result<(), GISSTCliError> {
     let cwd = cwd.as_deref().map_or(Path::new(""), Path::new);
-    let mut conn = db.acquire().await?;
+    let mut conn = db.begin().await?;
     let path = cwd.join(Path::new(&file));
     let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(&path));
     source_path.pop();
@@ -360,6 +458,7 @@ async fn create_object(
     if let Some(inst) = link {
         Object::link_object_to_instance(&mut conn, object_id, inst, role, role_index).await?;
     }
+    conn.commit().await?;
     Ok(())
 }
 
