@@ -159,7 +159,7 @@ async fn main() -> Result<(), IngestError> {
     }
 
     base_conn.commit().await?;
-    
+
     let db = Arc::new(RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?);
     let roms = Arc::new(std::path::PathBuf::from(roms));
     let files: Vec<_> = walkdir::WalkDir::new(&*roms)

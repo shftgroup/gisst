@@ -59,7 +59,11 @@ impl MeiliIndexer {
     }
     /// # Errors
     /// Fails if the API can't be accessed
-    async fn create_index(&self, idx:&str, key:&str) -> Result<meilisearch_sdk::indexes::Index, crate::error::SearchIndex> {
+    async fn create_index(
+        &self,
+        idx: &str,
+        key: &str,
+    ) -> Result<meilisearch_sdk::indexes::Index, crate::error::SearchIndex> {
         if let Ok(idx) = self.meili.get_index(idx).await {
             return Ok(idx);
         }
@@ -76,20 +80,60 @@ impl MeiliIndexer {
     pub async fn init_indices(&self) -> Result<(), crate::error::SearchIndex> {
         let mut instances = self.create_index("instance", "instance_id").await?;
         instances.set_primary_key("instance_id").await?;
-        instances.set_filterable_attributes(["work_platform"]).await?;
-        instances.set_sortable_attributes(["work_name", "work_version", "work_platform"]).await?;
+        instances
+            .set_filterable_attributes(["work_platform"])
+            .await?;
+        instances
+            .set_sortable_attributes(["work_name", "work_version", "work_platform"])
+            .await?;
         let mut states = self.create_index("state", "state_id").await?;
         states.set_primary_key("state_id").await?;
-        states.set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"]).await?;
-        states.set_sortable_attributes(["work_name", "work_version", "work_platform", "creator_username", "creator_full_name", "state_name", "created_on"]).await?;
+        states
+            .set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"])
+            .await?;
+        states
+            .set_sortable_attributes([
+                "work_name",
+                "work_version",
+                "work_platform",
+                "creator_username",
+                "creator_full_name",
+                "state_name",
+                "created_on",
+            ])
+            .await?;
         let mut saves = self.create_index("save", "save_id").await?;
         saves.set_primary_key("save_id").await?;
-        saves.set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"]).await?;
-        saves.set_sortable_attributes(["work_name", "work_version", "work_platform", "creator_username", "creator_full_name", "save_short_desc", "created_on"]).await?;
+        saves
+            .set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"])
+            .await?;
+        saves
+            .set_sortable_attributes([
+                "work_name",
+                "work_version",
+                "work_platform",
+                "creator_username",
+                "creator_full_name",
+                "save_short_desc",
+                "created_on",
+            ])
+            .await?;
         let mut replays = self.create_index("replay", "replay_id").await?;
         replays.set_primary_key("replay_id").await?;
-        replays.set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"]).await?;
-        replays.set_sortable_attributes(["work_name", "work_version", "work_platform", "creator_username", "creator_full_name", "replay_name", "created_on"]).await?;
+        replays
+            .set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name"])
+            .await?;
+        replays
+            .set_sortable_attributes([
+                "work_name",
+                "work_version",
+                "work_platform",
+                "creator_username",
+                "creator_full_name",
+                "replay_name",
+                "created_on",
+            ])
+            .await?;
         let mut creators = self.create_index("creator", "creator_id").await?;
         creators.set_primary_key("creator_id").await?;
         Ok(())
