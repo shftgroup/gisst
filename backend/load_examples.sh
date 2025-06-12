@@ -98,7 +98,7 @@ do
                                --content "$file"
       instance_uuid=$(get_uuid_from_counter)
       uuid_counter=$((uuid_counter+1));
-      ./target/debug/gisst-cli add-work-instance --platform-name "Super Nintendo Entertainment System" --work-version "NTSC" --work-name "$base" \
+      ./target/debug/gisst-cli add-work-instance --platform-name "Game Boy" --work-version "NTSC" --work-name "$base" \
                                --work-id "$work_uuid" --instance-id "$instance_uuid" \
                                --environment-id $uuid_sameboy --cwd examples/data/gb/ \
                                --content "$file"
@@ -118,24 +118,30 @@ do
   file=$(basename -- "$work")
   base=${file%.*};
   ext=${file##*.};
+  if [ "$base" = "PETSCOP" ]; then
+      if [ ${LOAD_PETSCOP:-1} -ne 1 ] ; then
+          continue
+      fi
+  fi
   work_uuid=$(get_uuid_from_counter)
   uuid_counter=$((uuid_counter+1));
   EXTRA_ARGS=
   for DISC_FILE in $(cat "$work"); do
-      EXTRA_ARGS="${EXTRA_ARGS} --content \"${DISC_FILE}\""
+      EXTRA_ARGS="${EXTRA_ARGS} --content ${DISC_FILE}"
       DISC_EXT=${DISC_FILE##*.}
       if [ $DISC_EXT = "cue" ]; then
           for bin in $(awk -F' ' '/^FILE/ {for (i=2; i < NF; i++) { printf "%s", $i; if (i < NF-1) { printf "%s", OFS; } else { printf "\n";}}}' "examples/data/psx/$DISC_FILE"); do
               bin=${bin:1: -1}
-              EXTRA_ARGS="${EXTRA_ARGS} --content \"${bin}\""
+              EXTRA_ARGS="${EXTRA_ARGS} --content ${bin}"
           done
       fi
   done
+  IFS=' ' read -A extras <<< "$EXTRA_ARGS"
   ./target/debug/gisst-cli add-work-instance --platform-name "Sony Playstation" --work-version "NTSC" --work-name "$base" \
                            --work-id "$work_uuid" --instance-id "$work_uuid" \
                            --environment-id $uuid_pcsx --cwd examples/data/psx/ \
                            --dep scph5500.bin --dep scph5501.bin --dep scph5502.bin \
-                           --content "$file" $EXTRA_ARGS
+                           --content "$file" ${extras[@]}
 done
 for work in examples/data/psx/*.exe; do
   folder=$(basename `dirname "$work"`)
