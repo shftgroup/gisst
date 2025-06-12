@@ -61,7 +61,7 @@ async fn main() -> Result<(), GISSTCliError> {
         Commands::Reindex => reindex(db, &indexer).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
         Commands::AddWorkInstance(cmd) => {
-            add_work_instance(cmd, db, &storage_root, &indexer).await?
+            add_work_instance(cmd, db, &storage_root, &indexer).await?;
         }
         Commands::Link {
             record_type,
@@ -121,6 +121,7 @@ async fn main() -> Result<(), GISSTCliError> {
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 async fn add_work_instance(
     AddWorkInstanceData {
         depth,
