@@ -50,6 +50,8 @@ pub enum GISSTCliError {
     FileSize(std::num::TryFromIntError),
     #[error("search index error")]
     SearchIndex(#[from] gisst::error::SearchIndex),
+    #[error("Integer too big")]
+    IntegerTooBig(#[from] std::num::TryFromIntError),
 }
 
 #[derive(Debug, Parser)]
@@ -78,6 +80,32 @@ pub struct GISSTCommand<T: clap::FromArgMatches + clap::Subcommand> {
     pub command: T,
 }
 
+#[derive(Debug, Args)]
+pub struct AddWorkInstanceData {
+    #[arg(long, default_value_t = 4)]
+    pub depth: u8,
+    #[arg(long = "platform-name")]
+    pub platform_name: String,
+    #[arg(long = "work-version")]
+    pub work_version: String,
+    #[arg(long = "work-name")]
+    pub work_name: String,
+    #[arg(long = "work-id")]
+    pub work_id: Option<Uuid>,
+    #[arg(long = "instance-id")]
+    pub instance_id: Option<Uuid>,
+    #[arg(long = "environment-id")]
+    pub environment_id: Uuid,
+    #[arg(long = "config", value_parser)]
+    pub configs: Vec<String>,
+    #[arg(long = "dep", value_parser)]
+    pub deps: Vec<String>,
+    #[arg(long = "content", value_parser)]
+    pub content: Vec<String>,
+    #[arg(long)]
+    pub cwd: Option<String>,
+}
+
 #[derive(Debug, Subcommand)]
 pub enum BaseSubcommand<C: clap::FromArgMatches + clap::Args> {
     /// Create record(s)
@@ -93,6 +121,12 @@ pub enum Commands {
     InitIndices,
     /// Dump all works, states, saves, etc into search indexer
     Reindex,
+
+    /// Adds a work and corresponding instance with deps and content
+    /// files in the given order.  This is a shorthand for adding an
+    /// instance if you already have an environment defined
+    /// (e.g. retroarch emulator or v86 environment setup).
+    AddWorkInstance(AddWorkInstanceData),
 
     /// Link records together
     Link {

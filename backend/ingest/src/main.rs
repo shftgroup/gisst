@@ -125,7 +125,7 @@ async fn main() -> Result<(), IngestError> {
     info!("DB connection successful.");
     let storage_root = gisst_storage_root_path.to_string();
     info!("Storage root is set to: {}", &storage_root);
-    let mut base_conn = pool.acquire().await?;
+    let mut base_conn = pool.begin().await?;
     let ra_cfg_object_id = insert_file_object(
         &mut base_conn,
         &storage_root,
@@ -158,8 +158,8 @@ async fn main() -> Result<(), IngestError> {
         dep_ids.push(dep_id);
     }
 
-    // base conn gets dropped
-    drop(base_conn);
+    base_conn.commit().await?;
+
     let db = Arc::new(RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?);
     let roms = Arc::new(std::path::PathBuf::from(roms));
     let files: Vec<_> = walkdir::WalkDir::new(&*roms)
