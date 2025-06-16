@@ -3,54 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}GISST{% endblock %}</title>
-    {% block bootstrap_imports %}
-    <!-- Default import of current bootstrap -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
-    {% endblock bootstrap_imports %}
+    <link rel="stylesheet" href="/ui/ui.css">
+    <!-- Base site-wide styling-->
     {% block style_imports %}
     {% endblock style_imports %}
     {% block gisst_imports %}
     {% endblock gisst_imports %}
 </head>
-<body class="d-flex flex-column h-100">
-<!-- Preload for bootstrap and js dependencies, can be overwritten -->
-{% block bootstrap_js_preload %}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js" integrity="sha384-cuYeSxntonz0PPNlHhBs68uyIAVpIIOZZ5JqeqvYYIcEL727kskC66kF92t6Xl2V" crossorigin="anonymous"></script>
-{% endblock bootstrap_js_preload %}
-
+<body class="gisst-internal-body">
+<!-- Preload js dependencies, can be overwritten -->
 {% block js_preload %}
 {% endblock js_preload %}
 
-    {% block main %}
-    <main class="flex-shrink-0" role="main">
-    <!-- Add internal header, with user information -->
-        {% block header %}
-        <header class="p-2 bg-dark text-white">
-            <div class="container">
-                <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start justify-content-lg-between">
-                    <a class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none" href="{{ base_url }}/instances">
-                        <span class="fs-4">GISST</span>
-                    </a>
-                    <div class="col-md-3 text-end">
-                        {% if user %}
-                        <a href="{{ base_url }}/creators/{{ user.creator_id }}">{{ user.email }}</a>
-                        <a class="btn btn-outline-primary" me-2 href="{{ base_url }}/logout">Logout</a>
-                        {% else %}
-                        <a class="btn btn-outline-primary me-2" href="{{ base_url }}/login" >Login</a>
-                        {% endif %}
-                    </div>
+{% block navbar %}
+    {% block mobile_top_bar %}
+    <nav class="gisst-internal-nav-topbar">
+        <div class="gisst-internal-topbar-left">
+            <button class="gisst-internal-menu-toggle" onclick="toggleSidebar()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+            <a href="/instances" class="gisst-internal-topbar-logo">
+                <div class="gisst-internal-nav-logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3" fill="white" stroke="white"></polygon>
+                    </svg>
+                </div>
+                <span class="gisst-internal-nav-title">GISST</span>
+            </a>
+        </div>
+        <div class="gisst-internal-topbar-user">
+            <div class="gisst-internal-user-avatar">Test</div>
+        </div>
+    </nav>
+    {% endblock mobile_top_bar %}
+    {% block sidebar %}
+    <nav class="gisst-internal-nav-sidebar">
+        <div class="gisst-internal-nav-header">
+            <div class="gisst-internal-nav-logo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3" fill="white" stroke="white"></polygon>
+                </svg>
+            </div>
+            <span class="gisst-internal-nav-title">GISST</span>
+        </div>
+
+        <ul class="gisst-internal-nav-menu">
+            <li class="gisst-internal-nav-item">
+                <a href="/instances" class="gisst-internal-nav-link">
+                    <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="9" cy="9" r="2"></circle>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                    </svg>
+                    Instances
+                </a>
+            <li class="gisst-internal-nav-item">
+                <a href="/states" class="gisst-internal-nav-link">
+                    <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                        <circle cx="12" cy="13" r="3"></circle>
+                    </svg>
+                    States
+                </a>
+            </li>
+            <li class="gisst-internal-nav-item">
+                <a href="/saves" class="gisst-internal-nav-link">
+                    <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17,21 17,13 7,13 7,21"></polyline>
+                        <polyline points="7,3 7,8 15,8"></polyline>
+                    </svg>
+                    Saves
+                </a>
+            </li>
+            <li class="gisst-internal-nav-item">
+                <a href="/performances" class="gisst-internal-nav-link">
+                    <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Performances
+                </a>
+            </li>
+            <li class="gisst-internal-nav-item">
+                <a href="/creators" class="gisst-internal-nav-link">
+                    <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    Creators
+                </a>
+            </li>
+        </ul>
+        <div class="gisst-internal-user-section">
+            <div class="gisst-internal-user-info">
+                <div class="gisst-internal-user-avatar">Test</div>
+                <div>
+                    <div class="gisst-internal-user-email">test</div>
                 </div>
             </div>
+            <a href="/logout" class="gisst-internal-logout-btn">Logout</a>
+        </div>
+    </nav>
+    {% endblock sidebar %}
+    {% block mobile_drop_down %}
+    <div class="gisst-internal-mobile-dropdown" id="mobileDropdown">
+        <div class="gisst-internal-mobile-nav-content">
+            <ul class="gisst-internal-mobile-nav-menu">
+                <li class="gisst-internal-mobile-nav-item">
+                    <a href="/instances" class="gisst-internal-mobile-nav-link active">
+                        <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="9" cy="9" r="2"></circle>
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                        </svg>
+                        Instances
+                    </a>
+                </li>
+                <li class="gisst-internal-mobile-nav-item">
+                    <a href="/states" class="gisst-internal-mobile-nav-link">
+                        <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                            <circle cx="12" cy="13" r="3"></circle>
+                        </svg>
+                        States
+                    </a>
+                </li>
+                <li class="gisst-internal-mobile-nav-item">
+                    <a href="/saves" class="gisst-internal-mobile-nav-link">
+                        <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17,21 17,13 7,13 7,21"></polyline>
+                            <polyline points="7,3 7,8 15,8"></polyline>
+                        </svg>
+                        Saves
+                    </a>
+                </li>
+                <li class="gisst-internal-mobile-nav-item">
+                    <a href="/performances" class="gisst-internal-mobile-nav-link">
+                        <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        Performances
+                    </a>
+                </li>
+                <li class="gisst-internal-mobile-nav-item">
+                    <a href="/creators" class="gisst-internal-mobile-nav-link">
+                        <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        Creators
+                    </a>
+                </li>
+            </ul>
+
+            <div class="gisst-internal-mobile-user-section">
+                <div class="gisst-internal-mobile-user-info">
+                    <div class="gisst-internal-user-avatar">JD</div>
+                    <div>
+                        <div class="gisst-internal-user-email">john.doe@example.com</div>
+                    </div>
+                </div>
+                <a href="/logout" class="gisst-internal-mobile-logout-btn">Logout</a>
+            </div>
+        </div>
+    </div>
+    {% endblock mobile_drop_down %}
+    {% endblock navbar %}
+    <main class="gisst-internal-main-content" id="mainContent">
+        <header class="gisst-internal-content-header">
+            <h1 class="gisst-Login-h1">Welcome to GISST</h1>
+            <p class="gisst-Login-subtitle">
+                The Game and Interactive Software Scholarship Toolkit
+            </p>
         </header>
-        {% endblock header %}
-        {% block nav %}{% endblock nav %}
-        {% block content %}
-        {% endblock content %}
+        <div class="gisst-internal-content-body">
+            {% block content %}
+            {% endblock content %}
+        </div>
     </main>
-    {% endblock main %}
-{% block footer %}
-{% endblock footer %}
+    {% block nav_scripts %}
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mobileDropdown = document.getElementById('mobileDropdown');
+            const mainContent = document.getElementById('mainContent');
+
+            if (window.innerWidth <= 768) {
+                // Mobile: toggle dropdown menu
+                mobileDropdown.classList.toggle('active');
+            } else {
+                // Desktop: toggle sidebar
+                sidebar.classList.toggle('hidden');
+                mainContent.classList.toggle('expanded');
+            }
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mobileDropdown = document.getElementById('mobileDropdown');
+
+            sidebar.classList.remove('active');
+            mobileDropdown.classList.remove('active');
+        }
+
+        // Close mobile dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const mobileDropdown = document.getElementById('mobileDropdown');
+            const menuToggle = document.querySelector('.gisst-internal-menu-toggle');
+
+            if (window.innerWidth <= 768 &&
+                !mobileDropdown.contains(event.target) &&
+                !menuToggle.contains(event.target) &&
+                mobileDropdown.classList.contains('active')) {
+                mobileDropdown.classList.remove('active');
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            const mobileDropdown = document.getElementById('mobileDropdown');
+            const mainContent = document.getElementById('mainContent');
+
+            if (window.innerWidth > 768) {
+                mobileDropdown.classList.remove('active');
+
+                if (!sidebar.classList.contains('hidden')) {
+                    mainContent.classList.remove('expanded');
+                }
+            } else {
+                sidebar.classList.remove('hidden');
+                mainContent.classList.remove('expanded');
+            }
+        });
+
+        // Set active navigation link based on current path
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.gisst-internal-nav-link, .gisst-internal-mobile-nav-link');
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+    {% endblock nav_scripts %}
 </body>
 </html>
 
