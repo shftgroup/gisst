@@ -262,9 +262,9 @@ html, body {
     left: 0;
     width: 250px;
     height: 100vh;
-    background-color: light-dark(var(--light-card-bg), rgba(var(--dark-card-bg), 0.95));
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.95));
     backdrop-filter: blur(10px);
-    border-right: 1px solid light-dark(rgba(var(--light-border), 0.3), rgba(var(--dark-border), 0.3));
+    border-right: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
     padding: 1rem;
     overflow-y: auto;
     transition: transform 0.3s ease;
@@ -281,14 +281,14 @@ html, body {
     align-items: center;
     gap: 0.75rem;
     padding: 1rem 0;
-    border-bottom: 1px solid light-dark(rgba(var(--light-border), 0.3), rgba(var(--dark-border), 0.3));
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
     margin-bottom: 1rem;
 }
 
 .gisst-internal-nav-logo {
     width: 40px;
     height: 40px;
-    background-color: light-dark(var(--light-primary), var(--dark-primary));
+    background-color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
     border-radius: 8px;
     display: flex;
     justify-content: center;
@@ -305,7 +305,7 @@ html, body {
 .gisst-internal-nav-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: light-dark(var(--light-text-main), var(--dark-light));
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
 }
 
 .gisst-internal-nav-menu {
@@ -321,7 +321,7 @@ html, body {
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    color: light-dark(var(--light-text-main), var(--dark-light));
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
     text-decoration: none;
     border-radius: 8px;
     transition: all 0.3s ease;
@@ -329,12 +329,12 @@ html, body {
 }
 
 .gisst-internal-nav-link:hover {
-    background-color: light-dark(rgba(var(--light-primary), 0.1), rgba(var(--dark-primary), 0.2));
-    color: light-dark(var(--light-primary), var(--dark-primary));
+    background-color: light-dark(rgba(var(--gisst-light-theme-primary), 0.1), rgba(var(--gisst-dark-theme-primary), 0.2));
+    color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
 }
 
 .gisst-internal-nav-link.active {
-    background-color: light-dark(var(--light-primary), var(--dark-primary));
+    background-color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
     color: white;
 }
 
@@ -347,7 +347,7 @@ html, body {
 .gisst-internal-user-section {
     margin-top: auto;
     padding-top: 1rem;
-    border-top: 1px solid light-dark(rgba(var(--light-border), 0.3), rgba(var(--dark-border), 0.3));
+    border-top: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
 }
 
 .gisst-internal-user-info {
@@ -361,7 +361,7 @@ html, body {
 .gisst-internal-user-avatar {
     width: 32px;
     height: 32px;
-    background-color: light-dark(var(--light-secondary), var(--dark-secondary));
+    background-color: light-dark(var(--gisst-light-theme-secondary), var(--gisst-dark-theme-secondary));
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -373,15 +373,15 @@ html, body {
 
 .gisst-internal-user-email {
     font-size: 0.875rem;
-    color: light-dark(var(--light-text-light), rgba(var(--dark-input-bg), 0.7));
+    color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
 }
 
 .gisst-internal-logout-btn {
     width: 100%;
     padding: 0.5rem 1rem;
-    background-color: light-dark(rgba(var(--light-accent), 0.1), rgba(var(--dark-accent), 0.2));
-    color: light-dark(var(--light-accent), var(--dark-accent));
-    border: 1px solid light-dark(rgba(var(--light-accent), 0.3), rgba(var(--dark-accent), 0.3));
+    background-color: light-dark(rgba(var(--gisst-light-theme-accent), 0.1), rgba(var(--gisst-dark-theme-accent), 0.2));
+    color: light-dark(var(--gisst-light-theme-accent), var(--gisst-dark-theme-accent));
+    border: 1px solid light-dark(rgba(var(--gisst-light-theme-accent), 0.3), rgba(var(--gisst-dark-theme-accent), 0.3));
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.875rem;
@@ -393,7 +393,7 @@ html, body {
 }
 
 .gisst-internal-logout-btn:hover {
-    background-color: light-dark(var(--light-accent), var(--dark-accent));
+    background-color: light-dark(var(--gisst-light-theme-accent), var(--gisst-dark-theme-accent));
     color: white;
 }
 
@@ -405,9 +405,9 @@ html, body {
     left: 0;
     right: 0;
     height: 60px;
-    background-color: light-dark(var(--light-card-bg), rgba(var(--dark-card-bg), 0.95));
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.95));
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid light-dark(rgba(var(--light-border), 0.3), rgba(var(--dark-border), 0.3));
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
     padding: 0 1rem;
     align-items: center;
     justify-content: space-between;
@@ -431,13 +431,13 @@ html, body {
 }
 
 .gisst-internal-menu-toggle:hover {
-    background-color: light-dark(rgba(var(--light-primary), 0.1), rgba(var(--dark-primary), 0.2));
+    background-color: light-dark(rgba(var(--gisst-light-theme-primary), 0.1), rgba(var(--gisst-dark-theme-primary), 0.2));
 }
 
 .gisst-internal-menu-toggle svg {
     width: 24px;
     height: 24px;
-    fill: light-dark(var(--light-text-main), var(--dark-light));
+    fill: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
 }
 
 .gisst-internal-topbar-logo {
@@ -445,7 +445,7 @@ html, body {
     align-items: center;
     gap: 0.5rem;
     text-decoration: none;
-    color: light-dark(var(--light-text-main), var(--dark-light));
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
 }
 
 .gisst-internal-topbar-nav-logo .gisst-internal-nav-logo {
@@ -473,8 +473,8 @@ html, body {
 }
 
 .gisst-internal-content-header {
-    background-color: light-dark(var(--light-card-bg), rgba(var(--dark-card-bg), 0.5));
-    border-bottom: 1px solid light-dark(rgba(var(--light-border), 0.3), rgba(var(--dark-border), 0.3));
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.5));
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
     padding: 1.5rem 2rem;
 }
 
@@ -490,9 +490,9 @@ html, body {
     top: 60px;
     left: 0;
     right: 0;
-    background-color: light-dark(var(--light-card-bg), rgba(var(--dark-card-bg), 0.95));
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.95));
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid light-dark(rgba(var(--light-border), 0.3), rgba(var(--dark-border), 0.3));
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
     z-index: 1000;
     box-shadow: 0 4px 20px light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
     max-height: calc(100vh - 60px);
@@ -521,7 +521,7 @@ html, body {
     align-items: center;
     gap: 0.75rem;
     padding: 0.875rem 1rem;
-    color: light-dark(var(--light-text-main), var(--dark-light));
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
     text-decoration: none;
     border-radius: 8px;
     transition: all 0.3s ease;
@@ -529,17 +529,17 @@ html, body {
 }
 
 .gisst-internal-mobile-nav-link:hover {
-    background-color: light-dark(rgba(var(--light-primary), 0.1), rgba(var(--dark-primary), 0.2));
-    color: light-dark(var(--light-primary), var(--dark-primary));
+    background-color: light-dark(rgba(var(--gisst-light-theme-primary), 0.1), rgba(var(--gisst-dark-theme-primary), 0.2));
+    color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
 }
 
 .gisst-internal-mobile-nav-link.active {
-    background-color: light-dark(var(--light-primary), var(--dark-primary));
+    background-color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
     color: white;
 }
 
 .gisst-internal-mobile-user-section {
-    border-top: 1px solid light-dark(rgba(var(--light-border), 0.3), rgba(var(--dark-border), 0.3));
+    border-top: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
     padding-top: 1rem;
 }
 
@@ -549,16 +549,16 @@ html, body {
     gap: 0.75rem;
     padding: 0.75rem;
     margin-bottom: 0.75rem;
-    background-color: light-dark(rgba(var(--light-input-bg), 0.3), rgba(var(--dark-border), 0.2));
+    background-color: light-dark(rgba(var(--gisst-light-theme-input-bg), 0.3), rgba(var(--gisst-dark-theme-border), 0.2));
     border-radius: 8px;
 }
 
 .gisst-internal-mobile-logout-btn {
     width: 100%;
     padding: 0.75rem 1rem;
-    background-color: light-dark(rgba(var(--light-accent), 0.1), rgba(var(--dark-accent), 0.2));
-    color: light-dark(var(--light-accent), var(--dark-accent));
-    border: 1px solid light-dark(rgba(var(--light-accent), 0.3), rgba(var(--dark-accent), 0.3));
+    background-color: light-dark(rgba(var(--gisst-light-theme-accent), 0.1), rgba(var(--gisst-dark-theme-accent), 0.2));
+    color: light-dark(var(--gisst-light-theme-accent), var(--gisst-dark-theme-accent));
+    border: 1px solid light-dark(rgba(var(--gisst-light-theme-accent), 0.3), rgba(var(--gisst-dark-theme-accent), 0.3));
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.875rem;
@@ -570,7 +570,7 @@ html, body {
 }
 
 .gisst-internal-mobile-logout-btn:hover {
-    background-color: light-dark(var(--light-accent), var(--dark-accent));
+    background-color: light-dark(var(--gisst-light-theme-accent), var(--gisst-dark-theme-accent));
     color: white;
 }
 
