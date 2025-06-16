@@ -1,6 +1,8 @@
 import { instantMeiliSearch, InstantMeiliSearchOptions } from '@meilisearch/instant-meilisearch';
 import { default as instantsearch, InstantSearch } from 'instantsearch.js';
 import 'instantsearch.css/themes/reset.css';
+import '../css/server-ui-main.css';
+import '../css/server-ui-search.css';
 export type SearchOptions = InstantMeiliSearchOptions;
 export * as search from 'instantsearch.js';
 import * as widgets from 'instantsearch.js/es/widgets';
