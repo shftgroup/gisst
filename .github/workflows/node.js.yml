@@ -55,8 +55,10 @@ jobs:
       run: npm run dist --workspaces --if-present
       working-directory: frontend
     - run: npx playwright install --with-deps
+      working-directory: frontend
       if: steps.playwright-cache.outputs.cache-hit != 'true'
     - run: npx playwright install-deps
+      working-directory: frontend
       if: steps.playwright-cache.outputs.cache-hit == 'true'
     - name: Set up meili
       run: curl -L https://install.meilisearch.com | sh
