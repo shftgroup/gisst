@@ -58,41 +58,68 @@ class GISSTInstanceSearch extends HTMLElement {
       throw "Cannot create instance search UI without search url, search key, and base url";
     }
     this.classList.add("gisst-instance-search");
-    const top_row = document.createElement("div");
-    top_row.setAttribute("class", "row");
-    const searchbox = document.createElement("div");
-    top_row.appendChild(searchbox);
-    this.appendChild(top_row);
-    const bottom_row = document.createElement("div");
-    bottom_row.setAttribute("class", "row");
-    const resultsbox = document.createElement("div");
+
+    const search_container = document.createElement("div");
+    search_container.setAttribute("class", "gisst-Search-container");
+
+    const search_box = document.createElement("div");
+    search_container.appendChild(search_box);
+
+    const results_container = document.createElement("div");
+    results_container.setAttribute("class", "gisst-Search-results-container");
+    results_container.setAttribute("class", "gisst-Search-table-view");
+    results_container.innerHTML = `
+    <div class="gisst-Search-results-header">
+      <div class="gisst-Search-header-cell gisst-Search-header-description">Description</div>
+      <div class="gisst-Search-header-cell gisst-Search-header-platform">Platform</div>
+      <div class="gisst-Search-header-cell gisst-Search-header-version">Version</div>
+      <div class="gisst-Search-header-cell gisst-Search-header-actions">Actions</div>
+    </div>
+    `;
+
+    const results_body = document.createElement("div");
+    results_body.setAttribute("class", "gisst-Search-results-body");
+    results_container.appendChild(results_body);
+
+
+    search_container.appendChild(results_container);
+
     const pagination = document.createElement("div");
-    bottom_row.appendChild(resultsbox);
-    bottom_row.appendChild(pagination);
-    this.appendChild(bottom_row);
+    search_container.appendChild(pagination);
+    this.appendChild(search_container);
 
     const search = search_instances(search_url, search_key, {});
     search.addWidgets([
-      widgets.searchBox({
-        container: searchbox
+        widgets.searchBox({
+        container: search_box
       }),
-      widgets.configure({ hitsPerPage: 10 }),
-      widgets.pagination({ container: pagination }),
-      widgets.hits({
-        container: resultsbox,
-        templates: {
-          item: (hit, { html, components }) => html`
-          <div>
-          <div class="hit-name">
-          <a href="${base_url}/instances/${hit.instance_id}">${components.Highlight({ hit, attribute: "work_name"})}</a>
-          </div>
-          <div class="hit-">
-            ${hit.work_version}--${components.Highlight({ hit, attribute: "work_platform"})}--<a class="btn btn-primary instance-boot-button" href="${base_url}/play/${hit.instance_id}">Play</a>
-          </div>
-          </div>
-          `
-        }
-      })
+        widgets.hits({
+          container: results_body,
+          templates: {
+            item(hit, { html, components }) {
+              return html`
+                <div>
+                <div class="gisst-Search-results-row">
+                  <div class="gisst-Search-cell gisst-Search-game-name">
+                    <a href="${base_url}/instances/${hit.instance_id}">${components.Highlight({hit, attribute: "work_name"})}</a>
+                  </div>
+                  <div class="gisst-Search-cell gisst-Search-platform-info">${components.Highlight({hit, attribute:"work_platform"})}</div>
+                  <div class="gisst-Search-cell gisst-Search-version-info">${hit.work_version}</div>
+                  <div class="gisst-Search-cell gisst-Search-actions-cell">
+                    <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/play/${hit.instance_id}">Play</a>
+                    <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/play/${hit.instance_id}" title="Play">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </a>
+                  </div>
+                </div>
+                </div>
+              `
+            },
+          },
+        }),
+        widgets.configure({ hitsPerPage: 10 }),
+        widgets.pagination({ container: pagination }),
     ]);
     search.start();
   }
