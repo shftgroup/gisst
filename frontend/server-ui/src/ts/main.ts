@@ -98,7 +98,7 @@ class GISSTInstanceSearch extends HTMLElement {
           templates: {
             item(hit, { html, components }) {
               return html`
-                <div>
+                <>
                 <div class="gisst-Search-results-row">
                   <div class="gisst-Search-cell gisst-Search-game-name">
                     <a href="${base_url}/instances/${hit.instance_id}">${components.Highlight({hit, attribute: "work_name"})}</a>
@@ -113,8 +113,8 @@ class GISSTInstanceSearch extends HTMLElement {
                     </a>
                   </div>
                 </div>
-                </div>
-              `
+                </>
+              `;
             },
           },
         }),
