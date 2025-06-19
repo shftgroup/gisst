@@ -98,22 +98,21 @@ class GISSTInstanceSearch extends HTMLElement {
           templates: {
             item(hit, { html, components }) {
               return html`
-                <>
                 <div class="gisst-Search-results-row">
                   <div class="gisst-Search-cell gisst-Search-game-name">
                     <a href="${base_url}/instances/${hit.instance_id}">${components.Highlight({hit, attribute: "work_name"})}</a>
                   </div>
-                  <div class="gisst-Search-cell gisst-Search-platform-info">${components.Highlight({hit, attribute:"work_platform"})}</div>
+                  <div class="gisst-Search-cell gisst-Search-platform-info">${components.Highlight({hit, attribute: "work_platform"})}</div>
                   <div class="gisst-Search-cell gisst-Search-version-info">${hit.work_version}</div>
                   <div class="gisst-Search-cell gisst-Search-actions-cell">
                     <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/play/${hit.instance_id}">Play</a>
                     <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/play/${hit.instance_id}" title="Play">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                      </svg>
                     </a>
                   </div>
                 </div>
-                </>
               `;
             },
           },
@@ -176,7 +175,7 @@ class GISSTStateSearch extends HTMLElement {
         container: resultsbox,
         templates: {
           item: (hit, { html, components }) => html`
-          <div>
+          <div class="fun-test">
           <div class="hit-name">
           <a href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}">${components.Highlight({ hit, attribute: "state_name"})} (Play)</a>
           --
@@ -191,7 +190,8 @@ class GISSTStateSearch extends HTMLElement {
             ${show_creator_info ? html`<br/>
             <a href="{{ base_url | safe }}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_username" })}</a>` : ""}
           </div>
-        </div>`
+        </div>
+          `
         }
       })
     ]);
