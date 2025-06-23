@@ -45,8 +45,8 @@ if [ ${FETCH_CORES:-1} -eq 1 ] ; then
 mkdir -p ra-build
 pushd ra-build
 mkdir -p cores
-emsdk install 4.0.7
-emsdk activate 4.0.7
+emsdk install 4.0.10
+emsdk activate 4.0.10
 git clone --depth 1 -b tick-event https://github.com/JoeOsborn/v86 v86 || echo "already have v86"
 git clone --depth 1 https://github.com/libretro/retroarch ra || echo "already have RA"
 git clone --depth 1 https://github.com/libretro/libretro-fceumm fceumm || echo "already have fceumm"
@@ -113,7 +113,7 @@ for f in *; do
     fi
     pushd ../ra
     cp libretro_emscripten.bc libretro_emscripten.a
-    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EXTRA_WASMFS=1 HAVE_EGL=0 HAVE_AL=0 HAVE_AUDIOWORKLET=1 ASYNC=$ASYNC SYMBOLS=0 HAVE_OPENGLES3=1 HAVE_OZONE=0 HAVE_XMB=0 HAVE_GLUI=0 HAVE_MATERIALUI=0 -j all || die "could not build RA dist for ${f}"
+    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_RWEBAUDIO=0 HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EXTRA_WASMFS=1 HAVE_EGL=0 HAVE_AL=0 HAVE_AUDIOWORKLET=1 ASYNC=$ASYNC SYMBOLS=0 HAVE_OPENGLES3=1 HAVE_OZONE=0 HAVE_XMB=0 HAVE_GLUI=0 HAVE_MATERIALUI=0 -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* ../cores
     popd
     popd
