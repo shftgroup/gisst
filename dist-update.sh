@@ -113,7 +113,7 @@ for f in *; do
     fi
     pushd ../ra
     cp libretro_emscripten.bc libretro_emscripten.a
-    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EXTRA_WASMFS=1 HAVE_EGL=0 HAVE_AL=0 HAVE_AUDIOWORKLET=1 ASYNC=$ASYNC SYMBOLS=0 HAVE_OPENGLES3=1 HAVE_OZONE=0 HAVE_XMB=0 HAVE_GLUI=0 HAVE_MATERIALUI=0 -j all || die "could not build RA dist for ${f}"
+    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_RWEBAUDIO=0 HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EXTRA_WASMFS=1 HAVE_EGL=0 HAVE_AL=0 HAVE_AUDIOWORKLET=1 ASYNC=$ASYNC SYMBOLS=0 HAVE_OPENGLES3=1 HAVE_OZONE=0 HAVE_XMB=0 HAVE_GLUI=0 HAVE_MATERIALUI=0 -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* ../cores
     popd
     popd
