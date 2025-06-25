@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT work_id, work_name, work_version, work_platform,\n                      state_id, state_name, state_description, state.screenshot_id,\n                      file_id, instance_id, state.created_on, creator.creator_id,\n                      creator.creator_username, creator.creator_full_name\n               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)\n               WHERE state.state_id = $1",
+  "query": "SELECT work_id, work_name, work_version, work_platform,\n                      state_id, state_name, state_description, state.screenshot_id, screenshot.screenshot_data,\n                      file_id, instance_id, state.created_on, creator.creator_id,\n                      creator.creator_username, creator.creator_full_name\n               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id) JOIN screenshot ON (screenshot.screenshot_id = state.screenshot_id)",
   "describe": {
     "columns": [
       {
@@ -45,41 +45,45 @@
       },
       {
         "ordinal": 8,
+        "name": "screenshot_data",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 9,
         "name": "file_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "instance_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "created_on",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "creator_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "creator_username",
         "type_info": "Text"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "creator_full_name",
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid"
-      ]
+      "Left": []
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -96,5 +100,5 @@
       false
     ]
   },
-  "hash": "b393ed0e43f2d9fdcbc2333c3fb822a397ff83353878099d4bccb7d2a4985d77"
+  "hash": "6a986721c00c457b880f6a66b311d069b9c69c77c9fe0d8577680f7df66daa5e"
 }
