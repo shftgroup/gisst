@@ -80,8 +80,6 @@ class GISSTInstanceSearch extends HTMLElement {
     const results_body = document.createElement("div");
     results_body.setAttribute("class", "gisst-Search-results-body");
     results_container.appendChild(results_body);
-
-
     search_container.appendChild(results_container);
 
     const pagination = document.createElement("div");
@@ -104,7 +102,7 @@ class GISSTInstanceSearch extends HTMLElement {
                   </div>
                   <div class="gisst-Search-cell gisst-Search-platform-info">${components.Highlight({hit, attribute: "work_platform"})}</div>
                   <div class="gisst-Search-cell gisst-Search-version-info">${hit.work_version}</div>
-                  <div class="gisst-Search-cell gisst-Search-actions-cell">
+                  <div class="gisst-Search-cell gisst-Search-instance-actions-cell">
                     <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/play/${hit.instance_id}">Play</a>
                     <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/play/${hit.instance_id}" title="Play">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -125,7 +123,6 @@ class GISSTInstanceSearch extends HTMLElement {
 }
 
 customElements.define("gisst-instance-search", GISSTInstanceSearch);
-
 class GISSTStateSearch extends HTMLElement {
   constructor() {
     super();
@@ -141,7 +138,7 @@ class GISSTStateSearch extends HTMLElement {
     const limit_to_creator = this.getAttribute("creator-id");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
-    const can_clone = (this.getAttribute("can-clone") ?? "false") === 'true';
+    const can_clone = (this.getAttribute("can-clone") ?? "false") === 'true' ;
     const filters = [];
     if (limit_to_instance && limit_to_instance != "") {
       filters.push(`instance_id = "${limit_to_instance}"`);
@@ -150,47 +147,100 @@ class GISSTStateSearch extends HTMLElement {
       filters.push(`creator_id = "${limit_to_creator}"`);
     }
     this.classList.add("gisst-state-search");
-    const top_row = document.createElement("div");
-    top_row.setAttribute("class", "row");
-    const searchbox = document.createElement("div");
-    top_row.appendChild(searchbox);
-    this.appendChild(top_row);
-    const bottom_row = document.createElement("div");
-    bottom_row.setAttribute("class", "row");
-    const resultsbox = document.createElement("div");
+
+    const search_container = document.createElement("div");
+    search_container.setAttribute("class", "gisst-Search-container");
+
+    const results_container = document.createElement("div");
+    results_container.innerHTML = `
+    <div class="gisst-Search-results-container gisst-Search-table-view">
+        <div class="gisst-Search-results-header">
+            <div class="gisst-Search-header-cell gisst-Search-screenshot-cell">Preview</div>
+            <div class="gisst-Search-header-cell gisst-Search-header-state-info">Description</div>
+            <div class="gisst-Search-header-cell gisst-Search-header-instance-info">Instance</div>
+            <div class="gisst-Search-header-cell gisst-Search-header-creator-info">Creator</div>
+            <div class="gisst-Search-header-cell gisst-Search-header-actions">Actions</div>
+        </div>
+    </div>
+    `;
+
+    const results_body = document.createElement("div");
+    results_body.setAttribute("class", "gisst-Search-results-body");
+    results_container.appendChild(results_body);
+
+    const search_box = document.createElement("div");
     const pagination = document.createElement("div");
-    bottom_row.appendChild(resultsbox);
-    bottom_row.appendChild(pagination);
-    this.appendChild(bottom_row);
+
+    search_container.appendChild(search_box);
+    search_container.appendChild(results_container)
+    search_container.appendChild(pagination);
+
+    this.appendChild(search_container);
 
     const search = search_states(search_url, search_key, {});
     search.addWidgets([
       widgets.searchBox({
-        container: searchbox
+        container: search_box
       }),
       widgets.configure({ hitsPerPage: 10, filters: filters.join(" AND ") }),
       widgets.pagination({ container: pagination }),
       /* TODO: these nested templates are gnarly, what can be done? */
       widgets.hits({
-        container: resultsbox,
+        container: results_body,
         templates: {
           item: (hit, { html, components }) => html`
-          <div class="fun-test">
-          <div class="hit-name">
-          <a href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}">${components.Highlight({ hit, attribute: "state_name"})} (Play)</a>
-          --
-          <a href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}&boot_into_record=true">(Play and record)</a>
-          ${can_clone ? html`--<a class="btn btn-primary" href="${hit.instance_id}/clone?state=${ hit.state_id }">Clone as New Instance</a>` : ""}
-          </div>
-          <div class="hit-more-info">
-            ${components.Highlight({ hit, attribute: "state_description"})}
-            ${show_instance_info ? html`<br/>
-            <a href="${base_url}/instances/${hit.instance_id}">${components.Highlight({ hit, attribute: "work_name"})}</a>--
-            ${hit.work_version}--${components.Highlight({ hit, attribute: "work_platform"})}--<a class="btn btn-primary instance-boot-button" href="${base_url}/play/${hit.instance_id}">Play</a>` : ""}
-            ${show_creator_info ? html`<br/>
-            <a href="{{ base_url | safe }}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_username" })}</a>` : ""}
-          </div>
-        </div>
+           <div class="gisst-Search-results-row">
+              <div class="gisst-Search-cell gisst-Search-screenshot-cell">
+                <img src="data:image/png;base64,${hit.screenshot_data}" alt="${hit.state_description} from instance ${hit.work_name}">
+              </div>
+              <div class="gisst-Search-cell gisst-Search-state-info">
+                <div class="gisst-Search-state-name">
+                  <a href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}">${components.Highlight({hit, attribute: "state_name"})}</a>
+                </div>
+                <div class="gisst-Search-state-description">
+                  ${components.Highlight({hit, attribute: "state_description"})}
+                </div>
+              </div>
+              ${show_instance_info ? html`
+                <div class="gisst-Search-cell gisst-Search-instance-info">
+                  <div class="gisst-Search-instance-name">
+                    <a href="${base_url}/instances/${hit.instance_id}">${components.Highlight({hit, attribute: "work_name"})}</a>
+                  </div>
+                  <div class="gisst-Search-instance-details">
+                    ${hit.work_version} • ${hit.work_platform}
+                  </div>
+                </div>
+              ` : ""}
+              ${show_creator_info ? html `
+                <div class="gisst-Search-cell gisst-Search-creator-info">
+                  <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_username"})}</a>
+                </div>
+              ` : ""}
+              <div class="gisst-Search-cell gisst-Search-state-actions-cell">
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/play/${hit.instance_id}">Play</a>
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/play/${hit.instance_id}" title="Play">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </a>
+                <a class="gisst-Search-btn gisst-Search-btn-secondary gisst-Search-btn-text-only" href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}&boot_into_record=true">Record</a>
+                <a class="gisst-Search-btn gisst-Search-btn-secondary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}&boot_into_record=true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="4" fill="currentColor"/>
+                  </svg>
+                </a>
+                ${can_clone ? html`
+                  <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${hit.instance_id}/clone?state=${hit.state_id}">Clone</a>
+                  <a class="Gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon-only" href="${hit.instance_id}/clone?state=${hit.state_id}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </a>
+                ` : ""}
+              </div>
+            </div> 
           `
         }
       })
@@ -198,6 +248,93 @@ class GISSTStateSearch extends HTMLElement {
     search.start();
   }
 }
+
+//class GISSTStateSearch extends HTMLElement {
+//  constructor() {
+//    super();
+//  }
+//  connectedCallback() {
+//    const search_url = this.getAttribute("search-url");
+//    const search_key = this.getAttribute("search-key");
+//    const base_url = this.getAttribute("base-url");
+//    if(!search_url || !search_key || !base_url) {
+//      throw "Cannot create state search UI without search url, search key, and base url";
+//    }
+//    const limit_to_instance = this.getAttribute("instance-id");
+//    const limit_to_creator = this.getAttribute("creator-id");
+//    const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
+//    const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
+//    const can_clone = (this.getAttribute("can-clone") ?? "false") === 'true';
+//    const filters = [];
+//    if (limit_to_instance && limit_to_instance != "") {
+//      filters.push(`instance_id = "${limit_to_instance}"`);
+//    }
+//    if (limit_to_creator && limit_to_creator != "") {
+//      filters.push(`creator_id = "${limit_to_creator}"`);
+//    }
+//    this.classList.add("gisst-state-search");
+//    const search_container = document.createElement("div");
+//    search_container.setAttribute("class", "gisst-Search-container");
+//
+//    const results_container = document.createElement("div");
+//    results_container.innerHTML = `
+//    <div class="gisst-Search-results-container gisst-Search-table-view">
+//        <div class="gisst-Search-results-header">
+//            <div class="gisst-Search-header-cell gisst-Search-screenshot-cell">Preview</div>
+//            <div class="gisst-Search-header-cell gisst-Search-header-state-info">Description</div>
+//            <div class="gisst-Search-header-cell gisst-Search-header-instance-info">Instance</div>
+//            <div class="gisst-Search-header-cell gisst-Search-header-creator-info">Version</div>
+//            <div class="gisst-Search-header-cell gisst-Search-header-actions">Actions</div>
+//        </div>
+//    </div>
+//    `;
+//    const results_body = document.createElement("div");
+//    results_body.setAttribute("class", "gisst-Search-results-body");
+//    results_container.appendChild(results_body);
+//
+//    const search_box = document.createElement("div");
+//    const pagination = document.createElement("div");
+//
+//    search_container.appendChild(search_box);
+//    search_container.appendChild(results_container);
+//    search_container.appendChild(pagination);
+//
+//    this.appendChild(search_container);
+//
+//    const search = search_states(search_url, search_key, {});
+//    search.addWidgets([
+//      widgets.searchBox({
+//        container: search_box
+//      }),
+//      widgets.configure({ hitsPerPage: 10, filters: filters.join(" AND ") }),
+//      widgets.pagination({ container: pagination }),
+//      /* TODO: these nested templates are gnarly, what can be done? */
+//      widgets.hits({
+//        container: results_body,
+//        templates: {
+//          item: (hit, { html, components }) => html`
+//          <div class="hit-name">
+//          <a href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}">${components.Highlight({ hit, attribute: "state_name"})} (Play)</a>
+//          --
+//          <a href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}&boot_into_record=true">(Play and record)</a>
+//          ${can_clone ? html`--<a class="btn btn-primary" href="${hit.instance_id}/clone?state=${ hit.state_id }">Clone as New Instance</a>` : ""}
+//          </div>
+//          <div class="hit-more-info">
+//            ${components.Highlight({ hit, attribute: "state_description"})}
+//            ${show_instance_info ? html`<br/>
+//            <a href="${base_url}/instances/${hit.instance_id}">${components.Highlight({ hit, attribute: "work_name"})}</a>--
+//            ${hit.work_version}--${components.Highlight({ hit, attribute: "work_platform"})}--<a class="btn btn-primary instance-boot-button" href="${base_url}/play/${hit.instance_id}">Play</a>` : ""}
+//            ${show_creator_info ? html`<br/>
+//            <a href="{{ base_url | safe }}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_username" })}</a>` : ""}
+//          </div>
+//        </div>
+//          `
+//        }
+//      })
+//    ]);
+//    search.start();
+//  }
+//}
 
 customElements.define("gisst-state-search", GISSTStateSearch);
 

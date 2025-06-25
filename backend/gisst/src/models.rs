@@ -180,6 +180,7 @@ pub struct Work {
     pub work_derived_from: Option<Uuid>,
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreatorStateInfo {
     pub work_id: Uuid,
@@ -190,6 +191,8 @@ pub struct CreatorStateInfo {
     pub state_name: String,
     pub state_description: String,
     pub screenshot_id: Uuid,
+    #[serde_as(as = "Base64")]
+    pub screenshot_data: Vec<u8>,
     pub file_id: Uuid,
     pub instance_id: Uuid,
     pub created_on: DateTime<Utc>,
@@ -270,10 +273,10 @@ impl CreatorStateInfo {
         sqlx::query_as!(
             Self,
             r#"SELECT work_id, work_name, work_version, work_platform,
-                      state_id, state_name, state_description, state.screenshot_id,
+                      state_id, state_name, state_description, state.screenshot_id, screenshot.screenshot_data,
                       file_id, instance_id, state.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name
-               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)
+               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id) JOIN screenshot ON (screenshot.screenshot_id = state.screenshot_id)
                WHERE state.state_id = $1"#,
             state.state_id
         ).fetch_one(conn).await
@@ -283,10 +286,10 @@ impl CreatorStateInfo {
         sqlx::query_as!(
             Self,
             r#"SELECT work_id, work_name, work_version, work_platform,
-                      state_id, state_name, state_description, state.screenshot_id,
+                      state_id, state_name, state_description, state.screenshot_id, screenshot.screenshot_data,
                       file_id, instance_id, state.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name
-               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id)"#
+               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id) JOIN screenshot ON (screenshot.screenshot_id = state.screenshot_id)"#
         ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
     }
 }
