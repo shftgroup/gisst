@@ -2,7 +2,6 @@
 .ais-SearchBox {
     margin-bottom: 1.5rem;
 }
-
 .ais-SearchBox-form {
     position: relative;
     display: flex;
@@ -15,12 +14,10 @@
     box-shadow: 0 2px 4px light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
     transition: all 0.3s ease;
 }
-
 .ais-SearchBox-form:focus-within {
     border-color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
     box-shadow: 0 0 0 2px light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.1), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.2));
 }
-
 .ais-SearchBox-input {
     flex: 1;
     padding: 0.75rem 1rem;
@@ -31,11 +28,9 @@
     outline: none;
     width: 100%;
 }
-
 .ais-SearchBox-input::placeholder {
     color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.5));
 }
-
 .ais-SearchBox-submit,
 .ais-SearchBox-reset {
     padding: 0.5rem;
@@ -49,47 +44,59 @@
     border-radius: 4px;
     margin: 0.125rem;
 }
-
 .ais-SearchBox-submit:hover,
 .ais-SearchBox-reset:hover {
     background-color: light-dark(rgba(var(--gisst-light-theme-primary), 0.1), rgba(var(--gisst-dark-theme-primary), 0.2));
 }
-
 .ais-SearchBox-submitIcon,
 .ais-SearchBox-resetIcon {
     width: 16px;
     height: 16px;
     fill: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
 }
-
 .ais-SearchBox-loadingIndicator {
     padding: 0.5rem;
     margin: 0.125rem;
 }
-
 .ais-SearchBox-loadingIcon {
     width: 16px;
     height: 16px;
 }
+/* GISST Meili Hits widget styling */
+.ais-Hits {
+    background: none;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    margin: 0;
+    border-radius: 0;
+}
+.ais-Hits-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+}
+.ais-Hits-item {
+    display: block;
+}
+/* GISST General Search Container */
+/* This is the parent for the search box, results, and pagination */
 
 .gisst-Search-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 1.5rem;
 }
-
 .gisst-Search-header {
     text-align: center;
     margin-bottom: 2rem;
 }
-
 .gisst-Search-header h1 {
     font-size: 1.75rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
     color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
 }
-
 .gisst-Search-header p {
     color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
     font-size: 1rem;
@@ -105,15 +112,13 @@
     overflow: hidden;
     box-shadow: 0 2px 4px light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
 }
-
 .gisst-Search-results-header {
     background-color: light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.05), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.1));
     border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
     display: flex;
     padding: 0;
 }
-
-.gisst-Search-results-header .gisst-Search-header-cell {
+.gisst-Search-header-cell {
     padding: 0.75rem 1rem;
     text-align: left;
     font-weight: 600;
@@ -124,50 +129,24 @@
     border-right: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.2), rgba(var(--gisst-dark-theme-border), 0.2));
     flex: 1;
 }
-
-.gisst-Search-results-header .gisst-Search-header-cell:last-child {
+.gisst-Search-header-cell:last-child {
     border-right: none;
 }
 
-.gisst-Search-results-header .gisst-Search-header-game { width: 30%; flex: 0 0 30%; }
-.gisst-Search-results-header .gisst-Search-header-platform { width: 25%; flex: 0 0 25%; }
-.gisst-Search-results-header .gisst-Search-header-version { width: 15%; flex: 0 0 15%; }
-.gisst-Search-results-header .gisst-Search-header-actions { width: 30%; flex: 0 0 30%; }
-
-/* Meilisearch hits container */
-.ais-Hits {
-    background: none;
-    border: none;
-    box-shadow: none;
-    backdrop-filter: none;
-    margin: 0;
-    border-radius: 0;
-}
-
-.ais-Hits-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-}
-
-.ais-Hits-item {
-    display: block;
-}
+/* GISST Search Results Row */
+/* This is the target container for Meili Hits Widget */
 
 .gisst-Search-results-row {
     display: flex;
     transition: all 0.3s ease;
     border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.15), rgba(var(--gisst-dark-theme-border), 0.15));
 }
-
 .gisst-Search-results-row:hover {
     background-color: light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.03), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.05));
 }
-
 .gisst-Search-results-row:last-child {
     border-bottom: none;
 }
-
 .gisst-Search-results-row .gisst-Search-cell {
     padding: 0.75rem 1rem;
     border-right: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.1), rgba(var(--gisst-dark-theme-border), 0.1));
@@ -176,41 +155,40 @@
     display: flex;
     align-items: center;
 }
-
 .gisst-Search-results-row .gisst-Search-cell:last-child {
     border-right: none;
 }
 
-.gisst-Search-game-name {
+/* GISST Instance Search */
+.gisst-Search-results-header .gisst-Search-header-description { width: 30%; flex: 0 0 30%; }
+.gisst-Search-results-header .gisst-Search-header-platform { width: 25%; flex: 0 0 25%; }
+.gisst-Search-results-header .gisst-Search-header-version { width: 15%; flex: 0 0 15%; }
+.gisst-Search-results-header .gisst-Search-header-actions { width: 30%; flex: 0 0 30%; }
+.gisst-Search-instance-work-name {
     font-weight: 500;
     width: 30%;
     flex: 0 0 30%;
 }
-
-.gisst-Search-game-name a {
+.gisst-Search-instance-work-name a {
     color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
     text-decoration: none;
     transition: color 0.3s ease;
 }
-
-.gisst-Search-game-name a:hover {
+.gisst-Search-instance-work-name a:hover {
     color: light-dark(var(--gisst-light-theme-primary-dark), var(--gisst-dark-theme-primary-dark));
     text-decoration: underline;
 }
-
-.gisst-Search-platform-info {
+.gisst-Search-instance-platform-info {
     color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
     width: 25%;
     flex: 0 0 25%;
 }
-
-.gisst-Search-version-info {
+.gisst-Search-instance-version-info {
     color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
     width: 15%;
     flex: 0 0 15%;
     font-size: 0.8rem;
 }
-
 .gisst-Search-instance-actions-cell {
     width: 30%;
     flex: 0 0 30%;
@@ -218,6 +196,7 @@
     gap: 0.5rem;
 }
 
+/* GISST State Search */
 .gisst-Search-state-actions-cell {
     width: 15%;
     flex: 0 0 15%;
@@ -225,7 +204,6 @@
     gap: 0.5rem;
     flex-wrap: wrap;
 }
-
 .gisst-Search-state-info {
     width: 30%;
     flex: 0 0 30%;
@@ -233,23 +211,20 @@
     flex-direction: column;
     gap: 0.25rem;
 }
-.gisst-Search-state-name {
+.gisst-Search-name {
     font-weight: 600;
     font-size: 0.9rem;
 }
-
-.gisst-Search-state-name a {
+.gisst-Search-name a {
     color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
     text-decoration: none;
     transition: color 0.3s ease;
 }
-
-.gisst-Search-state-name a:hover {
+.gisst-Search-name a:hover {
     color: light-dark(var(--gisst-light-theme-primary-dark), var(--gisst-dark-theme-primary-dark));
     text-decoration: underline;
 }
-
-.gisst-Search-state-description {
+.gisst-Search-description {
     font-size: 0.8rem;
     color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
     display: -webkit-box;
@@ -258,6 +233,7 @@
     overflow: hidden;
 }
 
+/* GISST Search Instance Information Cell */
 .gisst-Search-instance-info {
     width: 25%;
     flex: 0 0 25%;
@@ -265,17 +241,14 @@
     flex-direction: column;
     gap: 0.25rem;
 }
-
 .gisst-Search-instance-name {
     font-weight: 500;
     font-size: 0.8rem;
 }
-
 .gisst-Search-instance-name a {
     color: light-dark(var(--gisst-light-theme-secondary), var(--gisst-dark-theme-secondary));
     text-decoration: none;
 }
-
 .gisst-Search-instance-name a:hover {
     text-decoration: underline;
 }
@@ -284,28 +257,65 @@
     color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
 }
 
+/* GISST Search Creator Information Cell*/
 .gisst-Search-creator-info {
     width: 10%;
     flex: 0 0 10%;
+    display: flex;
     font-size: 0.8rem;
 }
-
 .gisst-Search-creator-info a {
     color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
     text-decoration: none;
 }
-
 .gisst-Search-creator-info a:hover {
     color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
     text-decoration: underline;
 }
+/* GISST Search Save */
+.gisst-Search-save-info {
+    width: 40%;
+    flex: 0 0 40%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
 
+/* GISST Search Performance */
+.gisst-Search-performance-info {
+    width: 40%;
+    flex: 0 0 40%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+/* GISST Search Optional CSS */
+/* There may be a more elegant way to do this, but this covers the 4- and 3- column layouts that are possible.*/
+/* No creator */
+.gisst-Search-no-creator .gisst-Search-instance-info { width: 30%; flex: 0 0 30%; }
+.gisst-Search-no-creator .gisst-Search-creator-info { display: none; }
+.gisst-Search-no-creator .gisst-Search-state-actions-cell { width: 20%; flex: 0 0 20%; }
+/* No instance */
+.gisst-Search-no-instance .gisst-Search-state-info { width: 40%; flex: 0 0 40%; }
+.gisst-Search-no-instance .gisst-Search-save-info { width: 40%; flex: 0 0 40%; }
+.gisst-Search-no-instance .gisst-Search-performance-info { width: 40%; flex: 0 0 40%; }
+.gisst-Search-no-instance .gisst-Search-instance-info { display: none; }
+.gisst-Search-no-instance .gisst-Search-creator-info { width: 20%; flex: 0 0 20%;}
+.gisst-Search-no-instance .gisst-Search-state-actions-cell { width: 20%; flex: 0 0 20%; }
+/* No creator or instance */
+.gisst-Search-no-creator.gisst-Search-no-instance .gisst-Search-state-info { width: 60%; flex: 0 0 60%; }
+.gisst-Search-no-creator.gisst-Search-no-instance .gisst-Search-save-info { width: 80%; flex: 0 0 80%; }
+.gisst-Search-no-creator.gisst-Search-no-instance .gisst-Search-performance-info { width: 80%; flex: 0 0 80%; }
 
-/* Screenshot styling */
+/* GISST Search Screenshot Cell */
 .gisst-Search-screenshot-cell {
     width: 120px;
     flex: 0 0 120px;
     padding: 0.5rem;
+}
+.gisst-Search-screenshot-header {
+    width: 120px;
+    flex: 0 0 120px;
 }
 
 .gisst-Search-screenshot {
@@ -460,6 +470,7 @@
         display: none;
     }
 }
+
 @media (max-width: 768px) {
     .gisst-Search-container {
         padding: 1rem;
@@ -510,4 +521,49 @@
     .gisst-Search-btn-text {
         display: none;
     }
+}
+
+@media (max-width: 576px) {
+    .gisst-Search-responsive-header {
+        display: none; /* Hide header on mobile */
+    }
+    .gisst-Search-results-row.gisst-Search-responsive-results-row {
+        flex-direction: column;
+        min-height: auto;
+    }
+    .gisst-Search-results-row.gisst-Search-responsive-results-row .gisst-Search-cell {
+        width: 100% !important;
+        flex: none !important;
+        border-right: none;
+        border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.1), rgba(var(--gisst-dark-theme-border), 0.1));
+        padding: 0.5rem 1rem;
+    }
+    .gisst-Search-results-row.gisst-Search-responsive-results-row .gisst-Search-cell:last-child {
+        border-bottom: none;
+    }
+    .gisst-Search-state-actions-cell {
+        justify-content: center;
+    }
+    .gisst-Search-state-actions-cell .gisst-Search-btn {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .gisst-Search-state-actions-cell .gisst-Search-btn-icon-only {
+        display: none;
+    }
+    .gisst-Search-state-actions-cell .gisst-Search-btn-text-only {
+        display: inline-flex;
+    }
+    .gisst-Search-screenshot-cell {
+        width: 100%;
+        flex: none;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .gisst-Search-screenshot {
+        width: 200px;
+        height: auto;
+        max-width: 100%;
+    }
+
 }
