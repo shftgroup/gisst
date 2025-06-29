@@ -503,3 +503,37 @@ class GISSTPerformanceSearch extends HTMLElement {
 }
 
 customElements.define("gisst-performance-search", GISSTPerformanceSearch);
+
+class GISSTCreatorRecentActivity extends HTMLElement {
+  constructor() {
+    super();
+  }
+
+  connectedCallback() {
+    const search_url = this.getAttribute("search-url");
+    const search_key = this.getAttribute("search-key");
+    const base_url = this.getAttribute("base-url");
+    const creator_id = this.getAttribute("creator_id");
+    if(!search_url || !search_key || !base_url || !creator_id) {
+      throw "Cannot create creator recent activity UI without search url, search key, base url, and target creator id.";
+    }
+
+
+
+  }
+}
+
+class GISSTServerRecentActivity extends HTMLElement {
+  constructor() {
+    super();
+  }
+
+  connectedCallback() {
+    const search_url = this.getAttribute("search-url");
+    const search_key = this.getAttribute("search-key");
+    const base_url = this.getAttribute("base-url");
+    if(!search_url || !search_key || !base_url) {
+      throw "Cannot create server recent activity UI without search url, search key, and base url";
+    }
+  }
+}

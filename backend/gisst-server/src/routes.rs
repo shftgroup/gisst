@@ -7,6 +7,7 @@ mod save;
 mod screenshot;
 mod state;
 mod work;
+mod dashboard;
 
 pub use creator::router as creator_router;
 pub use instance::router as instance_router;

@@ -159,6 +159,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/screenshots", screenshot_router())
         .nest("/states", state_router())
         .nest("/works", work_router())
+        .nest("/dashboard", dashboard_router())
         .route_layer(
             // This is ugly, but it achieves the goal; the unwrap is fine
             // because BASE_URL was initialized earlier in this function.
