@@ -35,7 +35,6 @@
     --gisst-dark-theme-particle-rgb-c: 244,63,94;
     --gisst-dark-theme-input-bg: 248, 250, 252;
     --gisst-dark-theme-border: 51, 65, 85;
-    /* Layout Variables */
 }
 
 /* Reset CSS for page */
@@ -372,8 +371,18 @@ html, body {
     font-size: 0.875rem;
 }
 
+.gisst-internal-user-avatar a {
+    text-decoration: none;
+    color: white;
+}
+
 .gisst-internal-user-email {
     font-size: 0.875rem;
+    color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
+}
+
+.gisst-internal-user-email a {
+    text-decoration: none;
     color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
 }
 
