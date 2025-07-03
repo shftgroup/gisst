@@ -1,39 +1,39 @@
 {% extends "layout_internal.html" %}
 
+{% block js_preload %}
+<script type="module" src="{{ base_url | safe }}/ui/ui.js"></script>
+{% endblock js_preload %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
+<div class="gisst-Instance-container">
+    <div class="gisst-Instance-row">
         <h1>{{ work.work_name }} Instance Information</h1>
-        <div class="row">
-            <p class="col-4">
-                Version: {{ work.work_version }}
-            </p>
-            <p class="col-4">
-                Platform: {{ work.work_platform }}
-            </p>
-            <p class="col-4">
-                Runtime: {{ environment.environment_framework }} - {{ environment.environment_core_name }} - {{ environment.environment_core_version }}
-            </p>
+        <div class="gisst-Instance-info">
+            <p><strong>Version:</strong> {{ work.work_version }}</p>
+            <p><strong>Platform:</strong> {{ work.work_platform }}</p>
+            <p><strong>Runtime:</strong> {{ environment.environment_framework }} - {{ environment.environment_core_name }} - {{ environment.environment_core_version }}</p>
         </div>
-        <div>
-            <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.instance_id }}" target="_blank">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
-                    <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
+        <div class="gisst-Instance-action-buttons">
+            <a class="gisst-Instance-btn gisst-Search-btn-primary" href="{{ base_url }}/play/{{ instance.instance_id }}" target="_blank">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
                 Play
             </a>
-            <a class="btn btn-primary" href="{{ base_url }}/play/{{ instance.instance_id }}?boot_into_record=true" target="_blank">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play" viewBox="0 0 16 16">
-                    <path d="M10.804 8 5 4.633v6.734L10.804 8zm.792-.696a.802.802 0 0 1 0 1.392l-6.363 3.692C4.713 12.69 4 12.345 4 11.692V4.308c0-.653.713-.998 1.233-.696l6.363 3.692z"/>
+            <a class="gisst-Instance-btn gisst-Search-btn-secondary" href="{{ base_url }}/play/{{ instance.instance_id }}?boot_into_record=true" target="_blank">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="4" fill="currentColor"/>
                 </svg>
                 Play and Record
             </a>
-          <a class="btn btn-primary" href="?{% if not creator_id %}creator_id={{user.creator_id}}&{% endif %}">{% if creator_id %}Show all users' states/performances{% else %}Show only my states/performances{% endif %}</a>
+          <a class="gisst-Instance-btn gisst-Search-btn-primary" href="?{% if not creator_id %}creator_id={{user.creator_id}}&{% endif %}">{% if creator_id %}Show all users' states/performances{% else %}Show only my moments and performances{% endif %}</a>
         </div>
     </div>
-    <div class="row">
-      <h2>States</h2>
+    <div class="gisst-Instance-row">
+        <div class="gisst-Instance-section-header">
+            <h2>States</h2>
+        </div>
       <gisst-state-search
         base-url="{{ base_url | safe }}"
         search-url="{{ search_url | safe }}"
@@ -48,8 +48,10 @@
         {% endif %}
       ></gisst-state-search>
     </div>
-    <div class="row">
-      <h2>Performances</h1>
+    <div class="gisst-Instance-row">
+        <div class="gisst-Instance-section-header">
+            <h2>Performances</h2>
+        </div>
       <gisst-performance-search
         base-url="{{ base_url | safe }}"
         search-url="{{ search_url | safe }}"
@@ -61,8 +63,10 @@
         {% endif %}
       ></gisst-performance-search>
     </div>
-    <div class="row">
-      <h1>Saves</h1>
+    <div class="gisst-Instance-row">
+        <div class="gisst-Instance-section-header">
+            <h2>Saves</h2>
+        </div>
       <gisst-save-search
         base-url="{{ base_url | safe }}"
         search-url="{{ search_url | safe }}"
@@ -74,23 +78,27 @@
         {% endif %}
       ></gisst-save-search>
     </div>
-    <div class="row">
+    <div class="gisst-Instance-row">
         <h1>Data Objects</h1>
-        <table class="table">
-            <tr>
-                <th scope="col">File</th>
-                <th scope="col">Role</th>
-                <th scope="col">Index</th>
-                <th scope="col">Source Path</th>
-            </tr>
-            {% for data in objects %}
+        <table class="gisst-Instance-data-table">
+            <thead>
                 <tr>
-                    <td><a href="{{ base_url }}/objects/{{ data.object_id }}">{{ data.file_filename }}</a></td>
-                    <td>{{ data.object_role }}</td>
-                    <td>{{ data.object_role_index }}</td>
-                    <td>{{ data.file_source_path }}</td>
+                    <th scope="col">File</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Index</th>
+                    <th scope="col">Source Path</th>
                 </tr>
+            </thead>
+            <tbody>
+            {% for data in objects %}
+            <tr>
+                <td><a href="{{ base_url }}/objects/{{ data.object_id }}">{{ data.file_filename }}</a></td>
+                <td>{{ data.object_role }}</td>
+                <td>{{ data.object_role_index }}</td>
+                <td>{{ data.file_source_path }}</td>
+            </tr>
             {% endfor %}
+            </tbody>
         </table>
     </div>
 </div>

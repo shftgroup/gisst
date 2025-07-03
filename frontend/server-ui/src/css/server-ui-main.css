@@ -1,0 +1,610 @@
+/* Main Theme, Utility, and Component Defaults */
+
+/* Site wide theme colors */
+:root {
+    color-scheme: light dark;
+    /* Light theme */
+    --gisst-light-theme-primary: #4f46e5;
+    --gisst-light-theme-primary-dark: #4338ca;
+    --gisst-light-theme-secondary: #059669;
+    --gisst-light-theme-secondary-dark: #047857;
+    --gisst-light-theme-dark: #1e1b4b;
+    --gisst-light-theme-light: #f8fafc;
+    --gisst-light-theme-accent: #e11d48;
+    --gisst-light-theme-bg: #f0f5ff;
+    --gisst-light-theme-card-bg: #ffffff;
+    --gisst-light-theme-text-main: #334155;
+    --gisst-light-theme-text-light: #64748b;
+    --gisst-light-theme-particle-rgb-a: 79,70,229;
+    --gisst-light-theme-particle-rgb-b: 5,150,105;
+    --gisst-light-theme-particle-rgb-c: 225,29,72;
+    --gisst-light-theme-input-bg: 240, 245, 255;
+    --gisst-light-theme-border: 203, 213, 225;
+    /* Dark theme */
+    --gisst-dark-theme-primary: #6366f1;
+    --gisst-dark-theme-primary-dark: #4f46e5;
+    --gisst-dark-theme-secondary: #10b981;
+    --gisst-dark-theme-secondary-dark: #0ea5e9;
+    --gisst-dark-theme-dark: #1e293b;
+    --gisst-dark-theme-light: #f8fafc;
+    --gisst-dark-theme-accent: #f43f5e;
+    --gisst-dark-theme-bg: #0f172a;
+    --gisst-dark-theme-card-bg: 30,41,59;
+    --gisst-dark-theme-particle-rgb-a: 99,102,241;
+    --gisst-dark-theme-particle-rgb-b: 16,185,129;
+    --gisst-dark-theme-particle-rgb-c: 244,63,94;
+    --gisst-dark-theme-input-bg: 248, 250, 252;
+    --gisst-dark-theme-border: 51, 65, 85;
+}
+
+/* Reset CSS for page */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+html, body {
+    height: 100%;
+}
+
+/* Adjustment Utilities */
+.gisst-mb-2 {
+    margin-bottom: 2rem;
+}
+
+/* Login page styling */
+
+.gisst-Login-body {
+    background-color: light-dark(var(--gisst-light-theme-bg), var(--gisst-dark-theme-dark));
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image:
+            radial-gradient(circle at 20% 35%, light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.1), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.15)) 0%, transparent 40%),
+            radial-gradient(circle at 75% 80%, light-dark(rgba(var(--gisst-light-theme-particle-rgb-b), 0.08), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.1)) 0%, transparent 40%);
+    position:relative;
+    overflow:hidden;
+}
+
+.gisst-Login-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.gisst-Login-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background-color: light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.4), rgba(var(--gisst-dark-theme-particle-rgb-b), 0.5));
+    border-radius: 50%;
+    bottom: -10px;
+    animation: gisst-Login-float 10s infinite linear;
+}
+
+.gisst-Login-particle:nth-child(2n) {
+    background-color: light-dark(rgba(var(--gisst-light-theme-particle-rgb-b), 0.4), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.5));
+    animation-duration: 15s;
+}
+
+.gisst-Login-particle:nth-child(3n) {
+    background-color: light-dark(rgba(var(--gisst-light-theme-particle-rgb-c), 0.3), rgba(var(--gisst-dark-theme-particle-rgb-b), 0.4));
+    animation-duration: 20s;
+}
+
+@keyframes gisst-Login-float {
+    0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100vh) translateX(100px);
+        opacity: 0;
+    }
+}
+
+.gisst-Login-container {
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.8));
+    backdrop-filter: blur(10px);
+    width: 90%;
+    max-width: 400px;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.1), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.3));
+    z-index: 1;
+    position: relative;
+}
+
+.gisst-Login-logo {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    background-color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
+    border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 10px 15px -3px light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.3), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.3));
+    position: relative;
+    overflow: hidden;
+}
+
+.gisst-Login-logo svg {
+    width: 50px;
+    height: 50px;
+    fill:white;
+}
+
+.gisst-Login-h1 {
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.gisst-Login-subtitle {
+    color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.5));
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+.gisst-Login-google-btn {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-input-bg), 0.05));
+    border: 2px solid light-dark(rgba(var(--gisst-light-theme-border), 0.8), rgba(var(--gisst-dark-theme-input-bg), 0.1));
+    border-radius: 8px;
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.gisst-Login-google-btn::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: -100%;
+    background: linear-gradient(90deg, transparent, light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.05), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.1), transparent));
+    transition: 0.5s;
+}
+
+.gisst-Login-google-btn:hover {
+    border-color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-input-bg), 0.1));
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px light-dark(rgba(0,0,0,0.1), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.3));
+}
+
+.gisst-Login-google-btn:hover::before {
+    left: 100%;
+}
+
+.gisst-Login-google-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.gisst-Login-google-icon {
+    width: 20px;
+    height: 20px;
+    fill: #4285f4;
+}
+
+.gisst-Login-info-link a {
+    color: light-dark(var(--gisst-light-theme-secondary), var(--gisst-dark-theme-secondary));
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.gisst-Login-info-link a:hover{
+    color: light-dark(var(--gisst-light-theme-secondary-dark), var(--gisst-dark-theme-secondary-dark));
+    text-decoration: underline;
+}
+
+.gisst-Login-info {
+    text-align: center;
+    padding: 1rem;
+    background-color: light-dark(rgba(var(--gisst-light-theme-input-bg), 0.5), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.6));
+    border-radius: 8px;
+    border: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.2));
+}
+
+.gisst-Login-info p {
+    color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.gisst-Login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+
+/* Main internal page structure */
+.gisst-internal-body {
+    background-color: light-dark(var(--gisst-light-theme-bg), var(--gisst-dark-theme-bg));
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Internal side bar navigation */
+.gisst-internal-nav-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.95));
+    backdrop-filter: blur(10px);
+    border-right: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+    padding: 1rem;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    box-shadow: 0 0 20px light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
+}
+
+.gisst-internal-nav-sidebar.hidden {
+    transform: translateX(-100%);
+}
+
+.gisst-internal-nav-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+    margin-bottom: 1rem;
+}
+
+.gisst-internal-nav-logo {
+    width: 40px;
+    height: 40px;
+    background-color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.gisst-internal-nav-logo svg {
+    width: 24px;
+    height: 24px;
+    fill: white;
+}
+
+.gisst-internal-nav-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+}
+
+.gisst-internal-nav-menu {
+    list-style: none;
+}
+
+.gisst-internal-nav-item {
+    margin-bottom: 0.5rem;
+}
+
+.gisst-internal-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.gisst-internal-nav-link:hover {
+    background-color: light-dark(rgba(var(--gisst-light-theme-primary), 0.1), rgba(var(--gisst-dark-theme-primary), 0.2));
+    color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
+}
+
+.gisst-internal-nav-link.active {
+    background-color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
+    color: white;
+}
+
+.gisst-internal-nav-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.gisst-internal-user-section {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+}
+
+.gisst-internal-user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.gisst-internal-user-avatar {
+    width: 32px;
+    height: 32px;
+    background-color: light-dark(var(--gisst-light-theme-secondary), var(--gisst-dark-theme-secondary));
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.gisst-internal-user-avatar a {
+    text-decoration: none;
+    color: white;
+}
+
+.gisst-internal-user-email {
+    font-size: 0.875rem;
+    color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
+}
+
+.gisst-internal-user-email a {
+    text-decoration: none;
+    color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
+}
+
+.gisst-internal-logout-btn {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background-color: light-dark(rgba(var(--gisst-light-theme-accent), 0.1), rgba(var(--gisst-dark-theme-accent), 0.2));
+    color: light-dark(var(--gisst-light-theme-accent), var(--gisst-dark-theme-accent));
+    border: 1px solid light-dark(rgba(var(--gisst-light-theme-accent), 0.3), rgba(var(--gisst-dark-theme-accent), 0.3));
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+    display: block;
+}
+
+.gisst-internal-logout-btn:hover {
+    background-color: light-dark(var(--gisst-light-theme-accent), var(--gisst-dark-theme-accent));
+    color: white;
+}
+
+/* Top bar navigation for mobile */
+.gisst-internal-nav-topbar {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.95));
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+    padding: 0 1rem;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1001;
+    box-shadow: 0 2px 10px light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
+}
+
+.gisst-internal-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gisst-internal-menu-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+
+.gisst-internal-menu-toggle:hover {
+    background-color: light-dark(rgba(var(--gisst-light-theme-primary), 0.1), rgba(var(--gisst-dark-theme-primary), 0.2));
+}
+
+.gisst-internal-menu-toggle svg {
+    width: 24px;
+    height: 24px;
+    fill: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+}
+
+.gisst-internal-topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+}
+
+.gisst-internal-topbar-nav-logo .gisst-internal-nav-logo {
+    width: 32px;
+    height: 32px;
+}
+
+.gisst-internal-topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Main content container */
+.gisst-internal-main-content {
+    margin-left: 250px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: margin-left 0.3s ease;
+}
+
+.gisst-internal-main-content.expanded {
+    margin-left: 0;
+}
+
+.gisst-internal-content-header {
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.5));
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+    padding: 1.5rem 2rem;
+}
+
+.gisst-internal-content-body {
+    flex: 1;
+    padding: 2rem;
+}
+
+/* Mobile top dropdown */
+.gisst-internal-mobile-dropdown {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.95));
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+    z-index: 1000;
+    box-shadow: 0 4px 20px light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+
+.gisst-internal-mobile-dropdown.active {
+    display: block;
+}
+
+.gisst-internal-mobile-nav-content {
+    padding: 1rem;
+}
+
+.gisst-internal-mobile-nav-menu {
+    list-style: none;
+    margin-bottom: 1.5rem;
+}
+
+.gisst-internal-mobile-nav-item {
+    margin-bottom: 0.5rem;
+}
+
+.gisst-internal-mobile-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.gisst-internal-mobile-nav-link:hover {
+    background-color: light-dark(rgba(var(--gisst-light-theme-primary), 0.1), rgba(var(--gisst-dark-theme-primary), 0.2));
+    color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
+}
+
+.gisst-internal-mobile-nav-link.active {
+    background-color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
+    color: white;
+}
+
+.gisst-internal-mobile-user-section {
+    border-top: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+    padding-top: 1rem;
+}
+
+.gisst-internal-mobile-user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    background-color: light-dark(rgba(var(--gisst-light-theme-input-bg), 0.3), rgba(var(--gisst-dark-theme-border), 0.2));
+    border-radius: 8px;
+}
+
+.gisst-internal-mobile-logout-btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: light-dark(rgba(var(--gisst-light-theme-accent), 0.1), rgba(var(--gisst-dark-theme-accent), 0.2));
+    color: light-dark(var(--gisst-light-theme-accent), var(--gisst-dark-theme-accent));
+    border: 1px solid light-dark(rgba(var(--gisst-light-theme-accent), 0.3), rgba(var(--gisst-dark-theme-accent), 0.3));
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+    display: block;
+}
+
+.gisst-internal-mobile-logout-btn:hover {
+    background-color: light-dark(var(--gisst-light-theme-accent), var(--gisst-dark-theme-accent));
+    color: white;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .gisst-internal-nav-sidebar {
+        display: none;
+    }
+
+    .gisst-internal-nav-topbar {
+        display: flex;
+    }
+
+    .gisst-internal-main-content {
+        margin-left: 0;
+        margin-top: 60px;
+    }
+
+    .gisst-internal-main-content.expanded {
+        margin-left: 0;
+    }
+
+    .gisst-internal-content-body {
+        padding: 1rem;
+    }
+}
+

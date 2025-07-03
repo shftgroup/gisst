@@ -1,0 +1,166 @@
+.gisst-Instance-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.gisst-Instance-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.8));
+    border: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
+}
+
+.gisst-Instance-info p{
+    margin: 0;
+    font-size: 0.875rem;
+    color: light-dark(var(--gisst-light-theme-text-light), rgba(var(--gisst-dark-theme-input-bg), 0.7));
+}
+
+.gisst-Instance-info strong {
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+    font-weight: 600;
+}
+
+.gisst-Instance-row {
+    margin-bottom: 2rem;
+}
+
+.gisst-Instance-row h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+}
+
+.gisst-Instance-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.gisst-Instance-section-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+}
+
+.gisst-Instance-action-buttons {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.gisst-Instance-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    text-align: center;
+    transition: all 0.3s ease;
+    font-size: 0.875rem;
+    position: relative;
+    overflow: hidden;
+    gap: 0.5rem;
+}
+
+.gisst-Instance-btn::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: -100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: 0.5s;
+}
+
+.gisst-Instance-btn:hover::before {
+    left: 100%;
+}
+
+.gisst-Instance-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.gisst-Instance-data-table {
+    width: 100%;
+    background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.8));
+    border: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.3));
+    border-collapse: collapse;
+}
+
+.gisst-Instance-data-table th {
+    background-color: light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.05), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.1));
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: light-dark(var(--gisst-light-theme-text-main), var(--gisst-dark-theme-light));
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
+}
+
+.gisst-Instance-data-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.15), rgba(var(--gisst-dark-theme-border), 0.15));
+    font-size: 0.875rem;
+}
+
+.gisst-Instance-data-table tr:hover {
+    background-color: light-dark(rgba(var(--gisst-light-theme-particle-rgb-a), 0.03), rgba(var(--gisst-dark-theme-particle-rgb-a), 0.05));
+}
+
+.gisst-Instance-data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.gisst-Instance-data-table a {
+    color: light-dark(var(--gisst-light-theme-primary), var(--gisst-dark-theme-primary));
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.gisst-Instance-data-table a:hover {
+    color: light-dark(var(--gisst-light-theme-primary-dark), var(--gisst-dark-theme-primary-dark));
+    text-decoration: underline;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .gisst-Instance-info {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+
+    .gisst-Instance-action-buttons {
+        flex-direction: column;
+    }
+
+    .gisst-Instance-data-table {
+        font-size: 0.8rem;
+    }
+
+    .gisst-Instance-data-table th,
+    .gisst-Instance-data-table td {
+        padding: 0.5rem;
+    }
+}

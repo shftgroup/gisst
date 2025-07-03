@@ -9,7 +9,7 @@ console.log(`
 
 const client = new MeiliSearch({
   host: process.argv[2] ?? "http://localhost:7701",
-  apiKey: "test-api-key-github-actions",
+  apiKey: "test-api-key",
 });
 
 const instances = client.index('instance');
@@ -40,41 +40,42 @@ const instance_data = [
         instance_id:11, row_num:11},
 ];
 await instances.addDocuments(instance_data);
-
+console.log("Creating state record index");
 const states = client.index('state');
+const screenshot_b64 = "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAABbWlDQ1BpY2MAACiRdZG7S8NQFMZ/poriA0EdRBwyVBFUEAVx1Dp0KSJVwdeSpmkr9BGSFCmugouD4CC6+Br8D3QVXBUEQRFE3Nx9LVLiuUaoiL3h5vz47v0OJ19Ai2XNnFs7Drm858SjEX1+YVGvf0ajkzb6CRuma09MT8eouj5uqVH1ZlD1qn7v39WUtFwTahqER03b8YRlGmKrnq14U7jDzBhJ4QPhAUcGFL5UeiLgJ8XpgN8UO7PxSdBUTz39ixO/2Mw4OeE+4XAuWzR/5lFf0mzl52akdsnuxiVOlAg6CYqskMVjUGpeMvvfN/Ttm6IgHlPeNiUccaTJiHdA1KJ0taSmRLfkyVJSuf/N002NDAfdmyNQ9+j7rz1Qvw3lLd//PPT98hGEHuA8X/EXJKexd9G3Klp4H1rX4fSioiV24GwDOu9twzG+pZBsLZWClxNoWYD2a2hcCrL6Oef4DmbX5Bddwe4e9Mr91uUvPjJoJucWBkIAAAAJcEhZcwAACxIAAAsSAdLdfvwAAAERSURBVHja7dZBCsAgDADBGPz/k2P7gp6aQ3AGehVJV3RFxAmulUYgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACYLjdsWhVmeyfpzRzVgDdm75J92Hyl7wBEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAB82F0LV5XpDrDe7xiDKwABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAAzPMAGvkL/eKCZR0AAAAASUVORK5CYII="
 const state_data = [
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
-       state_id:0, state_name:"first state", state_description:"the first obstacle in level 1-2", screenshot_id:0, file_id:0,
+       state_id:0, state_name:"first state", state_description:"the first obstacle in level 1-2", screenshot_id:0, screenshot_data: screenshot_b64, file_id:0,
        created_on: 5, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
       },
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
-       state_id:1, state_name:"second state", state_description:"the end of level 3-1", screenshot_id:1, file_id:1,
+       state_id:1, state_name:"second state", state_description:"the end of level 3-1", screenshot_id:1, screenshot_data: screenshot_b64, file_id:1,
        created_on: 0, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
       },
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
-       state_id:2, state_name:"third state", state_description:"the beginning of level 1-3", screenshot_id:2, file_id:2,
+       state_id:2, state_name:"third state", state_description:"the beginning of level 1-3", screenshot_id:2, screenshot_data: screenshot_b64, file_id:2,
        created_on: 3, creator_id:1, creator_username: "user1", creator_full_name: "user one"
       },
 
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
-       state_id:3, state_name:"first state n", state_description:"the first obstacle in level 1-2 n", screenshot_id:3, file_id:3,
+       state_id:3, state_name:"first state n", state_description:"the first obstacle in level 1-2 n", screenshot_id:3, screenshot_data: screenshot_b64, file_id:3,
        created_on: 7, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
       },
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
-       state_id:4, state_name:"second state n", state_description:"the end of level 3-1 n", screenshot_id:4, file_id:4,
+       state_id:4, state_name:"second state n", state_description:"the end of level 3-1 n", screenshot_id:4, screenshot_data: screenshot_b64, file_id:4,
        created_on: 11, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
       },
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
-       state_id:5, state_name:"third state n", state_description:"the beginning of level 1-3 n", screenshot_id:5, file_id:5,
+       state_id:5, state_name:"third state n", state_description:"the beginning of level 1-3 n", screenshot_id:5, screenshot_data: screenshot_b64, file_id:5,
        created_on: 4, creator_id:1, creator_username: "user1", creator_full_name: "user one"
       },
 
       {work_id:1, work_name:"work b", work_version:"0.1", work_platform:"Nintendo N64", instance_id:2,
-       state_id:6, state_name:"work b state", state_description:"yet another state", screenshot_id:6, file_id:6,
+       state_id:6, state_name:"work b state", state_description:"yet another state", screenshot_id:6, screenshot_data: screenshot_b64, file_id:6,
        created_on: 12, creator_id:1, creator_username: "user1", creator_full_name: "user one"
       },
       {work_id:1, work_name:"work b", work_version:"0.1", work_platform:"Nintendo N64", instance_id:2,
-       state_id:7, state_name:"work b state", state_description:"even yet another state", screenshot_id:7, file_id:7,
+       state_id:7, state_name:"work b state", state_description:"even yet another state", screenshot_id:7, screenshot_data: screenshot_b64, file_id:7,
        created_on: 13, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
       },
 ];

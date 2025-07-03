@@ -275,6 +275,9 @@ pub async fn get_player(
                 .get_template("player.html")?
                 .render(context!(
                     base_url => BASE_URL.get(),
+                    // Need to pass 'user' to outer layout template as well
+                    // May want to create a layout_params object at some point
+                    user => user,
                     player_params => PlayerTemplateInfo {
                         gisst_root: BASE_URL.get().unwrap().clone(),
                         environment,
