@@ -353,7 +353,7 @@ pub struct Cursor(*mut RetroCursor);
 impl Cursor {
     fn next(&mut self) -> Option<RVal> {
         let mut rval = RVal::default();
-        if unsafe { libretrodb_cursor_read_item(self.0, &mut rval) == 0 } {
+        if unsafe { libretrodb_cursor_read_item(self.0, &raw mut rval) == 0 } {
             Some(rval)
         } else {
             None
