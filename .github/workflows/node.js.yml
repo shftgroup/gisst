@@ -67,8 +67,8 @@ jobs:
       name: Run meili
       with:
         run: |
-          ./meilisearch --no-analytics --master-key test-api-key-github-actions --env development --db-path ./test --http-addr localhost:7701 &
-        wait-on: '{"resources":["http-get://localhost:7701/version"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
+          ./meilisearch --no-analytics --master-key test-api-key --env development --db-path ./test --http-addr localhost:7701 &
+        wait-on: '{"resources":["http-get://localhost:7701/version"],"headers":{"Authorization":"Bearer test-api-key"}}'
         tail: true # true = stderr,stdout
         log-output-resume: stderr
         wait-for: 1m
@@ -80,8 +80,8 @@ jobs:
       run: |
         export GISST_CONFIG_PATH=./config
         export MEILI_URL=http://localhost:7701
-        export MEILI_MASTER_KEY=test-api-key-github-actions
-        export MEILI_API_KEY=test-api-key-github-actions
+        export MEILI_MASTER_KEY=test-api-key
+        export MEILI_API_KEY=test-api-key
         cargo run --bin gisst-cli -- init-indices
     - name: Create test data
       working-directory: frontend
