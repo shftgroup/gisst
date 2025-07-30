@@ -19,7 +19,7 @@ export default {
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/main.ts'),
+      entry: resolve(__dirname, 'src/ts/main.ts'),
       name: 'UI',
       fileName: 'ui',
     },
