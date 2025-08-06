@@ -223,7 +223,7 @@ class GISSTStateSearch extends HTMLElement {
               ` : ""}
               ${show_creator_info ? html `
                 <div class="gisst-Search-cell gisst-Search-creator-info">
-                  <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_username"})}</a>
+                  <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_full_name"})}</a>
                 </div>
               ` : ""}
               <div class="gisst-Search-cell gisst-Search-state-actions-cell">
@@ -354,7 +354,7 @@ class GISSTSaveSearch extends HTMLElement {
               ` : ""}
               ${show_creator_info ? html `
                 <div class="gisst-Search-cell gisst-Search-creator-info">
-                  <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_username"})}</a>
+                  <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_full_name"})}</a>
                 </div>
               ` : ""}
               <div class="gisst-Search-cell gisst-Search-state-actions-cell">
@@ -476,7 +476,7 @@ class GISSTPerformanceSearch extends HTMLElement {
               ` : ""}
               ${show_creator_info ? html `
                 <div class="gisst-Search-cell gisst-Search-creator-info">
-                  <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_username"})}</a>
+                  <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_full_name"})}</a>
                 </div>
               ` : ""}
               <div class="gisst-Search-cell gisst-Search-state-actions-cell">
