@@ -1,13 +1,16 @@
 [Unit]
 Description=GISST
 Requires=postgresql@16-main.service
+Wants=gisst-tracing.service gisst-search.service
 
 [Service]
 Type=exec
 Restart=always
+RestartSec=5s
 ExecStart=/home/jcoa2018/.cargo/bin/cargo run --bin gisst-server
 User=jcoa2018
 WorkingDirectory=/home/jcoa2018/Projects/gisst/backend
+
 
 [Install]
 WantedBy=multi-user.target

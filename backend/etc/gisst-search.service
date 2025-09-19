@@ -1,7 +1,7 @@
 [Unit]
 Description=GISST Search Service
 After=gisst.service
-Requires=gisst.service
+Wants=gisst.service
 
 [Service]
 Type=simple
@@ -10,6 +10,8 @@ WorkingDirectory=/home/jcoa2018/Projects/gisst/backend/meili
 EnvironmentFile=/home/jcoa2018/Projects/gisst/backend/.env
 PassEnvironment=MEILI_MASTER_KEY
 ExecStart=/bin/bash -c "./meilisearch --no-analytics --db-path ./db --env production"
+Restart=always
+RestartSec=5s
 
 [Install]
 WantedBy=gisst.service
