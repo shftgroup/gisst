@@ -6,8 +6,8 @@ declare class V86 {
   keyboard_set_status(bool): void;
   screen_adapter:ScreenAdapter;
   screen_make_screenshot():Image;
-  async save_state(): ArrayBuffer;
-  async restore_state(sbuf:ArrayBuffer): void;
+  async save_state(): Promise<ArrayBuffer>;
+  async restore_state(sbuf:ArrayBuffer): Promise<void>;
   add_listener(evt:string, listener:(any)=>void);
   remove_listener(evt:string, listener:(any)=>void);
   get_instruction_counter():number;

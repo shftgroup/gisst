@@ -75,7 +75,8 @@ export class EmbedV86 {
     } else {
       // console.log("save state");
       const screenshot = this.emulator.screen_make_screenshot();
-      this.states.push(new State("state"+this.states.length.toString(), await this.emulator.save_state(), screenshot.src));
+      const state = await this.emulator.save_state();
+      this.states.push(new State("state"+this.states.length.toString(), state, screenshot.src));
       this.config.states_changed([this.states[this.states.length-1]], []);
     }
   }
@@ -103,7 +104,7 @@ export class EmbedV86 {
     nonnull(this.emulator);
     if(this.active_replay != null) {
       const replay = this.replays[this.active_replay];
-      const truncated_checkpoints = replay.reset_to_checkpoint(n,replay.mode == ReplayMode.Finished ? ReplayMode.Playback : replay.mode,this.emulator);
+      const truncated_checkpoints = await replay.reset_to_checkpoint(n,replay.mode == ReplayMode.Finished ? ReplayMode.Playback : replay.mode,this.emulator);
       this.config.replay_checkpoints_changed([], truncated_checkpoints);
     } else {
       this.emulator.restore_state(this.states[n].state);
@@ -127,7 +128,8 @@ export class EmbedV86 {
         const replay_idx = parseInt(checkpoint_matches[1],10);
         const checkpoint_idx = parseInt(checkpoint_matches[2],10);
         const checkpoint = this.replays[replay_idx].checkpoints[checkpoint_idx];
-        return [new Blob([checkpoint.state]), file_name.toString()+".v86state"];
+        const state = await this.replays[replay_idx].restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
+        return [new Blob([state]), file_name.toString()+".v86state"];
       } else {
         const num_str = (file_name.match(/state([0-9]+)$/)?.[1]) ?? "0";
         const save_num = parseInt(num_str,10);
@@ -140,11 +142,6 @@ export class EmbedV86 {
       const replay_num = parseInt(num_str,10);
       const rep = this.replays[replay_num];
       const ser_rep = await rep.serialize();
-      //TODO remove me, just for testing
-      const unser_rep = await Replay.deserialize(ser_rep);
-      if(unser_rep.events.length != rep.events.length || unser_rep.checkpoints.length != rep.checkpoints.length) {
-        throw "ser roundtrip error";
-      }
       return [new Blob([ser_rep]), file_name.toString()+".v86replay"];
     } else {
       throw "Invalid save category";

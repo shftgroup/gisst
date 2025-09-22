@@ -1,3 +1,5 @@
+import {BlockIndex} from './blockindex';
+
 export enum Evt {
   KeyCode = 0,
   MouseClick = 1,
@@ -10,6 +12,13 @@ export const EvtNames:string[] = ["keyboard-code", "mouse-click", "mouse-delta",
 const REPLAY_CHECKPOINT_INTERVAL:number = 100003*1000*12;
 /* Cycles per millisecond (appx) * milliseconds per second * number of seconds */
 
+const REPLAY_VERSION=1;
+
+const BLOCK_SIZE = 256;
+const SUPERBLOCK_SIZE = 256;
+const STATE_INDEX_INFO_LEN = 3;
+const STATE_INFO_BLOCK_START = 16;
+
 export enum ReplayMode {
   Inactive=0,
   Record,
@@ -18,16 +27,22 @@ export enum ReplayMode {
 }
 
 export class Checkpoint {
-  state:ArrayBuffer;
+  header_info:Uint8Array;
+  superblock_seq:Uint32Array;
   name:string;
   thumbnail:string;
   when:number;
   event_index:number;
-  constructor(when:number, name:string, event_index:number, state:ArrayBuffer, thumbnail:string) {
+  new_blocks:number[];
+  new_superblocks:number[];
+  constructor(when:number, name:string, event_index:number, header_info:Uint8Array, new_blocks:number[], new_superblocks:number[], superblock_seq:Uint32Array, thumbnail:string) {
     this.when = when;
     this.name = name;
     this.event_index = event_index;
-    this.state = state;
+    this.header_info = header_info;
+    this.superblock_seq = superblock_seq;
+    this.new_blocks = new_blocks;
+    this.new_superblocks = new_superblocks;
     this.thumbnail = thumbnail;
   }
 }
@@ -41,7 +56,10 @@ export class Replay {
   mode:ReplayMode;
   last_time:number;
   wraps:number;
-  
+  superblock_index: BlockIndex;
+  block_index: BlockIndex;
+  version:number;
+
   private constructor(id:string, mode:ReplayMode) {
     this.id = id;
     this.events = [];
@@ -51,19 +69,47 @@ export class Replay {
     this.wraps = 0;
     this.last_time = 0;
     this.mode = mode;
+    this.version = REPLAY_VERSION;
+    this.block_index = new BlockIndex(BLOCK_SIZE); // measured in bytes
+    this.superblock_index = new BlockIndex(SUPERBLOCK_SIZE*4); // blocks*sizeof(int)
   }
-  reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86):Checkpoint[] {
+  public async restore_checkpoint(header_info:Uint8Array, superblock_seq:Uint32Array):Promise<ArrayBuffer> {
+    const block_byte_size = this.block_index.object_size;
+    const superblock_byte_size = (this.superblock_index.object_size/4) * block_byte_size;
+    /* TODO reuse this allocation across calls */
+    const header_info_length = header_info.length;
+    const state = new Uint8Array(header_info_length + superblock_seq.length * superblock_byte_size);
+    state.set(header_info, 0);
+    const state_size = state.byteLength;
+    for (let i = 0; i < state_size; i++) {
+      const superblock_idx = superblock_seq[i];
+      const superblock_bytes = this.superblock_index.get(superblock_idx);
+      const superblock = new Uint32Array(superblock_bytes.buffer, superblock_bytes.byteOffset, superblock_bytes.byteLength / 4);
+      const superblock_sz = superblock.length;
+      for (let j = 0; j < superblock_sz; j++) {
+        const block_idx = superblock[j];
+        const byte_offset = header_info_length + i * superblock_byte_size + j * block_byte_size;
+        state.set(this.block_index.get(block_idx), byte_offset);
+      }
+    }
+    return state.buffer;
+  }
+  async reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86):Promise<Checkpoint[]> {
     const checkpoint = this.checkpoints[n];
     this.checkpoint_index = n+1;
-    emulator.restore_state(checkpoint.state);
+    const state = await this.restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
+    await emulator.restore_state(state);
     this.seek_internal(checkpoint.event_index, checkpoint.when);
     console.log("time check:",emulator.get_instruction_counter(),this.last_time,checkpoint.when);
     const dropped_checkpoints = mode == ReplayMode.Record ? this.checkpoints.slice(this.checkpoint_index) : [];
     this.resume(mode, emulator);
     console.log("time check B:",emulator.get_instruction_counter(),this.last_time,checkpoint.when);
+    if (dropped_checkpoints.length) {
+      this.block_index.remove_after(checkpoint.when);
+      this.superblock_index.remove_after(checkpoint.when);
+    }
     return dropped_checkpoints;
   }
-  // TODO: add a seek api that respects checkpoints
   private seek_internal(event_index:number, t:number) {
     if(event_index > this.events.length) { throw "Seek: event index out of bounds"; }
     const [wraps, time] = this.cpu_time(t);
@@ -119,9 +165,62 @@ export class Replay {
       this.index += 1;
     }
   }
+  async encode_checkpoint(time:number, event_index:number, screenshot:string, state:Uint8Array) : Promise<Checkpoint> {
+    const header_block = new Int32Array(state.buffer, state.byteOffset, 4);
+    const info_block_len = header_block[STATE_INDEX_INFO_LEN];
+    const info_block_buffer = state.slice(0, STATE_INFO_BLOCK_START + info_block_len);
+    state = state.subarray(info_block_buffer.length);
+    const state_size = state.length;
+    const block_byte_size = this.block_index.object_size;
+    const superblock_block_count = this.superblock_index.object_size/4;
+    const superblock_byte_size = superblock_block_count*block_byte_size;
+    const superblock_count = Math.ceil(state_size / (this.block_index.object_size));
+    /* TODO reuse these allocations across calls */
+    const superblock_seq = new Uint32Array(superblock_count);
+    const superblock_buf = new Uint32Array(new ArrayBuffer(this.superblock_index.object_size));
+    const block_buf = new Uint8Array(block_byte_size);
+    const new_blocks = [];
+    const new_superblocks = [];
+    for (let i = 0; i < superblock_count; i++) {
+      const superblock_offset = i * superblock_byte_size;
+      for (let j = 0; j < superblock_block_count; j++) {
+        const block_start = superblock_offset + j * block_byte_size;
+        const block_end = Math.min(block_start + block_byte_size, state_size);
+        if (block_start > state_size) {
+          superblock_buf[j] = 0;
+        } else {
+          let result;
+          if(block_start + block_byte_size > state_size) {
+            block_buf.subarray(state_size - block_start).fill(0);
+            block_buf.set(state.subarray(block_start, block_end));
+            result = await this.block_index.insert(block_buf, time);
+          } else {
+            result = await this.block_index.insert(state.subarray(block_start, block_end), time);
+          }
+          if (result.is_new) {
+            // new block; output or add to a list
+            new_blocks.push(result.index);
+          }
+          superblock_buf[j] = result.index;
+        }
+      }
+      let super_result = await this.superblock_index.insert(new Uint8Array(superblock_buf.buffer, superblock_buf.byteOffset, superblock_byte_size), time);
+      if (super_result.is_new) {
+        // new superblock; output or add to a list
+        new_superblocks.push(super_result.index);
+      }
+      superblock_seq[i] = super_result.index;
+    }
+    const checkpoint = new Checkpoint(time, "replay"+this.id+"-check"+this.checkpoints.length.toString(), event_index, info_block_buffer, new_blocks, new_superblocks, superblock_seq, screenshot);
+    this.checkpoints.push(checkpoint);
+    return checkpoint;
+  }
   async make_checkpoint(emulator:V86) {
     // console.log("make cp",this.replay_time(emulator.get_instruction_counter()),this.index,this.checkpoints.length);
-    this.checkpoints.push(new Checkpoint(this.replay_time(emulator.get_instruction_counter()), "replay"+this.id+"-check"+this.checkpoints.length.toString(), this.index, await emulator.save_state(), emulator.screen_make_screenshot().src));
+    const state = new Uint8Array(await emulator.save_state());
+    const time = this.replay_time(emulator.get_instruction_counter());
+    const screenshot = emulator.screen_make_screenshot();
+    await this.encode_checkpoint(time, this.index, screenshot.src, state);
     this.checkpoint_index += 1;
   }
   async tick(emulator:V86) {
@@ -138,7 +237,7 @@ export class Replay {
           last_t = this.checkpoints[this.checkpoints.length-1].when;
         }
         if(real_t - last_t > REPLAY_CHECKPOINT_INTERVAL) {
-          this.make_checkpoint(emulator);
+          await this.make_checkpoint(emulator);
         }
         break;
       }
@@ -151,7 +250,8 @@ export class Replay {
           const checkpoint_is_first = (checkpoint_t <= event_t) && checkpoint_t < real_t;
           if(checkpoint_is_first) {
             const check = this.checkpoints[this.checkpoint_index];
-            emulator.restore_state(check.state);
+            const state = await this.restore_checkpoint(check.header_info, check.superblock_seq);
+            await emulator.restore_state(state);
             //console.log("Playback time check",this.replay_time(emulator.get_instruction_counter()),check.when);
             this.checkpoint_index += 1;
           } else if(event_is_first) {
@@ -200,7 +300,6 @@ export class Replay {
     if(this.mode == ReplayMode.Playback) {
       this.finish_playback(emulator);
     }
-    // console.log(this);
   }
   async start_playback(emulator:V86) {
     this.mode = ReplayMode.Playback;
@@ -211,7 +310,9 @@ export class Replay {
     emulator.v86.cpu.instruction_counter[0] = 0;
     emulator.mouse_set_status(false);
     emulator.keyboard_set_status(false);
+    // TODO read initial superblock seq?
   }
+  /* TODO: this api should be in terms of a stream not a buffer, to account for very long/large replays; also shouldn't deserialize the whole thing at once!! */
   async serialize():Promise<ArrayBuffer> {
     // magic+metadata+frame count+checkpoint count+(frame count * max event size)+(checkpoint count * size of last checkpoint)
     const frame_count = this.events.length;
@@ -231,8 +332,11 @@ export class Replay {
       dst.set(id_bytes);
       x += 16;
     }
-    // empty 16 bytes
-    x += 16;
+    // write version
+    view.setUint8(x, this.version);
+    x += 1;
+    // empty 15 bytes
+    x += 15;
     // counts
     view.setUint32(x,frame_count,true);
     x += 4;
@@ -291,121 +395,185 @@ export class Replay {
       view.setUint32(x,thumb_bytes.byteLength,true);
       x += 4;
       {
-        const dst = new Uint8Array(ret,x,thumb_bytes.byteLength);
+        const dst = new Uint8Array(ret, x, thumb_bytes.byteLength);
         dst.set(new Uint8Array(thumb_bytes));
       }
       x += thumb_bytes.byteLength;
       // the state
-      view.setUint32(x,check.state.byteLength,true);
+      // write header size
+      view.setUint32(x,check.header_info.byteLength,true);
       x += 4;
-      const st_buf = new Uint8Array(check.state);
-      const dst_buf = new Uint8Array(ret,x,check.state.byteLength);
-      dst_buf.set(st_buf);
-      x += check.state.byteLength;
+      // write header
+      {
+        const dst = new Uint8Array(ret, x, check.header_info.byteLength);
+        dst.set(check.header_info);
+        x += check.header_info.byteLength;
+      }
+      // write new block count and contents
+      view.setUint32(x, check.new_blocks.length, true);
+      x += 4;
+      for (const block_idx of check.new_blocks) {
+        const dst = new Uint8Array(ret, x, this.block_index.object_size);
+        dst.set(this.block_index.get(block_idx));
+        x += this.block_index.object_size;
+      }
+      // write new superblock count and contents
+      view.setUint32(x, check.new_superblocks.length, true);
+      x += 4;
+      for (const superblock_idx of check.new_superblocks) {
+        const dst = new Uint8Array(ret, x, this.superblock_index.object_size);
+        dst.set(this.superblock_index.get(superblock_idx));
+        x += this.superblock_index.object_size;
+      }
+      // Write superblock seq count and contents
+      view.setUint32(x, check.superblock_seq.length, true);
+      x += 4;
+      {
+        const dst = new Uint32Array(ret, x, check.superblock_seq.length);
+        dst.set(check.superblock_seq);
+        x += dst.byteLength;
+      }
     }
     return ret;
   }
-  static async deserialize(buf:ArrayBuffer):Promise<Replay> {
+  /* TODO: this api should be in terms of a stream not a buffer, to account for very long/large replays */
+  static async deserialize(buf: ArrayBuffer): Promise<Replay> {
     const events = [];
-    const checkpoints = [];
     const view = new DataView(buf);
     let x = 0;
-    const magic = view.getUint32(x,true);
+    const magic = view.getUint32(x, true);
     x += 4;
-    if(magic != 0x4C505256) {
+    if (magic != 0x4C505256) {
       throw "Invalid magic, not a v86replay file";
     }
     // metadata: 16 bytes UUID; reserve the rest for later.
-    const id = bytes_to_uuid(new Uint8Array(buf,x,16));
+    const id = bytes_to_uuid(new Uint8Array(buf, x, 16));
     x += 16;
+    // version
+    const version = view.getUint8(x);
+    x += 1;
+    if (version > REPLAY_VERSION) {
+      throw "Unrecognized replay version";
+    }
     // empty metadata bytes
-    x += 16;
-    const frame_count = view.getUint32(x,true);
+    x += 15;
+    const frame_count = view.getUint32(x, true);
     x += 4;
-    const checkpoint_count = view.getUint32(x,true);
+    const checkpoint_count = view.getUint32(x, true);
     x += 4;
-    for(let i = 0; i < frame_count; i++) {
+    for (let i = 0; i < frame_count; i++) {
       const code = view.getUint8(x);
       x += 1;
-      const when_b = view.getBigUint64(x,true);
+      const when_b = view.getBigUint64(x, true);
       x += 8;
-      if(when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
+      if (when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
         console.log(when_b);
         throw "When is too big";
       }
       const when = Number(when_b);
-      if(BigInt(when) != when_b) {
-        console.log(when,when_b);
+      if (BigInt(when) != when_b) {
+        console.log(when, when_b);
         throw "When didn't match";
       }
-      let value:object|number;
-      switch(code) {
-      case Evt.KeyCode:
-        value = view.getUint8(x);
-        x += 1;
-        break;
-      case Evt.MouseClick: {
-        const a = view.getUint8(x);
-        const b = view.getUint8(x+1);
-        const c = view.getUint8(x+2);
-        x += 3;
-        value = [a,b,c];
-        break;
-      }
-      case Evt.MouseDelta:
-      case Evt.MouseWheel: {
-        const mx = view.getFloat64(x,true);
-        const my = view.getFloat64(x+8,true);
-        value = [mx,my];
-        x += 8*2;
-        break;
-      }
-      case Evt.MouseAbsolute: {
-        const mx = view.getFloat64(x,true);
-        const my = view.getFloat64(x+8,true);
-        const w = view.getFloat64(x+16,true);
-        const h = view.getFloat64(x+24,true);
-        value = [mx,my,w,h];
-        x += 8*4;
-        break;
-      }
-      default:
-        throw "Unhandled event type";
+      let value: object | number;
+      switch (code) {
+        case Evt.KeyCode:
+          value = view.getUint8(x);
+          x += 1;
+          break;
+        case Evt.MouseClick: {
+          const a = view.getUint8(x);
+          const b = view.getUint8(x + 1);
+          const c = view.getUint8(x + 2);
+          x += 3;
+          value = [a, b, c];
+          break;
+        }
+        case Evt.MouseDelta:
+        case Evt.MouseWheel: {
+          const mx = view.getFloat64(x, true);
+          const my = view.getFloat64(x + 8, true);
+          value = [mx, my];
+          x += 8 * 2;
+          break;
+        }
+        case Evt.MouseAbsolute: {
+          const mx = view.getFloat64(x, true);
+          const my = view.getFloat64(x + 8, true);
+          const w = view.getFloat64(x + 16, true);
+          const h = view.getFloat64(x + 24, true);
+          value = [mx, my, w, h];
+          x += 8 * 4;
+          break;
+        }
+        default:
+          throw "Unhandled event type";
       }
       events.push(new ReplayEvent(when, code, value));
     }
-    for(let i = 0; i < checkpoint_count; i++) {
-      const when_b = view.getBigUint64(x,true);
+    const r = new Replay(id, ReplayMode.Inactive);
+    r.version = version;
+    r.events = events;
+    for (let i = 0; i < checkpoint_count; i++) {
+      const when_b = view.getBigUint64(x, true);
       x += 8;
-      if(when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
+      if (when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
         console.log(when_b);
         throw "When is too big";
       }
       const when = Number(when_b);
-      if(BigInt(when) != when_b) {
-        console.log(when,when_b);
+      if (BigInt(when) != when_b) {
+        console.log(when, when_b);
         throw "When didn't match";
       }
-      const event_index = view.getUint32(x,true);
+      const event_index = view.getUint32(x, true);
       x += 4;
-      const name = "check"+i.toString();
-      const thumb_len = view.getUint32(x,true);
+      const name = "check" + i.toString();
+      const thumb_len = view.getUint32(x, true);
       x += 4;
       const thumb_bytes = new Uint8Array(thumb_len);
-      thumb_bytes.set(new Uint8Array(buf,x,thumb_len));
-      const thumb = await blobToDataURL(new Blob([thumb_bytes], {type:"image/png"}));
+      thumb_bytes.set(new Uint8Array(buf, x, thumb_len));
+      const thumb = await blobToDataURL(new Blob([thumb_bytes], { type: "image/png" }));
       x += thumb_len;
-      const state_len = view.getUint32(x,true);
-      x += 4;
-      const src_buf = new Uint8Array(buf,x,state_len);
-      const state = new Uint8Array(state_len);
-      state.set(src_buf);
-      x += state_len;
-      checkpoints.push(new Checkpoint(when, name, event_index, state.buffer, thumb));
+      if (version == 0) {
+        const state_len = view.getUint32(x, true);
+        x += 4;
+        const src_buf = new Uint8Array(buf, x, state_len);
+        const state = new Uint8Array(state_len);
+        state.set(src_buf);
+        x += state_len;
+        /* reencode as next statestream state */
+        await r.encode_checkpoint(when, event_index, thumb, state);
+      } else {
+        /* already state stream, read new blocks, new superblocks, superblock seq */
+        const info_len = view.getUint32(x, true);
+        x += 4;
+        const info = new Uint8Array(buf, x, info_len);
+        const new_blocks = [];
+        const new_block_count = view.getUint32(x, true);
+        x += 4;
+        for (let i = 0; i < new_block_count; i++) {
+          const block = new Uint8Array(buf, x, r.block_index.object_size);
+          new_blocks.push(r.block_index.length());
+          r.block_index.insert_exact(block.slice(), r.block_index.length(), when);
+          x += r.block_index.object_size;
+        }
+        const new_superblocks = [];
+        const new_superblock_count = view.getUint32(x, true);
+        x += 4;
+        for (let i = 0; i < new_superblock_count; i++) {
+          const superblock = new Uint8Array(buf, x, r.superblock_index.object_size);
+          new_superblocks.push(r.superblock_index.length());
+          r.superblock_index.insert_exact(superblock.slice(), r.block_index.length(), when);
+          x += r.superblock_index.object_size;
+        }
+        const superblock_seq_len = view.getUint32(x, true);
+        x += 4;
+        const superblock_seq = new Uint32Array(buf, x, superblock_seq_len);
+        x += superblock_seq.byteLength;
+        r.checkpoints.push(new Checkpoint(when, name, event_index, info.slice(), new_blocks, new_superblocks, superblock_seq.slice(), thumb));
+      }
     }
-    const r = new Replay(id, ReplayMode.Inactive);
-    r.events = events;
-    r.checkpoints = checkpoints;
     r.index = 0;
     r.checkpoint_index = 0;
     r.last_time = 0;
