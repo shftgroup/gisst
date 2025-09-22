@@ -174,7 +174,7 @@ pub struct HttpConfig {
 
 // Not sure if all of this is redundant, it appears so
 fn default_listen_address() -> Ipv4Addr {
-    Ipv4Addr::new(0, 0, 0, 0)
+    Ipv4Addr::UNSPECIFIED
 }
 
 fn default_port() -> u16 {

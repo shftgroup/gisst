@@ -20,17 +20,17 @@ use gisst::storage::{FileInformation, PendingUpload, StorageHandler};
 use std::collections::HashMap;
 use std::sync::{RwLockReadGuard, RwLockWriteGuard};
 trait ServerStateExt {
-    fn get_pending_uploads(&self) -> Option<RwLockReadGuard<HashMap<Uuid, PendingUpload>>>;
-    fn get_pending_uploads_mut(&self) -> RwLockWriteGuard<HashMap<Uuid, PendingUpload>>;
+    fn get_pending_uploads(&'_ self) -> Option<RwLockReadGuard<'_, HashMap<Uuid, PendingUpload>>>;
+    fn get_pending_uploads_mut(&'_ self) -> RwLockWriteGuard<'_, HashMap<Uuid, PendingUpload>>;
     fn insert_pending_upload(&self, uuid: Uuid, pending: PendingUpload) -> Option<PendingUpload>;
     fn remove_pending_upload(&self, uuid: Uuid) -> Option<PendingUpload>;
 }
 impl ServerStateExt for ServerState {
-    fn get_pending_uploads(&self) -> Option<RwLockReadGuard<HashMap<Uuid, PendingUpload>>> {
+    fn get_pending_uploads(&'_ self) -> Option<RwLockReadGuard<'_, HashMap<Uuid, PendingUpload>>> {
         self.pending_uploads.read().ok()
     }
 
-    fn get_pending_uploads_mut(&self) -> RwLockWriteGuard<HashMap<Uuid, PendingUpload>> {
+    fn get_pending_uploads_mut(&'_ self) -> RwLockWriteGuard<'_, HashMap<Uuid, PendingUpload>> {
         self.pending_uploads.write().unwrap_or_else(|mut e| {
             **e.get_mut() = std::collections::HashMap::new();
             self.pending_uploads.clear_poison();
