@@ -30,9 +30,13 @@ pub struct LoggedInUserInfo {
 
 impl LoggedInUserInfo {
     pub fn generate_from_user(user: &crate::auth::User) -> LoggedInUserInfo {
-        let given_initial = user.given_name.as_ref()
+        let given_initial = user
+            .given_name
+            .as_ref()
             .and_then(|name| name.chars().next());
-        let family_initial = user.family_name.as_ref()
+        let family_initial = user
+            .family_name
+            .as_ref()
             .and_then(|name| name.chars().next());
 
         let initials = match (given_initial, family_initial) {
