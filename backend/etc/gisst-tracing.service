@@ -1,7 +1,8 @@
 [Unit]
 Description=GISST Tracing Containers
-After=gisst.service docker.service
-Requires=gisst.service docker.service
+After=docker.service
+Requires=docker.service
+Wants=gisst.service
 
 [Service]
 Type=simple
@@ -18,6 +19,8 @@ Environment="QUERY_BASE_PATH=/tracing"
 PassEnvironment=GF_SERVER_PROTOCOL GF_SERVER_SERVE_FROM_SUB_PATH GF_SERVER_ROOT_URL GF_SERVER_DOMAIN GF_AUTH_PROXY_ENABLED GF_AUTH_PROXY_HEADERNAME GF_AUTH_PROXY_AUTO_SIGN_UP QUERY_BASE_PATH
 ExecStart=/bin/bash -c "docker compose -f docker-compose.yml up"
 ExecStop=/bin/bash -c "docker compose -f docker-compose.yml stop"
+Restart=always
+RestartSec=5s
 
 [Install]
 WantedBy=gisst.service
