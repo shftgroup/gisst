@@ -292,9 +292,9 @@ async fn main() -> Result<(), IngestError> {
                                 rval.map_get("description"),
                             )
                             .await
-                            .expect("Create_single_file_instance_objects failed in RDB");
+                            .expect("Create_single_file_instance_objects failed for record found in RDB");
                         }
-                        FindResult::NotInRDB if force => {
+                        FindResult::NotInRDB | FindResult::AlreadyHave if force => {
                             let instance_id = create_metadata_records(
                                 &mut tx,
                                 &file_name,
@@ -316,32 +316,7 @@ async fn main() -> Result<(), IngestError> {
                                 Some(stem.to_string()),
                             )
                             .await
-                            .expect("Create_single_file_instance_objects failed not in RDB");
-                            // ?? unwraps Result<(), Ingest Error>
-                        }
-                        FindResult::AlreadyHave if force => {
-                            let instance_id = create_metadata_records(
-                                &mut tx,
-                                &file_name,
-                                &stem,
-                                &file_name,
-                                &platform,
-                                &core_name,
-                                &core_version,
-                                &indexer,
-                            )
-                            .await?;
-                            link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
-                            create_single_file_instance_objects(
-                                &mut tx,
-                                &storage_root,
-                                &roms,
-                                instance_id,
-                                &path,
-                                Some(stem.to_string()),
-                            )
-                            .await
-                            .expect("Create_single_file_instance_objects failed not in RDB");
+                            .expect("Create_single_file_instance_objects failed for force-added record");
                             // ?? unwraps Result<(), Ingest Error>
                         }
                         // _ => Ok(()),

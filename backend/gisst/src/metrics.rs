@@ -35,8 +35,8 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
             .u64_observable_counter(table)
             .with_callback(move |obs| {
                 handle.block_on(async {
-                    if let Ok(mut conn) = pool.acquire().await {
-                        if let Some(count) = sqlx::query_scalar!(
+                    if let Ok(mut conn) = pool.acquire().await
+                        && let Some(count) = sqlx::query_scalar!(
                             r#"SELECT reltuples::bigint AS estimate 
                                FROM pg_class 
                                WHERE oid = ($1::text)::regclass"#,
@@ -47,9 +47,8 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
                         .ok()
                         .flatten()
                         .and_then(|num| u64::try_from(num).ok())
-                        {
-                            obs.observe(count, &[]);
-                        }
+                    {
+                        obs.observe(count, &[]);
                     }
                 });
             })
@@ -64,15 +63,14 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
             .u64_observable_counter("file_size")
             .with_callback(move |obs| {
                 handle.block_on(async {
-                    if let Ok(mut conn) = pool.acquire().await {
-                        if let Some(size) = sqlx::query_scalar!("SELECT SUM(file_size) FROM file")
+                    if let Ok(mut conn) = pool.acquire().await
+                        && let Some(size) = sqlx::query_scalar!("SELECT SUM(file_size) FROM file")
                             .fetch_one(conn.as_mut())
                             .await
                             .ok()
                             .flatten()
-                        {
-                            obs.observe(size.to_u64().unwrap_or(0), &[]);
-                        }
+                    {
+                        obs.observe(size.to_u64().unwrap_or(0), &[]);
                     }
                 });
             });
@@ -85,16 +83,15 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
             .u64_observable_counter("file_size_compressed")
             .with_callback(move |obs| {
                 handle.block_on(async {
-                    if let Ok(mut conn) = pool.acquire().await {
-                        if let Some(size) =
+                    if let Ok(mut conn) = pool.acquire().await
+                        && let Some(size) =
                             sqlx::query_scalar!("SELECT SUM(file_compressed_size) FROM file")
                                 .fetch_one(conn.as_mut())
                                 .await
                                 .ok()
                                 .flatten()
-                        {
-                            obs.observe(size.to_u64().unwrap_or(0), &[]);
-                        }
+                    {
+                        obs.observe(size.to_u64().unwrap_or(0), &[]);
                     }
                 });
             });
