@@ -20,22 +20,21 @@ export class InsertResult {
 }
 
 export class BlockIndex {
-  object_size: number;
-  index: Record<string, number[]>;
-  objects: Uint8Array[];
-  counts: number[];
-  hashes: string[];
-  additions: Addition[];
+  object_size: number = 8;
+  index: Record<string, number[]> = {};
+  objects: Uint8Array[] = [];
+  counts: number[] = [];
+  hashes: string[] = [];
+  additions: Addition[] = [];
 
-  public constructor(object_size:number) {
-    this.object_size = object_size;
-    this.index = {};
-    this.objects = [];
-    this.counts = [];
-    this.hashes = [];
-    this.additions = [];
+  public static async create(object_size:number):Promise<BlockIndex> {
+    const ths = new BlockIndex();
+    ths.object_size = object_size;
     const zeroes = new Uint8Array(object_size);
-    this.insert_exact(zeroes, 0, 0);
+    if (!await (ths.insert_exact(zeroes, 0, 0))) {
+      throw "Couldn't initialize with zeros";
+    }
+    return ths;
   }
   private bucket_get(bucket:number[], object:Uint8Array): number | undefined {
     for (const which of bucket) {
@@ -47,7 +46,7 @@ export class BlockIndex {
   }
   public async insert(object:Uint8Array, frame:number): Promise<InsertResult> {
     const hash = await xxhash128(new Uint32Array(object.buffer, object.byteOffset, object.byteLength / 4));
-    let bucket = this.index[hash];
+    const bucket = this.index[hash];
     if (bucket == undefined) {
       const which = this.objects.length;
       this.index[hash] = [which];
@@ -78,7 +77,7 @@ export class BlockIndex {
       return false;
     }
     const hash = await xxhash128(new Uint32Array(object.buffer, object.byteOffset, object.byteLength / 4));
-    let bucket = this.index[hash];
+    const bucket = this.index[hash];
     if (bucket == undefined) {
       this.index[hash] = [idx];
       this.objects.push(object);
@@ -88,10 +87,10 @@ export class BlockIndex {
       }
       return true;
     }
-    let which = this.bucket_get(bucket, object);
+    const which = this.bucket_get(bucket, object);
     if (which == undefined) {
       bucket.push(idx);
-      this.objects.push(object.buffer.transfer());
+      this.objects.push(object);
       this.hashes.push(hash);
       if (this.additions.length == 0 || this.additions[this.additions.length - 1].when < when) {
         this.additions.push(new Addition(when, idx));
@@ -140,6 +139,7 @@ export class BlockIndex {
     this.insert_exact(zeros, 0, 0);
   }
   public length() {
+    console.log("RET",this.objects.length);
     return this.objects.length;
   }
 }

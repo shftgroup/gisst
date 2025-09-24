@@ -48,30 +48,25 @@ export class Checkpoint {
 }
 
 export class Replay {
-  events:ReplayEvent[];
-  checkpoints:Checkpoint[];
-  index:number;
-  checkpoint_index:number;
-  id:string;
-  mode:ReplayMode;
-  last_time:number;
-  wraps:number;
-  superblock_index: BlockIndex;
-  block_index: BlockIndex;
-  version:number;
+  events:ReplayEvent[]=[];
+  checkpoints:Checkpoint[]=[];
+  index:number=0;
+  checkpoint_index:number=0;
+  id:string="";
+  mode:ReplayMode=ReplayMode.Inactive;
+  last_time:number=0;
+  wraps:number=0;
+  superblock_index!: BlockIndex;
+  block_index!: BlockIndex;
+  version:number=REPLAY_VERSION;
 
-  private constructor(id:string, mode:ReplayMode) {
-    this.id = id;
-    this.events = [];
-    this.checkpoints = [];
-    this.index = 0;
-    this.checkpoint_index = 0;
-    this.wraps = 0;
-    this.last_time = 0;
-    this.mode = mode;
-    this.version = REPLAY_VERSION;
-    this.block_index = new BlockIndex(BLOCK_SIZE); // measured in bytes
-    this.superblock_index = new BlockIndex(SUPERBLOCK_SIZE*4); // blocks*sizeof(int)
+  public static async create(id:string, mode:ReplayMode) : Promise<Replay> {
+    const ths = new Replay();
+    ths.id = id;
+    ths.mode = mode;
+    ths.block_index = await BlockIndex.create(BLOCK_SIZE); // measured in bytes
+    ths.superblock_index = await BlockIndex.create(SUPERBLOCK_SIZE*4); // blocks*sizeof(int)
+    return ths;
   }
   public async restore_checkpoint(header_info:Uint8Array, superblock_seq:Uint32Array):Promise<ArrayBuffer> {
     const block_byte_size = this.block_index.object_size;
@@ -204,7 +199,7 @@ export class Replay {
           superblock_buf[j] = result.index;
         }
       }
-      let super_result = await this.superblock_index.insert(new Uint8Array(superblock_buf.buffer, superblock_buf.byteOffset, superblock_byte_size), time);
+      const super_result = await this.superblock_index.insert(new Uint8Array(superblock_buf.buffer, superblock_buf.byteOffset, superblock_byte_size), time);
       if (super_result.is_new) {
         // new superblock; output or add to a list
         new_superblocks.push(super_result.index);
@@ -279,7 +274,7 @@ export class Replay {
     }
   }
   static async start_recording(emulator:V86):Promise<Replay> {
-    const r = new Replay(generateUUID(),ReplayMode.Record);
+    const r = await Replay.create(generateUUID(),ReplayMode.Record);
     emulator.v86.cpu.instruction_counter[0] = 0;
     r.make_checkpoint(emulator);
     return r;
@@ -318,7 +313,7 @@ export class Replay {
     const frame_count = this.events.length;
     const checkpoint_count = this.checkpoints.length;
     const last_check = this.checkpoints[this.checkpoints.length-1];
-    const size_max = 4+32+4+4+(frame_count*(1+8+4*8))+(checkpoint_count*(8+4+4+4+last_check.state.byteLength+last_check.thumbnail.length));
+    const size_max = 4+32+4+4+(frame_count*(1+8+4*8))+(checkpoint_count*(8+4+4+last_check.thumbnail.length+4+last_check.header_info.byteLength+4+4+4+last_check.superblock_seq.length*4))+this.block_index.length()*this.block_index.object_size+this.superblock_index.length()*this.superblock_index.object_size+this.block_index.length()*4+this.superblock_index.length()*4;
     const ret = new ArrayBuffer(size_max);
     const view = new DataView(ret);
     // ASCII "VRPL" backwards ("LPRV") so it shows up as "VRPL" in binary
@@ -434,6 +429,7 @@ export class Replay {
         x += dst.byteLength;
       }
     }
+    ret.resize(x);
     return ret;
   }
   /* TODO: this api should be in terms of a stream not a buffer, to account for very long/large replays */
@@ -511,7 +507,7 @@ export class Replay {
       }
       events.push(new ReplayEvent(when, code, value));
     }
-    const r = new Replay(id, ReplayMode.Inactive);
+    const r = await Replay.create(id, ReplayMode.Inactive);
     r.version = version;
     r.events = events;
     for (let i = 0; i < checkpoint_count; i++) {

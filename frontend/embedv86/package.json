@@ -17,7 +17,7 @@
   "types": "./dist/embedv86.d.ts",
   "scripts": {
     "dev": "vite",
-    "check": "tsc && eslint src",
+    "check": "tsc && eslint src && vitest --run",
     "build": "tsc && vite build && shx cp dist/embedv86.d.ts dist/embedv86.umd.d.ts",
     "preview": "vite preview"
   },
@@ -28,7 +28,8 @@
     "shx": "^0.3.4",
     "typescript": "^5.8.2",
     "vite": "^6.2.1",
-    "vite-plugin-dts": "^4.5.3"
+    "vite-plugin-dts": "^4.5.3",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "hash-wasm": "^4.12.0"
