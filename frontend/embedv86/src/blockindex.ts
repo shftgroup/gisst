@@ -139,7 +139,6 @@ export class BlockIndex {
     this.insert_exact(zeros, 0, 0);
   }
   public length() {
-    console.log("RET",this.objects.length);
     return this.objects.length;
   }
 }
