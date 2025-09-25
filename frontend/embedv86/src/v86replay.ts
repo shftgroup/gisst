@@ -75,8 +75,7 @@ export class Replay {
     const header_info_length = header_info.length;
     const state = new Uint8Array(header_info_length + superblock_seq.length * superblock_byte_size);
     state.set(header_info, 0);
-    const state_size = state.byteLength;
-    for (let i = 0; i < state_size; i++) {
+    for (let i = 0; i < superblock_seq.length; i++) {
       const superblock_idx = superblock_seq[i];
       const superblock_bytes = this.superblock_index.get(superblock_idx);
       const superblock = new Uint32Array(superblock_bytes.buffer, superblock_bytes.byteOffset, superblock_bytes.byteLength / 4);
@@ -164,12 +163,12 @@ export class Replay {
     const header_block = new Int32Array(state.buffer, state.byteOffset, 4);
     const info_block_len = header_block[STATE_INDEX_INFO_LEN];
     const info_block_buffer = state.slice(0, STATE_INFO_BLOCK_START + info_block_len);
-    state = state.subarray(info_block_buffer.length);
+    state = state.subarray(16+info_block_buffer.length);
     const state_size = state.length;
     const block_byte_size = this.block_index.object_size;
     const superblock_block_count = this.superblock_index.object_size/4;
     const superblock_byte_size = superblock_block_count*block_byte_size;
-    const superblock_count = Math.ceil(state_size / (this.block_index.object_size));
+    const superblock_count = Math.ceil(state_size / (this.block_index.object_size*superblock_block_count));
     /* TODO reuse these allocations across calls */
     const superblock_seq = new Uint32Array(superblock_count);
     const superblock_buf = new Uint32Array(new ArrayBuffer(this.superblock_index.object_size));
@@ -199,7 +198,7 @@ export class Replay {
           superblock_buf[j] = result.index;
         }
       }
-      const super_result = await this.superblock_index.insert(new Uint8Array(superblock_buf.buffer, superblock_buf.byteOffset, superblock_byte_size), time);
+      const super_result = await this.superblock_index.insert(new Uint8Array(superblock_buf.buffer), time);
       if (super_result.is_new) {
         // new superblock; output or add to a list
         new_superblocks.push(super_result.index);
@@ -307,14 +306,14 @@ export class Replay {
     emulator.keyboard_set_status(false);
     // TODO read initial superblock seq?
   }
-  /* TODO: this api should be in terms of a stream not a buffer, to account for very long/large replays; also shouldn't deserialize the whole thing at once!! */
+  /* TODO: this api should be in terms of a stream not a buffer, to account for very long/large replays; also maybe shouldn't serialize/deserialize the whole thing at once!! */
   async serialize():Promise<ArrayBuffer> {
-    // magic+metadata+frame count+checkpoint count+(frame count * max event size)+(checkpoint count * size of last checkpoint)
     const frame_count = this.events.length;
     const checkpoint_count = this.checkpoints.length;
     const last_check = this.checkpoints[this.checkpoints.length-1];
+    // magic+metadata+frame count+checkpoint count+(frame count * max event size)+(checkpoint count * size of last checkpoint)+size of deduped blocks and superblocks
     const size_max = 4+32+4+4+(frame_count*(1+8+4*8))+(checkpoint_count*(8+4+4+last_check.thumbnail.length+4+last_check.header_info.byteLength+4+4+4+last_check.superblock_seq.length*4))+this.block_index.length()*this.block_index.object_size+this.superblock_index.length()*this.superblock_index.object_size+this.block_index.length()*4+this.superblock_index.length()*4;
-    const ret = new ArrayBuffer(size_max);
+    const ret = new ArrayBuffer(size_max, {maxByteLength:size_max});
     const view = new DataView(ret);
     // ASCII "VRPL" backwards ("LPRV") so it shows up as "VRPL" in binary
     let x = 0;
@@ -424,9 +423,10 @@ export class Replay {
       view.setUint32(x, check.superblock_seq.length, true);
       x += 4;
       {
-        const dst = new Uint32Array(ret, x, check.superblock_seq.length);
-        dst.set(check.superblock_seq);
-        x += dst.byteLength;
+        for (const superblock of check.superblock_seq) {
+          view.setUint32(x, superblock, true);
+          x += 4;
+        }
       }
     }
     ret.resize(x);
@@ -514,7 +514,7 @@ export class Replay {
       const when_b = view.getBigUint64(x, true);
       x += 8;
       if (when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
-        console.log(when_b);
+        console.log("cc", when_b);
         throw "When is too big";
       }
       const when = Number(when_b);
@@ -545,6 +545,7 @@ export class Replay {
         const info_len = view.getUint32(x, true);
         x += 4;
         const info = new Uint8Array(buf, x, info_len);
+        x += info_len;
         const new_blocks = [];
         const new_block_count = view.getUint32(x, true);
         x += 4;
@@ -565,8 +566,11 @@ export class Replay {
         }
         const superblock_seq_len = view.getUint32(x, true);
         x += 4;
-        const superblock_seq = new Uint32Array(buf, x, superblock_seq_len);
-        x += superblock_seq.byteLength;
+        const superblock_seq = new Uint32Array(superblock_seq_len);
+        for (let i = 0; i < superblock_seq_len; i++) {
+          superblock_seq[i] = view.getUint32(x, true);
+          x += 4;
+        }
         r.checkpoints.push(new Checkpoint(when, name, event_index, info.slice(), new_blocks, new_superblocks, superblock_seq.slice(), thumb));
       }
     }
@@ -643,22 +647,114 @@ function bytes_to_uuid(buf:Uint8Array):string {
 
 //https://stackoverflow.com/a/30407959
 function dataURLToBlob(dataurl:string) {
-    const arr = dataurl.split(','), mime = arr[0]!.match(/:(.*?);/)![1],
-        bstr = atob(arr[1]!);
+  const arr = dataurl.split(','), mime = arr[0]!.match(/:(.*?);/)![1],
+    bstr = atob(arr[1]!);
   let n = bstr.length;
   const u8arr = new Uint8Array(n);
-    while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], {type:mime});
+  while(n--){
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], {type:mime});
 }
 //https://stackoverflow.com/a/67551175
 function blobToDataURL(blob: Blob): Promise<string> {
+  if (import.meta.vitest) {
+    return Promise.resolve("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+  }
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = () => reject(reader.error);
     reader.onabort = () => reject(new Error("Read aborted"));
     reader.readAsDataURL(blob);
+  });
+}
+
+if (import.meta.vitest) {
+  const { it, expect } = import.meta.vitest;
+  const IMG_STR = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  it("encode", async () => {
+    const replay = await Replay.create("123456789abcdef123456789abcdef", ReplayMode.Inactive);
+    const header = [
+      0,0,0,0,
+      0,0,0,0,
+      0,0,0,0,
+      4,0,0,0,
+      1,2,3,4,
+    ];
+    const fake_state = new Uint8Array(16+4+256*256*2);
+    fake_state.set(header);
+    /* all 0s except the last one */
+    fake_state[fake_state.length-1] = 1;
+    const cp1 = await replay.encode_checkpoint(0, 0, IMG_STR, fake_state);
+    expect(cp1.header_info.length).toBe(20);
+    expect(replay.block_index.length()).toBe(2);
+    expect(replay.superblock_index.length()).toBe(2);
+    expect(cp1.superblock_seq.length).toBe(2);
+    expect(cp1.superblock_seq).toEqual(Uint32Array.from([0,1]));
+    fake_state[fake_state.length-1] = 2;
+    const cp2 = await replay.encode_checkpoint(1, 1, IMG_STR, fake_state);
+    expect(replay.block_index.length()).toBe(3);
+    expect(replay.superblock_index.length()).toBe(3);
+    expect(cp2.superblock_seq.length).toBe(2);
+    expect(cp2.superblock_seq).toEqual(Uint32Array.from([0,2]));
+  });
+  it("decode", async () => {
+    const replay = await Replay.create("123456789abcdef123456789abcdef", ReplayMode.Inactive);
+    const header = [
+      0,0,0,0,
+      0,0,0,0,
+      0,0,0,0,
+      4,0,0,0,
+      1,2,3,4,
+    ];
+    const fake_state = new Uint8Array(16+256*256*2);
+    fake_state.set(header);
+    /* all 0s except the last byte */
+    fake_state[fake_state.length-1] = 1;
+    const cp1 = await replay.encode_checkpoint(0, 0, IMG_STR, fake_state);
+    const state_at_cp1 = fake_state.slice().buffer;
+    fake_state[fake_state.length-1] = 2;
+    const cp2 = await replay.encode_checkpoint(1, 1, IMG_STR, fake_state);
+    const state_at_cp2 = fake_state.slice().buffer;
+    fake_state[fake_state.length-1] = 4;
+    expect(replay.block_index.length()).toBe(3);
+    expect(replay.superblock_index.length()).toBe(3);
+    const out_state_1 = await replay.restore_checkpoint(cp1.header_info, cp1.superblock_seq);
+    expect(out_state_1).toEqual(state_at_cp1);
+    const out_state_2 = await replay.restore_checkpoint(cp2.header_info, cp2.superblock_seq);
+    expect(out_state_2).toEqual(state_at_cp2);
+  });
+  it("roundtrip", async () => {
+    const replay = await Replay.create("123456789abcdef123456789abcdef", ReplayMode.Inactive);
+    const header = [
+      0,0,0,0,
+      0,0,0,0,
+      0,0,0,0,
+      4,0,0,0,
+      1,2,3,4,
+    ];
+    const fake_state = new Uint8Array(16+4+256*256*2);
+    fake_state.set(header);
+    /* all 0s except the last one */
+    fake_state[fake_state.length-1] = 1;
+    const cp1 = await replay.encode_checkpoint(0, 0, IMG_STR, fake_state);
+    fake_state[fake_state.length-1] = 2;
+    const cp2 = await replay.encode_checkpoint(1, 1, IMG_STR, fake_state);
+    const ser = await replay.serialize();
+    const replay2 = await Replay.deserialize(ser);
+    expect(cp1.header_info).toEqual(replay2.checkpoints[0].header_info);
+    expect(cp1.superblock_seq).toEqual(replay2.checkpoints[0].superblock_seq);
+    expect(cp1.new_blocks).toEqual(replay2.checkpoints[0].new_blocks);
+    expect(cp1.new_superblocks).toEqual(replay2.checkpoints[0].new_superblocks);
+    expect(cp2.header_info).toEqual(replay2.checkpoints[1].header_info);
+    expect(cp2.superblock_seq).toEqual(replay2.checkpoints[1].superblock_seq);
+    expect(cp2.new_blocks).toEqual(replay2.checkpoints[1].new_blocks);
+    expect(cp2.new_superblocks).toEqual(replay2.checkpoints[1].new_superblocks);
+    expect(replay.block_index.get(0)).toEqual(replay2.block_index.get(0));
+    expect(replay.block_index.get(1)).toEqual(replay2.block_index.get(1));
+    expect(replay.block_index.get(2)).toEqual(replay2.block_index.get(2));
+    expect(replay.superblock_index.get(0)).toEqual(replay2.superblock_index.get(0));
+    expect(replay.superblock_index.get(1)).toEqual(replay2.superblock_index.get(1));
   });
 }

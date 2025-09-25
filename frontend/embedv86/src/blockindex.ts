@@ -45,6 +45,9 @@ export class BlockIndex {
     return undefined;
   }
   public async insert(object:Uint8Array, frame:number): Promise<InsertResult> {
+    if (object.length != this.object_size) {
+      throw "object too large";
+    }
     const hash = await xxhash128(new Uint32Array(object.buffer, object.byteOffset, object.byteLength / 4));
     const bucket = this.index[hash];
     if (bucket == undefined) {
