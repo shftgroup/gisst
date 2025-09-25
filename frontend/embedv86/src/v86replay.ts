@@ -73,7 +73,9 @@ export class Replay {
     const superblock_byte_size = (this.superblock_index.object_size/4) * block_byte_size;
     /* TODO reuse this allocation across calls */
     const header_info_length = header_info.length;
-    const state = new Uint8Array(header_info_length + superblock_seq.length * superblock_byte_size);
+    const full_size = header_info_length + superblock_seq.length * superblock_byte_size;
+    const buffer = new ArrayBuffer(full_size, {maxByteLength:full_size});
+    const state = new Uint8Array(buffer);
     state.set(header_info, 0);
     for (let i = 0; i < superblock_seq.length; i++) {
       const superblock_idx = superblock_seq[i];
@@ -86,7 +88,8 @@ export class Replay {
         state.set(this.block_index.get(block_idx), byte_offset);
       }
     }
-    return state.buffer;
+    buffer.resize((new Uint32Array(buffer))[2]);
+    return buffer;
   }
   async reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86):Promise<Checkpoint[]> {
     const checkpoint = this.checkpoints[n];
@@ -163,7 +166,7 @@ export class Replay {
     const header_block = new Int32Array(state.buffer, state.byteOffset, 4);
     const info_block_len = header_block[STATE_INDEX_INFO_LEN];
     const info_block_buffer = state.slice(0, STATE_INFO_BLOCK_START + info_block_len);
-    state = state.subarray(16+info_block_buffer.length);
+    state = state.subarray(STATE_INFO_BLOCK_START + info_block_len);
     const state_size = state.length;
     const block_byte_size = this.block_index.object_size;
     const superblock_block_count = this.superblock_index.object_size/4;
@@ -189,7 +192,7 @@ export class Replay {
             block_buf.set(state.subarray(block_start, block_end));
             result = await this.block_index.insert(block_buf, time);
           } else {
-            result = await this.block_index.insert(state.subarray(block_start, block_end), time);
+            result = await this.block_index.insert(state.slice(block_start, block_end), time);
           }
           if (result.is_new) {
             // new block; output or add to a list

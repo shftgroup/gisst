@@ -87,8 +87,8 @@ export class EmbedV86 {
       this.config.stop_replay();
     }
     this.config.register_replay("replay"+this.replays.length.toString());
-    this.active_replay = this.replays.length;
     this.replays.push(await Replay.start_recording(this.emulator));
+    this.active_replay = this.replays.length-1;
     // console.log("add initial checkpoints");
     this.config.replay_checkpoints_changed(this.replays[this.replays.length-1].checkpoints,[]);
   }
@@ -116,9 +116,9 @@ export class EmbedV86 {
       await this.replays[this.active_replay].stop(this.emulator);
       this.config.stop_replay();
     }
-    this.active_replay = n;
     console.log(this.replays[n].checkpoints);
     await this.replays[n].start_playback(this.emulator);
+    this.active_replay = n;
     this.config.replay_checkpoints_changed(this.replays[n].checkpoints,[]);
   }
   async download_file(category:"state" | "save" | "replay", file_name:string):Promise<[Blob,string]> {
