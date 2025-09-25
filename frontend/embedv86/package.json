@@ -17,9 +17,10 @@
   "types": "./dist/embedv86.d.ts",
   "scripts": {
     "dev": "vite",
-    "check": "tsc && eslint src && vitest --run",
+    "check": "tsc && eslint src",
     "build": "tsc && vite build && shx cp dist/embedv86.d.ts dist/embedv86.umd.d.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "tsc && eslint src && vitest --run"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.12.2",
