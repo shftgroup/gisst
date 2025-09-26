@@ -119,11 +119,10 @@ export class EmbedV86 {
     console.log(this.replays[n].checkpoints);
     await this.replays[n].start_playback(this.emulator);
     this.active_replay = n;
-    this.config.replay_checkpoints_changed(this.replays[n].checkpoints,[]);
   }
   async download_file(category:"state" | "save" | "replay", file_name:string):Promise<[Blob,string]> {
     if(category == "state") {
-      const checkpoint_matches = file_name.match(/replay([0-9]+)-check([0-9]+)/);
+      const checkpoint_matches = file_name.match(/replay([0-9a-f-]+)-state([0-9]+)/);
       if(checkpoint_matches != null) {
         const replay_idx = parseInt(checkpoint_matches[1],10);
         const checkpoint_idx = parseInt(checkpoint_matches[2],10);
@@ -195,6 +194,7 @@ export class EmbedV86 {
       const replay = await Replay.deserialize(replay_data);
       console.log(replay.id,replay.events.length,replay.checkpoints.length);
       this.config.register_replay("replay"+this.replays.length.toString());
+      this.config.replay_checkpoints_changed(replay.checkpoints,[]);
       this.replays.push(replay);
     }
     let content_json;

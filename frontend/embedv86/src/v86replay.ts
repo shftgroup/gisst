@@ -166,6 +166,8 @@ export class Replay {
     const header_block = new Int32Array(state.buffer, state.byteOffset, 4);
     const info_block_len = header_block[STATE_INDEX_INFO_LEN];
     const info_block_buffer = state.slice(0, STATE_INFO_BLOCK_START + info_block_len);
+    // const infos = JSON.parse(new TextDecoder().decode(info_block_buffer.slice(STATE_INFO_BLOCK_START)));
+    // console.log(infos);
     state = state.subarray(STATE_INFO_BLOCK_START + info_block_len);
     const state_size = state.length;
     const block_byte_size = this.block_index.object_size;
@@ -208,7 +210,7 @@ export class Replay {
       }
       superblock_seq[i] = super_result.index;
     }
-    const checkpoint = new Checkpoint(time, "replay"+this.id+"-check"+this.checkpoints.length.toString(), event_index, info_block_buffer, new_blocks, new_superblocks, superblock_seq, screenshot);
+    const checkpoint = new Checkpoint(time, "replay"+this.id+"-state"+this.checkpoints.length.toString(), event_index, info_block_buffer, new_blocks, new_superblocks, superblock_seq, screenshot);
     this.checkpoints.push(checkpoint);
     return checkpoint;
   }
@@ -527,7 +529,7 @@ export class Replay {
       }
       const event_index = view.getUint32(x, true);
       x += 4;
-      const name = "check" + i.toString();
+      const name = "replay"+id+"-state" + i.toString();
       const thumb_len = view.getUint32(x, true);
       x += 4;
       const thumb_bytes = new Uint8Array(thumb_len);

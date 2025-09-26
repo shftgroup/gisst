@@ -64,16 +64,18 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       "activate_save": (_savefile) => {},
       "create_save": () => {},
       "load_state":(n:number) => {
-        // get the replay of state n
-        // if it's not the same as the active replay we have to do something
-        const replay = state_to_replay[n];
-        if(replay !== v86.active_replay) {
-          v86.stop_replay();
-          if(replay !== null) {
-            v86.play_replay_slot(replay);
+        (async () => {
+          // get the replay of state n
+          const replay = state_to_replay[n];
+          // if it's not the same as the active replay we have to do something
+          if(replay !== v86.active_replay) {
+            await v86.stop_replay();
+            if(replay !== null) {
+              await v86.play_replay_slot(replay);
+            }
           }
-        }
-        v86.load_state_slot(n);
+          await v86.load_state_slot(n);
+        })();
       },
       "save_state":() => {
         v86.save_state()
@@ -162,30 +164,33 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       } else {
         ui_state.newReplay(nom, nom);
       }
-      //ui_state.setReplayMode(UIReplayMode.Record);
     },
     stop_replay:()=>{
     },
-    states_changed:(added:StateInfo[], removed:StateInfo[]) => {
-      for(const si of removed) {
-        ui_state.removeState(si.name);
-      }
+    states_changed:(added:StateInfo[], _removed:StateInfo[]) => {
       for(const si of added) {
         if(entry_state && si.name == "state0") {
           si.thumbnail = entry_screenshot!;
           const data = (start as StateStart).data;
           ui_state.newState(si.name, si.thumbnail, "init", data);
-          state_to_replay.push(v86.active_replay);
+          state_to_replay.push(null);
         } else {
-          ui_state.newState(si.name,si. thumbnail, String(v86.active_replay));
-          state_to_replay.push(v86.active_replay);
+          ui_state.newState(si.name,si. thumbnail, "no replay");
         }
       }
     },
-    replay_checkpoints_changed:(added:StateInfo[], _removed:StateInfo[]) => {
+    replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
+      for(const si of removed) {
+        ui_state.removeState(si.name);
+      }
       for(const si of added) {
-        ui_state.newState(si.name,si.thumbnail,String(v86.active_replay));
-        state_to_replay.push(v86.active_replay);
+        const checkpoint_matches = si.name.match(/replay([0-9a-f-]+)-state([0-9]+)/);
+        if (checkpoint_matches == null) {
+          throw "added checkpoint with bad name format";
+        }
+        const replay_idx = v86.replays.findIndex((elt) => elt.id == checkpoint_matches[1]);
+        ui_state.newState(si.name,si.thumbnail,"replay"+String(replay_idx));
+        state_to_replay.push(replay_idx);
       }
     },
   });
