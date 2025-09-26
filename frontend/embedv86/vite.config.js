@@ -21,5 +21,11 @@ export default defineConfig({
     external: [],
     output: {globals:{}},
   },
+  test: {
+    includeSource: ['src/**/*.{js,ts}'],
+  },
+  define: {
+    'import.meta.vitest': 'undefined'
+  }
 })
 
