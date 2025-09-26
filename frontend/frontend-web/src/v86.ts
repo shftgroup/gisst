@@ -70,7 +70,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
           // if it's not the same as the active replay we have to do something
           if(replay !== v86.active_replay) {
             await v86.stop_replay();
-            if(replay !== null) {
+            if(replay != null) {
               await v86.play_replay_slot(replay);
             }
           }

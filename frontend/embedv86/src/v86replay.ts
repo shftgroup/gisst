@@ -1,4 +1,5 @@
 import {BlockIndex} from './blockindex';
+import {memcmp} from './utils';
 
 export enum Evt {
   KeyCode = 0,
@@ -59,6 +60,7 @@ export class Replay {
   superblock_index!: BlockIndex;
   block_index!: BlockIndex;
   version:number=REPLAY_VERSION;
+  last_state?:Uint8Array;
 
   public static async create(id:string, mode:ReplayMode) : Promise<Replay> {
     const ths = new Replay();
@@ -73,8 +75,8 @@ export class Replay {
     const superblock_byte_size = (this.superblock_index.object_size/4) * block_byte_size;
     /* TODO reuse this allocation across calls */
     const header_info_length = header_info.length;
-    const full_size = header_info_length + superblock_seq.length * superblock_byte_size;
-    const buffer = new ArrayBuffer(full_size, {maxByteLength:full_size});
+    const full_size = (new Uint32Array(header_info.buffer,0,4))[2];
+    const buffer = new ArrayBuffer(full_size);
     const state = new Uint8Array(buffer);
     state.set(header_info, 0);
     for (let i = 0; i < superblock_seq.length; i++) {
@@ -85,10 +87,19 @@ export class Replay {
       for (let j = 0; j < superblock_sz; j++) {
         const block_idx = superblock[j];
         const byte_offset = header_info_length + i * superblock_byte_size + j * block_byte_size;
-        state.set(this.block_index.get(block_idx), byte_offset);
+        if (byte_offset >= state.byteLength) {
+          break;
+        }
+        const block = this.block_index.get(block_idx);
+        if (byte_offset + block_byte_size > state.byteLength) {
+          state.set(block.subarray(0, state.byteLength - byte_offset), byte_offset);
+          break;
+        } else {
+          state.set(block, byte_offset);
+        }
       }
     }
-    buffer.resize((new Uint32Array(buffer))[2]);
+    this.last_state = state.slice(header_info_length);
     return buffer;
   }
   async reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86):Promise<Checkpoint[]> {
@@ -180,13 +191,20 @@ export class Replay {
     const block_buf = new Uint8Array(block_byte_size);
     const new_blocks = [];
     const new_superblocks = [];
+    const start = performance.now();
+    const USE_MEMCMP = true;
     for (let i = 0; i < superblock_count; i++) {
       const superblock_offset = i * superblock_byte_size;
       for (let j = 0; j < superblock_block_count; j++) {
         const block_start = superblock_offset + j * block_byte_size;
         const block_end = Math.min(block_start + block_byte_size, state_size);
-        if (block_start > state_size) {
+        if (block_start >= state_size) {
           superblock_buf[j] = 0;
+        } else if (USE_MEMCMP && this.last_state && memcmp(this.last_state.subarray(block_start, block_end), state.subarray(block_start, block_end))) {
+          const old_super = this.checkpoints[this.checkpoints.length-1].superblock_seq[i];
+          const old_super_contents = this.superblock_index.get(old_super);
+          superblock_buf[j] = old_super_contents[j];
+          continue;
         } else {
           let result;
           if(block_start + block_byte_size > state_size) {
@@ -212,6 +230,10 @@ export class Replay {
     }
     const checkpoint = new Checkpoint(time, "replay"+this.id+"-state"+this.checkpoints.length.toString(), event_index, info_block_buffer, new_blocks, new_superblocks, superblock_seq, screenshot);
     this.checkpoints.push(checkpoint);
+    if (USE_MEMCMP) {
+      this.last_state = state;
+    }
+    console.log("DT",performance.now()-start);
     return checkpoint;
   }
   async make_checkpoint(emulator:V86) {
@@ -579,6 +601,7 @@ export class Replay {
         r.checkpoints.push(new Checkpoint(when, name, event_index, info.slice(), new_blocks, new_superblocks, superblock_seq.slice(), thumb));
       }
     }
+    r.last_state = undefined;
     r.index = 0;
     r.checkpoint_index = 0;
     r.last_time = 0;
@@ -691,7 +714,7 @@ if (import.meta.vitest) {
     fake_state.set(header);
     /* all 0s except the last one */
     fake_state[fake_state.length-1] = 1;
-    const cp1 = await replay.encode_checkpoint(0, 0, IMG_STR, fake_state);
+    const cp1 = await replay.encode_checkpoint(0, 0, IMG_STR, fake_state.slice());
     expect(cp1.header_info.length).toBe(20);
     expect(replay.block_index.length()).toBe(2);
     expect(replay.superblock_index.length()).toBe(2);
@@ -709,7 +732,7 @@ if (import.meta.vitest) {
     const header = [
       0,0,0,0,
       0,0,0,0,
-      0,0,0,0,
+      20,0,2,0,
       4,0,0,0,
       1,2,3,4,
     ];
@@ -717,10 +740,10 @@ if (import.meta.vitest) {
     fake_state.set(header);
     /* all 0s except the last byte */
     fake_state[fake_state.length-1] = 1;
-    const cp1 = await replay.encode_checkpoint(0, 0, IMG_STR, fake_state);
+    const cp1 = await replay.encode_checkpoint(0, 0, IMG_STR, fake_state.slice());
     const state_at_cp1 = fake_state.slice().buffer;
     fake_state[fake_state.length-1] = 2;
-    const cp2 = await replay.encode_checkpoint(1, 1, IMG_STR, fake_state);
+    const cp2 = await replay.encode_checkpoint(1, 1, IMG_STR, fake_state.slice());
     const state_at_cp2 = fake_state.slice().buffer;
     fake_state[fake_state.length-1] = 4;
     expect(replay.block_index.length()).toBe(3);
@@ -735,7 +758,7 @@ if (import.meta.vitest) {
     const header = [
       0,0,0,0,
       0,0,0,0,
-      0,0,0,0,
+      20,0,2,0,
       4,0,0,0,
       1,2,3,4,
     ];
@@ -743,9 +766,9 @@ if (import.meta.vitest) {
     fake_state.set(header);
     /* all 0s except the last one */
     fake_state[fake_state.length-1] = 1;
-    const cp1 = await replay.encode_checkpoint(0, 0, IMG_STR, fake_state);
+    const cp1 = await replay.encode_checkpoint(0, 0, IMG_STR, fake_state.slice());
     fake_state[fake_state.length-1] = 2;
-    const cp2 = await replay.encode_checkpoint(1, 1, IMG_STR, fake_state);
+    const cp2 = await replay.encode_checkpoint(1, 1, IMG_STR, fake_state.slice());
     const ser = await replay.serialize();
     const replay2 = await Replay.deserialize(ser);
     expect(cp1.header_info).toEqual(replay2.checkpoints[0].header_info);

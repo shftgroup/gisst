@@ -1,12 +1,10 @@
 export function memcmp(a:Uint8Array, b:Uint8Array) : boolean {
-  const a32 = new Uint32Array(a.buffer, a.byteOffset, a.byteLength/4);
-  const b32 = new Uint32Array(b.buffer, b.byteOffset, b.byteLength/4);
-  const sz = a32.length;
-  if (sz != b32.length) {
+  const sz = a.length;
+  if (sz != b.length) {
     return false;
   }
   for (let i = 0; i < sz; i++) {
-    if (a32[i] != b32[i]) {
+    if (a[i] != b[i]) {
       return false;
     }
   }
