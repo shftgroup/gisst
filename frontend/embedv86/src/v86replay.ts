@@ -108,10 +108,8 @@ export class Replay {
     const state = await this.restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
     await emulator.restore_state(state);
     this.seek_internal(checkpoint.event_index, checkpoint.when);
-    console.log("time check:",emulator.get_instruction_counter(),this.last_time,checkpoint.when);
     const dropped_checkpoints = mode == ReplayMode.Record ? this.checkpoints.slice(this.checkpoint_index) : [];
     this.resume(mode, emulator);
-    console.log("time check B:",emulator.get_instruction_counter(),this.last_time,checkpoint.when);
     if (dropped_checkpoints.length) {
       this.block_index.remove_after(checkpoint.when);
       this.superblock_index.remove_after(checkpoint.when);
@@ -177,8 +175,6 @@ export class Replay {
     const header_block = new Int32Array(state.buffer, state.byteOffset, 4);
     const info_block_len = header_block[STATE_INDEX_INFO_LEN];
     const info_block_buffer = state.slice(0, STATE_INFO_BLOCK_START + info_block_len);
-    // const infos = JSON.parse(new TextDecoder().decode(info_block_buffer.slice(STATE_INFO_BLOCK_START)));
-    // console.log(infos);
     state = state.subarray(STATE_INFO_BLOCK_START + info_block_len);
     const state_size = state.length;
     const block_byte_size = this.block_index.object_size;
