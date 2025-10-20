@@ -166,7 +166,6 @@ export class Replay {
   }
   log_evt(emulator:V86, code:Evt, val:object|number) {
     if(this.mode == ReplayMode.Record) {
-      //console.log("R",this.replay_time(emulator.get_instruction_counter()), EvtNames[code], val);
       this.events.push(new ReplayEvent(this.replay_time(emulator.get_instruction_counter()), code, val));
       this.index += 1;
     }
@@ -187,7 +186,6 @@ export class Replay {
     const block_buf = new Uint8Array(block_byte_size);
     const new_blocks = [];
     const new_superblocks = [];
-    const start = performance.now();
     const USE_MEMCMP = true;
     for (let i = 0; i < superblock_count; i++) {
       const superblock_offset = i * superblock_byte_size;
@@ -229,11 +227,9 @@ export class Replay {
     if (USE_MEMCMP) {
       this.last_state = state;
     }
-    console.log("DT",performance.now()-start);
     return checkpoint;
   }
   async make_checkpoint(emulator:V86) {
-    // console.log("make cp",this.replay_time(emulator.get_instruction_counter()),this.index,this.checkpoints.length);
     const state = new Uint8Array(await emulator.save_state());
     const time = this.replay_time(emulator.get_instruction_counter());
     const screenshot = emulator.screen_make_screenshot();
@@ -537,7 +533,7 @@ export class Replay {
       const when_b = view.getBigUint64(x, true);
       x += 8;
       if (when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
-        console.log("cc", when_b);
+        console.log(when_b);
         throw "When is too big";
       }
       const when = Number(when_b);
