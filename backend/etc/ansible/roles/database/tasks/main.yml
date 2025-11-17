@@ -1,0 +1,55 @@
+---
+- name: Install postgres
+  apt:
+    state: latest
+    update_cache: yes
+    name:
+      - postgresql-16
+      - postgresql-client-16
+      - python3-psycopg2
+  notify: postgres-restart
+- name: Create GISST DB
+  become_user: "{{ db_user_admin }}"
+  become: yes
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+- name: Add metrics reader user
+  become_user: "{{ db_user_admin }}"
+  community.postgresql.postgresql_user:
+    name: "{{ db_user_read }}"
+    password: "{{ db_user_read_password }}"
+- name: Add metrics reader to pg_monitor group
+  become_user: "{{ db_user_admin }}"
+  community.postgresql.postgresql_membership:
+    login_db: "{{ db_name }}"
+    target_roles: [ "{{ db_user_read }}" ]
+    groups: [ "pg_monitor", "pg_read_all_data" ]
+- name: GRANT USAGE ON SCHEMA public to reader
+  become_user: "{{ db_user_admin }}"
+  community.postgresql.postgresql_privs:
+    login_db: "{{ db_name }}"
+    role: "{{ db_user_read }}"
+    privs: USAGE
+    type: schema
+    objs: public
+- name: GRANT SELECT ON ALL TABLES IN SCHEMA public
+  become_user: "{{ db_user_admin }}"
+  community.postgresql.postgresql_privs:
+    login_db: "{{ db_name }}"
+    role: "{{ db_user_read }}"
+    privs: SELECT
+    objs: ALL_IN_SCHEMA
+- name: GRANT SELECT ON DATABASE "{{ db_name }}"
+  become_user: "{{ db_user_admin }}"
+  community.postgresql.postgresql_privs:
+    login_db: "{{ db_name }}"
+    role: "{{ db_user_read }}"
+    privs: SELECT
+    objs: ALL_IN_SCHEMA
+- name: Allow connections by "{{ db_user_read }}" from sources
+  community.postgresql.postgresql_pg_hba:
+    dest: /etc/postgresql/16/main/pg_hba.conf
+    rules: "{{ db_user_read_hba_rules }}"
+  notify: postgres-restart
+#- name: Open UFW for remote reads from sources
+#  community.general.ufw:

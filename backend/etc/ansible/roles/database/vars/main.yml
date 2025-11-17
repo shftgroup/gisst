@@ -1,0 +1,17 @@
+---
+db_name: gisstdb
+db_host: localhost
+db_user_admin: postgres
+db_user_read: metrics
+# db_user_read_password: define in vault
+db_user_read_hba_rules:
+  - address: "127.0.0.1/32"
+    contype: host
+    databases: all
+    method: "scram-sha-256"
+    users: "{{ db_user_read }}"
+  - address: "172.17.0.0/16"
+    contype: host
+    databases: all
+    method: "scram-sha-256"
+    users: "{{ db_user_read }}"
