@@ -23,7 +23,7 @@ env_logger = "0.11.8"
 futures = "0.3.28"
 log = "0.4.17"
 md5 = "0.7.0"
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "macros"], default-features=false }
+sqlx = { version = "0.8", features = ["migrate", "runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "macros"], default-features=false }
 minijinja = {version= "2.9.0", features=["builtins", "macros", "json", "loader", "urlencode"]}
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.159", features = ["derive"] }

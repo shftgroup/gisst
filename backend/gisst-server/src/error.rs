@@ -16,6 +16,8 @@ use uuid::Uuid;
 pub enum ServerError {
     #[error("database error")]
     Sql(#[from] sqlx::Error),
+    #[error("database migration error")]
+    SqlMigration(#[from] sqlx::migrate::MigrateError),
     #[error("search index error")]
     SearchIndex(#[from] gisst::error::SearchIndex),
     #[error("search error")]
@@ -109,6 +111,10 @@ impl IntoResponse for ServerError {
         let error_template = env.get_template("error.html").unwrap();
         let (status, message) = match self {
             ServerError::Sql(_) => (StatusCode::INTERNAL_SERVER_ERROR, "database error"),
+            ServerError::SqlMigration(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "database migration error",
+            ),
             ServerError::IO(_) => (StatusCode::INTERNAL_SERVER_ERROR, "IO error"),
             ServerError::Storage(_) => (StatusCode::INTERNAL_SERVER_ERROR, "storage error"),
             ServerError::RecordManipulation(_) => (
