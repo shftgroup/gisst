@@ -309,11 +309,11 @@ pub async fn creation(
     );
 
     let file_info = FileInformation {
-        source_filename: filename.to_string(),
+        source_filename: filename.clone(),
         source_path: String::new(),
         dest_filename: StorageHandler::get_dest_filename(hash, filename),
         dest_path: dest_path.to_string_lossy().to_string(),
-        file_hash: hash.to_string(),
+        file_hash: hash.clone(),
         file_compressed_size: None,
         file_size: 0,
     };

@@ -121,9 +121,9 @@ async fn main() -> Result<(), IngestError> {
         .filter_level(verbose.log_level_filter())
         .init();
     info!("Connecting to database: {gisst_cli_db_url}");
-    let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.to_string()).await?);
+    let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.clone()).await?);
     info!("DB connection successful.");
-    let storage_root = gisst_storage_root_path.to_string();
+    let storage_root = gisst_storage_root_path.clone();
     info!("Storage root is set to: {}", &storage_root);
     let mut base_conn = pool.begin().await?;
     let ra_cfg_object_id = insert_file_object(
@@ -264,7 +264,7 @@ async fn main() -> Result<(), IngestError> {
                             &roms,
                             instance_id,
                             &path,
-                            Some(stem.to_string()),
+                            Some(stem.clone()),
                         )
                         .await?;
                     }
@@ -313,7 +313,7 @@ async fn main() -> Result<(), IngestError> {
                                 &roms,
                                 instance_id,
                                 &path,
-                                Some(stem.to_string()),
+                                Some(stem),
                             )
                             .await
                             .expect("Create_single_file_instance_objects failed for force-added record");

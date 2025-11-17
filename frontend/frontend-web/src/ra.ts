@@ -201,23 +201,23 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         await resp.text();
         if (sz > 0 && sz <= 16*1024*1024) {
           const data = await (await fetch(content_url)).arrayBuffer();
-          module.FS.createPath("/",download_source_path, true, true);
-          module.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
+          RA.FS.createPath("/",download_source_path, true, true);
+          RA.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
         } else {
           const content_url_encoded = encodeURI(file.file_dest_path);
           fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
         }
       }
       console.log("Place fetch manifest",fetch_manifest);
-      module.FS.createDataFile("/mem", "fetch.txt", enc.encode(fetch_manifest), true, true, true);
+      RA.FS.createDataFile("/mem", "fetch.txt", enc.encode(fetch_manifest), true, true, true);
       if (entryState) {
-        module.FS.createDataFile(state_dir, content_base + ".state1.entry", state_data, true, true, true);
-        module.FS.createDataFile(state_dir, content_base + ".state1", state_data, true, true, true);
+        RA.FS.createDataFile(state_dir, content_base + ".state1.entry", state_data, true, true, true);
+        RA.FS.createDataFile(state_dir, content_base + ".state1", state_data, true, true, true);
       }
       if (movie) {
         const data = (start as ReplayStart).data;
         console.log(data, "/storage/"+data.file_dest_path,state_dir + "/" + content_base + ".replay1");
-        module.FS.createPath("/", state_dir, true, true);
+        RA.FS.createPath("/", state_dir, true, true);
         RA.FS.createDataFile(state_dir, content_base + ".replay1", replay, true, true, false);
       }
       for (const [data, savefile] of save_data) {
@@ -244,7 +244,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
       }
       const lines_enc = enc.encode(ra_cfg_text);
-      module.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);
+      RA.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);
       if (entryState) {
         const data = (start as StateStart).data;
         seen_states[content_base+".state1"] = (entryScreenshot as GISSTModels.Screenshot).screenshot_data;
@@ -261,6 +261,10 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         seen_saves.push(save.save_id+".srm");
         ui_state.newSave(save.save_id+".srm", "init", save);
       }
+      // This is a really gross workaround for an emscripten wasmfs
+      // bug where the file is allocated but only the first few
+      // hundred bytes are written.
+      RA.FS.readFile("/mem/retroarch.cfg");
       retroReady();
     });
 }
@@ -277,14 +281,15 @@ function retroReady(): void {
     function () {
       const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
       prev.classList.add("hidden");
+      canv.classList.remove("hidden");
       RA.startRetroArch(canv, retro_args, function () {
         setInterval(checkChangedStatesAndSaves, FS_CHECK_INTERVAL);
         setInterval(autosave_state, AUTO_STATE_INTERVAL);
-        canv.classList.remove("hidden");
         window.RA = RA;
         window.UI = ui_state;
         window.DB = db;
       });
+
       return false;
     });
 }

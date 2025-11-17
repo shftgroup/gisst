@@ -265,7 +265,7 @@ impl StorageHandler {
                 .to_string_lossy()
                 .to_string(),
             dest_filename: save_filename,
-            file_hash: hash_string.to_string(),
+            file_hash: hash_string.clone(),
             file_size,
             file_compressed_size,
         })

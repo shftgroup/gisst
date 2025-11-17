@@ -48,9 +48,9 @@ async fn main() -> Result<(), GISSTCliError> {
         "Connecting to database: {}",
         cli_config.database.database_url
     );
-    let db: PgPool = get_db_by_url(cli_config.database.database_url.to_string()).await?;
+    let db: PgPool = get_db_by_url(cli_config.database.database_url.clone()).await?;
     info!("DB connection successful.");
-    let storage_root = cli_config.storage.root_folder_path.to_string();
+    let storage_root = cli_config.storage.root_folder_path.clone();
     info!(
         "Storage root is set to: {}",
         cli_config.storage.root_folder_path

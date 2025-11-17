@@ -30,9 +30,11 @@ window.onload = async function() {
       canv.style.width = new_w;
       canv.style.height = new_h;
     }
-  })
-  ro.observe(canv);
-  ro.observe(container);
+  });
+  if(kind == "v86") {
+    ro.observe(canv);
+    ro.observe(container);
+  }
 
   canv.style.touchAction = "none";
   canv.addEventListener("touchstart", touchHandler, true);
