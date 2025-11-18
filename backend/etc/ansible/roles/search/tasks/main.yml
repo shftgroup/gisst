@@ -1,0 +1,5 @@
+---
+- name: Install meilisearch
+  include_role:
+    name: joeosborn.meilisearch
+# Nothing more needs to be done!

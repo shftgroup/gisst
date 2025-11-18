@@ -3,6 +3,6 @@
   hosts: localhost
   become: yes
   gather_facts: yes
-  tasks:
-    - import_role:
-        name: database
+  roles:
+    - database
+    - search
