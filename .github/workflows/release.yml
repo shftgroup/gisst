@@ -48,12 +48,18 @@ jobs:
     - name: Build rust binaries
       run: cargo build --all-targets --release
       working-directory: backend
+    - name: Rename rust binaries
+      run: |
+        cp backend/target/release/gisst-cli gisst-cli-linux-${{ runner.arch }}
+        cp backend/target/release/gisst-server gisst-server-linux-${{ runner.arch }}
+        cp backend/target/release/ingest ingest-linux-${{ runner.arch }}
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
+        fail_on_unmatched_files: true
         files: |
           backend/v86dump.js
-          backend/target/release/gisst-cli-linux-${{ runner.arch }}
-          backend/target/release/gisst-server-linux-${{ runner.arch }}
-          backend/target/release/ingest-linux-${{ runner.arch }}
+          gisst-cli-linux-${{ runner.arch }}
+          gisst-server-linux-${{ runner.arch }}
+          ingest-linux-${{ runner.arch }}
           backend/frontend-assets.tgz
