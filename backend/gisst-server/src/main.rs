@@ -28,6 +28,9 @@ use opentelemetry_semantic_conventions::{
     attribute::{DEPLOYMENT_ENVIRONMENT_NAME, SERVICE_NAME, SERVICE_NAMESPACE, SERVICE_VERSION},
 };
 use tracing_subscriber::layer::SubscriberExt;
+
+const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
+
 fn resource() -> Resource {
     Resource::builder()
         .with_schema_url(
@@ -87,6 +90,14 @@ fn init_metrics(config: &ServerConfig) -> Result<SdkMeterProvider, anyhow::Error
 #[tokio::main]
 #[tracing::instrument(name = "main")]
 async fn main() -> Result<()> {
+    if std::env::args()
+        .nth(1)
+        .as_ref()
+        .is_some_and(|s| s == "-v" || s == "--version")
+    {
+        println!("gisst-server {}", VERSION.unwrap_or("unknown"));
+        return Ok(());
+    }
     let config = serverconfig::ServerConfig::new()?;
 
     // Setup the tracer and logging
