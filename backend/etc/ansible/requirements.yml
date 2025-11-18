@@ -4,3 +4,5 @@ roles:
     src: https://github.com/joeosborn/ansible-role-meilisearch
     version: main
     scm: git
+  - name: geerlingguy.nodejs
+    version: 7.0.0

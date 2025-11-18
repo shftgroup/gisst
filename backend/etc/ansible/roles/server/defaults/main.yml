@@ -1,0 +1,30 @@
+---
+# in testing or production environment, a version number or 'latest'
+# in development environment, a git branch name or commit
+gisst_server_version: latest
+
+# development only
+gisst_server_dev_cargo_features: ""
+
+# service
+gisst_server_user: gisst
+gisst_server_group: gisst
+gisst_server_home: /var/lib/gisst/
+gisst_server_config_dir: /etc/gisst/
+
+# details
+gisst_server_storage_dir: "{{ gisst_server_home }}/storage"
+gisst_server_environment: production
+gisst_server_temp_dir: "{{ gisst_server_home }}/tmp"
+gisst_server_storage_dir_depth: 4
+
+# http
+gisst_server_terminate_ssl: no
+gisst_server_bind_address: "0.0.0.0"
+gisst_server_bind_port: 3000
+gisst_server_host_name: "localhost"
+gisst_server_base_url: "{{ gisst_server_host_name }}"
+
+# auth
+# gisst_server_google_client_id: define in vault
+# gisst_server_google_client_secret: define in vault

@@ -9,10 +9,10 @@ db_user_read_hba_rules:
     contype: host
     databases: all
     method: "scram-sha-256"
-    users: "{{ db_user_read }}"
-  - address: "172.17.0.0/16"
-    contype: host
-    databases: all
-    method: "scram-sha-256"
-    users: "{{ db_user_read }}"
-server_load_examples: true
+    users: all
+# example: read from docker bridge
+  # - address: "172.17.0.0/16"
+  #   contype: host
+  #   databases: all
+  #   method: "scram-sha-256"
+  #   users: "{{ db_user_read }}"
