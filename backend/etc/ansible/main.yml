@@ -1,6 +1,6 @@
 ---
 - name: Test playbook
-  hosts: localhost
+  hosts: testing
   become: yes
   gather_facts: yes
   roles:
