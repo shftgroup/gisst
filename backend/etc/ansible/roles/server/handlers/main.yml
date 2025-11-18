@@ -1,0 +1,28 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+- name: Rebuild gisst-server
+  block:
+    - name: Build GISST binaries
+      ansible.builtin.command:
+        chdir: "{{ gisst_server_home }}/release/backend"
+        cmd: "cargo build --all-targets --features {{ gisst_server_dev_cargo_features }}"
+    - name: Copy GISST binaries
+      copy:
+        src: "{{ item }}"
+        dest: "{{ gisst_server_home }}/"
+      loop:
+          - "{{ gisst_server_home }}/release/backend/target/debug/gisst-cli"
+          - "{{ gisst_server_home }}/release/backend/target/debug/gisst-server"
+          - "{{ gisst_server_home }}/release/backend/target/debug/ingest"
+          - "{{ gisst_server_home }}/release/backend/v86dump"
+      notify: Restart gisst-server
+    - name: Copy GISST default config
+      copy:
+        src: "{{ gisst_server_home }}/release/backend/config/default.toml"
+        dest: "{{ gisst_config_dir }}/config/default.toml"
+- name: Restart gisst-server
+  ansible.builtin.systemd_service:
+    name: gisst-server
+    state: restarted

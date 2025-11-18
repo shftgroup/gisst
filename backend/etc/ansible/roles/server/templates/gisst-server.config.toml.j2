@@ -1,0 +1,36 @@
+[database]
+database_url = "{{ gisst_server_database_full_url }}"
+max_connections = 128
+min_connections = 8
+connect_timeout_seconds = 30
+idle_timeout_seconds = 900
+max_lifetime_seconds = 3600
+
+[http]
+listen_address = "{{ gisst_server_bind_address }}"
+listen_port = 3000
+dev_cert = "{{ gisst_server_ssl_cert }}"
+dev_key = "{{ gisst_server_ssl_key }}"
+dev_ssl = "{{ gisst_server_terminate_ssl }}"
+base_url = "{{ gisst_server_base_url }}"
+
+[storage]
+root_folder_path = "{{ gisst_server_storage_dir }}"
+temp_folder_path = "{{ gisst_server_temp_dir }}"
+folder_depth = {{ gisst_server_storage_dir_depth }}
+
+[env]
+default_directive = "info,gisst_server=debug,gisst=debug"
+rust_log = "info,gisst_server=debug,gisst=debug,tower_sessions=warn,tower_sessions_core=wa
+rn,axum_login=warn"
+trace_include_headers = false
+# If you want to use jaeger/tracing, be sure to set up the docker compose/tracing infra!
+# see etc/provisioning.txt
+jaeger_endpoint = "{{ gisst_server_jaeger_endpoint }}"
+prometheus_endpoint = "{{ gisst_server_prometheus_endpoint }}"
+
+[search]
+meili_url = "{{ gisst_server_meilisearch_url }}"
+meili_external_url = "{{ gisst_server_meilisearch_external_url }}"
+meili_api_key = "{{ meilisearch_api_key }}"
+meili_search_key = "{{ meilisearch_search_key }}"

@@ -18,6 +18,11 @@
   community.postgresql.postgresql_user:
     name: "{{ db_user_read }}"
     password: "{{ db_user_read_password }}"
+- name: Set postgres admin user password
+  become_user: "{{ db_user_admin }}"
+  community.postgresql.postgresql_user:
+    name: "{{ db_user_admin }}"
+    password: "{{ db_user_admin_password }}"
 - name: Add metrics reader to pg_monitor group
   become_user: "{{ db_user_admin }}"
   community.postgresql.postgresql_membership:

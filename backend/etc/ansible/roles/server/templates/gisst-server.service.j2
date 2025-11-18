@@ -1,0 +1,25 @@
+[Unit]
+Description=GISST
+Requires=postgresql@16-main.service
+After=network.target network-online.target systemd-user-sessions.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30
+ExecStart={{ gisst_server_home }}/gisst-server
+User={{ gisst_server_user }}
+WorkingDirectory={{ gisst_server_config_dir }}
+EnvironmentFile=-{{ gisst_server_config_dir }}/gisst-server.env
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ gisst_server_home }} {{ gisst_server_config_dir }} {{ gisst_server_storage_dir }} {{ gisst_server_temp_dir }}
+
+[Install]
+WantedBy=multi-user.target
