@@ -67,6 +67,7 @@
           - "{{ gisst_server_home }}/release/backend/target/debug/gisst-server"
           - "{{ gisst_server_home }}/release/backend/target/debug/ingest"
           - "{{ gisst_server_home }}/release/backend/v86dump"
+      notify: Restart gisst-server
 - name: Get gisst server (testing, production)
   when: gisst_server_environment != "development"
   block:
@@ -118,7 +119,7 @@
         not gisst_server_binary.stat.exists or
         (gisst_server_binary.stat.exists and
          gisst_server_current_version_number != gisst_server_desired_version_number)
-      notify: Restart gisst_server
+      notify: Restart gisst-server
       retries: 3
       delay: 10
 - name: Deploy systemd service file
@@ -130,7 +131,7 @@
     mode: '0644'
   notify:
     - Reload systemd
-    - Restart meilisearch
+    - Restart gisst-server
 - name: Start and enable gisst-server service
   ansible.builtin.systemd_service:
     name: gisst-server
@@ -139,29 +140,13 @@
     daemon_reload: true
 - name: Flush handlers before health check
   ansible.builtin.meta: flush_handlers
-- name: Wait for Meilisearch service to be ready
-  ansible.builtin.wait_for:
-    host: "{{ meilisearch_http_addr.split(':')[0] }}"
-    port: "{{ meilisearch_http_addr.split(':')[1] | int }}"
-    delay: 5
-    timeout: 60
-    state: started
-
-- name: Check Meilisearch health endpoint
+- name: Check for gisst-server response
   ansible.builtin.uri:
-    url: "{{ meilisearch_http_proto }}://{{ meilisearch_http_addr }}/health"
-    method: GET
-    return_content: true
+    url: "{{ gisst_server_base_url }}"
+    method: HEAD
+    return_content: false
     status_code: 200
-  register: meilisearch_health_check
+  register: gisst_server_health_check
   retries: 5
   delay: 10
-  until: meilisearch_health_check.status == 200
-
-- name: Verify health check response
-  ansible.builtin.assert:
-    that:
-      - meilisearch_health_check.json is defined
-      - meilisearch_health_check.json.status == "available"
-    fail_msg: "Meilisearch health check failed: {{ meilisearch_health_check.content | default('No response content') }}"
-    success_msg: "Meilisearch is healthy and available"
+  until: gisst_server_health_check.status == 200
