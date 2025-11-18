@@ -15,3 +15,4 @@ db_user_read_hba_rules:
     databases: all
     method: "scram-sha-256"
     users: "{{ db_user_read }}"
+server_load_examples: true

@@ -1,0 +1,6 @@
+---
+roles:
+  - name: joeosborn.meilisearch
+    src: https://github.com/joeosborn/ansible-role-meilisearch
+    version: main
+    scm: git
