@@ -1,0 +1,59 @@
+name: Release Binaries
+on:
+  push:
+    tags:
+      - 'v*'
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Cache node modules
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-node-modules
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        cache-dependency-path: '**/package-lock.json'
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - name: ci
+      run: npm ci
+      working-directory: frontend
+    - name: build
+      run: npm run build --workspaces --if-present
+      working-directory: frontend
+    - name: tsc
+      run: npm run check --workspaces --if-present
+      working-directory: frontend
+    - name: dist
+      run: npm run dist --workspaces --if-present
+      working-directory: frontend
+    - name: tgz frontend -dist assets
+      working-directory: backend
+      run: tar czf frontend-assets.tgz ./*-dist
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2.7.7
+      with:
+        workspaces: "backend"
+        cache-all-crates: "true"
+    - name: Build rust binaries
+      run: cargo build --all-targets --release
+      working-directory: backend
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          backend/v86dump.js
+          backend/target/release/gisst-cli-linux-${{ runner.arch }}
+          backend/target/release/gisst-server-linux-${{ runner.arch }}
+          backend/target/release/ingest-linux-${{ runner.arch }}
+          backend/frontend-assets.tgz
