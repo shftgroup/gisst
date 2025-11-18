@@ -6,3 +6,5 @@
   roles:
     - database
     - search
+    - server
+    

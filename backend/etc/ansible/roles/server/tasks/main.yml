@@ -1,4 +1,8 @@
 ---
+- name: Get meilisearch keys
+  include_role:
+    name: joeosborn.meilisearch
+    tasks_from: fetch_keys
 - name: Create gisst_server group
   ansible.builtin.group:
     name: "{{ gisst_server_group }}"
@@ -39,37 +43,22 @@
     - "{{ gisst_server_home }}"
     - "{{ gisst_server_config_dir }}"
 - name: Get gisst server (dev)
-  when: gisst_server_environment == "development"
   block:
     - name: Download development dependencies
       apt:
-        - git
-        - cargo
+        state: latest
+        update_cache: yes
+        name:
+          - git
+          - cargo
     - name: Checkout GISST branch (dev)
       git:
         repo: 'https://github.com/shftgroup/gisst'
         dest: "{{ gisst_server_home }}/release"
         version: "{{ gisst_server_version }}"
-    - name: Build GISST binaries (dev)
-      command:
-        chdir: "{{ gisst_server_home }}/release/backend"
-        cmd: "cargo build --all-targets --features {{ gisst_server_dev_cargo_features }}"
-        creates:
-          - "{{ gisst_server_home }}/release/backend/target/debug/gisst-cli"
-          - "{{ gisst_server_home }}/release/backend/target/debug/gisst-server"
-          - "{{ gisst_server_home }}/release/backend/target/debug/ingest"
-    - name: Copy GISST binaries
-      copy:
-        src: "{{ item }}"
-        dest: "{{ gisst_server_home }}/"
-      loop:
-          - "{{ gisst_server_home }}/release/backend/target/debug/gisst-cli"
-          - "{{ gisst_server_home }}/release/backend/target/debug/gisst-server"
-          - "{{ gisst_server_home }}/release/backend/target/debug/ingest"
-          - "{{ gisst_server_home }}/release/backend/v86dump"
-      notify: Restart gisst-server
+      notify: Rebuild gisst-server
+  when: gisst_server_environment == "development"
 - name: Get gisst server (testing, production)
-  when: gisst_server_environment != "development"
   block:
     - name: Determine system architecture
       ansible.builtin.set_fact:
@@ -105,7 +94,7 @@
     - name: Download gisst-server binaries
       ansible.builtin.get_url:
         url: "https://github.com/shftgroup/gisst/releases/download/{{ gisst_server_version }}/{{ item }}"
-        dest: "{{ gisst_server_home }}"
+        dest: "{{ gisst_server_home }}/{{ item | split('-linux')[0] }}"
         mode: '0755'
         owner: root
         group: root
@@ -115,6 +104,7 @@
         - "gisst-cli-linux-{{ gisst_server_arch }}"
         - "ingest-linux-{{ gisst_server_arch }}"
         - "v86dump.js"
+        - "default.toml"
       when: >
         not gisst_server_binary.stat.exists or
         (gisst_server_binary.stat.exists and
@@ -122,6 +112,21 @@
       notify: Restart gisst-server
       retries: 3
       delay: 10
+  when: gisst_server_environment != "development"
+- name: Deploy gisst env file
+  template:
+    src: gisst-server.env.j2
+    dest: "{{ gisst_config_dir }}/gisst-server.env"
+    owner: "{{ gisst_user }}"
+    group: "{{ gisst_user }}"
+    mode: '0640'
+- name: Deploy gisst configuration
+  template:
+    src: gisst-server.config.toml.j2
+    dest: "{{ gisst_config_dir }}/config/local.toml"
+    owner: "{{ gisst_user }}"
+    group: "{{ gisst_user }}"
+    mode: '0640'
 - name: Deploy systemd service file
   ansible.builtin.template:
     src: gisst-server.service.j2
