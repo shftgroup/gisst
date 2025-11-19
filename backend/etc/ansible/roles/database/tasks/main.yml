@@ -13,58 +13,64 @@
   become: yes
   community.postgresql.postgresql_db:
     name: "{{ db_name }}"
-- name: Add metrics reader user
-  become_user: "{{ db_user_admin }}"
-  community.postgresql.postgresql_user:
-    name: "{{ db_user_read }}"
-    password: "{{ db_user_read_password }}"
 - name: Set postgres admin user password
   become_user: "{{ db_user_admin }}"
   community.postgresql.postgresql_user:
     name: "{{ db_user_admin }}"
     password: "{{ db_user_admin_password }}"
-- name: Add metrics reader to pg_monitor group
-  become_user: "{{ db_user_admin }}"
-  community.postgresql.postgresql_membership:
-    login_db: "{{ db_name }}"
-    target_roles: [ "{{ db_user_read }}" ]
-    groups: [ "pg_monitor", "pg_read_all_data" ]
-- name: GRANT USAGE ON SCHEMA public to reader
-  become_user: "{{ db_user_admin }}"
-  community.postgresql.postgresql_privs:
-    login_db: "{{ db_name }}"
-    role: "{{ db_user_read }}"
-    privs: USAGE
-    type: schema
-    objs: public
-- name: GRANT SELECT ON ALL TABLES IN SCHEMA public
-  become_user: "{{ db_user_admin }}"
-  community.postgresql.postgresql_privs:
-    login_db: "{{ db_name }}"
-    role: "{{ db_user_read }}"
-    privs: SELECT
-    objs: ALL_IN_SCHEMA
-- name: GRANT SELECT ON DATABASE "{{ db_name }}"
-  become_user: "{{ db_user_admin }}"
-  community.postgresql.postgresql_privs:
-    login_db: "{{ db_name }}"
-    role: "{{ db_user_read }}"
-    privs: SELECT
-    objs: ALL_IN_SCHEMA
-- name: Allow connections by "{{ db_user_read }}" from sources
-  community.postgresql.postgresql_pg_hba:
-    dest: /etc/postgresql/16/main/pg_hba.conf
-    rules: "{{ db_user_read_hba_rules }}"
-  notify: postgres-restart
-#- name: Open UFW for remote reads from sources
-#  community.general.ufw:
-- name: Activate postgresql_exporter
+- name: Metrics collection
   when: db_collect_metrics
-  include_role:
-    name: prometheus.prometheus.postgresql_exporter
-    vars:
-      # todo move the definition up somewhere shareable or something?
-      # todo node role with node exporter?
-      postgres_exporter_basic_auth_users: "{{ { db_user_read }: db_user_read_password }}"
-      postgres_exporter_name: "postgresql://{{ db_user_read }}:{{ db_user_read_password }}@localhost"
-      # todo: configure ssl, bind addr, port
+  block:
+    - name: Add metrics reader user
+      become_user: "{{ db_user_admin }}"
+      community.postgresql.postgresql_user:
+        name: "{{ db_user_read }}"
+        password: "{{ db_user_read_password }}"
+    - name: Add metrics reader to pg_monitor group
+      become_user: "{{ db_user_admin }}"
+      community.postgresql.postgresql_membership:
+        login_db: "{{ db_name }}"
+        target_roles: [ "{{ db_user_read }}" ]
+        groups: [ "pg_monitor", "pg_read_all_data" ]
+    - name: GRANT USAGE ON SCHEMA public to reader
+      become_user: "{{ db_user_admin }}"
+      community.postgresql.postgresql_privs:
+        login_db: "{{ db_name }}"
+        role: "{{ db_user_read }}"
+        privs: USAGE
+        type: schema
+        objs: public
+    - name: GRANT SELECT ON ALL TABLES IN SCHEMA public
+      become_user: "{{ db_user_admin }}"
+      community.postgresql.postgresql_privs:
+        login_db: "{{ db_name }}"
+        role: "{{ db_user_read }}"
+        privs: SELECT
+        objs: ALL_IN_SCHEMA
+    - name: GRANT SELECT ON DATABASE "{{ db_name }}"
+      become_user: "{{ db_user_admin }}"
+      community.postgresql.postgresql_privs:
+        login_db: "{{ db_name }}"
+        role: "{{ db_user_read }}"
+        privs: SELECT
+        objs: ALL_IN_SCHEMA
+    - name: Allow connections by "{{ db_user_read }}" from sources
+      community.postgresql.postgresql_pg_hba:
+        dest: /etc/postgresql/16/main/pg_hba.conf
+        rules: "{{ db_user_read_hba_rules }}"
+      notify: postgres-restart
+    - name: Activate postgresql_exporter
+      include_role:
+        name: prometheus.prometheus.postgresql_exporter
+        vars:
+          postgres_exporter_web_telemetry_path: "{{ db_metrics_http_path }}"
+          postgres_exporter_web_listen_address: "{{ db_metrics_bind_addr }}"
+          postgres_exporter_basic_auth_users: "{{ prometheus_scraper_auth_users }}"
+          postgres_exporter_name: "postgresql://{{ db_user_read }}:{{ db_user_read_password }}@localhost"
+      notify: nginx-restart
+    - name: Add nginx location include
+      when: db_metrics_use_proxy
+      template:
+        src: templates/db-metrics.nginx.inserver.j2
+        dest: "{{ db_metrics_proxy_snippets_dir }}/gisstdb.conf"
+      notify: nginx-restart
