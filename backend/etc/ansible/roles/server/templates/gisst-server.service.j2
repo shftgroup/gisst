@@ -11,14 +11,14 @@ RestartSec=5s
 TimeoutStopSec=30
 User={{ gisst_server_user }}
 EnvironmentFile=-{{ gisst_server_home }}/gisst-server.env
-{{% if gisst_server_environment == "development" %}}
+{% if gisst_server_environment == "development" %}
 ExecStart=/usr/bin/cargo run --bin gisst-server
-WorkingDirectory={{ gisst_server_home }}/repo
-EnvironmentFile=-{{ gisst_server_home }}/repo/.env
-{{% else %}}
+WorkingDirectory={{ gisst_server_home }}/repo/backend/
+EnvironmentFile=-{{ gisst_server_home }}/repo/backend/.env
+{% else %}
 ExecStart={{ gisst_server_home }}/gisst-server
 WorkingDirectory={{ gisst_server_home }}
-{{% endif %}}
+{% endif %}
 
 # Security settings
 NoNewPrivileges=true

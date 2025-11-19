@@ -42,12 +42,22 @@
         update_cache: yes
         name:
           - git
-          - cargo
+          - rustup
+          - build-essential
+          - pkgconf
+          - libssl-dev
+    - name: Use latest stable rust
+      command: rustup default stable
     - name: Checkout GISST branch (dev)
       git:
         repo: 'https://github.com/shftgroup/gisst'
         dest: "{{ gisst_server_home }}/repo"
         version: "{{ gisst_server_version }}"
+    - name: Build GISST binaries
+      ansible.builtin.command:
+        chdir: "{{ gisst_server_home }}/repo/backend"
+        cmd: "cargo build --all-targets --features {{ gisst_server_dev_cargo_features }}"
+      notify: Restart gisst-server
     - name: Get frontend deps
       community.general.npm:
         ci: yes
@@ -55,15 +65,14 @@
     - name: Build frontend
       ansible.builtin.command:
         chdir: "{{ gisst_server_home }}/repo/frontend"
-        cmd: "npm run build --workspaces --if-present && npm run dist --workspaces --if-present"
-    - name: Build GISST binaries
+        cmd: "npm run build --workspaces --if-present"
+    - name: Dist frontend
       ansible.builtin.command:
-        chdir: "{{ gisst_server_home }}/repo/backend"
-        cmd: "cargo build --all-targets --features {{ gisst_server_dev_cargo_features }}"
-      notify: Restart gisst-server
+        chdir: "{{ gisst_server_home }}/repo/frontend"
+        cmd: "npm run dist --workspaces --if-present"
     - name: Specify paths for templates
       ansible.builtin.set_fact:
-        gisst_server_env_config_path: "{{ gisst_server_home }}/config/{{ gisst_server_environment }}.toml"
+        gisst_server_env_config_path: "{{ gisst_server_home }}/repo/backend/config/{{ gisst_server_environment }}.toml"
   when: gisst_server_environment == "development"
 - name: Get gisst server (testing, production)
   block:
