@@ -57,7 +57,7 @@ pub async fn clone_v86_machine(
     info!("Input {env_json}\n{state_file_path}");
     let now = std::time::Instant::now();
     let proc_output = Command::new("node")
-        .arg("v86dump/index.js")
+        .arg("v86dump.js")
         .arg(env_json)
         .arg(state_file_path)
         .output()?;
