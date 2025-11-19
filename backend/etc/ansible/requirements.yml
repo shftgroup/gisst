@@ -6,3 +6,6 @@ roles:
     scm: git
   - name: geerlingguy.nodejs
     version: 7.0.0
+collections:
+  - name: prometheus.prometheus
+    version: 0.27.5

@@ -58,3 +58,13 @@
   notify: postgres-restart
 #- name: Open UFW for remote reads from sources
 #  community.general.ufw:
+- name: Activate postgresql_exporter
+  when: db_collect_metrics
+  include_role:
+    name: prometheus.prometheus.postgresql_exporter
+    vars:
+      # todo move the definition up somewhere shareable or something?
+      # todo node role with node exporter?
+      postgres_exporter_basic_auth_users: "{{ { db_user_read }: db_user_read_password }}"
+      postgres_exporter_name: "postgresql://{{ db_user_read }}:{{ db_user_read_password }}@localhost"
+      # todo: configure ssl, bind addr, port
