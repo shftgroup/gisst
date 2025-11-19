@@ -60,5 +60,5 @@ jobs:
       with:
         fail_on_unmatched_files: true
         files: |
-          backend/bin-linux-${{ runner.arch }}.tgz
+          bin-linux-${{ runner.arch }}.tgz
           backend/gisst.tgz
