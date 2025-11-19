@@ -16,3 +16,7 @@ db_user_read_hba_rules:
   #   databases: all
   #   method: "scram-sha-256"
   #   users: "{{ db_user_read }}"
+db_metrics_use_proxy: false
+db_metrics_proxy_snippets_dir: /etc/nginx/snippets/
+db_metrics_http_path: "metrics"
+db_metrics_bind_addr: "0.0.0.0:9187"

@@ -1,3 +1,6 @@
 ---
 - name: postgres-restart
   service: name=postgresql state=restarted
+- name: nginx-restart
+  when: db_metrics_use_proxy
+  service: name=nginx state=restarted
