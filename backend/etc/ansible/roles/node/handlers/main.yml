@@ -1,0 +1,4 @@
+---
+- name: nginx-restart
+  when: node_metrics_use_proxy
+  service: name=nginx state=restarted

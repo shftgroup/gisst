@@ -1,0 +1,2 @@
+metrics_user: metrics
+prometheus_scraper_auth_users: "{{ { metrics_user }: metrics_user_password }}"

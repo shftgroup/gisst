@@ -2,4 +2,9 @@
 - name: Install meilisearch
   include_role:
     name: joeosborn.meilisearch
-# Nothing more needs to be done!
+- name: Add proxy snippet for meilisearch
+  when: meilisearch_use_proxy
+  template:
+    src: templates/meilisearch.nginx.inserver.j2
+    dest: "{{ meilisearch_proxy_snippets_dir }}/meilisearch.conf"
+  notify: nginx-restart
