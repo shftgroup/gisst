@@ -16,7 +16,7 @@ ExecStart=/usr/bin/cargo run --bin gisst-server
 WorkingDirectory={{ gisst_server_home }}/repo/backend/
 EnvironmentFile=-{{ gisst_server_home }}/repo/backend/.env
 {% else %}
-ExecStart={{ gisst_server_home }}/gisst-server
+ExecStart={{ gisst_server_home }}/bin/gisst-server
 WorkingDirectory={{ gisst_server_home }}
 {% endif %}
 
