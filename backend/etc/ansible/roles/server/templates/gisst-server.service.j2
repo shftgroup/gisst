@@ -9,17 +9,23 @@ Type=simple
 Restart=on-failure
 RestartSec=5s
 TimeoutStopSec=30
-ExecStart={{ gisst_server_home }}/gisst-server
 User={{ gisst_server_user }}
-WorkingDirectory={{ gisst_server_config_dir }}
-EnvironmentFile=-{{ gisst_server_config_dir }}/gisst-server.env
+EnvironmentFile=-{{ gisst_server_home }}/gisst-server.env
+{{% if gisst_server_environment == "development" %}}
+ExecStart=/usr/bin/cargo run --bin gisst-server
+WorkingDirectory={{ gisst_server_home }}/repo
+EnvironmentFile=-{{ gisst_server_home }}/repo/.env
+{{% else %}}
+ExecStart={{ gisst_server_home }}/gisst-server
+WorkingDirectory={{ gisst_server_home }}
+{{% endif %}}
 
 # Security settings
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths={{ gisst_server_home }} {{ gisst_server_config_dir }} {{ gisst_server_storage_dir }} {{ gisst_server_temp_dir }}
+ReadWritePaths={{ gisst_server_home }} {{ gisst_server_storage_dir }} {{ gisst_server_temp_dir }}
 
 [Install]
 WantedBy=multi-user.target

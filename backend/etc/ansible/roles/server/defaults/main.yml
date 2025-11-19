@@ -10,7 +10,6 @@ gisst_server_dev_cargo_features: ""
 gisst_server_user: gisst
 gisst_server_group: gisst
 gisst_server_home: /var/lib/gisst/
-gisst_server_config_dir: /etc/gisst/
 
 # details
 gisst_server_storage_dir: "{{ gisst_server_home }}/storage"
