@@ -197,3 +197,9 @@
   retries: 5
   delay: 10
   until: gisst_server_health_check.status == 200
+ - name: Add nginx location include
+   when: gisst_server_use_proxy
+   template:
+     src: templates/gisst-server.nginx.inserver.j2
+     dest: "{{ gisst_server_proxy_snippets_dir }}/gisst_server.conf"
+   notify: nginx-restart

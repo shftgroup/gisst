@@ -1,0 +1,8 @@
+location /{{ gisst_server_http_path }} {
+  proxy_set_header X-Forwarded-For $remote_addr;
+  proxy_set_header Host $host;
+  proxy_pass_header  X-Accepted-Encoding;
+  proxy_pass_request_headers on;
+  proxy_pass http://localhost:{{ gisst_server_bind_port }};
+  client_max_body_size: {{ gisst_server_max_body_size }};
+}
