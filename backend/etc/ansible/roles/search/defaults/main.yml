@@ -1,1 +1,4 @@
 ---
+meilisearch_use_proxy: false
+meilisearch_proxy_snippets_dir: /etc/nginx/snippets
+meilisearch_proxy_external_path: search

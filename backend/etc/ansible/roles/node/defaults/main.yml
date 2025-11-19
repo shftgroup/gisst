@@ -1,0 +1,7 @@
+---
+node_metrics_http_path: metrics
+node_metrics_bind_addr: "0.0.0.0:9100"
+node_systemd_http_path: systemd
+node_systemd_bind_addr: "0.0.0.0:9558"
+node_use_proxy: false
+node_proxy_snippet_dir: /etc/nginx/snippets
