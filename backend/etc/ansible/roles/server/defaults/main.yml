@@ -1,7 +1,7 @@
 ---
-# in testing or production environment, a version number or 'latest'
+# in testing or production environment, a version number
 # in development environment, a git branch name or commit
-gisst_server_version: latest
+gisst_server_version: v0.1.0
 
 # development only
 gisst_server_dev_cargo_features: ""
@@ -32,12 +32,12 @@ gisst_server_base_url: "{{ gisst_server_host_name }}"
 # gisst_server_google_client_secret: define in vault
 
 # database
-gisst_server_database_full_url: "postgresql://{{ db_user_admin | default(`postgres`) }}:{{ db_user_admin_password | default(`postgres`)  }}@{{ db_host | default(`127.0.0.1`)  }}/{{ db_name | default(`gisstdb`) }}"
+gisst_server_database_full_url: "postgresql://{{ db_user_admin | default('postgres') }}:{{ db_user_admin_password | default('postgres')  }}@{{ db_host | default('127.0.0.1')  }}/{{ db_name | default('gisstdb') }}"
 
 # metrics
 gisst_server_jaeger_endpoint: "http://127.0.0.1:4317"
 gisst_server_prometheus_endpoint: "http://127.0.0.1:9090"
 
 # search
-gisst_server_meilisearch_url: "{{ meilisearch_http_addr | default(`http://127.0.0.1:7700`) }}"
+gisst_server_meilisearch_url: "{{ meilisearch_http_addr | default('http://127.0.0.1:7700') }}"
 gisst_server_meilisearch_external_url: "{{ gisst_server_base_url }}/search"

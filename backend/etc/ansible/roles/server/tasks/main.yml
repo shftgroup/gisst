@@ -26,6 +26,7 @@
     mode: '0755'
   loop:
     - "{{ gisst_server_config_dir }}"
+    - "{{ gisst_server_config_dir }}/config"
     - "{{ gisst_server_storage_dir }}"
     - "{{ gisst_server_temp_dir }}"
 - name: Install node dependency for v86dump
@@ -62,7 +63,7 @@
   block:
     - name: Determine system architecture
       ansible.builtin.set_fact:
-        gisst_server_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'aarch64' if ansible_architecture == 'aarch64' else ansible_architecture }}"
+        gisst_server_arch: "{{ 'X64' if ansible_architecture == 'x86_64' else 'aarch64' if ansible_architecture == 'aarch64' else ansible_architecture }}"
     - name: Check if gisst-server binary exists
       ansible.builtin.stat:
         path: "{{ gisst_server_home }}/gisst-server"
@@ -94,7 +95,7 @@
     - name: Download gisst-server binaries
       ansible.builtin.get_url:
         url: "https://github.com/shftgroup/gisst/releases/download/{{ gisst_server_version }}/{{ item }}"
-        dest: "{{ gisst_server_home }}/{{ item | split('-linux')[0] }}"
+        dest: "{{ gisst_server_home }}/{{ item | split('-linux') | first }}"
         mode: '0755'
         owner: root
         group: root
@@ -104,7 +105,7 @@
         - "gisst-cli-linux-{{ gisst_server_arch }}"
         - "ingest-linux-{{ gisst_server_arch }}"
         - "v86dump.js"
-        - "default.toml"
+        - "frontend-assets.tgz"
       when: >
         not gisst_server_binary.stat.exists or
         (gisst_server_binary.stat.exists and
@@ -112,20 +113,36 @@
       notify: Restart gisst-server
       retries: 3
       delay: 10
+    - name: Untar frontend assets
+      ansible.builtin.unarchive:
+        src: "{{ gisst_server_home }}/frontend-assets.tgz"
+        dest: "{{ gisst_server_config_dir }}"
+        remote_src: yes
+    - name: Download default.toml file
+      ansible.builtin.get_url:
+        url: "https://github.com/shftgroup/gisst/blob/{{ gisst_server_version }}/backend/config/default.toml"
+        dest: "{{ gisst_server_config_dir }}/config/default.toml"
+        mode: '0644'
+        owner: "{{ gisst_server_user }}"
+        group: "{{ gisst_server_group }}"
+        timeout: 120
+      notify: Restart gisst-server
+      retries: 3
+      delay: 10
   when: gisst_server_environment != "development"
 - name: Deploy gisst env file
   template:
     src: gisst-server.env.j2
-    dest: "{{ gisst_config_dir }}/gisst-server.env"
-    owner: "{{ gisst_user }}"
-    group: "{{ gisst_user }}"
+    dest: "{{ gisst_server_config_dir }}/gisst-server.env"
+    owner: "{{ gisst_server_user }}"
+    group: "{{ gisst_server_user }}"
     mode: '0640'
 - name: Deploy gisst configuration
   template:
     src: gisst-server.config.toml.j2
-    dest: "{{ gisst_config_dir }}/config/local.toml"
-    owner: "{{ gisst_user }}"
-    group: "{{ gisst_user }}"
+    dest: "{{ gisst_server_config_dir }}/config/local.toml"
+    owner: "{{ gisst_server_user }}"
+    group: "{{ gisst_server_user }}"
     mode: '0640'
 - name: Deploy systemd service file
   ansible.builtin.template:
