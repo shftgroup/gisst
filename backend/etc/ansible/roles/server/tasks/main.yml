@@ -118,6 +118,11 @@
         src: "{{ gisst_server_home }}/frontend-assets.tgz"
         dest: "{{ gisst_server_config_dir }}"
         remote_src: yes
+    - name: (Temporary) Copy v86dump.js
+      copy:
+        src: "{{ gisst_server_home }}/v86dump.js"
+        dest: "{{ gisst_server_config_dir }}/v86dump.js"
+        remote_src: yes
     - name: Download default.toml file
       ansible.builtin.get_url:
         url: "https://github.com/shftgroup/gisst/blob/{{ gisst_server_version }}/backend/config/default.toml"
