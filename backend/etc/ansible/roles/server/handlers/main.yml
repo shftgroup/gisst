@@ -8,6 +8,14 @@
       ansible.builtin.command:
         chdir: "{{ gisst_server_home }}/release/backend"
         cmd: "cargo build --all-targets --features {{ gisst_server_dev_cargo_features }}"
+    - name: Get frontend deps
+      community.general.npm:
+        ci: yes
+        path: "{{ gisst_server_home }}/release/frontend"
+    - name: Build frontend
+      ansible.builtin.command:
+        chdir: "{{ gisst_server_home }}/release/frontend"
+        cmd: "npm run build --workspaces --if-present && npm run dist --workspaces --if-present"
     - name: Copy GISST binaries
       copy:
         src: "{{ item }}"
