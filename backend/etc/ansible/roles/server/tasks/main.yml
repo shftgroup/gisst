@@ -46,31 +46,46 @@
           - build-essential
           - pkgconf
           - libssl-dev
-    - name: Use latest stable rust
+    - name: Use latest stable rust (gisst user)
+      become_user: "{{ gisst_server_user }}"
       command: rustup default stable
     - name: Checkout GISST branch (dev)
+      become_user: "{{ gisst_server_user }}"
       git:
         repo: 'https://github.com/shftgroup/gisst'
         dest: "{{ gisst_server_home }}/repo"
         version: "{{ gisst_server_version }}"
+    - name: Install cargo-sqlx
+      become_user: "{{ gisst_server_user }}"
+      command: cargo install sqlx-cli
+    - name: Run migrations
+      become_user: "{{ gisst_server_user }}"
+      command:
+        cmd: "cargo sqlx migrate run --database-url {{ gisst_server_database_full_url }}"
+        chdir: "{{ gisst_server_home }}/repo/backend"
     - name: Build GISST binaries
-      ansible.builtin.command:
+      become_user: "{{ gisst_server_user }}"
+      ansible.builtin.shell:
         chdir: "{{ gisst_server_home }}/repo/backend"
         cmd: "cargo build --all-targets --features {{ gisst_server_dev_cargo_features }}"
       notify: Restart gisst-server
     - name: Get frontend deps
+      become_user: "{{ gisst_server_user }}"
       community.general.npm:
         ci: yes
         path: "{{ gisst_server_home }}/repo/frontend"
     - name: Build frontend
+      become_user: "{{ gisst_server_user }}"
       ansible.builtin.command:
         chdir: "{{ gisst_server_home }}/repo/frontend"
         cmd: "npm run build --workspaces --if-present"
     - name: Dist frontend
+      become_user: "{{ gisst_server_user }}"
       ansible.builtin.command:
         chdir: "{{ gisst_server_home }}/repo/frontend"
         cmd: "npm run dist --workspaces --if-present"
     - name: Specify paths for templates
+      become_user: "{{ gisst_server_user }}"
       ansible.builtin.set_fact:
         gisst_server_env_config_path: "{{ gisst_server_home }}/repo/backend/config/{{ gisst_server_environment }}.toml"
   when: gisst_server_environment == "development"
