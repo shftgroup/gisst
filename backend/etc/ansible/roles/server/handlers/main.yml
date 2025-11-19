@@ -2,39 +2,6 @@
 - name: Reload systemd
   ansible.builtin.systemd_service:
     daemon_reload: true
-- name: Build GISST binaries
-  listen: Rebuild gisst-server
-  ansible.builtin.command:
-    chdir: "{{ gisst_server_home }}/release/backend"
-    cmd: "cargo build --all-targets --features {{ gisst_server_dev_cargo_features }}"
-- name: Get frontend deps
-  listen: Rebuild gisst-server
-  community.general.npm:
-    ci: yes
-    path: "{{ gisst_server_home }}/release/frontend"
-- name: Build frontend
-  listen: Rebuild gisst-server
-  ansible.builtin.command:
-    chdir: "{{ gisst_server_home }}/release/frontend"
-    cmd: "npm run build --workspaces --if-present && npm run dist --workspaces --if-present"
-- name: Copy GISST binaries
-  listen: Rebuild gisst-server
-  copy:
-    src: "{{ item }}"
-    dest: "{{ gisst_server_home }}/"
-    remote_src: yes
-  loop:
-      - "{{ gisst_server_home }}/release/backend/target/debug/gisst-cli"
-      - "{{ gisst_server_home }}/release/backend/target/debug/gisst-server"
-      - "{{ gisst_server_home }}/release/backend/target/debug/ingest"
-      - "{{ gisst_server_home }}/release/backend/v86dump"
-  notify: Restart gisst-server
-- name: Copy GISST default config
-  listen: Rebuild gisst-server
-  copy:
-    src: "{{ gisst_server_home }}/release/backend/config/default.toml"
-    dest: "{{ gisst_config_dir }}/config/default.toml"
-    remote_src: yes
 - name: Restart gisst-server
   ansible.builtin.systemd_service:
     name: gisst-server
