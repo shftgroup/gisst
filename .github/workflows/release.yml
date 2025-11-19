@@ -39,7 +39,7 @@ jobs:
       working-directory: frontend
     - name: tgz frontend -dist assets
       working-directory: backend
-      run: tar czf frontend-assets.tgz ./*-dist
+      run: tar czf gisst.tgz ./*-dist ./config ./v86dump.js
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2.7.7
       with:
@@ -48,18 +48,17 @@ jobs:
     - name: Build rust binaries
       run: cargo build --all-targets --release
       working-directory: backend
-    - name: Rename rust binaries
+    - name: Package rust binaries
       run: |
-        cp backend/target/release/gisst-cli gisst-cli-linux-${{ runner.arch }}
-        cp backend/target/release/gisst-server gisst-server-linux-${{ runner.arch }}
-        cp backend/target/release/ingest ingest-linux-${{ runner.arch }}
+        mkdir -p bin
+        cp backend/target/release/gisst-cli bin
+        cp backend/target/release/gisst-server bin
+        cp backend/target/release/ingest bin
+        tar czf bin-linux-${{ runner.arch }}.tgz ./bin
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
         fail_on_unmatched_files: true
         files: |
-          backend/v86dump.js
-          gisst-cli-linux-${{ runner.arch }}
-          gisst-server-linux-${{ runner.arch }}
-          ingest-linux-${{ runner.arch }}
-          backend/frontend-assets.tgz
+          backend/bin-linux-${{ runner.arch }}.tgz
+          backend/gisst.tgz
