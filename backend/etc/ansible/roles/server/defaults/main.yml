@@ -24,7 +24,11 @@ gisst_server_ssl_key: ""
 gisst_server_bind_address: "0.0.0.0"
 gisst_server_bind_port: 3000
 gisst_server_host_name: "localhost"
-gisst_server_base_url: "http://{{ gisst_server_host_name }}:{{ gisst_server_bind_port }}"
+gisst_server_http_path: ""
+gisst_server_base_url: "http://{{ gisst_server_host_name }}:{{ gisst_server_bind_port }}/{{ gisst_server_http_path }}"
+gisst_server_max_body_size: "32M"
+gisst_server_proxy_snippets_dir: /etc/nginx/snippets/
+gisst_server_use_proxy: false
 
 # auth
 # gisst_server_google_client_id: define in vault
