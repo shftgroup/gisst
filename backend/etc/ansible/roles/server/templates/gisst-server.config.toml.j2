@@ -21,8 +21,7 @@ folder_depth = {{ gisst_server_storage_dir_depth }}
 
 [env]
 default_directive = "info,gisst_server=debug,gisst=debug"
-rust_log = "info,gisst_server=debug,gisst=debug,tower_sessions=warn,tower_sessions_core=wa
-rn,axum_login=warn"
+rust_log = "info,gisst_server=debug,gisst=debug,tower_sessions=warn,tower_sessions_core=warn,axum_login=warn"
 trace_include_headers = false
 # If you want to use jaeger/tracing, be sure to set up the docker compose/tracing infra!
 # see etc/provisioning.txt
