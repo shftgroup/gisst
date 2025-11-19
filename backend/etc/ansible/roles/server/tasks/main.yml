@@ -125,7 +125,7 @@
     - name: Download gisst-server binaries
       ansible.builtin.get_url:
         url: "https://github.com/shftgroup/gisst/releases/download/{{ gisst_server_version }}/{{ item }}"
-        dest: "{{ gisst_server_home }}/{{ item | split('-linux') | first }}"
+        dest: "{{ gisst_server_home }}/{{ item }}"
         mode: '0755'
         owner: root
         group: root
@@ -141,7 +141,7 @@
       delay: 10
     - name: Untar binaries
       ansible.builtin.unarchive:
-        src: "{{ gisst_server_home }}/bin.tgz"
+        src: "{{ gisst_server_home }}/bin-linux-{{ gisst_server_arch }}.tgz"
         dest: "{{ gisst_server_home }}"
         remote_src: yes
       notify: Restart gisst-server
