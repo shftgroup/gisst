@@ -4,7 +4,7 @@
 gisst_server_version: v0.1.0
 
 # development only
-gisst_server_dev_cargo_features: ""
+gisst_server_dev_cargo_features: "dummy_auth"
 
 # service
 gisst_server_user: gisst
@@ -24,7 +24,7 @@ gisst_server_ssl_key: ""
 gisst_server_bind_address: "0.0.0.0"
 gisst_server_bind_port: 3000
 gisst_server_host_name: "localhost"
-gisst_server_base_url: "https://{{ gisst_server_host_name }}"
+gisst_server_base_url: "http://{{ gisst_server_host_name }}:{{ gisst_server_bind_port }}"
 
 # auth
 # gisst_server_google_client_id: define in vault

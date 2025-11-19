@@ -2,6 +2,7 @@
 db_name: gisstdb
 db_host: localhost
 db_user_admin: postgres
+db_collect_metrics: false
 db_user_read: metrics
 # db_user_read_password: define in vault
 db_user_read_hba_rules:
