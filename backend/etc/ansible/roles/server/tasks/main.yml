@@ -189,16 +189,6 @@
     daemon_reload: true
 - name: Flush handlers before health check
   ansible.builtin.meta: flush_handlers
-- name: Check for gisst-server response
-  ansible.builtin.uri:
-    url: "{{ gisst_server_base_url }}"
-    method: HEAD
-    return_content: false
-    status_code: 200
-  register: gisst_server_health_check
-  retries: 5
-  delay: 10
-  until: gisst_server_health_check.status == 200
 - name: Add nginx location include
   when: gisst_server_use_proxy
   template:
