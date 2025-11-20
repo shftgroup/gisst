@@ -1,0 +1,33 @@
+---
+- name: Install prometheus
+  include_role:
+    name: prometheus.prometheus.prometheus
+  vars:
+    # prometheus_web_external_url: "{{ metrics_external_addr }}"
+    # prometheus_web_listen_address: "{{ metrics_bind_addr }}:{{ metrics_bind_port }}"
+    # prometheus_metrics_path: "/{{ metrics_http_path }}"
+    # prometheus_db_dir: "{{ metrics_db_dir }}"
+    # prometheus_config_dir: "{{ metrics_config_dir }}"
+    prometheus_scrape_configs: "{{ metrics_targets }}"
+    # prometheus_config_flags_extra: "{{ metrics_config_flags_extra }}"
+    prometheus_system_user: "{{ metrics_user }}"
+    prometheus_system_group: "{{ metrics_group }}"
+- name: Get search keys
+  include_role:
+    name: joeosborn.meilisearch
+    tasks_from: fetch_keys
+  vars:
+    meilisearch_master_key: "{{ search_master_key }}"
+- name: Write search API key to file
+  copy:
+    dest: "{{ metrics_config_dir }}/{{ metrics_search_api_key_file }}"
+    mode: '0600'
+    owner: "{{ metrics_user }}"
+    group: "{{ metrics_group }}"
+    content: "{{ meilisearch_api_key }}"
+- name: Add nginx location include
+  when: metrics_use_proxy
+  template:
+    src: templates/metrics.nginx.inserver.j2
+    dest: "{{ metrics_proxy_snippets_dir }}/node.conf"
+  notify: nginx-restart

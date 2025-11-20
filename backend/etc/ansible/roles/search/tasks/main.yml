@@ -2,9 +2,19 @@
 - name: Install meilisearch
   include_role:
     name: joeosborn.meilisearch
+  vars:
+    meilisearch_home: "{{ search_home }}"
+    meilisearch_config_dir: "{{ search_config_dir }}"
+    meilisearch_db_path: "{{ search_db_path }}"
+    meilisearch_dump_dir: "{{ search_dump_path }}"
+    meilisearch_snapshot_path: "{{ search_snapshot_path }}"
+    meilisearch_env: "{{ search_env }}"
+    meilisearch_http_addr: "{{ search_bind_addr }}:{{ search_bind_port }}"
+    meilisearch_master_key: "{{ search_master_key }}"
+    meilisearch_metrics_feature: true
 - name: Add proxy snippet for meilisearch
-  when: meilisearch_use_proxy
+  when: search_use_proxy
   template:
-    src: templates/meilisearch.nginx.inserver.j2
-    dest: "{{ meilisearch_proxy_snippets_dir }}/meilisearch.conf"
+    src: templates/search.nginx.inserver.j2
+    dest: "{{ search_proxy_snippets_dir }}/meilisearch.conf"
   notify: nginx-restart

@@ -1,6 +1,6 @@
 metrics_user: metrics
-prometheus_scraper_auth_users:
+metrics_scraper_auth_users:
   metrics: "{{ metrics_user_password }}"
-node_auth_users: "{{ prometheus_scraper_auth_users }}"
+node_auth_users: "{{ metrics_scraper_auth_users }}"
 db_collect_metrics: true
-db_metrics_auth_users: "{{ prometheus_scraper_auth_users }}"
+db_metrics_auth_users: "{{ metrics_scraper_auth_users }}"
