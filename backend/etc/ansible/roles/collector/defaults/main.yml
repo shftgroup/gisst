@@ -1,0 +1,23 @@
+---
+collector_user: collector
+collector_group: collector
+collector_home: /var/lib/jaeger
+collector_config_path: /etc/jaeger
+collector_binary_path: /usr/local/bin/jaeger
+collector_storage_path: "{{ collector_home }}/badger/"
+collector_version: 2.12.0
+collector_download_url_root: https://download.jaegertracing.io/v1.75.0
+collector_query_base_path: "/"
+collector_metrics_bind_addr: "0.0.0.0"
+collector_metrics_bind_port: "8888"
+collector_log_level: "WARN"
+collector_grpc_bind_addr: "0.0.0.0"
+collector_grpc_bind_port: 4317
+collector_http_bind_addr: "0.0.0.0"
+collector_http_bind_port: 4318
+collector_exporter_metrics_bind_addr: "0.0.0.0"
+collector_exporter_metrics_bind_port: "8889"
+collector_query_grpc_bind_addr: "0.0.0.0"
+collector_query_grpc_bind_port: 16685
+collector_query_http_bind_addr: "0.0.0.0"
+collector_query_http_bind_port: 16686

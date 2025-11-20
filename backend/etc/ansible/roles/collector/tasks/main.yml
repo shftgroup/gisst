@@ -1,0 +1,133 @@
+---
+- name: Create collector group
+  ansible.builtin.group:
+    name: "{{ collector_group }}"
+    system: true
+    state: present
+- name: Create collector user
+  ansible.builtin.user:
+    name: "{{ collector_user }}"
+    group: "{{ collector_group }}"
+    system: true
+    create_home: true
+    home: "{{ collector_home }}"
+    shell: /sbin/nologin
+    state: present
+- name: Create required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ collector_user }}"
+    group: "{{ collector_group }}"
+    mode: '0755'
+  loop:
+    - "{{ collector_storage_path }}"
+    - "{{ collector_config_path }}"
+- name: Determine system architecture
+  ansible.builtin.set_fact:
+    collector_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else ansible_architecture }}"
+- name: Check if jaeger binary exists
+  ansible.builtin.stat:
+    path: "{{ collector_binary_path }}"
+  register: jaeger_binary
+- name: Get current jaeger version
+  ansible.builtin.command:
+    cmd: "{{ collector_binary_path }} --version"
+  register: jaeger_current_version
+  failed_when: false
+  changed_when: false
+  when: jaeger_binary.stat.exists
+- name: Extract current version number
+  ansible.builtin.set_fact:
+    jaeger_current_version_number: "{{ jaeger_current_version.stdout | regex_search('jaeger version v([0-9]+\\.[0-9]+\\.[0-9]+)', '\\1') | first }}"
+  when:
+    - jaeger_binary.stat.exists
+    - jaeger_current_version.rc == 0
+    - jaeger_current_version.stdout is defined
+- name: Set current version to empty when binary doesn't exist or version check failed
+  ansible.builtin.set_fact:
+    jaeger_current_version_number: ""
+  when: >
+    not jaeger_binary.stat.exists or
+    jaeger_current_version.rc != 0 or
+    jaeger_current_version.stdout is not defined
+- name: Extract desired version number
+  ansible.builtin.set_fact:
+    jaeger_desired_version_number: "{{ collector_version | regex_replace('^v', '') }}"
+- name: Download jaeger binary
+  ansible.builtin.get_url:
+    url: "{{ collector_download_url_root }}/jaeger-{{ collector_version }}-linux-{{ collector_arch }}.tar.gz"
+    dest: "{{ collector_home }}/jaeger.tar.gz"
+    mode: '0755'
+    owner: root
+    group: root
+    timeout: 120
+  when: >
+    not jaeger_binary.stat.exists or
+    (jaeger_binary.stat.exists and
+     jaeger_current_version_number != jaeger_desired_version_number)
+  retries: 3
+  delay: 10
+- name: Extract jaeger binary
+  ansible.builtin.unarchive:
+    src: "{{ collector_home }}/jaeger.tar.gz"
+    dest: "{{ collector_home }}/"
+    remote_src: yes
+    mode: '0755'
+  when: >
+    not jaeger_binary.stat.exists or
+    (jaeger_binary.stat.exists and
+     jaeger_current_version_number != jaeger_desired_version_number)
+- name: Copy jaeger binary to final location
+  copy:
+    remote_src: yes
+    mode: '0755'
+    src: "{{ collector_home }}/jaeger-{{ collector_version }}-linux-{{ collector_arch }}/jaeger"
+    dest: "{{ collector_binary_path }}"
+  notify: Restart collector
+- name: Deploy config file
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ collector_config_path }}/config.yml"
+    owner: "{{ collector_user }}"
+    group: "{{ collector_group }}"
+    mode: '0640'
+  notify: Restart collector
+- name: Deploy UI config file
+  ansible.builtin.template:
+    src: jaeger-ui.json.j2
+    dest: "{{ collector_config_path }}/jaeger-ui.json"
+    owner: "{{ collector_user }}"
+    group: "{{ collector_group }}"
+    mode: '0640'
+  notify: Restart collector
+- name: Deploy environment file
+  ansible.builtin.template:
+    src: collector.env.j2
+    dest: "{{ collector_config_path }}/collector.env"
+    owner: "{{ collector_user }}"
+    group: "{{ collector_group }}"
+    mode: '0640'
+  notify: Restart collector
+- name: Deploy systemd service file
+  ansible.builtin.template:
+    src: jaeger.service.j2
+    dest: /etc/systemd/system/jaeger.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart collector
+- name: Start and enable collector service
+  ansible.builtin.systemd_service:
+    name: jaeger
+    state: started
+    enabled: true
+    daemon_reload: true
+# ports:
+# - "16686:16686"
+# - "8888:8888"
+# - "8889:8889"
+# - "4317:4317"
+# - "4318:4318"

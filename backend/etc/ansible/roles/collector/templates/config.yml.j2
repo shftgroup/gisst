@@ -1,0 +1,68 @@
+service:
+  extensions: [jaeger_storage, jaeger_query]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger_storage_exporter, spanmetrics]
+    metrics/spanmetrics:
+      receivers: [spanmetrics]
+      exporters: [prometheus]
+  telemetry:
+    resource:
+      service.name: jaeger
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: {{ collector_metrics_bind_addr }}
+                port: {{ collector_metrics_bind_port }}
+    logs:
+      level: {{ collector_log_level }}
+
+extensions:
+  jaeger_query:
+    storage:
+      traces: some_storage
+      metrics: some_metrics_storage
+    grpc:
+      endpoint: "{{ collector_query_grpc_bind_addr }}:{{ collector_query_grpc_bind_port }}"
+    http:
+      endpoint: "{{ collector_query_http_bind_addr }}:{{ collector_query_http_bind_port }}"
+    base_path: "{{ collector_query_base_path }}"
+  jaeger_storage:
+    backends:
+      some_storage:
+        badger:
+          directories:
+            keys: "{{ collector_storage_path }}"
+            values: "{{ collector_storage_path }}"
+          ephemeral: false
+    metric_backends:
+      some_metrics_storage:
+        prometheus:
+          endpoint: "{{ metrics_external_addr }}"
+          normalize_calls: true
+          normalize_duration: true
+
+connectors:
+  spanmetrics:
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "{{ collector_grpc_bind_addr }}:{{ collector_grpc_bind_port }}"
+      http:
+        endpoint: "{{ collector_http_bind_addr }}:{{ collector_http_bind_port }}"
+
+processors:
+  batch:
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: some_storage
+  prometheus:
+    endpoint: "{{ collector_exporter_metrics_bind_addr }}:{{ collector_exporter_metrics_bind_port }}"

@@ -1,0 +1,26 @@
+[Unit]
+Description=Jaeger
+Documentation=https://www.jaegertracing.io/docs/latest
+After=network.target network-online.target systemd-user-sessions.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ collector_home }}
+EnvironmentFile=-{{ collector_config_path }}/collector.env
+ExecStart={{ collector_binary_path }} --config {{ collector_config_path }}/config.yml
+User={{ collector_user }}
+Group={{ collector_group }}
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ collector_home }} {{ collector_config_path }} {{ collector_storage_path }}
+
+[Install]
+WantedBy=multi-user.target
