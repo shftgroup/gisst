@@ -64,7 +64,7 @@
         name: prometheus.prometheus.postgres_exporter
       vars:
         postgres_exporter_web_telemetry_path: "/{{ db_metrics_http_path }}"
-        postgres_exporter_web_listen_address: "{{ db_metrics_bind_addr }}"
+        postgres_exporter_web_listen_address: "{{ db_metrics_bind_addr }}:{{ db_metrics_bind_port }}"
         postgres_exporter_basic_auth_users: "{{ db_metrics_auth_users }}"
         postgres_exporter_name: "postgresql://{{ db_user_read }}:{{ db_user_read_password }}@localhost"
     - name: Add nginx location include
