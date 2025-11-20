@@ -2,6 +2,9 @@
 members = ["gisst", "gisst-server", "gisst-cli", "ingest", "rdb-sys"]
 resolver = "2"
 
+#[profile.dev.build-override]
+#opt-level = 3
+
 [profile.dev.package.md5]
 opt-level = 3
 [profile.dev.package.sqlx-macros]

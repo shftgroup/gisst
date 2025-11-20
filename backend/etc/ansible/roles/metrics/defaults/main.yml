@@ -1,0 +1,18 @@
+---
+metrics_search_api_key_file: search.key
+metrics_db_dir: "/var/lib/prometheus"
+metrics_config_dir: "/etc/prometheus"
+metrics_config_flags_extra:
+  enable-feature:
+    - extra-scrape-metrics
+    - otlp-deltatocumulative
+  otlp.ignore_resource_attributes: []
+  otlp.keep_identifying_resource_attributes: true
+metrics_http_path: "metrics"
+metrics_bind_addr: "0.0.0.0"
+metrics_bind_port: 9090
+metrics_external_addr: "http://localhost:{{ metrics_bind_port }}/{{ metrics_http_path }}"
+metrics_use_proxy: false
+metrics_proxy_snippet_dir: /etc/nginx/snippets
+metrics_user: "metrics"
+metrics_group: "{{ metrics_user }}"

@@ -1,4 +1,16 @@
 ---
-meilisearch_use_proxy: false
-meilisearch_proxy_snippets_dir: /etc/nginx/snippets
-meilisearch_proxy_external_path: search
+search_home: "/var/lib/meilisearch"
+search_config_dir: "/etc/meilisearch"
+search_db_path: "{{ meilisearch_home }}/data"
+search_env: "production"
+meilisearch_no_analytics: "true"
+search_dump_path: "{{ search_home }}/dumps"
+search_snapshot_path: "{{ search_home }}/snapshots"
+
+search_bind_addr: "0.0.0.0"
+search_bind_port: 7700
+search_external_addr: "http://localhost:{{ search_bind_port }}"
+
+search_use_proxy: false
+search_proxy_snippets_dir: /etc/nginx/snippets
+search_proxy_external_path: search

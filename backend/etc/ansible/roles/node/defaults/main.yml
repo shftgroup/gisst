@@ -2,8 +2,10 @@
 node_metrics_http_path: metrics
 node_metrics_bind_addr: "0.0.0.0"
 node_metrics_bind_port: "9100"
+node_metrics_external_addr: "http://localhost:{{ node_metrics_bind_port }}/{{ node_metrics_http_path }}"
 node_systemd_http_path: systemd
 node_systemd_bind_addr: "0.0.0.0"
 node_systemd_bind_port: "9558"
+node_systemd_external_addr: "http://localhost:{{ node_systemd_bind_port }}/{{ node_systemd_http_path }}"
 node_use_proxy: false
 node_proxy_snippet_dir: /etc/nginx/snippets

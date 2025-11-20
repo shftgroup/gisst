@@ -22,3 +22,4 @@ db_metrics_proxy_snippets_dir: /etc/nginx/snippets/
 db_metrics_http_path: "metrics"
 db_metrics_bind_addr: "0.0.0.0"
 db_metrics_bind_port: 9187
+db_metrics_external_addr: "http://localhost:{{ db_metrics_bind_port }}/{{ db_metrics_http_path }}"
