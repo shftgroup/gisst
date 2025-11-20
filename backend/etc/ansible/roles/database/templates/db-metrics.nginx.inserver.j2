@@ -5,5 +5,5 @@ location /{{ db_metrics_http_path }}/ {
   proxy_set_header Connection $connection_upgrade;
   proxy_set_header Host $host;
   proxy_pass_request_headers on;
-  proxy_pass http://{{ db_metrics_bind_addr }};
+  proxy_pass http://{{ db_metrics_bind_addr }}:{{ db_metrics_bind_port }};
 }

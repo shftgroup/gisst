@@ -4,14 +4,14 @@
     name: prometheus.prometheus.node_exporter
   vars:
     node_exporter_web_telemetry_path: "/{{ node_metrics_http_path }}"
-    node_exporter_web_listen_address: "{{ node_metrics_bind_addr }}"
+    node_exporter_web_listen_address: "{{ node_metrics_bind_addr }}:{{ node_metrics_bind_port }}"
     node_exporter_basic_auth_users: "{{ node_auth_users }}"
 - name: Activate systemd_exporter
   include_role:
     name: prometheus.prometheus.systemd_exporter
   vars:
     systemd_exporter_web_telemetry_path: "/{{ node_systemd_http_path }}"
-    systemd_exporter_web_listen_address: "{{ node_systemd_bind_addr }}"
+    systemd_exporter_web_listen_address: "{{ node_systemd_bind_addr }}:{{ node_systemd_bind_port }}"
     systemd_exporter_basic_auth_users: "{{ node_auth_users }}"
 - name: Add nginx location include
   when: node_use_proxy
