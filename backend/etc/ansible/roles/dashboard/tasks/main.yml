@@ -1,0 +1,55 @@
+---
+- name: Install grafana repository key
+  ansible.builtin.apt_key:
+    url: https://apt.grafana.com/gpg.key
+    keyring: /etc/apt/keyrings/grafana.gpg
+- name: Add grafana repository
+  apt_repository:
+    repo: deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main
+- name: Install grafana
+  apt:
+    name: grafana
+- name: Setup grafana.ini
+  template:
+    src: templates/grafana.ini.j2
+    dest: "/etc/grafana/grafana.ini"
+- name: Provision datasources
+  template:
+    src: templates/datasources.yaml.j2
+    dest: "/etc/grafana/provisioning/datasources/datasources.yaml"
+# - name: Provision dashboards
+  # template:
+    # src: templates/dashboards.yaml.j2
+    # dest: "/etc/grafana/provisioning/dashboards/default.yaml"
+# - name: Default dashboard definitions
+  # template:
+    # src: "templates/dashboards/{{ dashname }}.json.j2"
+    # dest: "/var/lib/grafana/dashboards/{{ dashname }.json"
+  # loop:
+    # - health
+    # - collector
+    # - server
+    # - metrics
+    # - database
+- name: Ensure grafana service is running
+  ansible.builtin.systemd_service:
+    name: grafana-server
+    state: started
+    enabled: true
+    daemon_reload: true
+- name: Add dashboard users
+  grafana.grafana.user:
+    admin_name: "{{ dashboard_admin_user }}"
+    admin_password: "{{ dashboard_admin_password }}"
+    grafana_url: "{{ dashboard_root_url }}"
+    email: "{{ item.email }}"
+    login: "{{ item.username }}"
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+  loop: "{{ dashboard_user_logins }}"
+- name: Add nginx location include
+  when: dashboard_use_proxy
+  template:
+    src: templates/dashboard.nginx.inserver.j2
+    dest: "{{ dashboard_proxy_snippets_dir }}/dashboard.conf"
+  notify: nginx-restart

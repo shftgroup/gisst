@@ -1,0 +1,60 @@
+apiVersion: 1
+
+datasources:
+  - name: Metrics
+    type: prometheus
+    uid: metrics
+    access: proxy
+    url: {{ metrics_external_addr }}
+    isDefault: true
+    jsonData:
+      manageAlerts: true
+      allowAsRecordingRulesTarget: true
+      prometheusType: Prometheus
+      cacheLevel: 'High'
+      disableRecordingRules: false
+      timeInterval: 10s
+      incrementalQueryOverlapWindow: 10m
+      exemplarTraceIdDestinations:
+        - datasourceUid: traces
+          name: traceID
+    version: 1
+    editable: false
+  - name: Traces
+    type: jaeger
+    access: proxy
+    uid: traces
+    url: {{ collector_query_external_url }}
+    # basicAuth:
+    # basicAuthUser:
+#    secureJsonData:
+#      basicAuthPassword: 
+    readOnly: false
+    isDefault: false
+    jsonData:
+      tracesToMetrics:
+        datasourceUid: 'prom'
+        spanStartTimeShift: '1h'
+        spanEndTimeShift: '-1h'
+        tags: [{ key: 'service.name', value: 'service' }, { key: 'job' }]
+        queries:
+          - name: 'Sample query'
+            query: 'sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m]))'
+      nodeGraph:
+        enabled: true
+      traceQuery:
+        timeShiftEnabled: true
+        spanStartTimeShift: '1h'
+        spanEndTimeShift: '-1h'
+      spanBar:
+        type: 'None'
+  - name: Database
+    uid: database
+    type: postgres
+    url: "{{ db_host }}:5432"
+    user: {{ db_user_read }}
+    secureJsonData:
+      password: {{ db_user_read_password }}
+    jsonData:
+      database: {{ db_name }}
+      sslmode: 'disable'

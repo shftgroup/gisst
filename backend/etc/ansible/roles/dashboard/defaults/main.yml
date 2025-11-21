@@ -1,0 +1,21 @@
+---
+dashboard_bind_addr: 0.0.0.0
+dashboard_bind_port: 3000
+dashboard_external_protocol: http
+dashboard_external_domain: localhost
+dashboard_admin_user: admin
+dashboard_admin_email: grafana@localhost
+# dashboard_admin_password: put in vault secrets
+# basic_auth users for accessing metrics in prometheus:
+dashboard_metrics_user: metrics
+# dashboard_metrics_password: put in vault
+dashboard_http_path: "/"
+dashboard_root_url: "{{ dashboard_external_protocol }}://{{ dashboard_external_domain }}:{{ dashboard_bind_port }}/{{ dashboard_http_path }}"
+#dashboard_user_logins:  put in vault secrets
+#  - username: me
+#    password: pw
+#    email: who@where
+#    name: name
+
+dashboard_use_proxy: false
+dashboard_proxy_snippets_dir: /etc/nginx/snippets.d

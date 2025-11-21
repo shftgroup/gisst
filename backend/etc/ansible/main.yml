@@ -8,6 +8,6 @@
 #    - database
 #    - server
 #    - search
-    - metrics
-    - collector
-#    - dashboard
+#    - metrics
+#    - collector
+    - dashboard
