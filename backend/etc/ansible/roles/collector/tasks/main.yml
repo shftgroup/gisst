@@ -125,9 +125,9 @@
     state: started
     enabled: true
     daemon_reload: true
-# ports:
-# - "16686:16686"
-# - "8888:8888"
-# - "8889:8889"
-# - "4317:4317"
-# - "4318:4318"
+- name: Add proxy snippet
+  when: collector_use_proxy
+  template:
+    src: templates/collector.nginx.inserver.j2
+    dest: "{{ collector_proxy_snippets_dir }}/collector.conf"
+  notify: nginx-restart
