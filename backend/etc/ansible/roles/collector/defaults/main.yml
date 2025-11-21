@@ -22,6 +22,8 @@ collector_query_grpc_bind_port: 16685
 collector_query_http_bind_addr: "0.0.0.0"
 collector_query_http_bind_port: 16686
 
+collector_query_external_url: "http://localhost:{{ collector_query_http_bind_port }}/{{ collector_query_base_path }}"
+
 collector_use_proxy: false
 collector_proxy_snippets_dir: "/etc/nginx/snippets.d"
 collector_proxy_metrics_http_path: "/metrics/collector"
