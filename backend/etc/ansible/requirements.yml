@@ -9,5 +9,7 @@ roles:
 collections:
   - name: prometheus.prometheus
     version: 0.27.4
+  - name: community.grafana
+    version: 2.3.0
   - name: grafana.grafana
     version: 6.0.6

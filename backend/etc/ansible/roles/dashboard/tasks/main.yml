@@ -17,35 +17,51 @@
   template:
     src: templates/datasources.yaml.j2
     dest: "/etc/grafana/provisioning/datasources/datasources.yaml"
-# - name: Provision dashboards
-  # template:
-    # src: templates/dashboards.yaml.j2
-    # dest: "/etc/grafana/provisioning/dashboards/default.yaml"
-# - name: Default dashboard definitions
-  # template:
-    # src: "templates/dashboards/{{ dashname }}.json.j2"
-    # dest: "/var/lib/grafana/dashboards/{{ dashname }.json"
-  # loop:
-    # - health
-    # - collector
-    # - server
-    # - metrics
-    # - database
+- name: Create dashboards directory
+  file:
+    path: /var/lib/grafana/dashboards
+    state: directory
+    owner: grafana
+    group: grafana
+    mode: '0755'
+- name: Provision dashboards
+  template:
+    src: templates/dashboards.yaml.j2
+    dest: "/etc/grafana/provisioning/dashboards/default.yaml"
+- name: Default dashboard definitions
+  copy:
+    src: "files/dashboards/{{ item }}.json"
+    dest: "/var/lib/grafana/dashboards/{{ item }}.json"
+  loop:
+    - activity
+    - node_health
+    - search
+    - database_health
+    # collector (jaeger monitoring) , metrics (prometheus monitoring)
 - name: Ensure grafana service is running
   ansible.builtin.systemd_service:
     name: grafana-server
-    state: started
+    state: restarted
     enabled: true
     daemon_reload: true
 - name: Add dashboard users
-  grafana.grafana.user:
-    admin_name: "{{ dashboard_admin_user }}"
-    admin_password: "{{ dashboard_admin_password }}"
-    grafana_url: "{{ dashboard_root_url }}"
+  community.grafana.grafana_user:
+    url_username: "{{ dashboard_admin_user }}"
+    url_password: "{{ dashboard_admin_password }}"
+    url: "{{ dashboard_root_url }}"
     email: "{{ item.email }}"
     login: "{{ item.username }}"
     name: "{{ item.name }}"
     password: "{{ item.password }}"
+    is_admin: "{{ item.is_admin }}"
+  loop: "{{ dashboard_user_logins }}"
+- name: Add users to organization
+  community.grafana.grafana_organization_user:
+    url: "{{ dashboard_root_url }}"
+    url_username: "{{ dashboard_admin_user }}"
+    url_password: "{{ dashboard_admin_password }}"
+    login: "{{ item.username }}"
+    role: "{{ item.is_admin | ternary('admin', 'viewer')}}"
   loop: "{{ dashboard_user_logins }}"
 - name: Add nginx location include
   when: dashboard_use_proxy
