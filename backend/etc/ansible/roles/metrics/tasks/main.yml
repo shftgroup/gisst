@@ -1,4 +1,15 @@
 ---
+- name: Get search keys
+  include_role:
+    name: joeosborn.meilisearch
+    tasks_from: fetch_keys
+  vars:
+    meilisearch_master_key: "{{ search_master_key }}"
+- name: Write search API key to file
+  copy:
+    dest: "{{ metrics_config_dir }}/{{ metrics_search_api_key_file }}"
+    mode: '0666'
+    content: "{{ meilisearch_api_key }}"
 - name: Install prometheus
   include_role:
     name: prometheus.prometheus.prometheus
@@ -12,19 +23,12 @@
     prometheus_config_flags_extra: "{{ metrics_config_flags_extra }}"
     prometheus_system_user: "{{ metrics_user }}"
     prometheus_system_group: "{{ metrics_group }}"
-- name: Get search keys
-  include_role:
-    name: joeosborn.meilisearch
-    tasks_from: fetch_keys
-  vars:
-    meilisearch_master_key: "{{ search_master_key }}"
-- name: Write search API key to file
-  copy:
-    dest: "{{ metrics_config_dir }}/{{ metrics_search_api_key_file }}"
+- name: Tighten search API key permissions
+  file:
+    path: "{{ metrics_config_dir }}/{{ metrics_search_api_key_file }}"
     mode: '0600'
     owner: "{{ metrics_user }}"
     group: "{{ metrics_group }}"
-    content: "{{ meilisearch_api_key }}"
 - name: Add nginx location include
   when: metrics_use_proxy
   template:

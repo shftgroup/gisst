@@ -35,6 +35,7 @@
   loop:
     - activity
     - node_health
+    - systemd
     - search
     - database_health
     # collector (jaeger monitoring) , metrics (prometheus monitoring)
