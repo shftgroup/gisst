@@ -1,4 +1,5 @@
 {
+  {% raw %}
   "annotations": {
     "list": [
       {
@@ -2499,6 +2500,7 @@
     "db",
     "stats"
   ],
+  {% endraw %}
   "templating": {
     "list": [
       {

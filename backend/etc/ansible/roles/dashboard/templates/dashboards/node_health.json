@@ -1,4 +1,5 @@
 {
+  {% raw %}
   "annotations": {
     "list": [
       {
@@ -23419,6 +23420,7 @@
   "tags": [
     "linux"
   ],
+  {% endraw %}
   "templating": {
     "list": [
       {
