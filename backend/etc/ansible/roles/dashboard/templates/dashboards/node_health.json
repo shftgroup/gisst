@@ -23437,8 +23437,8 @@
       },
       {
         "current": {
-          "text": "node_exporter",
-          "value": "node_exporter"
+          "text": "{{ node_metrics_job_name }}",
+          "value": "{{ node_metrics_job_name }}"
         },
         "datasource": {
           "type": "prometheus",
