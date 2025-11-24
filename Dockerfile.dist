@@ -1,0 +1,29 @@
+# Usage: e.g. docker run -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -e GET_ASSETS=0 gisst-dist
+# Consider: docker volume create gisst-build
+#           docker run -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v gisst-build:/gisst-build -e GET_ASSETS=0 gisst-dist
+ARG RUST_VERSION=1.91.1
+ARG EMSDK_VERSION=4.0.17
+FROM emscripten/emsdk:$EMSDK_VERSION
+ARG RUST_VERSION
+ARG EMSDK_VERSION
+ENV RUST_VERSION=$RUST_VERSION
+ENV EMSDK_VERSION=$EMSDK_VERSION
+ENV GET_ASSETS=1
+ENV FETCH_CORES=1
+ENV BUILD_CORES=1
+
+WORKDIR /gisst-build
+
+RUN apt update && \
+    apt install -y software-properties-common && \
+    add-apt-repository ppa:git-core/ppa && \
+    apt install -y bash curl git jq bison libpng-dev \
+        bsdmainutils build-essential pkgconf cmake clang && \
+    apt-get clean
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustup default $RUST_VERSION && \
+    rustup target add wasm32-unknown-unknown
+COPY dist-update-docker.sh /usr/local/bin/dist-update
+RUN chmod +x /usr/local/bin/dist-update
+ENTRYPOINT ["/usr/local/bin/dist-update"]
