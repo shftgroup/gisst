@@ -1,0 +1,73 @@
+---
+testing:
+  hosts:
+    lxd0:
+      ansible_connection: lxd
+      ansible_host: ansible-testing
+  vars:
+    node_metrics_job_name: node_health
+    node_metrics_bind_port: 9100
+    node_systemd_bind_port: 9558
+    db_host: localhost
+    db_metrics_bind_port: 9187
+    db_user_read: metrics
+    db_name: gisstdb
+    search_job_name: search
+    search_bind_port: 7700
+    search_http_path: ""
+    search_job_target: "localhost:{{ search_bind_port }}"
+    metrics_bind_port: 9090
+    dashboard_external_domain: "10.108.47.141"
+    collector_query_external_url: "http://localhost:16686/"
+    metrics_external_addr: "http://10.108.47.141:{{ metrics_bind_port }}"
+    metrics_search_api_key_file: search.key
+    metrics_targets:
+      - job_name: "prometheus"
+        metrics_path: "/metrics"
+        static_configs:
+          - targets:
+              - "localhost:{{ metrics_bind_port }}"
+      - job_name: "{{ node_metrics_job_name }}"
+        scrape_interval: 10s
+        metrics_path: "/metrics"
+        basic_auth:
+          username: "{{ metrics_user }}"
+          password: "{{ metrics_user_password }}"
+        static_configs:
+          - targets:
+            - "localhost:{{ node_metrics_bind_port }}"
+      - job_name: node_systemd_stats
+        metrics_path: "/metrics"
+        basic_auth:
+          username: "{{ metrics_user }}"
+          password: "{{ metrics_user_password }}"
+        static_configs:
+          - targets: [ "localhost:{{ node_systemd_bind_port }}" ]
+      - job_name: db
+        metrics_path: "/metrics"
+        basic_auth:
+          username: "{{ metrics_user }}"
+          password: "{{ metrics_user_password }}"
+        static_configs:
+          - targets: [ "localhost:{{ db_metrics_bind_port }}" ]
+      - job_name: "{{ search_job_name }}"
+        metrics_path: "/metrics"
+        authorization:
+          credentials_file: "{{ metrics_config_dir }}/{{ metrics_search_api_key_file }}"
+        static_configs:
+          - targets: [ "{{ search_job_target }}" ]
+      - job_name: collector_metrics
+        metrics_path: "/metrics"
+        static_configs:
+          - targets: [ "localhost:{{ collector_metrics_bind_port }} "]
+      - job_name: collector_trace_metrics
+        metrics_path: "/metrics"
+        static_configs:
+          - targets: [ "localhost:{{ collector_exporter_metrics_bind_port }} "]
+      - job_name: dashboard_metrics
+        metrics_path: "/{{ dashboard_http_path }}metrics"
+        basic_auth:
+          username: "{{ metrics_user }}"
+          password: "{{ metrics_user_password }}"
+        static_configs:
+          - targets: [ "localhost:{{ dashboard_bind_port }}" ]
