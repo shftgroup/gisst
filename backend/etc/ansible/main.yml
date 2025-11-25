@@ -4,10 +4,11 @@
   become: yes
   gather_facts: yes
   roles:
-    - node
-    - database
-    - search
-    - server
-    - metrics
-    - collector
-    - dashboard
+   - node
+   - database
+   - search
+   - server
+   - metrics
+   - collector
+   - dashboard
+   - examples

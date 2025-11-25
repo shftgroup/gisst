@@ -1,4 +1,4 @@
-location /{{ gisst_server_http_path }} {
+location /{{ gisst_server_http_path }}/ {
   proxy_set_header X-Forwarded-For $remote_addr;
   proxy_set_header Host $host;
   proxy_pass_header  X-Accepted-Encoding;
