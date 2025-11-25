@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPT_VERSION="1.0.0"
+
 set -e
 
 git config --global advice.detachedHead false
@@ -35,7 +37,9 @@ function getrepo
     return $?
 }
 
-# check rust and emsdk versions from env var against manifest
+# check script, rust, and emsdk versions from env var against manifest
+MANIFEST_SCRIPT_VERSION=$(jq -r ".script_version" /manifest.json)
+[ $MANIFEST_SCRIPT_VERSION = "${SCRIPT_VERSION}" ] || die "Container built with wrong script version ${SCRIPT_VERSION} for manifest $MANIFEST_SCRIPT_VERSION"
 MANIFEST_RUST_VERSION=$(jq -r ".rust_version" /manifest.json)
 [ $MANIFEST_RUST_VERSION = "${RUST_VERSION}" ] || die "Container built with wrong rust version ${RUST_VERSION} for manifest $MANIFEST_RUST_VERSION"
 MANIFEST_EMSDK_VERSION=$(jq -r ".emsdk_version" /manifest.json)
@@ -96,6 +100,9 @@ pushd ra
 rm -rf obj-emscripten
 popd
 
+build_args=($((jq -re '.retroarch_build_args | @sh' /manifest.json) | tr -d \'))
+
+RETROARCH_VERSION=$(jq -e '.retroarch.version' /manifest.json)
 for f in $CORENAMES v86; do
     if [ $f = "ra" ]; then
         continue
@@ -103,11 +110,14 @@ for f in $CORENAMES v86; do
     pushd $f
 
     ASYNC=0
-    # TODO get from manifest
-    if [ $f = "mupen64plus_next" ] || [ $f = "hatari" ]; then ASYNC=1; fi
+    if jq -re ".retroarch_cores.$f.async == true" /manifest.json; then
+        ASYNC=1
+    fi
 
+    CORE_VERSION=$(jq -e ".retroarch_cores.$f.version" /manifest.json)
     if [ $f = "v86" ]
     then
+        CORE_VERSION=$(jq -e ".v86.version" /manifest.json)
         # make clean
         WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
         cp build/libv86.js build/v86.wasm /out/
@@ -115,7 +125,10 @@ for f in $CORENAMES v86; do
         continue
     elif [ $f = "sameboy" ]
     then
-        git clone --depth 1 https://github.com/gbdev/rgbds.git || echo "Could not get rgbds or rgbds already present"
+        rgbds_repo=$(jq -r '.retroarch_cores.sameboy.rgbds_repo' /manifest.json)
+        rgbds_version=$(jq -r '.retroarch_cores.sameboy.rgbds_version' /manifest.json)
+        CORE_VERSION=$(jq -r '.retroarch_cores.sameboy.version' /manifest.json)_rgbds_$rgbds_version
+        git clone --depth 1 --revision $rgbds_version $rgbds_repo || echo "Could not get rgbds or rgbds already present"
         make -C rgbds -j || die "Could not build rgbds"
         PATH="./rgbds:${PATH}" make -j CONF=release bootroms || die "could not build sameboy bootroms"
         PATH="./rgbds:${PATH}" emmake make CONF=release platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC -j libretro || die "could not build core ${f}"
@@ -139,8 +152,13 @@ for f in $CORENAMES v86; do
     fi
     pushd ../ra
     cp libretro_emscripten.bc libretro_emscripten.a
-    emmake make -f Makefile.emscripten LIBRETRO=$f HAVE_RWEBAUDIO=0 HAVE_THREADS=1 PTHREAD_POOL_SIZE=4 PROXY_TO_PTHREAD=1 HAVE_WASMFS=1 HAVE_EXTRA_WASMFS=1 HAVE_EGL=0 HAVE_AL=0 HAVE_AUDIOWORKLET=1 ASYNC=$ASYNC SYMBOLS=0 HAVE_OPENGLES3=1 HAVE_OZONE=0 HAVE_XMB=0 HAVE_GLUI=0 HAVE_MATERIALUI=0 -j all || die "could not build RA dist for ${f}"
+    emmake make -f Makefile.emscripten LIBRETRO=$f ASYNC=$ASYNC "${build_args[@]}" -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* /out/cores
+    # compute hash from script,rust,emsdk,retroarch,core version+retroarch build args
+    HASHSTR="scr:$SCRIPT_VERSION rst:$RUST_VERSION ems:$EMSDK_VERSION ret:$RETROARCH_VERSION cor:$CORE_VERSION args:${build_args[@]}"
+    echo "${HASHSTR}" > /out/cores/${f}_libretro.hash
+    sha1sum <<< "${HASHSTR}" | cut -f 1 -d ' ' >> /out/cores/${f}_libretro.hash
+    echo "hash: ${HASHSTR} = $(cat /out/cores/${f}_libretro.hash)"
     popd
     popd
 done
