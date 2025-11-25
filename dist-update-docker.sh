@@ -100,9 +100,9 @@ pushd ra
 rm -rf obj-emscripten
 popd
 
-build_args=($((jq -re '.retroarch_build_args | @sh' /manifest.json) | tr -d \'))
+build_args=($((jq -r '.retroarch_build_args | @sh' /manifest.json) | tr -d \'))
 
-RETROARCH_VERSION=$(jq -e '.retroarch.version' /manifest.json)
+RETROARCH_VERSION=$(jq -r '.retroarch.version' /manifest.json)
 for f in $CORENAMES v86; do
     if [ $f = "ra" ]; then
         continue
@@ -114,13 +114,18 @@ for f in $CORENAMES v86; do
         ASYNC=1
     fi
 
-    CORE_VERSION=$(jq -e ".retroarch_cores.$f.version" /manifest.json)
+    CORE_VERSION=$(jq -r ".retroarch_cores.$f.version" /manifest.json)
     if [ $f = "v86" ]
     then
-        CORE_VERSION=$(jq -e ".v86.version" /manifest.json)
+        CORE_VERSION=$(jq -re ".v86.version" /manifest.json)
         # make clean
         WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
         cp build/libv86.js build/v86.wasm /out/
+        # compute hash from script,rust,v86 version
+        HASHSTR="scr:$SCRIPT_VERSION rst:$RUST_VERSION v86:$CORE_VERSION"
+        echo "${HASHSTR}" > /out/v86.hash
+        sha1sum <<< "${HASHSTR}" | cut -f 1 -d ' ' >> /out/v86.hash
+        cat /out/v86.hash
         popd
         continue
     elif [ $f = "sameboy" ]
@@ -158,7 +163,7 @@ for f in $CORENAMES v86; do
     HASHSTR="scr:$SCRIPT_VERSION rst:$RUST_VERSION ems:$EMSDK_VERSION ret:$RETROARCH_VERSION cor:$CORE_VERSION args:${build_args[@]}"
     echo "${HASHSTR}" > /out/cores/${f}_libretro.hash
     sha1sum <<< "${HASHSTR}" | cut -f 1 -d ' ' >> /out/cores/${f}_libretro.hash
-    echo "hash: ${HASHSTR} = $(cat /out/cores/${f}_libretro.hash)"
+    cat /out/cores/${f}_libretro.hash
     popd
     popd
 done
