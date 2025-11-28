@@ -218,7 +218,7 @@ impl From<String> for RVal {
             value: RValInner {
                 str_: ManuallyDrop::new(RStr {
                     len,
-                    buf: Box::into_raw(s).cast::<i8>(),
+                    buf: Box::into_raw(s).cast::<c_char>(),
                 }),
             },
         }
