@@ -29,6 +29,9 @@ backend/test
 backend/rdb-sys/libretro-util
 backend/rdb
 backend/web-dist
+backend/etc/ansible/group_vars
+backend/etc/ansible/inventory.yml
+backend/etc/ansible/ansible.cfg
 backend/embed-dist
 backend/examples/data/v86/local
 backend/examples/records/v86/local
