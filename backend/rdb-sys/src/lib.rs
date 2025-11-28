@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_int, c_void},
+    ffi::{c_int, c_void},
     mem::ManuallyDrop,
 };
 
@@ -23,7 +23,7 @@ pub enum RType {
 #[repr(C)]
 pub struct RStr {
     pub len: u32,
-    pub buf: *mut c_char,
+    pub buf: *mut u8,
 }
 
 #[repr(C)]
