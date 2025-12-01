@@ -45,16 +45,22 @@
     state: restarted
     enabled: true
     daemon_reload: true
-- name: Add dashboard users
-  community.grafana.grafana_user:
-    url_username: "{{ dashboard_admin_user }}"
-    url_password: "{{ dashboard_admin_password }}"
+- name: Wait for dashboard to be ready
+  ansible.builtin.uri:
     url: "{{ dashboard_root_url }}"
+    method: GET
+    status_code: 200
+  retries: 5
+  delay: 10
+- name: Add dashboard users
+  grafana.grafana.user:
+    admin_name: "{{ dashboard_admin_user }}"
+    admin_password: "{{ dashboard_admin_password }}"
+    grafana_url: "{{ dashboard_root_url }}"
     email: "{{ item.email }}"
     login: "{{ item.username }}"
     name: "{{ item.name }}"
     password: "{{ item.password }}"
-    is_admin: "{{ item.is_admin }}"
   loop: "{{ dashboard_user_logins }}"
 - name: Add users to organization
   community.grafana.grafana_organization_user:

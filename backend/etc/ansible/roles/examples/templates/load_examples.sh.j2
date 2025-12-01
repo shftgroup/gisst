@@ -7,7 +7,7 @@
 source {{ gisst_server_home }}/gisst-server.env
 source .env
 
-export GISST_CONFIG_PATH={{ gisst_server_env_config_path | dirname }}
+export GISST_CONFIG_PATH={{ gisst_pwd }}/config
 export MEILI_URL=$MEILI_URL
 export MEILI_API_KEY=$MEILI_API_KEY
 export MEILI_MASTER_KEY=$MEILI_MASTER_KEY

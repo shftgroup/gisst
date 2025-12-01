@@ -1,7 +1,4 @@
 ---
-# in testing or production environment, a version number
-# in development environment, a git branch name or commit
-gisst_server_version: v0.1.0
 
 # development only
 gisst_server_dev_cargo_features: "dummy_auth"
@@ -17,6 +14,10 @@ gisst_server_environment: production
 gisst_server_temp_dir: "{{ gisst_server_home }}/tmp"
 gisst_server_storage_dir_depth: 4
 
+# in testing or production environment, a version number
+# in development environment, a git branch name or commit
+gisst_server_version: "{{ (gisst_server_environment == 'development') | ternary('main', 'v0.1.0') }}"
+
 # http
 gisst_server_terminate_ssl: false
 gisst_server_ssl_cert: ""
@@ -25,7 +26,7 @@ gisst_server_bind_address: "0.0.0.0"
 gisst_server_bind_port: 4000
 gisst_server_host_name: "localhost"
 gisst_server_http_path: ""
-gisst_server_base_url: "http://{{ gisst_server_host_name }}:{{ gisst_server_bind_port }}{{ gisst_server_http_path }}"
+gisst_server_base_url: "{{ gisst_server_terminate_ssl | ternary('https', 'http') }}://{{ gisst_server_host_name }}:{{ gisst_server_bind_port }}{{ gisst_server_http_path }}"
 gisst_server_max_body_size: "32M"
 gisst_server_proxy_snippets_dir: /etc/nginx/snippets/
 gisst_server_use_proxy: false
@@ -38,8 +39,8 @@ gisst_server_use_proxy: false
 gisst_server_database_full_url: "postgresql://{{ db_user_admin | default('postgres') }}:{{ db_user_admin_password | default('postgres')  }}@{{ db_host | default('127.0.0.1')  }}/{{ db_name | default('gisstdb') }}"
 
 # metrics
-gisst_server_jaeger_endpoint: "http://127.0.0.1:4317"
-gisst_server_prometheus_endpoint: "http://127.0.0.1:9090"
+gisst_server_jaeger_endpoint: "{{ collector_external_url | default('http://127.0.0.1:4317/') }}"
+gisst_server_prometheus_endpoint: "{{ metrics_external_addr | default('http://127.0.0.1:9090/metrics')}}"
 
 # search
 gisst_server_meilisearch_url: "{{ meilisearch_http_addr | default('http://127.0.0.1:7700') }}"

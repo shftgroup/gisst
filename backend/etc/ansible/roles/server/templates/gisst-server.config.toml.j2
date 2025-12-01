@@ -9,8 +9,8 @@ max_lifetime_seconds = 3600
 [http]
 listen_address = "{{ gisst_server_bind_address }}"
 listen_port = "{{ gisst_server_bind_port }}"
-dev_cert = "{{ gisst_server_ssl_cert }}"
-dev_key = "{{ gisst_server_ssl_key }}"
+dev_cert = "{{ gisst_server_home }}/cert.pem"
+dev_key = "{{ gisst_server_home }}/cert.key"
 dev_ssl = "{{ gisst_server_terminate_ssl }}"
 base_url = "{{ gisst_server_base_url }}"
 

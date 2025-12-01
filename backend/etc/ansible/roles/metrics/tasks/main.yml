@@ -1,4 +1,9 @@
 ---
+- name: Create metrics config folder
+  file:
+    path: "{{ metrics_config_dir }}"
+    state: directory
+    mode: '0755'
 - name: Get search keys
   include_role:
     name: joeosborn.meilisearch
@@ -23,6 +28,15 @@
     prometheus_config_flags_extra: "{{ metrics_config_flags_extra }}"
     prometheus_system_user: "{{ metrics_user }}"
     prometheus_system_group: "{{ metrics_group }}"
+- name: Add configuration for otlp
+  blockinfile:
+    block: |
+      otlp:
+        promote_all_resource_attributes: true
+        keep_identifying_resource_attributes: true
+    path: "{{ metrics_config_dir }}/prometheus.yml"
+    backup: yes
+    validate: promtool check config %s
 - name: Tighten search API key permissions
   file:
     path: "{{ metrics_config_dir }}/{{ metrics_search_api_key_file }}"

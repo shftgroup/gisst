@@ -6,9 +6,8 @@ metrics_config_flags_extra:
   enable-feature:
     - extra-scrape-metrics
     - otlp-deltatocumulative
-  otlp.promote_all_resource_attributes: true
-  otlp.keep_identifying_resource_attributes: true
-  web.enable_otlp_receiver: true
+  web.enable-otlp-receiver: ""
+  web.enable-remote-write-receiver: ""
 metrics_http_path: "metrics"
 metrics_bind_addr: "0.0.0.0"
 metrics_bind_port: 9090

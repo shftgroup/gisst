@@ -36,6 +36,47 @@
   vars:
     nodejs_version: "23.x"
     nodejs_install_npm_user: "{{ gisst_server_user }}"
+- name: Copy SSL keys if needed
+  when: gisst_server_terminate_ssl and gisst_server_ssl_cert != ""
+  copy:
+    src: "{{ item.from }}"
+    dest: "{{ item.to }}"
+    owner: "{{ gisst_server_user }}"
+  loop:
+    - from: "{{ gisst_server_ssl_cert }}"
+      to: "{{ gisst_server_home }}/cert.pem"
+    - from: "{{ gisst_server_ssl_key }}"
+      to: "{{ gisst_server_home }}/cert.key"
+- name: Generate SSL keys if needed
+  when: gisst_server_terminate_ssl and gisst_server_ssl_cert == ""
+  block:
+    - name: Produce private key
+      openssl_privatekey:
+        path: "{{ gisst_server_home }}/cert.key"
+        owner: "{{ gisst_server_user }}"
+        size: 4096
+    - name: Produce CSR
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ gisst_server_home }}/cert.key"
+        common_name: "{{ gisst_server_host_name }}"
+        organization_name: GISST
+        subject_alt_name:
+          - "DNS:{{ gisst_server_host_name }}"
+          #- "DNS:www.ansible.com"
+          #- "DNS:docs.ansible.com"
+      register: gisst_csr
+    - name: Create self-signed certificate from CSR
+      community.crypto.x509_certificate:
+        path: "{{ gisst_server_home }}/cert.pem"
+        csr_content: "{{ gisst_csr.csr }}"
+        privatekey_path: "{{ gisst_server_home }}/cert.key"
+        owner: "{{ gisst_server_user }}"
+        provider: selfsigned
+        selfsigned_not_after: "+3650d"
+    - name: Force cert variables to self-signed certificates
+      ansible.builtin.set_fact:
+        gisst_server_ssl_cert: "{{ gisst_server_home }}/cert.pem"
+        gisst_server_ssl_key: "{{ gisst_server_home }}/cert.key"
 - name: Clone gisst server (dev)
   block:
     - name: Download development dependencies

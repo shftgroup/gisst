@@ -7,15 +7,13 @@
 - name: Find correct paths
   set_fact:
     gisst_pwd: "{{ (gisst_server_environment == 'development') | ternary(gisst_server_home+'/repo/backend', gisst_server_home) }}"
-- name: Debug
-  debug:
-    msg: "GSE {{ gisst_server_environment }} GSU {{ gisst_server_user }} GSH {{ gisst_server_home }} PWD {{ gisst_pwd }}"
-# TODO: Download these from github release
+# TODO: Download these from github release or something
 - name: Copy example files
   when: gisst_server_environment != 'development'
   copy:
     src: ../../../../examples
     dest: "{{ gisst_pwd }}/"
+    owner: "{{ gisst_server_user }}"
 - name: Template load_examples script
   template:
     src: templates/load_examples.sh.j2
