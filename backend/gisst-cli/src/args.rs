@@ -112,8 +112,32 @@ pub enum BaseSubcommand<C: clap::FromArgMatches + clap::Args> {
     Create(C),
 }
 
+#[derive(Debug, Args)]
+pub struct AddCoreArgs {
+    pub core_meta: String,
+    #[arg(long = "entrypoint")]
+    pub entrypoints: Vec<String>,
+    #[arg(long = "dependency")]
+    pub dependencies: Vec<String>,
+    #[arg(long = "config")]
+    pub configs: Vec<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct UpgradeEnvironmentArgs {
+    pub core_name: String,
+    pub core_version: String,
+    pub core_meta: String,
+}
+
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    /// Add a new core to the core table
+    AddCore(AddCoreArgs),
+
+    /// Upgrade legacy environments with the given name and version to use the core name and version from the given core.json file
+    UpgradeEnvironment(UpgradeEnvironmentArgs),
+
     /// Recalculate file sizes and compressed sizes
     RecalcSizes,
 

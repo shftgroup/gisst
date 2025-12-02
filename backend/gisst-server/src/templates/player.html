@@ -9,6 +9,7 @@
 {% if player_params.environment.environment_framework == "retroarch" %}
 <script src="{{ base_url }}/ra/libretro_adapter.js"></script>
 {% elif player_params.environment.environment_framework == "v86" %}
+<!-- Should be  player_params. -->
 <script src="{{ base_url }}/v86/libv86.js"></script>
 {% endif %}
 <script id="config" type="application/json">

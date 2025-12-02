@@ -1,11 +1,39 @@
-import {ColdStart, StateStart, ReplayStart, ObjectLink, EmuControls, EmbedOptions, ControllerOverlayMode, SaveFileLink} from './types.d';
+import {ColdStart, StateStart, ReplayStart, CoreFileLink, ObjectLink, EmuControls, EmbedOptions, ControllerOverlayMode, SaveFileLink} from './types.d';
 import {loadRetroArch,LibretroModule} from './libretro_adapter';
 
-export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, saves:SaveFileLink[], manifest:ObjectLink[], container:HTMLDivElement, embed_options:EmbedOptions):Promise<EmuControls> {
+export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, saves:SaveFileLink[], core_manifest:CoreFileLink[], manifest:ObjectLink[], container:HTMLDivElement, embed_options:EmbedOptions):Promise<EmuControls> {
   const state_dir = "/mem/states";
   const saves_dir = "/mem/saves";
   const retro_args = ["-v"];
   const content = manifest.find((o) => o.object_role=="content" && o.object_role_index == 0)!;
+    const core_path = '/storage/'+core_manifest.find((o) => o.core_role=="entrypoint" && o.core_role_index == 0)!.file_dest_path;
+    const remote_deps:{[id:string]:string} = {};
+    const core_config = core_manifest.find((o) => o.core_role=="config");
+    const instance_config = manifest.find((o) => o.object_role=="config");
+    const extra_configs:string[] = [];
+    if (core_config) {
+        extra_configs.push(core_config.file_source_path);
+    }
+    if (instance_config) {
+        extra_configs.push(instance_config.file_source_path);
+    }
+    for (const o of core_manifest) {
+        // Emscripten dependencies go into remote_deps
+        if (o.file_filename.match(/.*\.(wasm|js|data)/)) {
+            remote_deps[o.file_source_path+o.file_filename] = '/storage/'+o.file_dest_path;
+        } else if (o.core_role == "dependency") {
+            // Other dependencies go into regular "local" manifest
+            manifest.push({
+                object_role: "dependency",
+                object_role_index: manifest.length * 100 + o.core_role_index,
+                object_id: o.core_name+'.'+o.core_version+'.'+o.core_role+'.'+o.core_role_index+'.'+o.file_hash,
+                file_dest_path: o.file_dest_path,
+                file_filename: o.file_filename,
+                file_source_path: o.file_source_path,
+                file_hash: o.file_hash
+            });
+        }
+    }
   const content_file = content.file_filename!;
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
@@ -31,17 +59,12 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   for (const save of saves) {
     save_data.push([save, new Uint8Array(await ((await fetch(gisst_root+"/storage/"+save.file_dest_path)).arrayBuffer()))]);
   }
-  retro_args.push("--config=/mem/retroarch.cfg");
-  const has_config = manifest.find((o) => o.object_role=="config")!;
-  if(has_config) {
-    retro_args.push("--appendconfig");
-    retro_args.push("/fetch/content/retroarch.cfg");
-  }
+    retro_args.push("--config=/mem/retroarch.cfg");
   retro_args.push("/fetch/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
   let ra_cfg_text:string = await ((await fetch(gisst_root+"/assets/retroarch_web_base.cfg")).text());
   return new Promise((res) => {
-    loadRetroArch(gisst_root, core, {'OPFS_MOUNT':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
+      loadRetroArch(gisst_root, core_path, remote_deps, {'OPFS_MOUNT':'/home/web_user/retroarch', 'FETCH_MANIFEST':'/mem/fetch.txt', 'FETCH_BASE_DIR':'/fetchfs/'},
       true,
       async function (module:LibretroModule) {
         const enc = new TextEncoder();
@@ -50,7 +73,8 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         module.FS.createPath("/", saves_dir, true, true);
         let fetch_manifest = `${gisst_root}/storage/\n`;
         /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
-        for(const file of manifest) {
+          for(const file of manifest) {
+              if (file.object_role == "config") { continue; }
           let sep = file.file_source_path.startsWith("/") ? "" : "/";
           let download_source_path_full = "/fetch/content" + sep + file.file_source_path;
           let download_source_path = download_source_path_full;
@@ -110,6 +134,11 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
           }
           ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
         }
+          for (const config of extra_configs) {
+              const config_url = gisst_root+"/storage/"+config;
+              const text = await (await fetch(config_url)).text();
+              ra_cfg_text += "\n" + text + "\n";
+          }
         const lines_enc = enc.encode(ra_cfg_text);
         module.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);
         retroReady(module, retro_args, container);

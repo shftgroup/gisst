@@ -103,6 +103,27 @@ impl FromStr for ObjectRole {
     }
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
+#[sqlx(rename_all = "lowercase", type_name = "core_file_role")]
+#[serde(rename_all = "lowercase")]
+pub enum CoreFileRole {
+    Entrypoint,
+    Dependency,
+    Config,
+}
+impl FromStr for CoreFileRole {
+    type Err = &'static str;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "entrypoint" => Ok(Self::Entrypoint),
+            "dependency" => Ok(Self::Dependency),
+            "config" => Ok(Self::Config),
+            _ => Err("Attempting to convert ObjectRole that does not exist."),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InstanceObject {
     pub instance_id: Uuid,
@@ -911,6 +932,41 @@ impl InstanceWork {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct CoreFileLink {
+    pub core_name: String,
+    pub core_version: String,
+    pub core_role: CoreFileRole,
+    pub core_role_index: String,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+
+impl CoreFileLink {
+    pub async fn get_all_for_core(
+        conn: &mut sqlx::PgConnection,
+        core_name: &str,
+        core_version: &str,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT core_name, core_version, core_file.core_role as "core_file_role:_",
+                   core_file.core_role_index,
+                   file.file_hash, file.file_filename,
+                   file.file_source_path, file.file_dest_path
+               FROM core_file
+               JOIN file USING(file_id)
+               WHERE core_name = $1 AND core_version = $2 "#,
+            core_name,
+            core_version
+        )
+        .fetch_all(conn)
+        .await
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ObjectLink {
     pub object_id: Uuid,
     pub object_role: ObjectRole,
@@ -920,6 +976,7 @@ pub struct ObjectLink {
     pub file_source_path: String,
     pub file_dest_path: String,
 }
+
 impl ObjectLink {
     pub async fn get_all_for_instance_id(
         conn: &mut sqlx::PgConnection,

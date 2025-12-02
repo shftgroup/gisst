@@ -1,6 +1,6 @@
 import {nested_replace,StringIndexable} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
-import {EmbedOptions,Environment, ColdStart, StateStart, ReplayStart, ObjectLink, SaveFileLink, EmuControls} from './types.d';
+import {EmbedOptions,Environment, ColdStart, StateStart, ReplayStart, CoreFileLink, ObjectLink, SaveFileLink, EmuControls} from './types.d';
 
 
 let v86_loading = false;
@@ -13,36 +13,49 @@ async function downloadScript(src:string) : Promise<Blob> {
   return blob;
 }
 
-function load_v86(gisst_root:string) : Promise<Blob | string> {
-  const path = gisst_root+'/v86/libv86.js';
-  if (gisst_root.startsWith("https://")) {
-    return downloadScript(path);
+function load_v86(v86_path:string) : Promise<Blob | string> {
+  if (v86_path.startsWith("https://")) {
+    return downloadScript(v86_path);
   } else {
-    return new Promise((resolve) => resolve(path));
+    return new Promise((resolve) => resolve(v86_path));
   }
 }
 
-export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], _saves:SaveFileLink[], container:HTMLDivElement, _options:EmbedOptions):Promise<EmuControls> {
-  if(!v86_loaded && !v86_loading) {
-    v86_loading = true;
-    console.log("Loading v86");
-    let blobOrUrl = await load_v86(gisst_root);
-    if (blobOrUrl instanceof Blob) {
-      blobOrUrl = URL.createObjectURL(blobOrUrl);
+export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, core_manifest:CoreFileLink[], manifest:ObjectLink[], _saves:SaveFileLink[], container:HTMLDivElement, _options:EmbedOptions):Promise<EmuControls> {
+    let v86_wasm = null;
+    if(!v86_loaded && !v86_loading) {
+        v86_loading = true;
+        console.log("Loading v86");
+        const entrypoint = core_manifest.find((o) => o.core_role == "entrypoint")!;
+        let blobOrUrl = await load_v86(gisst_root + "/" + entrypoint.file_dest_path);
+        if (blobOrUrl instanceof Blob) {
+            blobOrUrl = URL.createObjectURL(blobOrUrl);
+        }
+        const scpt = document.createElement("script");
+        scpt.src = blobOrUrl;
+        scpt.onload = () => {
+            v86_loaded = true;
+            v86_loading = false;
+        }
+        document.head.appendChild(scpt);
     }
-    const scpt = document.createElement("script");
-    scpt.src = blobOrUrl;
-    scpt.onload = () => {
-      v86_loaded = true;
-      v86_loading = false;
-    }
-    document.head.appendChild(scpt);
-  }
+    // TODO maybe replace with an await
   while(v86_loading) {
-    console.log("Another v86 instance is loading, please wait...");
+    console.log("A v86 instance is loading, please wait...");
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
   console.log("v86 loaded");
+  for (const obj of core_manifest) {
+    if (obj.core_role == "dependency") {
+      const filename = obj.file_filename;
+      const obj_path = "storage/"+obj.file_dest_path;
+      if (filename == "v86.wasm") {
+        v86_wasm = obj_path;
+      } else {
+        nested_replace(environment.environment_config as StringIndexable, filename, obj_path);
+      }
+    }
+  }
   for (const obj of manifest) {
     if (obj.object_role == "content") {
       const obj_path = "storage/"+obj.file_dest_path;
@@ -65,8 +78,8 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   }
 
   const v86 = new EmbedV86({
-    wasm_root:gisst_root+"/v86",
-    bios_root:gisst_root+"/v86/bios",
+    wasm_file:v86_wasm,
+    bios_root:gisst_root,
     record_from_start:false,
     content_root:gisst_root,
     container: container,

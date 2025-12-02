@@ -19,6 +19,17 @@ export interface Environment {
   environment_id:string,
   environment_name:string
 }
+export interface CoreFileLink {
+  core_name:string,
+  core_version:string,
+  core_role:string,
+  core_role_index:integer,
+  file_hash:string,
+  file_filename:string,
+  file_source_path:string,
+  file_dest_path:string,
+}
+
 export interface ObjectLink {
   object_role:string,
   object_role_index:integer,

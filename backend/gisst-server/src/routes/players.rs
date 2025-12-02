@@ -6,7 +6,9 @@ use crate::{
 };
 
 use gisst::error::Table;
-use gisst::models::{Environment, Instance, ObjectLink, ReplayLink, SaveLink, StateLink, Work};
+use gisst::models::{
+    CoreFileLink, Environment, Instance, ObjectLink, ReplayLink, SaveLink, StateLink, Work,
+};
 
 use axum::{
     Extension,
@@ -29,6 +31,7 @@ struct PlayerTemplateInfo {
     user: LoggedInUserInfo,
     saves: Vec<SaveLink>,
     start: PlayerStartTemplateInfo,
+    core_manifest: Vec<CoreFileLink>,
     manifest: Vec<ObjectLink>,
     boot_into_record: bool,
 }
@@ -41,6 +44,7 @@ struct EmbedDataInfo {
     environment: Environment,
     saves: Vec<SaveLink>,
     start: PlayerStartTemplateInfo,
+    core_manifest: Vec<CoreFileLink>,
     manifest: Vec<ObjectLink>,
     host_url: String,
     host_protocol: String,
@@ -124,6 +128,12 @@ pub async fn get_data(
         (_, _) => return Err(ServerError::Unreachable),
     };
     let saves: Vec<SaveLink> = SaveLink::get_by_ids(&mut conn, &params.save).await?;
+    let core_manifest = CoreFileLink::get_all_for_core(
+        &mut conn,
+        environment.environment_core_name,
+        environment.environment_core_version,
+    )
+    .await?;
     let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
 
     // This unwrap is safe since BASE_URL is initialized at launch
@@ -158,6 +168,7 @@ pub async fn get_data(
         work,
         saves,
         start,
+        core_manifest,
         manifest,
         host_url: url_parts[1].to_string(),
         host_protocol: url_parts[0].to_string(),
@@ -260,6 +271,12 @@ pub async fn get_player(
         (_, _) => return Err(ServerError::Unreachable),
     };
     let saves: Vec<SaveLink> = SaveLink::get_by_ids(&mut conn, &params.save).await?;
+    let core_manifest = CoreFileLink::get_all_for_core(
+        &mut conn,
+        environment.environment_core_name,
+        environment.environment_core_version,
+    )
+    .await?;
     let manifest = ObjectLink::get_all_for_instance_id(&mut conn, instance.instance_id).await?;
     tracing::debug!("manifest: {manifest:?}");
     Ok((
@@ -286,6 +303,7 @@ pub async fn get_player(
                         saves,
                         user,
                         start,
+                        core_manifest,
                         manifest,
                         boot_into_record: params.boot_into_record.unwrap_or_default(),
                     }

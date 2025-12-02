@@ -184,11 +184,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
                 .service(selective_serve_dir::SelectiveServeDir::new("web-dist/assets")),
         )
         .nest_service(
-            "/cores",
-            builder.clone()
-                .service(selective_serve_dir::SelectiveServeDir::new("web-dist/cores")),
-        )
-        .nest_service(
             "/media",
             builder.clone()
                 .service(selective_serve_dir::SelectiveServeDir::new("web-dist/media")),
