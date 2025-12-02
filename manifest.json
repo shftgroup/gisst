@@ -6,7 +6,7 @@
   "v86": {
     "repo": "https://github.com/JoeOsborn/v86",
     "version": "a72b495ae289ac90ea8784d9e8d35d11afcad7ce",
-    "bios": {
+    "dependencies": {
       "seabios.bin": "v86bios/seabios_a74f33d58109877723201ef02d20b46b84c36974.bin",
       "bochs-bios.bin": "v86bios/bochs-bios_6b1400c2a76c82d9535456866cc4cd23c5c70311.bin",
       "vgabios.bin": "v86bios/vgabios_c7260820bac7d2d5308baa22668f111dbb520db9.bin",
@@ -56,7 +56,12 @@
       },
       "pcsx_rearmed": {
         "repo": "https://github.com/libretro/pcsx_rearmed",
-        "version": "81814bdc6b1f22c029210082c17c819fe047232f"
+        "version": "81814bdc6b1f22c029210082c17c819fe047232f",
+        "dependencies": {
+          "scph5500.bin":"psxbios/scph5500_b05def971d8ec59f346f2d9ac21fb742e3eb6917.bin",
+          "scph5501.bin":"psxbios/scph5501_0555c6fae8906f3f09baf5988f00e55f88e9f30b.bin",
+          "scph5502.bin":"psxbios/scph5502_f8de9325fc36fcfa4b29124d291c9251094f2e54.bin"
+        }
       },
       "sameboy": {
         "repo": "https://github.com/LIJI32/SameBoy",

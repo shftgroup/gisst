@@ -120,11 +120,13 @@ for f in $CORENAMES v86; do
         # make clean
         WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
         cp build/libv86.js build/v86.wasm /out/
-        for biosfile in $(jq -r ".v86.bios | keys[]" /manifest.json); do
-            bios_src=$(jq -r ".v86.bios[\"$biosfile\"]" /manifest.json)
-            cp "/files/${bios_src}" "/out/${bios}"
+        for biosfile in $(jq -r ".v86.dependencies // {} | keys[]" /manifest.json); do
+            bios_src=$(jq -r ".v86.dependencies[\"$biosfile\"]" /manifest.json)
+            cp "/files/${bios_src}" "/out/${biosfile}"
         done
-        jq "del(.[\"retroarch\",\"emsdk_version\"])" /manifest.json > /out/v86.json
+        ENTRYPOINTS_STR='["libv86.js"]'
+        DEPENDENCIES_STR=$(jq --compact-output '[.v86.dependencies // {} | keys[]]+["v86.wasm"]' /manifest.json)
+        jq "del(.[\"retroarch\",\"emsdk_version\"]) + {\"core_name\":\"v86\", \"entrypoints\":${ENTRYPOINTS_STR}, \"dependencies\":${DEPENDENCIES_STR}}" /manifest.json > /out/v86.json
         sha1sum /out/v86.json | cut -f 1 -d ' ' > /out/v86.hash
         cat /out/v86.json
         cat /out/v86.hash
@@ -161,7 +163,13 @@ for f in $CORENAMES v86; do
     emmake make -f Makefile.emscripten LIBRETRO=$f ASYNC=$ASYNC "${build_args[@]}" -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* /out/cores
     # compute hash from manifest (except for v86 and non-this-core RA cores)
-    jq ".retroarch.cores = (.retroarch.cores | to_entries[] | select(.key == \"${f}\") | [.] | from_entries) | del(.[\"v86\",\"rust_version\"])" /manifest.json > "/out/cores/${f}_libretro.json"
+    ENTRYPOINTS_STR="[\"${f}_libretro.js\"]"
+    for depfile in $(jq -r ".retroarch.cores.${f}.dependencies // {} | keys[]" /manifest.json); do
+        dep_src=$(jq -r ".retroarch.cores.${f}.dependencies[\"$depfile\"]" /manifest.json)
+        cp "/files/${dep_src}" "/out/cores/${depfile}"
+    done
+    DEPENDENCIES_STR=$(jq --compact-output "[.retroarch.cores.${f}.dependencies // {} | keys[]] + [\"${f}_libretro.wasm\"]" /manifest.json)
+    jq ".retroarch.cores = (.retroarch.cores | to_entries[] | select(.key == \"${f}\") | [.] | from_entries) | del(.[\"v86\",\"rust_version\"]) + {\"core_name\":\"${f}\", \"entrypoints\":${ENTRYPOINTS_STR}, \"dependencies\":${DEPENDENCIES_STR}}" /manifest.json > "/out/cores/${f}_libretro.json"
     sha1sum /out/cores/${f}_libretro.json | cut -f 1 -d ' ' > /out/cores/${f}_libretro.hash
     cat /out/cores/${f}_libretro.json
     cat /out/cores/${f}_libretro.hash
