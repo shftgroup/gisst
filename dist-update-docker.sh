@@ -84,10 +84,10 @@ pushd ra-build
 getrepo v86 '.v86'
 getrepo ra '.retroarch'
 
-CORENAMES=$(jq -re '.retroarch_cores | to_entries[] | select(.value.skip|not) | .key' /manifest.json)
+CORENAMES=$(jq -re '.retroarch.cores | to_entries[] | select(.value.skip|not) | .key' /manifest.json)
 
 for corename in $CORENAMES; do
-    getrepo $corename ".retroarch_cores.${corename}"
+    getrepo $corename ".retroarch.cores.${corename}"
 done
 
 popd
@@ -100,7 +100,7 @@ pushd ra
 rm -rf obj-emscripten
 popd
 
-build_args=($((jq -r '.retroarch_build_args | @sh' /manifest.json) | tr -d \'))
+build_args=($((jq -r '.retroarch.build_args | @sh' /manifest.json) | tr -d \'))
 
 RETROARCH_VERSION=$(jq -r '.retroarch.version' /manifest.json)
 for f in $CORENAMES v86; do
@@ -110,29 +110,28 @@ for f in $CORENAMES v86; do
     pushd $f
 
     ASYNC=0
-    if jq -re ".retroarch_cores.$f.async == true" /manifest.json; then
+    if jq -re ".retroarch.cores.$f.async == true" /manifest.json; then
         ASYNC=1
     fi
 
-    CORE_VERSION=$(jq -r ".retroarch_cores.$f.version" /manifest.json)
     if [ $f = "v86" ]
     then
-        CORE_VERSION=$(jq -re ".v86.version" /manifest.json)
         # make clean
         WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
         cp build/libv86.js build/v86.wasm /out/
-        # compute hash from script,rust,v86 version
-        HASHSTR="scr:$SCRIPT_VERSION rst:$RUST_VERSION v86:$CORE_VERSION"
-        echo "${HASHSTR}" > /out/v86.hash
-        sha1sum <<< "${HASHSTR}" | cut -f 1 -d ' ' >> /out/v86.hash
+        # compute hash from script,rust,v86 version,bios hashes
+        for bios in $(jq -r ".v86.bios | keys[]" /manifest.json); do
+            cp "/files/$(jq -r ".v86.bios.[\"$bios\"]" /manifest.json)" "/out/${bios}"
+        done
+        jq "del(.[\"retroarch\",\"emsdk_version\"])" /manifest.json > "/out/v86.json"
+        sha1sum /out/v86.json | cut -f 1 -d ' ' >> /out/v86.hash
         cat /out/v86.hash
         popd
         continue
     elif [ $f = "sameboy" ]
     then
-        rgbds_repo=$(jq -r '.retroarch_cores.sameboy.rgbds_repo' /manifest.json)
-        rgbds_version=$(jq -r '.retroarch_cores.sameboy.rgbds_version' /manifest.json)
-        CORE_VERSION=$(jq -r '.retroarch_cores.sameboy.version' /manifest.json)_rgbds_$rgbds_version
+        rgbds_repo=$(jq -r '.retroarch.cores.sameboy.rgbds_repo' /manifest.json)
+        rgbds_version=$(jq -r '.retroarch.cores.sameboy.rgbds_version' /manifest.json)
         git clone --depth 1 --revision $rgbds_version $rgbds_repo || echo "Could not get rgbds or rgbds already present"
         make -C rgbds -j || die "Could not build rgbds"
         PATH="./rgbds:${PATH}" make -j CONF=release bootroms || die "could not build sameboy bootroms"
@@ -159,10 +158,10 @@ for f in $CORENAMES v86; do
     cp libretro_emscripten.bc libretro_emscripten.a
     emmake make -f Makefile.emscripten LIBRETRO=$f ASYNC=$ASYNC "${build_args[@]}" -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* /out/cores
-    # compute hash from script,rust,emsdk,retroarch,core version+retroarch build args
-    HASHSTR="scr:$SCRIPT_VERSION rst:$RUST_VERSION ems:$EMSDK_VERSION ret:$RETROARCH_VERSION cor:$CORE_VERSION args:${build_args[@]}"
-    echo "${HASHSTR}" > /out/cores/${f}_libretro.hash
-    sha1sum <<< "${HASHSTR}" | cut -f 1 -d ' ' >> /out/cores/${f}_libretro.hash
+    # compute hash from manifest (except for v86 and non-this-core RA cores)
+    jq ".retroarch.cores = (.retroarch.cores | to_entries[] | select(.key == \"${f}\") | [.] | from_entries) | del(.[\"v86\",\"rust_version\"])" /manifest.json > "/out/cores/${f}_libretro.json"
+    sha1sum /out/cores/${f}_libretro.json | cut -f 1 -d ' ' >> /out/cores/${f}_libretro.hash
+    cat /out/cores/${f}_libretro.json
     cat /out/cores/${f}_libretro.hash
     popd
     popd

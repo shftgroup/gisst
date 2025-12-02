@@ -1,6 +1,6 @@
-# Usage: e.g. docker run -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -e GET_ASSETS=0 gisst-dist
+# Usage: e.g. docker run -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -e GET_ASSETS=0 gisst-dist
 # Consider: docker volume create gisst-build
-#           docker run -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v gisst-build:/gisst-build -e GET_ASSETS=0 gisst-dist
+#           docker run -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v gisst-build:/gisst-build -e GET_ASSETS=0 gisst-dist
 ARG RUST_VERSION=1.91.1
 ARG EMSDK_VERSION=4.0.17
 FROM emscripten/emsdk:$EMSDK_VERSION
