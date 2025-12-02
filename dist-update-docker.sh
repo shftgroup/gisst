@@ -2,6 +2,7 @@
 
 SCRIPT_VERSION="1.0.0"
 
+set -o pipefail
 set -e
 
 git config --global advice.detachedHead false
@@ -119,12 +120,13 @@ for f in $CORENAMES v86; do
         # make clean
         WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
         cp build/libv86.js build/v86.wasm /out/
-        # compute hash from script,rust,v86 version,bios hashes
-        for bios in $(jq -r ".v86.bios | keys[]" /manifest.json); do
-            cp "/files/$(jq -r ".v86.bios.[\"$bios\"]" /manifest.json)" "/out/${bios}"
+        for biosfile in $(jq -r ".v86.bios | keys[]" /manifest.json); do
+            bios_src=$(jq -r ".v86.bios[\"$biosfile\"]" /manifest.json)
+            cp "/files/${bios_src}" "/out/${bios}"
         done
-        jq "del(.[\"retroarch\",\"emsdk_version\"])" /manifest.json > "/out/v86.json"
-        sha1sum /out/v86.json | cut -f 1 -d ' ' >> /out/v86.hash
+        jq "del(.[\"retroarch\",\"emsdk_version\"])" /manifest.json > /out/v86.json
+        sha1sum /out/v86.json | cut -f 1 -d ' ' > /out/v86.hash
+        cat /out/v86.json
         cat /out/v86.hash
         popd
         continue
@@ -160,7 +162,7 @@ for f in $CORENAMES v86; do
     cp ${f}_libretro.* /out/cores
     # compute hash from manifest (except for v86 and non-this-core RA cores)
     jq ".retroarch.cores = (.retroarch.cores | to_entries[] | select(.key == \"${f}\") | [.] | from_entries) | del(.[\"v86\",\"rust_version\"])" /manifest.json > "/out/cores/${f}_libretro.json"
-    sha1sum /out/cores/${f}_libretro.json | cut -f 1 -d ' ' >> /out/cores/${f}_libretro.hash
+    sha1sum /out/cores/${f}_libretro.json | cut -f 1 -d ' ' > /out/cores/${f}_libretro.hash
     cat /out/cores/${f}_libretro.json
     cat /out/cores/${f}_libretro.hash
     popd

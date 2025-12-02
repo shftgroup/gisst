@@ -7,10 +7,10 @@
     "repo": "https://github.com/JoeOsborn/v86",
     "version": "a72b495ae289ac90ea8784d9e8d35d11afcad7ce",
     "bios": {
-      "seabios.bin": "v86bios/seabios.bin",
-      "bochs-bios.bin": "v86bios/bochs-bios.bin",
-      "vgabios.bin": "v86bios/vgabios.bin",
-      "bochs-vgabios.bin": "v86bios/bochs-vgabios.bin"
+      "seabios.bin": "v86bios/seabios_a74f33d58109877723201ef02d20b46b84c36974.bin",
+      "bochs-bios.bin": "v86bios/bochs-bios_6b1400c2a76c82d9535456866cc4cd23c5c70311.bin",
+      "vgabios.bin": "v86bios/vgabios_c7260820bac7d2d5308baa22668f111dbb520db9.bin",
+      "bochs-vgabios.bin": "v86bios/bochs-vgabios_d04f227c790a0e4d32f3cd27bad9341690de5cc6.bin"
     }
   },
   "retroarch": {
