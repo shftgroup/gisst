@@ -35,12 +35,21 @@ uuid_n64=00000000000000000000000000000064
 uuid_pcsx=00000000000000000000000000000065
 uuid_gambatte=00000000000000000000000000000066
 uuid_sameboy=00000000000000000000000000000067
-./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_1_52_environment.json
-./target/debug/gisst-cli environment create --json-file ./examples/records/snes/snes_snes9x_1_62_3_environment.json
+uuid_vba_next=00000000000000000000000000000068
+./target/debug/gisst-cli add-core ../ra-build/cores/fceumm_libretro.json
+./target/debug/gisst-cli add-core ../ra-build/cores/gambatte_libretro.json
+./target/debug/gisst-cli add-core ../ra-build/cores/pcsx_rearmed_libretro.json
+./target/debug/gisst-cli add-core ../ra-build/cores/sameboy_libretro.json
+./target/debug/gisst-cli add-core ../ra-build/cores/snes9x_libretro.json
+./target/debug/gisst-cli add-core ../ra-build/cores/vba_next_libretro.json
+./target/debug/gisst-cli add-core ../ra-build/v86.json
+
+./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/snes/snes_snes9x_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/win_31_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
-./target/debug/gisst-cli environment create --json-file ./examples/records/n64/n64_gliden64_environment.json
-./target/debug/gisst-cli environment create --json-file ./examples/records/psx/psx_pcsx_rearmed_1_62_3_environment.json
+#./target/debug/gisst-cli environment create --json-file ./examples/records/n64/n64_gliden64_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/psx/psx_pcsx_rearmed_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
 
@@ -140,7 +149,6 @@ do
   ./target/debug/gisst-cli add-work-instance --platform-name "Sony Playstation" --work-version "NTSC" --work-name "$base" \
                            --work-id "$work_uuid" --instance-id "$work_uuid" \
                            --environment-id $uuid_pcsx --cwd examples/data/psx/ \
-                           --dep scph5500.bin --dep scph5501.bin --dep scph5502.bin \
                            --content "$file" ${extras[@]}
 done
 for work in examples/data/psx/*.exe; do
@@ -153,7 +161,6 @@ for work in examples/data/psx/*.exe; do
   ./target/debug/gisst-cli add-work-instance --platform-name "Sony Playstation" --work-version "NTSC" --work-name "$base" \
                            --work-id "$work_uuid" --instance-id "$work_uuid" \
                            --environment-id $uuid_pcsx --cwd examples/data/psx/ \
-                           --dep scph5500.bin --dep scph5501.bin --dep scph5502.bin \
                            --content "$file"
 done
 uuid_psx_1=00000000000000000000000000010000

@@ -11,11 +11,11 @@ CREATE TABLE IF NOT EXISTS core (
 -- Automatic migration step: upgrade legacy cores into core table
 WITH vars as (SELECT current_timestamp as now)
   INSERT INTO core
-    VALUES (SELECT DISTINCT environment_core_name,
-                            environment_core_version,
-                            '{"version":0}'::jsonb,
-                            vars.now
-            FROM environment, vars);
+    SELECT DISTINCT environment_core_name,
+                    environment_core_version,
+                    '{"legacy":true}'::jsonb,
+                    vars.now
+    FROM environment, vars;
 
 CREATE TABLE IF NOT EXISTS core_file (
   core_name text NOT NULL,
@@ -27,10 +27,8 @@ CREATE TABLE IF NOT EXISTS core_file (
 );
 
 ALTER TABLE core_file ADD FOREIGN KEY (file_id) REFERENCES file(file_id);
-ALTER TABLE core_file ADD FOREIGN KEY (core_name) REFERENCES core(core_name);
-ALTER TABLE core_file ADD FOREIGN KEY (core_version) REFERENCES core(core_version);
-ALTER TABLE environment ADD FOREIGN KEY (environment_core_name) REFERENCES core(core_name);
-ALTER TABLE environment ADD FOREIGN KEY (environment_core_version) REFERENCES core(core_version);
+ALTER TABLE core_file ADD FOREIGN KEY (core_name,core_version) REFERENCES core(core_name,core_version);
+ALTER TABLE environment ADD FOREIGN KEY (environment_core_name,environment_core_version) REFERENCES core(core_name,core_version);
 
 CREATE INDEX idx_core_key ON core_file(core_name, core_version);
 

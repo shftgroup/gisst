@@ -7,7 +7,7 @@ use crate::args::CreateScreenshot;
 use crate::cliconfig::CLIConfig;
 use anyhow::Result;
 use args::{
-    AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment,
+    AddCoreArgs, AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment,
     CreateInstance, CreateObject, CreateReplay, CreateSave, CreateState, CreateWork, GISSTCli,
     GISSTCliError, PatchData,
 };
@@ -60,6 +60,12 @@ async fn main() -> Result<(), GISSTCliError> {
         Commands::InitIndices => (),
         Commands::Reindex => reindex(db, &indexer).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
+        Commands::UpgradeEnvironment(args) => {
+            todo!();
+        }
+        Commands::AddCore(args) => {
+            add_core(args, db, &storage_root).await?;
+        }
         Commands::AddWorkInstance(cmd) => {
             add_work_instance(cmd, db, &storage_root, &indexer).await?;
         }
@@ -118,6 +124,24 @@ async fn main() -> Result<(), GISSTCliError> {
             add_patched_instance(db, instance, data, storage_root, depth, &indexer).await?;
         }
     }
+    Ok(())
+}
+
+async fn add_core(
+    AddCoreArgs {
+        core_meta_path,
+        configs,
+    }: AddCoreArgs,
+    db: PgPool,
+    storage_root: &str,
+) -> Result<(), GISSTCliError> {
+    let mut tx = db.begin().await?;
+    let now = chrono::Utc::now();
+    todo!();
+    // for (idx, entry) in entrypoints.into_iter().enumerate() {}
+    // for (idx, dep) in dependencies.into_iter().enumerate() {}
+    // for (idx, config) in configs.into_iter().enumerate() {}
+    tx.commit().await?;
     Ok(())
 }
 
@@ -694,38 +718,27 @@ async fn create_replay(
         })
         .map_or(chrono::Utc::now(), chrono::DateTime::<chrono::Utc>::from);
     let mut conn = db.acquire().await?;
+    let cwd = Path::new("");
     let hash = StorageHandler::get_file_hash(file)?;
     let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut conn, &hash).await? {
         info!("File exists in DB already");
         file.file_id
     } else {
-        let uuid = Uuid::new_v4();
-
-        let filename = file.file_name().unwrap().to_string_lossy().to_string();
-
-        let file_info =
-            StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, file)
-                .await?;
-        info!(
-            "Wrote file {} to {}",
-            file_info.dest_filename, file_info.dest_path
-        );
-
-        let mut source_path = PathBuf::from(file);
+        let path = cwd.join(file);
+        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(&path));
         source_path.pop();
-
-        let file_record = gisst::models::File {
-            file_id: uuid,
-            file_hash: hash,
-            file_filename: filename,
-            file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
-            file_dest_path: file_info.dest_path,
-            file_size: file_info.file_size,
-            file_compressed_size: file_info.file_compressed_size,
+        gisst::models::insert_new_file(
+            &mut conn,
+            &storage_path,
+            depth,
+            &file_name,
+            &path,
+            &source_path.to_string_lossy().to_string().replace("./", ""),
             created_on,
-        };
-        gisst::models::File::insert(&mut conn, file_record).await?;
-        uuid
+        )
+        .await?
+        .file_id
     };
     info!("File ID: {file_id}");
     let replay = Replay {
@@ -818,38 +831,25 @@ async fn create_state(
         ));
     }
 
-    let uuid = Uuid::new_v4();
-
-    let filename = file.file_name().unwrap().to_string_lossy().to_string();
-
-    let file_info =
-        StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, file)
-            .await?;
-    info!(
-        "Wrote file {} to {}",
-        file_info.dest_filename, file_info.dest_path
-    );
-
     let mut source_path = PathBuf::from(file);
     source_path.pop();
-
-    let file_record = gisst::models::File {
-        file_id: uuid,
-        file_hash: hash,
-        file_filename: filename,
-        file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
-        file_dest_path: file_info.dest_path,
-        file_size: file_info.file_size,
-        file_compressed_size: file_info.file_compressed_size,
+    let file_name = file.file_name().unwrap().to_string_lossy().to_string();
+    let file_id = gisst::models::insert_new_file(
+        &mut conn,
+        &storage_path,
+        depth,
+        &file_name,
+        file,
+        &source_path.to_string_lossy().to_string().replace("./", ""),
         created_on,
-    };
-    gisst::models::File::insert(&mut conn, file_record).await?;
-
+    )
+    .await?
+    .file_id;
     let state = State {
         state_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
         is_checkpoint: replay_id.is_some(),
-        file_id: uuid,
+        file_id,
         state_name: state_name.clone(),
         state_description: state_description.unwrap_or_else(|| state_name.clone()),
         screenshot_id,
@@ -898,41 +898,29 @@ async fn create_save(
         .map_or(chrono::Utc::now(), chrono::DateTime::<chrono::Utc>::from);
 
     let mut conn = db.acquire().await?;
-    let mut source_path = PathBuf::from(file);
-    source_path.pop();
     let hash = StorageHandler::get_file_hash(file)?;
-
-    let uuid = Uuid::new_v4();
-
-    let filename = file.file_name().unwrap().to_string_lossy().to_string();
-
-    let file_info =
-        StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, file)
-            .await?;
-    info!(
-        "Wrote file {} to {}",
-        file_info.dest_filename, file_info.dest_path
-    );
-
-    let mut source_path = PathBuf::from(file);
-    source_path.pop();
-
-    let file_record = gisst::models::File {
-        file_id: uuid,
-        file_hash: hash,
-        file_filename: filename,
-        file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
-        file_dest_path: file_info.dest_path,
-        file_size: file_info.file_size,
-        file_compressed_size: file_info.file_compressed_size,
-        created_on,
+    let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut conn, &hash).await? {
+        file.file_id
+    } else {
+        let mut source_path = PathBuf::from(file);
+        source_path.pop();
+        let file_name = file.file_name().unwrap().to_string_lossy().to_string();
+        gisst::models::insert_new_file(
+            &mut conn,
+            &storage_path,
+            depth,
+            &file_name,
+            file,
+            &source_path.to_string_lossy().to_string().replace("./", ""),
+            created_on,
+        )
+        .await?
+        .file_id
     };
-    gisst::models::File::insert(&mut conn, file_record).await?;
-
     let save = Save {
         save_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
-        file_id: uuid,
+        file_id,
         save_short_desc: save_short_desc.clone(),
         save_description: save_description.unwrap_or_else(|| save_short_desc.clone()),
         created_on,

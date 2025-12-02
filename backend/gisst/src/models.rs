@@ -936,7 +936,7 @@ pub struct CoreFileLink {
     pub core_name: String,
     pub core_version: String,
     pub core_role: CoreFileRole,
-    pub core_role_index: String,
+    pub core_role_index: i32,
     pub file_hash: String,
     pub file_filename: String,
     pub file_source_path: String,
@@ -951,7 +951,7 @@ impl CoreFileLink {
     ) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT core_name, core_version, core_file.core_role as "core_file_role:_",
+            r#"SELECT core_name, core_version, core_file.core_role as "core_role:_",
                    core_file.core_role_index,
                    file.file_hash, file.file_filename,
                    file.file_source_path, file.file_dest_path
@@ -1165,18 +1165,19 @@ pub async fn insert_file_object(
             Duplicate::ReuseData | Duplicate::ForceUuid(_) => {
                 info!("adding duplicate file record for {path:?}");
                 inc_metric!(conn, ins_duplicate_reused_data, 1);
-                let file_id = Uuid::new_v4();
-                let file_record = File {
-                    file_id,
-                    file_filename: file_name,
-                    file_source_path,
+                let file = insert_new_file(
+                    conn,
+                    storage_root,
+                    depth,
+                    &file_name,
+                    path,
+                    &file_source_path,
                     created_on,
-                    ..file_info
-                };
-                File::insert(conn, file_record).await?;
+                )
+                .await?;
                 let object = Object {
                     object_id,
-                    file_id,
+                    file_id: file.file_id,
                     object_description,
                     created_on,
                 };
@@ -1193,40 +1194,63 @@ pub async fn insert_file_object(
         };
         object_id.ok_or(InsertFile::ObjectMissing(hash))
     } else {
-        let file_uuid = Uuid::new_v4();
-        let file_info = StorageHandler::write_file_to_uuid_folder(
+        let file = insert_new_file(
+            conn,
             storage_root,
             depth,
-            file_uuid,
             &file_name,
             path,
+            &file_source_path,
+            created_on,
         )
         .await?;
-        info!(
-            "Wrote file {} to {}",
-            file_info.dest_filename, file_info.dest_path
-        );
-        inc_metric!(conn, ins_new_file, 1);
-        let file_record = File {
-            file_id: file_uuid,
-            file_hash: file_info.file_hash,
-            file_filename: file_info.source_filename,
-            file_source_path,
-            file_dest_path: file_info.dest_path,
-            file_size: file_info.file_size,
-            file_compressed_size: file_info.file_compressed_size,
-            created_on,
-        };
-        File::insert(conn, file_record).await?;
         let object = Object {
             object_id,
-            file_id: file_uuid,
+            file_id: file.file_id,
             object_description,
             created_on,
         };
         Object::insert(conn, object).await?;
         Ok(object_id)
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+#[tracing::instrument(skip(conn))]
+pub async fn insert_new_file(
+    conn: &mut sqlx::PgConnection,
+    storage_root: &str,
+    depth: u8,
+    file_name: &str,
+    path: &std::path::Path,
+    file_source_path: &str,
+    created_on: chrono::DateTime<chrono::Utc>,
+) -> Result<File, crate::error::InsertFile> {
+    use crate::inc_metric;
+    use crate::storage::StorageHandler;
+    use tracing::info;
+    let file_uuid = Uuid::new_v4();
+    let file_info =
+        StorageHandler::write_file_to_uuid_folder(storage_root, depth, file_uuid, &file_name, path)
+            .await?;
+    info!(
+        "Wrote file {} to {}",
+        file_info.dest_filename, file_info.dest_path
+    );
+    inc_metric!(conn, ins_new_file, 1);
+    let file_record = File {
+        file_id: file_uuid,
+        file_hash: file_info.file_hash,
+        file_filename: file_info.source_filename,
+        file_source_path: file_source_path.to_string(),
+        file_dest_path: file_info.dest_path,
+        file_size: file_info.file_size,
+        file_compressed_size: file_info.file_compressed_size,
+        created_on,
+    };
+    File::insert(conn, file_record)
+        .await
+        .map_err(crate::error::InsertFile::from)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
