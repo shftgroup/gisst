@@ -138,9 +138,9 @@ async fn add_core(
     let mut tx = db.begin().await?;
     let now = chrono::Utc::now();
     todo!();
-    // for (idx, entry) in entrypoints.into_iter().enumerate() {}
-    // for (idx, dep) in dependencies.into_iter().enumerate() {}
-    // for (idx, config) in configs.into_iter().enumerate() {}
+    // make a core record with name and version (hash) derived from core meta path;
+    // then, make a file and corefilelink for each entrypoint, dependency, and config file
+    // for (role, idx, file) in entrypoints.into_iter().enumerate().map(|(x,y)| (CoreFileRole::Entrypoint,x,y)).chain(dependencies.into_iter().enumerate().map(|(x,y)| (CoreFileRole::Dependency,x,y))).chain(configs.into_iter().enumeraet().map(|(x,y)| (CoreFileRole::Config,x,y))) { ... }
     tx.commit().await?;
     Ok(())
 }
