@@ -27,7 +27,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
         v86_loading = true;
         console.log("Loading v86");
         const entrypoint = core_manifest.find((o) => o.core_role == "entrypoint")!;
-        let blobOrUrl = await load_v86(gisst_root + "/" + entrypoint.file_dest_path);
+        let blobOrUrl = await load_v86(gisst_root + "/storage/" + entrypoint.file_dest_path);
         if (blobOrUrl instanceof Blob) {
             blobOrUrl = URL.createObjectURL(blobOrUrl);
         }

@@ -4,6 +4,9 @@
 #  https://archive.org/details/magic-castle-2021-07-may
 #  https://nitroyuash.itch.io/petscop-restored
 
+#set -e
+#set -o pipefail
+
 source .env
 
 export GISST_CONFIG_PATH=./config
@@ -36,13 +39,13 @@ uuid_pcsx=00000000000000000000000000000065
 uuid_gambatte=00000000000000000000000000000066
 uuid_sameboy=00000000000000000000000000000067
 uuid_vba_next=00000000000000000000000000000068
-./target/debug/gisst-cli add-core ../ra-build/cores/fceumm_libretro.json
-./target/debug/gisst-cli add-core ../ra-build/cores/gambatte_libretro.json
-./target/debug/gisst-cli add-core ../ra-build/cores/pcsx_rearmed_libretro.json
-./target/debug/gisst-cli add-core ../ra-build/cores/sameboy_libretro.json
-./target/debug/gisst-cli add-core ../ra-build/cores/snes9x_libretro.json
-./target/debug/gisst-cli add-core ../ra-build/cores/vba_next_libretro.json
-./target/debug/gisst-cli add-core ../ra-build/v86.json
+./target/debug/gisst-cli add-core ../build/cores/fceumm_libretro.json
+./target/debug/gisst-cli add-core ../build/cores/gambatte_libretro.json
+./target/debug/gisst-cli add-core ../build/cores/pcsx_rearmed_libretro.json
+./target/debug/gisst-cli add-core ../build/cores/sameboy_libretro.json
+./target/debug/gisst-cli add-core ../build/cores/snes9x_libretro.json
+./target/debug/gisst-cli add-core ../build/cores/vba_next_libretro.json
+./target/debug/gisst-cli add-core ../build/v86.json
 
 ./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/snes/snes_snes9x_environment.json

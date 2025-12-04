@@ -35,7 +35,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       }
     } else if (obj.core_role == "entrypoint") {
         // libv86.js
-        await loadScript(gisst_root+"/"+obj.file_dest_path);
+        await loadScript(gisst_root+"/storage/"+obj.file_dest_path);
     }
   }
     if (!v86_wasm) { throw "No v86 wasm path defined"; }
