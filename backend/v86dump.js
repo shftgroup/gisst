@@ -4,24 +4,23 @@
 var fs = require("fs");
 var path = require("path");
 
-var args = process.argv.slice(2);
-if (args.length != 2) {
-  console.error("Usage: v86-json state-path");
+var args = process.argv.slice(3);
+if (args.length != 3) {
+  console.error("Usage: libv86-js-path v86-json state-path");
   process.exit(1);
 }
-var emu_info = JSON.parse(args[0]);
-var state_path = args[1];
+var libv86_path = args[0];
+var emu_info = JSON.parse(args[1]);
+var state_path = args[2];
 
 const disks = ["fda", "hda"];
 const bios = ["bios", "vgabios"];
 
-function readfile(path)
-{
+function readfile(path) {
     return new Uint8Array(fs.readFileSync(path)).buffer;
 }
 
-// TODO: use a specific core instead
-var V86 = require("./web-dist/v86/libv86.js").V86;
+var V86 = require(libv86_path).V86;
 
 // console.log("Now booting, please stand by ...");
 // let state=readfile(__dirname+"/../storage/0/3/1/e/087bbdc6dbb84234b43ce0b562d8486c-state2.v86state");
@@ -45,10 +44,8 @@ emulator.add_listener("emulator-loaded", async function(){
     if (buf.block_cache) {
       fs.copyFileSync(in_path, out_path);
       let outfile = fs.openSync(out_path, 'r+');
-      for(let [index, block] of buf.block_cache)
-      {
-        if(buf.block_cache_is_write.has(index))
-        {
+      for(let [index, block] of buf.block_cache) {
+        if(buf.block_cache_is_write.has(index)) {
           fs.writeSync(outfile, block, 0, block.length, index*256)
         }
       }
