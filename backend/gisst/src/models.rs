@@ -472,6 +472,18 @@ impl Instance {
         .fetch_all(conn)
         .await
     }
+    pub async fn get_all_for_environment_id(
+        conn: &mut PgConnection,
+        environment_id: Uuid,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT * FROM instance WHERE environment_id = $1"#,
+            environment_id
+        )
+        .fetch_all(conn)
+        .await
+    }
 }
 
 impl Environment {
@@ -490,6 +502,26 @@ impl Environment {
         .await
     }
 
+    pub async fn get_for_core(
+        conn: &mut PgConnection,
+        core_name: &str,
+        core_version: &str,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT environment_id, environment_name,
+                  environment_framework as "environment_framework:_",
+                  environment_core_name, environment_core_version,
+                  environment_derived_from, environment_config, created_on
+               FROM environment
+               WHERE environment_core_name = $1
+                 AND environment_core_version = $2"#,
+            core_name,
+            core_version
+        )
+        .fetch_all(conn)
+        .await
+    }
     pub async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, Insert> {
         sqlx::query_as!(
             Self,
@@ -596,15 +628,6 @@ impl Object {
         )
         .fetch_optional(conn)
         .await
-    }
-
-    pub async fn delete_object_instance_links_by_id(
-        conn: &mut PgConnection,
-        id: Uuid,
-    ) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM instanceObject WHERE object_id = $1", id)
-            .execute(conn)
-            .await
     }
 }
 
@@ -930,6 +953,70 @@ impl InstanceWork {
         .await
     }
 }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Core {
+    pub core_name: String,
+    pub core_version: String,
+    pub core_metadata: sqlx::types::JsonValue,
+    pub created_on: chrono::DateTime<chrono::Utc>,
+}
+
+impl Core {
+    pub async fn get(
+        conn: &mut sqlx::PgConnection,
+        name: &str,
+        version: &str,
+    ) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT core_name, core_version, core_metadata, created_on
+FROM core
+WHERE core_name = $1 AND core_version = $2"#,
+            name,
+            version
+        )
+        .fetch_optional(conn)
+        .await
+    }
+    pub async fn insert(conn: &mut sqlx::PgConnection, core: Self) -> Result<Self, Insert> {
+        sqlx::query_as!(
+            Self,
+            r#"INSERT INTO core VALUES ($1, $2, $3, $4) RETURNING *"#,
+            core.core_name,
+            core.core_version,
+            core.core_metadata,
+            core.created_on
+        )
+        .fetch_one(conn)
+        .await
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Core,
+                action: Action::Insert,
+                source: e,
+            })
+        })
+    }
+    pub async fn link_file(
+        conn: &mut sqlx::PgConnection,
+        name: &str,
+        version: &str,
+        role: CoreFileRole,
+        idx: u16,
+        file_id: Uuid,
+    ) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!(
+            r#"INSERT INTO core_file VALUES ($1, $2, $3, $4, $5)"#,
+            name,
+            version,
+            file_id,
+            role as _,
+            i32::from(idx)
+        )
+        .execute(conn)
+        .await
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CoreFileLink {
@@ -1231,7 +1318,7 @@ pub async fn insert_new_file(
     use tracing::info;
     let file_uuid = Uuid::new_v4();
     let file_info =
-        StorageHandler::write_file_to_uuid_folder(storage_root, depth, file_uuid, &file_name, path)
+        StorageHandler::write_file_to_uuid_folder(storage_root, depth, file_uuid, file_name, path)
             .await?;
     info!(
         "Wrote file {} to {}",

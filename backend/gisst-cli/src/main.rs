@@ -14,8 +14,8 @@ use args::{
 use clap::Parser;
 use gisst::{
     models::{
-        CoreFileLink, Creator, Duplicate, Environment, Instance, Object, ObjectRole, Replay, Save,
-        Screenshot, State, Work, insert_file_object,
+        Core, Creator, Duplicate, Environment, Instance, Object, ObjectLink, ObjectRole, Replay,
+        Save, Screenshot, State, Work, insert_file_object,
     },
     storage::StorageHandler,
 };
@@ -135,59 +135,115 @@ async fn upgrade_env(
     }: UpgradeEnvironmentArgs,
     db: PgPool,
 ) -> Result<(), GISSTCliError> {
+    use gisst::danger::{DestructiveEnvironment, DestructiveObject};
     let mut tx = db.begin().await?;
     // find envs with core name and version
-
-    let core_meta_path = Path::new(core_meta_path);
-    let core_dir = core_meta_path.parent()?;
+    let envs = Environment::get_for_core(&mut tx, &old_core_name, &old_core_version).await?;
+    if envs.is_empty() {
+        println!("No environments using this core name were found.");
+        return Ok(());
+    }
+    let core_meta_path = Path::new(&core_meta);
     let core_hash_path = core_meta_path.with_extension("hash");
-    let core_hash = std::fs::read(core_hash_path)?;
-    let core_meta: serde_json::Value = serde_json::from_str(std::fs::read(core_meta_path)?)?;
-    let name = core_meta["core_name"].as_str().unwrap().clone();
-    // ensure core name, core hash is in cores table
-    //    make database changes to environment records
-    // remove overlapping deps from instanceobject too for anything using those environments
-    // print message showing changes, make user type yes to continue
-
+    let core_hash = std::fs::read_to_string(core_hash_path)?;
+    let core_hash = core_hash.trim();
+    let core_meta: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
+    let name = core_meta["core_name"].as_str().unwrap().to_string();
+    let Some(_) = Core::get(&mut tx, &name, core_hash).await? else {
+        println!(
+            "Core {name}:{core_hash} is not present in the database, use gisst-cli add-core first"
+        );
+        return Err(GISSTCliError::CoreNotFound(name, core_hash.to_string()));
+    };
+    let deps: Vec<_> = core_meta["dependencies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|x| x.as_str())
+        .map(std::string::ToString::to_string)
+        .collect();
+    println!("Replacing instanceobject links to files in {deps:?} with core file links...");
+    let changed_envs: Vec<_> = envs.iter().map(|e| e.environment_id).collect();
+    let mut changed_instances = vec![];
+    for env in envs {
+        Environment::update_core(&mut tx, env.environment_id, &name, core_hash).await?;
+        let instances = Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
+        for inst in instances {
+            let mut changed = false;
+            // delete dependency links of objects with name of any dependency in core_meta.dependencies
+            for link in ObjectLink::get_all_for_instance_id(&mut tx, inst.instance_id).await? {
+                if link.object_role == ObjectRole::Dependency && deps.contains(&link.file_filename)
+                {
+                    // We can just unlink, the core offers the dependency now
+                    Object::unlink(&mut tx, link.object_id, inst.instance_id).await?;
+                    changed = true;
+                }
+            }
+            if changed {
+                changed_instances.push(inst.instance_id);
+            }
+        }
+    }
+    println!("------DANGER ZONE-----");
+    println!(
+        "This command will apply irreversible changes!  Content will potentially be run on different cores if you haven't been very careful!"
+    );
+    println!("Affected environments: {changed_envs:?}");
+    println!("Instances with changed objects: {changed_instances:?}");
+    println!("Type 'yes' to confirm!");
+    let mut out = String::new();
+    std::io::stdin().read_line(&mut out)?;
+    if out.trim() != "yes" {
+        println!("Aborting operation");
+        return Ok(());
+    }
+    println!("Performing destructive changes!");
     tx.commit().await?;
+    Ok(())
 }
 
 async fn add_core(
     AddCoreArgs {
         core_meta_path,
         configs,
+        depth,
     }: AddCoreArgs,
     db: PgPool,
     storage_root: &str,
 ) -> Result<(), GISSTCliError> {
+    use gisst::models::CoreFileRole;
     let mut tx = db.begin().await?;
     let now = chrono::Utc::now();
-    let core_meta_path = Path::new(core_meta_path);
-    let core_dir = core_meta_path.parent()?;
+    let core_meta_path = Path::new(&core_meta_path);
+    let core_dir = core_meta_path.parent().unwrap_or(Path::new(""));
     let core_hash_path = core_meta_path.with_extension("hash");
-    let core_hash = std::fs::read(core_hash_path)?;
-    let core_meta: serde_json::Value = serde_json::from_str(std::fs::read(core_meta_path)?)?;
-    let name = core_meta["core_name"].as_str().unwrap().clone();
+    let core_hash = std::fs::read_to_string(core_hash_path)?;
+    let core_hash = core_hash.trim();
+    let core_meta: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
+    let name = core_meta["core_name"].as_str().unwrap().to_string();
     let entrypoints: Vec<_> = core_meta["entrypoints"]
         .as_array()
         .unwrap()
-        .into_iter()
+        .iter()
         .filter_map(|x| x.as_str())
-        .cloned()
+        .map(std::string::ToString::to_string)
         .collect();
-    let deps: Vec<_> = core_meta["deps"]
+    let deps: Vec<_> = core_meta["dependencies"]
         .as_array()
         .unwrap()
-        .into_iter()
+        .iter()
         .filter_map(|x| x.as_str())
-        .cloned()
+        .map(std::string::ToString::to_string)
         .collect();
     let core = Core {
         core_name: name.clone(),
-        core_version: core_hash.clone(),
-        core_meta: core_meta.to_string(),
+        core_version: core_hash.to_string(),
+        core_metadata: core_meta,
+        created_on: now,
     };
-    Core::insert(&core).await?;
+    Core::insert(&mut tx, core).await?;
     // make a core record with name and version (hash) derived from core meta path;
     // then, make a file and corefilelink for each entrypoint, dependency, and config file
     for (role, idx, file) in entrypoints
@@ -202,38 +258,42 @@ async fn add_core(
         .chain(
             configs
                 .into_iter()
-                .enumeraet()
+                .enumerate()
                 .map(|(x, y)| (CoreFileRole::Config, x, y)),
         )
     {
-        let hash = StorageHandler::get_file_hash(core_dir + file)?;
-        let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut conn, &hash).await?
-        {
+        let hash = StorageHandler::get_file_hash(core_dir.join(&file))?;
+        let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut tx, &hash).await? {
             file.file_id
         } else {
-            let mut source_path = PathBuf::from(file);
+            let mut source_path = PathBuf::from(&file);
+            let file_name = source_path
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
             source_path.pop();
-            let file_name = file.file_name().unwrap().to_string_lossy().to_string();
             gisst::models::insert_new_file(
-                &mut conn,
-                &storage_path,
+                &mut tx,
+                storage_root,
                 depth,
                 &file_name,
-                core_dir + file,
+                &(core_dir.join(Path::new(&file))),
                 &source_path.to_string_lossy().to_string().replace("./", ""),
-                created_on,
+                now,
             )
             .await?
             .file_id
         };
-        let link = CoreFile {
-            core_name: name.clone(),
-            core_version: core_hash.clone(),
-            core_role: role,
-            core_role_index: idx,
+        Core::link_file(
+            &mut tx,
+            &name,
+            core_hash,
+            role,
+            u16::try_from(idx).map_err(GISSTCliError::IntegerTooBig)?,
             file_id,
-        };
-        CoreFile::insert(&mut tx, link).await?;
+        )
+        .await?;
     }
     tx.commit().await?;
     Ok(())

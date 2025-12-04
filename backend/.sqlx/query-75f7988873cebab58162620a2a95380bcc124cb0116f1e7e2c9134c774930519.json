@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM instanceObject WHERE object_id=$1 AND instance_id=$2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "75f7988873cebab58162620a2a95380bcc124cb0116f1e7e2c9134c774930519"
+}

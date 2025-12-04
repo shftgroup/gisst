@@ -52,6 +52,8 @@ pub enum GISSTCliError {
     SearchIndex(#[from] gisst::error::SearchIndex),
     #[error("Integer too big")]
     IntegerTooBig(#[from] std::num::TryFromIntError),
+    #[error("No defined core {0}:{1}")]
+    CoreNotFound(String, String),
 }
 
 #[derive(Debug, Parser)]
@@ -121,6 +123,9 @@ pub struct AddCoreArgs {
     /// Additional config files to be passed into the core.
     #[arg(long = "config", value_parser)]
     pub configs: Vec<String>,
+    /// Storage dir depth
+    #[arg(default_value_t = 4)]
+    pub depth: u8,
 }
 
 #[derive(Debug, Args)]
