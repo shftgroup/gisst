@@ -9,7 +9,7 @@ use anyhow::Result;
 use args::{
     AddCoreArgs, AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment,
     CreateInstance, CreateObject, CreateReplay, CreateSave, CreateState, CreateWork, GISSTCli,
-    GISSTCliError, PatchData,
+    GISSTCliError, PatchData, UpgradeEnvironmentArgs,
 };
 use clap::Parser;
 use gisst::{
@@ -61,7 +61,7 @@ async fn main() -> Result<(), GISSTCliError> {
         Commands::Reindex => reindex(db, &indexer).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
         Commands::UpgradeEnvironment(args) => {
-            todo!();
+            upgrade_env(args, db).await?;
         }
         Commands::AddCore(args) => {
             add_core(args, db, &storage_root).await?;
@@ -125,6 +125,31 @@ async fn main() -> Result<(), GISSTCliError> {
         }
     }
     Ok(())
+}
+
+async fn upgrade_env(
+    UpgradeEnvironmentArgs {
+        old_core_name,
+        old_core_version,
+        core_meta,
+    }: UpgradeEnvironmentArgs,
+    db: PgPool,
+) -> Result<(), GISSTCliError> {
+    let mut tx = db.begin().await?;
+    // find envs with core name and version
+
+    let core_meta_path = Path::new(core_meta_path);
+    let core_dir = core_meta_path.parent()?;
+    let core_hash_path = core_meta_path.with_extension("hash");
+    let core_hash = std::fs::read(core_hash_path)?;
+    let core_meta: serde_json::Value = serde_json::from_str(std::fs::read(core_meta_path)?)?;
+    let name = core_meta["core_name"].as_str().unwrap().clone();
+    // ensure core name, core hash is in cores table
+    //    make database changes to environment records
+    // remove overlapping deps from instanceobject too for anything using those environments
+    // print message showing changes, make user type yes to continue
+
+    tx.commit().await?;
 }
 
 async fn add_core(
