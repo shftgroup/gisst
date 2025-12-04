@@ -183,7 +183,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   );
   const container = <HTMLDivElement>document.getElementById("canvas_div")!;
   v86 = new EmbedV86({
-    wasm_file:v86_wasm,
+    wasm_file:gisst_root+"/"+v86_wasm,
     bios_root:gisst_root,
     record_from_start:boot_into_record,
     content_root:gisst_root,

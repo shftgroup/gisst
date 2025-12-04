@@ -79,7 +79,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   }
 
   const v86 = new EmbedV86({
-    wasm_file:v86_wasm,
+    wasm_file:gisst_root+"/"+v86_wasm,
     bios_root:gisst_root,
     record_from_start:false,
     content_root:gisst_root,
