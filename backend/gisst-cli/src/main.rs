@@ -14,8 +14,8 @@ use args::{
 use clap::Parser;
 use gisst::{
     models::{
-        Creator, Duplicate, Environment, Instance, Object, ObjectRole, Replay, Save, Screenshot,
-        State, Work, insert_file_object,
+        CoreFileLink, Creator, Duplicate, Environment, Instance, Object, ObjectRole, Replay, Save,
+        Screenshot, State, Work, insert_file_object,
     },
     storage::StorageHandler,
 };
@@ -137,10 +137,79 @@ async fn add_core(
 ) -> Result<(), GISSTCliError> {
     let mut tx = db.begin().await?;
     let now = chrono::Utc::now();
-    todo!();
+    let core_meta_path = Path::new(core_meta_path);
+    let core_dir = core_meta_path.parent()?;
+    let core_hash_path = core_meta_path.with_extension("hash");
+    let core_hash = std::fs::read(core_hash_path)?;
+    let core_meta: serde_json::Value = serde_json::from_str(std::fs::read(core_meta_path)?)?;
+    let name = core_meta["core_name"].as_str().unwrap().clone();
+    let entrypoints: Vec<_> = core_meta["entrypoints"]
+        .as_array()
+        .unwrap()
+        .into_iter()
+        .filter_map(|x| x.as_str())
+        .cloned()
+        .collect();
+    let deps: Vec<_> = core_meta["deps"]
+        .as_array()
+        .unwrap()
+        .into_iter()
+        .filter_map(|x| x.as_str())
+        .cloned()
+        .collect();
+    let core = Core {
+        core_name: name.clone(),
+        core_version: core_hash.clone(),
+        core_meta: core_meta.to_string(),
+    };
+    Core::insert(&core).await?;
     // make a core record with name and version (hash) derived from core meta path;
     // then, make a file and corefilelink for each entrypoint, dependency, and config file
-    // for (role, idx, file) in entrypoints.into_iter().enumerate().map(|(x,y)| (CoreFileRole::Entrypoint,x,y)).chain(dependencies.into_iter().enumerate().map(|(x,y)| (CoreFileRole::Dependency,x,y))).chain(configs.into_iter().enumeraet().map(|(x,y)| (CoreFileRole::Config,x,y))) { ... }
+    for (role, idx, file) in entrypoints
+        .into_iter()
+        .enumerate()
+        .map(|(x, y)| (CoreFileRole::Entrypoint, x, y))
+        .chain(
+            deps.into_iter()
+                .enumerate()
+                .map(|(x, y)| (CoreFileRole::Dependency, x, y)),
+        )
+        .chain(
+            configs
+                .into_iter()
+                .enumeraet()
+                .map(|(x, y)| (CoreFileRole::Config, x, y)),
+        )
+    {
+        let hash = StorageHandler::get_file_hash(core_dir + file)?;
+        let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut conn, &hash).await?
+        {
+            file.file_id
+        } else {
+            let mut source_path = PathBuf::from(file);
+            source_path.pop();
+            let file_name = file.file_name().unwrap().to_string_lossy().to_string();
+            gisst::models::insert_new_file(
+                &mut conn,
+                &storage_path,
+                depth,
+                &file_name,
+                core_dir + file,
+                &source_path.to_string_lossy().to_string().replace("./", ""),
+                created_on,
+            )
+            .await?
+            .file_id
+        };
+        let link = CoreFile {
+            core_name: name.clone(),
+            core_version: core_hash.clone(),
+            core_role: role,
+            core_role_index: idx,
+            file_id,
+        };
+        CoreFile::insert(&mut tx, link).await?;
+    }
     tx.commit().await?;
     Ok(())
 }
