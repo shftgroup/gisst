@@ -12,10 +12,10 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     const instance_config = manifest.find((o) => o.object_role=="config");
     const extra_configs:string[] = [];
     if (core_config) {
-        extra_configs.push(core_config.file_source_path);
+        extra_configs.push(core_config.file_dest_path);
     }
     if (instance_config) {
-        extra_configs.push(instance_config.file_source_path);
+        extra_configs.push(instance_config.file_dest_path);
     }
     for (const o of core_manifest) {
         // Emscripten dependencies go into remote_deps

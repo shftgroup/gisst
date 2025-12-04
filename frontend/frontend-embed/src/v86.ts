@@ -56,6 +56,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       }
     }
   }
+    if (!v86_wasm) { throw "No v86 wasm path defined"; }
   for (const obj of manifest) {
     if (obj.object_role == "content") {
       const obj_path = "storage/"+obj.file_dest_path;

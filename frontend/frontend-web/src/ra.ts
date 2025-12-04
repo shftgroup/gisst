@@ -20,18 +20,17 @@ let db:GISSTDBConnector;
 let content_base:string;
 
 export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, saves:GISSTModels.SaveFileLink[], core_manifest:CoreFileLink[], manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
-  db = new GISSTDBConnector(gisst_root);
-
+    db = new GISSTDBConnector(gisst_root);
     const core_path = '/storage/'+core_manifest.find((o) => o.core_role=="entrypoint" && o.core_role_index == 0)!.file_dest_path;
     const remote_deps:{[id:string]:string} = {};
     const core_config = core_manifest.find((o) => o.core_role=="config");
     const instance_config = manifest.find((o) => o.object_role=="config");
     const extra_configs:string[] = [];
     if (core_config) {
-        extra_configs.push(core_config.file_source_path);
+        extra_configs.push(core_config.file_dest_path);
     }
     if (instance_config) {
-        extra_configs.push(instance_config.file_source_path);
+        extra_configs.push(instance_config.file_dest_path);
     }
     for (const o of core_manifest) {
         // Emscripten dependencies go into remote_deps
@@ -272,7 +271,8 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
         }
         ra_cfg_text += "\ninput_overlay_enable = \"true\"\ninput_overlay = \"/home/web_user/retroarch/overlays/gamepads/"+overlay+"/"+overlay+".cfg\"\ninput_overlay_enable_autopreferred = \"true\"";
       }
-          for (const config of extra_configs) {
+        for (const config of extra_configs) {
+            console.log("Extra config:",config);
               const config_url = gisst_root+"/storage/"+config;
               const text = await (await fetch(config_url)).text();
               ra_cfg_text += "\n" + text + "\n";

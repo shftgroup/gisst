@@ -6,9 +6,9 @@ let ui_state:UI<ReplayEvent>;
 let db:GISSTDBConnector;
 
 // qua https://zacharycouchman.com/Dynamically-Loading-JavaScript/
-async function loadScript(url) {
+async function loadScript(url:string) {
   return new Promise((resolve, reject) => {
-    let ourScript = document.createElement('script');
+    const ourScript = document.createElement('script');
     ourScript.addEventListener('load', (evt) => {
       resolve(evt);
     });
@@ -38,6 +38,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
         await loadScript(gisst_root+"/"+obj.file_dest_path);
     }
   }
+    if (!v86_wasm) { throw "No v86 wasm path defined"; }
   for (const obj of manifest) {
     if (obj.object_role == "content") {
       const obj_path = "storage/"+obj.file_dest_path;
