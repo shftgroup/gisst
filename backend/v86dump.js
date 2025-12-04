@@ -4,7 +4,7 @@
 var fs = require("fs");
 var path = require("path");
 
-var args = process.argv.slice(3);
+var args = process.argv.slice(2);
 if (args.length != 3) {
   console.error("Usage: libv86-js-path v86-json state-path");
   process.exit(1);

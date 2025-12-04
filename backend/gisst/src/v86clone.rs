@@ -69,7 +69,7 @@ pub async fn clone_v86_machine(
                 if libv86_js.is_some() {
                     tracing::warn!("Second entrypoint for v86 detected in core files!");
                 }
-                libv86_js = Some(link.file_dest_path);
+                libv86_js = Some(format!("{storage_root}/{}", link.file_dest_path));
             }
             CoreFileRole::Dependency => {
                 let file_path = format!("{storage_root}/{}", link.file_dest_path);
@@ -81,7 +81,7 @@ pub async fn clone_v86_machine(
             }
         }
     }
-    info!("Input {env_json}\n{state_file_path}");
+    info!("Input: {libv86_js:?}\n{env_json}\n{state_file_path}");
     let libv86_js = libv86_js.ok_or(crate::error::V86Clone::EnvironmentInvalid(
         env.environment_id,
     ))?;
