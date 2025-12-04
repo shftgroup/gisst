@@ -193,11 +193,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             builder.clone().service(selective_serve_dir::SelectiveServeDir::new("web-dist/ra")),
         )
         .nest_service(
-            "/v86",
-            builder.clone()
-                .service(selective_serve_dir::SelectiveServeDir::new("web-dist/v86")),
-        )
-        .nest_service(
             "/embed",
             builder.clone()
                 .service(selective_serve_dir::SelectiveServeDir::new("embed-dist")),
