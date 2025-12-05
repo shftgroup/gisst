@@ -1,17 +1,13 @@
 [package]
 name = "ingest"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 walkdir = "2.3.3"
 uuid = { version = "1.8", features = ["serde", "v4"] }
-tracing = "0.1.37"
-tracing-subscriber = "0.3.16"
-serde = { version = "1.0.159", features = ["derive"] }
-serde_json = { version = "1.0.96", features = ["raw_value"] }
 thiserror = "2.0.12"
 log = "0.4.17"
 tokio = { version = "1.27.0", features = ["full"] }

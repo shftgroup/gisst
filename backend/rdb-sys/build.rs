@@ -25,7 +25,6 @@ fn main() {
     cc::Build::new()
         .includes(includes)
         .files(files)
-        .static_flag(true)
         .warnings(false)
         .define("NDEBUG", None)
         .compile("retro-db");

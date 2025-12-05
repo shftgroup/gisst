@@ -2,12 +2,17 @@
 members = ["gisst", "gisst-server", "gisst-cli", "ingest", "rdb-sys"]
 resolver = "2"
 
-#[profile.dev.build-override]
-#opt-level = 3
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
 
-[profile.dev.package.md5]
+#[profile.dev]
+#debug = 0
+
+[profile.dev.package.md-5]
 opt-level = 3
 [profile.dev.package.sqlx-macros]
 opt-level = 3
 # [profile.dev]
 # debug=line-tables-only
+
