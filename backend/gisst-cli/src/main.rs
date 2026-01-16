@@ -30,7 +30,6 @@ use uuid::{Uuid, uuid};
 #[tokio::main]
 async fn main() -> Result<(), GISSTCliError> {
     let args = GISSTCli::parse();
-
     env_logger::Builder::new()
         .filter_level(args.verbose.log_level_filter())
         .init();

@@ -39,12 +39,14 @@ uuid_pcsx=00000000000000000000000000000065
 uuid_gambatte=00000000000000000000000000000066
 uuid_sameboy=00000000000000000000000000000067
 uuid_vba_next=00000000000000000000000000000068
+uuid_vice_x64=00000000000000000000000000000070
 ./target/debug/gisst-cli add-core ../build/cores/fceumm_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/gambatte_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/pcsx_rearmed_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/sameboy_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/snes9x_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/vba_next_libretro.json
+./target/debug/gisst-cli add-core ../build/cores/vice_x64_libretro.json
 ./target/debug/gisst-cli add-core ../build/v86.json
 
 ./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_environment.json
@@ -55,6 +57,7 @@ uuid_vba_next=00000000000000000000000000000068
 ./target/debug/gisst-cli environment create --json-file ./examples/records/psx/psx_pcsx_rearmed_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/c64/vice_x64_environment.json
 
 # Set up counter for work / instance UUID
 uuid_counter=1000
@@ -80,7 +83,7 @@ get_uuid_from_counter() {
   fi
 }
 
-for work in ./examples/data/*/*.{nes,sfc,z64,gb};
+for work in ./examples/data/*/*.{nes,sfc,z64,gb,d64};
 do
   folder=$(basename `dirname "$work"`)
   file=$(basename -- "$work")
@@ -95,6 +98,12 @@ do
       ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo Entertainment System" --work-version "NTSC" --work-name "$base" \
                                --work-id "$work_uuid" --instance-id "$work_uuid" \
                                --environment-id $uuid_nes_fceumm --cwd examples/data/nes/ \
+                               --content "$file"
+  elif [ "$folder" = "c64" ]
+  then
+      ./target/debug/gisst-cli add-work-instance --platform-name "Commodore 64" --work-version "NTSC" --work-name "$base" \
+                               --work-id "$work_uuid" --instance-id "$work_uuid" \
+                               --environment-id $uuid_vice_x64 --cwd examples/data/c64/ \
                                --content "$file"
   elif [ "$folder" = "snes" ]
   then

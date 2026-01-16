@@ -6,7 +6,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   const saves_dir = "/mem/saves";
   const retro_args = ["-v"];
   const content = manifest.find((o) => o.object_role=="content" && o.object_role_index == 0)!;
-    const core_path = '/storage/'+core_manifest.find((o) => o.core_role=="entrypoint" && o.core_role_index == 0)!.file_dest_path;
+    const core_path = 'storage/'+core_manifest.find((o) => o.core_role=="entrypoint" && o.core_role_index == 0)!.file_dest_path;
     const remote_deps:{[id:string]:string} = {};
     const core_config = core_manifest.find((o) => o.core_role=="config");
     const instance_config = manifest.find((o) => o.object_role=="config");
@@ -20,7 +20,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
     for (const o of core_manifest) {
         // Emscripten dependencies go into remote_deps
         if (o.file_filename.match(/.*\.(wasm|js|data)/)) {
-            remote_deps[o.file_source_path+o.file_filename] = '/storage/'+o.file_dest_path;
+            remote_deps[o.file_source_path+o.file_filename] = 'storage/'+o.file_dest_path;
         } else if (o.core_role == "dependency") {
             // Other dependencies go into regular "local" manifest
             manifest.push({

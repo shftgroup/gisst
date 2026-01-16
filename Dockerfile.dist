@@ -1,6 +1,9 @@
-# Usage: e.g. docker run -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -e GET_ASSETS=0 gisst-dist
+# Build with docker build -t gisst-dist -f Dockerfile.dist .
+# Usage: e.g. docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -e GET_ASSETS=0 gisst-dist
 # Consider: docker volume create gisst-build
-#           docker run -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v gisst-build:/gisst-build -e GET_ASSETS=0 gisst-dist
+#           docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -v gisst-build:/gisst-build -e GET_ASSETS=0 gisst-dist
+# Or to run with podman:
+#           podman run --rm --mount type=bind,src=./manifest.json,dst=/manifest.json,Z --volume $(pwd)/build:/out,Z --volume $(pwd)/v86bios:/files/v86bios --volume $(pwd)/psxbios:/files/psxbios --volume gisst-build:/gisst-build -e GET_ASSETS=0  gisst-dist
 ARG RUST_VERSION=1.91.1
 ARG EMSDK_VERSION=4.0.17
 FROM emscripten/emsdk:$EMSDK_VERSION

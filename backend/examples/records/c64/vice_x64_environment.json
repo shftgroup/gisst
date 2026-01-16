@@ -1,0 +1,7 @@
+{
+  "environment_id": "00000000000000000000000000000070",
+  "environment_name": "Commodore 64",
+  "environment_framework": "retroarch",
+  "environment_core_name": "vice_x64",
+  "environment_core_version": "dc4397fff4c86f7fe685786f329c8e5b41e41c4f"
+}
