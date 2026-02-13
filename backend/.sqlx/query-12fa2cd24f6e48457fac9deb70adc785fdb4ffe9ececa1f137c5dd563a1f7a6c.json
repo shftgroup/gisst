@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core_file VALUES ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "core_file_role",
+            "kind": {
+              "Enum": [
+                "entrypoint",
+                "dependency",
+                "config"
+              ]
+            }
+          }
+        },
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "12fa2cd24f6e48457fac9deb70adc785fdb4ffe9ececa1f137c5dd563a1f7a6c"
+}

@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core VALUES ($1, $2, $3, $4) RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "core_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "core_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "core_metadata",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Jsonb",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "12c7752af135f6a52171ecda6c8405ca8198b14b7b5991e05d2a976319f91787"
+}
