@@ -44,27 +44,27 @@ jobs:
       with:
         path: ./build
         key: cache-${{hashFiles('manifest-ci.json', 'Dockerfile.dist', 'dist-update-docker.sh')}}
-  - name: Rebuild cores (setup buildx)
-    if: steps.cache.outputs.cache-hit != 'true'
-    uses: docker/setup-buildx-action@v2
-  - name: Rebuild cores (build container)
-    if: steps.cache.outputs.cache-hit != 'true'
-    uses: docker/build-push-action@v4
+    - name: Rebuild cores (setup buildx)
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: docker/setup-buildx-action@v2
+    - name: Rebuild cores (build container)
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: "Dockerfile.dist"
+          tags: gisst-dist:${{ github.sha }}
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          push: false
+    - name: Rebuild cores (run dist script)
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: addnab/docker-run-action@v3
       with:
-        context: .
-        file: "Dockerfile.dist"
-        tags: gisst-dist:${{ github.sha }}
-        load: true
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        push: false
-  - name: Rebuild cores (run dist script)
-    if: steps.cache.outputs.cache-hit != 'true'
-    uses: addnab/docker-run-action@v3
-    with:
-      image: gisst-dist:${{ github.sha }}
-      options: -v ./build:out -v ./manifest-ci.json:/manifest.json -v ./v86bios:/files/v86bios -e GET_ASSETS=0
-  - name: Create DB
+        image: gisst-dist:${{ github.sha }}
+        options: -v ./build:out -v ./manifest-ci.json:/manifest.json -v ./v86bios:/files/v86bios -e GET_ASSETS=0
+    - name: Create DB
       working-directory: backend
       run: |
         sudo systemctl start postgresql.service
