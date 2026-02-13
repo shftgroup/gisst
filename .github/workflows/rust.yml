@@ -50,14 +50,14 @@ jobs:
     - name: Rebuild cores (build container)
       if: steps.cache.outputs.cache-hit != 'true'
       uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: "Dockerfile.dist"
-          tags: gisst-dist:${{ github.sha }}
-          load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          push: false
+      with:
+        context: .
+        file: "Dockerfile.dist"
+        tags: gisst-dist:${{ github.sha }}
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        push: false
     - name: Rebuild cores (run dist script)
       if: steps.cache.outputs.cache-hit != 'true'
       uses: addnab/docker-run-action@v3
