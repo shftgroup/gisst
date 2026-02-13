@@ -60,7 +60,7 @@ jobs:
         push: false
     - name: Rebuild cores (run dist script)
       if: steps.cache.outputs.cache-hit != 'true'
-      uses: addnab/docker-run-action@v3
+      uses: baardrw/docker-run-action@v4
       with:
         image: gisst-dist:${{ github.sha }}
         options: -v ./build:out -v ./manifest-ci.json:/manifest.json -v ./v86bios:/files/v86bios -e GET_ASSETS=0

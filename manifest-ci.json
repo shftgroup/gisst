@@ -56,11 +56,6 @@
         "repo": "https://github.com/libretro/snes9x",
         "version": "5a40cd5514e63e691e39141d64267798357a1424"
       },
-      "stella2014": {
-        "skip": true,
-        "repo": "https://github.com/libretro/stella2014-libretro",
-        "version": "3cc89f0d316d6c924a5e3f4011d17421df58e615"
-      },
       "vba_next": {
         "repo": "https://github.com/JoeOsborn/vba-next",
         "version": "e437f6c847f88161b489a7a90aba1bfe70df9244"
