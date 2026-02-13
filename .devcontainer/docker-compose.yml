@@ -1,0 +1,53 @@
+version: '3.8'
+services:
+  devcontainer:
+    build:
+      context: ../
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ./devcontainer.env
+    environment:
+      PODMAN_USERNS: keep-id
+    volumes:
+      - ../../:/workspaces:cached
+      - ./nginx.conf:/etc/nginx/sites-enabled/default:ro
+      - ./certs:/certs:ro
+    command: sleep infinity
+    expose:
+      - "3000"
+    ports:
+      - "3000:443"
+      - "3000:443/udp"
+    depends_on:
+      - db
+      - meili
+    links:
+      - db
+      - meili
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: gisstdb
+    expose:
+      - "5432"
+    ports:
+      - "5432:5432"
+  meili:
+    image: getmeili/meilisearch:latest
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: devcontainer_testkey
+    volumes:
+      - meili-data:/meili_data
+    expose:
+      - "7700"
+    ports:
+      - "7700:7700"
+volumes:
+  postgres-data:
+  meili-data:

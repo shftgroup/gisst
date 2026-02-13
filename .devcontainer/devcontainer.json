@@ -1,0 +1,16 @@
+{
+  "name": "GISST Dev",
+  "dockerComposeFile": "docker-compose.yml",
+  "service":"devcontainer",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "initializeCommand": "[ -f certs/local.crt ] || (mkdir -p certs && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs/local.key -out certs/local.crt -subj '/CN=localhost')",
+  "postStartCommand": "sudo service nginx start",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "ms-vscode.vscode-typescript-next"
+      ]
+    }
+  }
+}
