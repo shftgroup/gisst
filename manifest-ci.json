@@ -63,7 +63,7 @@
       "vice_x64": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=x64"]
+        "extra_build_args": [ "EMUTYPE=x64" ]
       }
     }
   }
