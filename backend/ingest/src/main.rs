@@ -11,7 +11,7 @@ use gisst::{
         insert_file_object,
     },
 };
-use log::{error, info, warn};
+use log::{info, warn};
 use rdb_sys::{RDB, RVal};
 use sqlx::PgPool;
 use sqlx::pool::PoolOptions;
