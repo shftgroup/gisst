@@ -64,6 +64,7 @@ jobs:
       with:
         image: gisst-dist:${{ github.sha }}
         options: -v ./build:/out -v ./manifest-ci.json:/manifest.json -v ./v86bios:/files/v86bios -e GET_ASSETS=0
+        run: /usr/local/bin/dist-update
     - name: Create DB
       working-directory: backend
       run: |
