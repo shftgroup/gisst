@@ -53,19 +53,15 @@ jobs:
       with:
         context: .
         file: "Dockerfile.dist"
-        tags: gisst-dist:${{ github.sha }}
+        tags: gisst-dist:${{ hashFiles('manifest-ci.json', 'Dockerfile.dist', 'dist-update-docker.sh') }}
         load: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
         push: false
     - name: Rebuild cores (run dist script)
       if: steps.cache.outputs.cache-hit != 'true'
-      uses: baardrw/docker-run-action@v4
-      with:
-        image: gisst-dist:${{ github.sha }}
-        options: -v ./build:/out -v ./manifest-ci.json:/manifest.json -v ./v86bios:/files/v86bios -e GET_ASSETS=0
-        shell: /bin/bash
-        run: /usr/local/bin/dist-update
+      run: |
+        docker run --rm -v ./build:/out -v ./manifest-ci.json:/manifest.json -v ./v86bios:/files/v86bios -e GET_ASSETS=0 gisst-dist:${{ hashFiles('manifest-ci.json', 'Dockerfile.dist', 'dist-update-docker.sh') }}
     - name: Create DB
       working-directory: backend
       run: |

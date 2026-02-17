@@ -67,7 +67,7 @@
       },
       "extra_core_ci_kick": {
         "skip": "true",
-        "attempt": 0
+        "attempt": 1
       }
     }
   }
