@@ -14,6 +14,12 @@ export MEILI_URL=$MEILI_URL
 export MEILI_API_KEY=$MEILI_API_KEY
 export MEILI_MASTER_KEY=$MEILI_MASTER_KEY
 
+if ${GISST_CI:-0}; then
+    PSX_ENV=./examples/records/psx/psx_pcsx_rearmed_ci_environment.json
+else
+    PSX_ENV=./examples/records/psx/psx_pcsx_rearmed_environment.json
+fi
+
 # To ensure we don't get different results at different times, touch every file to ensure it has the same ATIME/MTIME
 find examples/data/ -type f -exec touch -t 202401010101.01 '{}' ';'
 
@@ -54,7 +60,7 @@ uuid_vice_x64=00000000000000000000000000000070
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/win_31_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
 #./target/debug/gisst-cli environment create --json-file ./examples/records/n64/n64_gliden64_environment.json
-./target/debug/gisst-cli environment create --json-file ./examples/records/psx/psx_pcsx_rearmed_environment.json
+./target/debug/gisst-cli environment create --json-file $PSX_ENV
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/c64/vice_x64_environment.json
