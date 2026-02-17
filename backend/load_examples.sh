@@ -140,7 +140,7 @@ do
                                # --work-id "$work_uuid" --instance-id "$work_uuid" \
                                # --environment-id $uuid_n64 --cwd examples/data/n64/ \
                                # --content "$file"
-  # fi
+  fi
 done
 
 uuid_counter=10000
