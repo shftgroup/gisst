@@ -78,7 +78,7 @@ jobs:
         echo "MEILI_MASTER_KEY=test-api-key-github-actions" >> .env
         echo "MEILI_API_KEY=test-api-key-github-actions" >> .env
         echo "MEILI_SEARCH_KEY=test-api-key-github-actions" >> .env
-        echo "GISST_CI=1" >> .env
+        echo "GISST_CI=true" >> .env
         rm -rf storage
         mkdir storage
         source .env
