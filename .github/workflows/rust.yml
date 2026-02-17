@@ -78,6 +78,7 @@ jobs:
         echo "MEILI_MASTER_KEY=test-api-key-github-actions" >> .env
         echo "MEILI_API_KEY=test-api-key-github-actions" >> .env
         echo "MEILI_SEARCH_KEY=test-api-key-github-actions" >> .env
+        echo "GISST_CI=1" >> .env
         rm -rf storage
         mkdir storage
         source .env
@@ -86,6 +87,7 @@ jobs:
         export MEILI_MASTER_KEY
         export MEILI_API_KEY
         export MEILI_SEARCH_KEY
+        export GISST_CI
         LOAD_WIN=0 zsh -e ./load_examples.sh
     - name: Check DB contents
       working-directory: backend
