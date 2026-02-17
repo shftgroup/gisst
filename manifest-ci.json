@@ -66,7 +66,8 @@
         "extra_build_args": [ "EMUTYPE=x64" ]
       },
       "extra_core_ci_kick": {
-        "skip": "true"
+        "skip": "true",
+        "attempt": 0
       }
     }
   }
