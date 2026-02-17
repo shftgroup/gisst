@@ -53,13 +53,18 @@ uuid_vice_x64=00000000000000000000000000000070
 ./target/debug/gisst-cli add-core ../build/cores/snes9x_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/vba_next_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/vice_x64_libretro.json
+# if ! ${GISST_CI:-false}; then
+    # ./target/debug/gisst-cli add-core ../build/cores/gliden64_libretro.json
+# fi
 ./target/debug/gisst-cli add-core ../build/v86.json
 
 ./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/snes/snes_snes9x_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/win_31_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
-#./target/debug/gisst-cli environment create --json-file ./examples/records/n64/n64_gliden64_environment.json
+# if ! ${GISST_CI:-false}; then
+    # ./target/debug/gisst-cli environment create --json-file ./examples/records/n64/n64_gliden64_environment.json
+# fi
 ./target/debug/gisst-cli environment create --json-file $PSX_ENV
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
@@ -129,13 +134,13 @@ do
                                --work-id "$work_uuid" --instance-id "$instance_uuid" \
                                --environment-id $uuid_sameboy --cwd examples/data/gb/ \
                                --content "$file"
-  elif [ "$folder" = "n64" ]
-  then
-      ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo 64" --work-version "NTSC" --work-name "$base" \
-                               --work-id "$work_uuid" --instance-id "$work_uuid" \
-                               --environment-id $uuid_n64 --cwd examples/data/n64/ \
-                               --content "$file"
-  fi
+  # elif [ "$folder" = "n64" ] && ! ${GISST_CI:-false}
+  # then
+      # ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo 64" --work-version "NTSC" --work-name "$base" \
+                               # --work-id "$work_uuid" --instance-id "$work_uuid" \
+                               # --environment-id $uuid_n64 --cwd examples/data/n64/ \
+                               # --content "$file"
+  # fi
 done
 
 uuid_counter=10000
