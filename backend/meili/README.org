@@ -32,5 +32,6 @@ Put the API and search keys into your =backend/.env=, and while you're at it mod
 export MEILI_URL=http://localhost:7700
 export MEILI_API_KEY=key_from_that_curl_command
 export MEILI_SEARCH_KEY=other_key_from_that_curl_command
+
 cargo run --bin gisst-cli -- reindex
 #+END_src
