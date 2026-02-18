@@ -4,6 +4,7 @@ retroarch-web/
 simple/content/
 .idea/
 ra-build
+build
 gisst.campus.pomona.edu.*
 id_deploy*
 backend/roms-*
