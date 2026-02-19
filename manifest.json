@@ -1,0 +1,87 @@
+{
+  "format_version": "1",
+  "script_version": "1.0.0",
+  "rust_version": "1.91.1",
+  "emsdk_version": "4.0.17",
+  "v86": {
+    "repo": "https://github.com/JoeOsborn/v86",
+    "version": "a72b495ae289ac90ea8784d9e8d35d11afcad7ce",
+    "dependencies": {
+      "seabios.bin": "v86bios/seabios_a74f33d58109877723201ef02d20b46b84c36974.bin",
+      "bochs-bios.bin": "v86bios/bochs-bios_6b1400c2a76c82d9535456866cc4cd23c5c70311.bin",
+      "vgabios.bin": "v86bios/vgabios_c7260820bac7d2d5308baa22668f111dbb520db9.bin",
+      "bochs-vgabios.bin": "v86bios/bochs-vgabios_d04f227c790a0e4d32f3cd27bad9341690de5cc6.bin"
+    }
+  },
+  "retroarch": {
+    "repo": "https://github.com/libretro/retroarch",
+    "version": "ee96a134660b4dfdce2bef8457a7e76c29b4d021",
+    "build_args": [
+      "HAVE_RWEBAUDIO=0",
+      "HAVE_THREADS=1",
+      "PTHREAD_POOL_SIZE=4",
+      "PROXY_TO_PTHREAD=1",
+      "HAVE_WASMFS=1",
+      "HAVE_EXTRA_WASMFS=1",
+      "HAVE_EGL=0",
+      "HAVE_AL=0",
+      "HAVE_AUDIOWORKLET=1",
+      "SYMBOLS=0",
+      "HAVE_OPENGLES3=1",
+      "HAVE_OZONE=0",
+      "HAVE_XMB=0",
+      "HAVE_GLUI=0",
+      "HAVE_MATERIALUI=0"
+    ],
+    "cores": {
+      "fceumm": {
+        "repo": "https://github.com/libretro/libretro-fceumm",
+        "version": "5cd4a43e16a7f3cd35628d481c347a0a98cfdfa2"
+      },
+      "gambatte": {
+        "repo": "https://github.com/libretro/gambatte-libretro",
+        "version": "6924c76ba03dadddc6e97fa3660f3d3bc08faa94"
+      },
+      "hatari": {
+        "skip": true,
+        "repo": "https://github.com/JoeOsborn/hatari",
+        "version": "73d89468dd5d38f90e1b4775700f07beae01eeaa",
+        "async": true
+      },
+      "mupen64plus_next": {
+        "skip": true,
+        "repo": "https://github.com/JoeOsborn/mupen64plus-libretro-nx",
+        "version": "a08d8a0b26a39e0f8ab62baaac22ffddf9d1fc67",
+        "async": true
+      },
+      "pcsx_rearmed": {
+        "repo": "https://github.com/libretro/pcsx_rearmed",
+        "version": "81814bdc6b1f22c029210082c17c819fe047232f",
+        "dependencies": {
+          "scph5500.bin":"psxbios/scph5500_b05def971d8ec59f346f2d9ac21fb742e3eb6917.bin",
+          "scph5501.bin":"psxbios/scph5501_0555c6fae8906f3f09baf5988f00e55f88e9f30b.bin",
+          "scph5502.bin":"psxbios/scph5502_f8de9325fc36fcfa4b29124d291c9251094f2e54.bin"
+        }
+      },
+      "sameboy": {
+        "repo": "https://github.com/LIJI32/SameBoy",
+        "version": "c50fdfd222ac5a2e07cf9c6f43c645e2dbe0a62d",
+        "rgbds_repo": "https://github.com/gbdev/rgbds.git",
+        "rgbds_version": "d961c697d740728f05895a2faec0dd755351e28b"
+      },
+      "snes9x": {
+        "repo": "https://github.com/libretro/snes9x",
+        "version": "5a40cd5514e63e691e39141d64267798357a1424"
+      },
+      "stella2014": {
+        "skip": true,
+        "repo": "https://github.com/libretro/stella2014-libretro",
+        "version": "3cc89f0d316d6c924a5e3f4011d17421df58e615"
+      },
+      "vba_next": {
+        "repo": "https://github.com/JoeOsborn/vba-next",
+        "version": "e437f6c847f88161b489a7a90aba1bfe70df9244"
+      }
+    }
+  }
+}
