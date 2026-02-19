@@ -103,6 +103,27 @@ impl FromStr for ObjectRole {
     }
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
+#[sqlx(rename_all = "lowercase", type_name = "core_file_role")]
+#[serde(rename_all = "lowercase")]
+pub enum CoreFileRole {
+    Entrypoint,
+    Dependency,
+    Config,
+}
+impl FromStr for CoreFileRole {
+    type Err = &'static str;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "entrypoint" => Ok(Self::Entrypoint),
+            "dependency" => Ok(Self::Dependency),
+            "config" => Ok(Self::Config),
+            _ => Err("Attempting to convert ObjectRole that does not exist."),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InstanceObject {
     pub instance_id: Uuid,
@@ -451,6 +472,18 @@ impl Instance {
         .fetch_all(conn)
         .await
     }
+    pub async fn get_all_for_environment_id(
+        conn: &mut PgConnection,
+        environment_id: Uuid,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT * FROM instance WHERE environment_id = $1"#,
+            environment_id
+        )
+        .fetch_all(conn)
+        .await
+    }
 }
 
 impl Environment {
@@ -469,6 +502,26 @@ impl Environment {
         .await
     }
 
+    pub async fn get_for_core(
+        conn: &mut PgConnection,
+        core_name: &str,
+        core_version: &str,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT environment_id, environment_name,
+                  environment_framework as "environment_framework:_",
+                  environment_core_name, environment_core_version,
+                  environment_derived_from, environment_config, created_on
+               FROM environment
+               WHERE environment_core_name = $1
+                 AND environment_core_version = $2"#,
+            core_name,
+            core_version
+        )
+        .fetch_all(conn)
+        .await
+    }
     pub async fn insert(conn: &mut PgConnection, model: Environment) -> Result<Self, Insert> {
         sqlx::query_as!(
             Self,
@@ -575,15 +628,6 @@ impl Object {
         )
         .fetch_optional(conn)
         .await
-    }
-
-    pub async fn delete_object_instance_links_by_id(
-        conn: &mut PgConnection,
-        id: Uuid,
-    ) -> sqlx::Result<PgQueryResult> {
-        sqlx::query!("DELETE FROM instanceObject WHERE object_id = $1", id)
-            .execute(conn)
-            .await
     }
 }
 
@@ -909,6 +953,105 @@ impl InstanceWork {
         .await
     }
 }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Core {
+    pub core_name: String,
+    pub core_version: String,
+    pub core_metadata: sqlx::types::JsonValue,
+    pub created_on: chrono::DateTime<chrono::Utc>,
+}
+
+impl Core {
+    pub async fn get(
+        conn: &mut sqlx::PgConnection,
+        name: &str,
+        version: &str,
+    ) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT core_name, core_version, core_metadata, created_on
+FROM core
+WHERE core_name = $1 AND core_version = $2"#,
+            name,
+            version
+        )
+        .fetch_optional(conn)
+        .await
+    }
+    pub async fn insert(conn: &mut sqlx::PgConnection, core: Self) -> Result<Self, Insert> {
+        sqlx::query_as!(
+            Self,
+            r#"INSERT INTO core VALUES ($1, $2, $3, $4) RETURNING *"#,
+            core.core_name,
+            core.core_version,
+            core.core_metadata,
+            core.created_on
+        )
+        .fetch_one(conn)
+        .await
+        .map_err(|e| {
+            Insert::Sql(RecordSQL {
+                table: Table::Core,
+                action: Action::Insert,
+                source: e,
+            })
+        })
+    }
+    pub async fn link_file(
+        conn: &mut sqlx::PgConnection,
+        name: &str,
+        version: &str,
+        role: CoreFileRole,
+        idx: u16,
+        file_id: Uuid,
+    ) -> sqlx::Result<PgQueryResult> {
+        sqlx::query!(
+            r#"INSERT INTO core_file VALUES ($1, $2, $3, $4, $5)"#,
+            name,
+            version,
+            file_id,
+            role as _,
+            i32::from(idx)
+        )
+        .execute(conn)
+        .await
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CoreFileLink {
+    pub core_name: String,
+    pub core_version: String,
+    pub core_role: CoreFileRole,
+    pub core_role_index: i32,
+    pub file_hash: String,
+    pub file_filename: String,
+    pub file_source_path: String,
+    pub file_dest_path: String,
+}
+
+impl CoreFileLink {
+    pub async fn get_all_for_core(
+        conn: &mut sqlx::PgConnection,
+        core_name: &str,
+        core_version: &str,
+    ) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT core_name, core_version, core_file.core_role as "core_role:_",
+                   core_file.core_role_index,
+                   file.file_hash, file.file_filename,
+                   file.file_source_path, file.file_dest_path
+               FROM core_file
+               JOIN file USING(file_id)
+               WHERE core_name = $1 AND core_version = $2 "#,
+            core_name,
+            core_version
+        )
+        .fetch_all(conn)
+        .await
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ObjectLink {
@@ -920,6 +1063,7 @@ pub struct ObjectLink {
     pub file_source_path: String,
     pub file_dest_path: String,
 }
+
 impl ObjectLink {
     pub async fn get_all_for_instance_id(
         conn: &mut sqlx::PgConnection,
@@ -1108,18 +1252,19 @@ pub async fn insert_file_object(
             Duplicate::ReuseData | Duplicate::ForceUuid(_) => {
                 info!("adding duplicate file record for {path:?}");
                 inc_metric!(conn, ins_duplicate_reused_data, 1);
-                let file_id = Uuid::new_v4();
-                let file_record = File {
-                    file_id,
-                    file_filename: file_name,
-                    file_source_path,
+                let file = insert_new_file(
+                    conn,
+                    storage_root,
+                    depth,
+                    &file_name,
+                    path,
+                    &file_source_path,
                     created_on,
-                    ..file_info
-                };
-                File::insert(conn, file_record).await?;
+                )
+                .await?;
                 let object = Object {
                     object_id,
-                    file_id,
+                    file_id: file.file_id,
                     object_description,
                     created_on,
                 };
@@ -1136,40 +1281,63 @@ pub async fn insert_file_object(
         };
         object_id.ok_or(InsertFile::ObjectMissing(hash))
     } else {
-        let file_uuid = Uuid::new_v4();
-        let file_info = StorageHandler::write_file_to_uuid_folder(
+        let file = insert_new_file(
+            conn,
             storage_root,
             depth,
-            file_uuid,
             &file_name,
             path,
+            &file_source_path,
+            created_on,
         )
         .await?;
-        info!(
-            "Wrote file {} to {}",
-            file_info.dest_filename, file_info.dest_path
-        );
-        inc_metric!(conn, ins_new_file, 1);
-        let file_record = File {
-            file_id: file_uuid,
-            file_hash: file_info.file_hash,
-            file_filename: file_info.source_filename,
-            file_source_path,
-            file_dest_path: file_info.dest_path,
-            file_size: file_info.file_size,
-            file_compressed_size: file_info.file_compressed_size,
-            created_on,
-        };
-        File::insert(conn, file_record).await?;
         let object = Object {
             object_id,
-            file_id: file_uuid,
+            file_id: file.file_id,
             object_description,
             created_on,
         };
         Object::insert(conn, object).await?;
         Ok(object_id)
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+#[tracing::instrument(skip(conn))]
+pub async fn insert_new_file(
+    conn: &mut sqlx::PgConnection,
+    storage_root: &str,
+    depth: u8,
+    file_name: &str,
+    path: &std::path::Path,
+    file_source_path: &str,
+    created_on: chrono::DateTime<chrono::Utc>,
+) -> Result<File, crate::error::InsertFile> {
+    use crate::inc_metric;
+    use crate::storage::StorageHandler;
+    use tracing::info;
+    let file_uuid = Uuid::new_v4();
+    let file_info =
+        StorageHandler::write_file_to_uuid_folder(storage_root, depth, file_uuid, file_name, path)
+            .await?;
+    info!(
+        "Wrote file {} to {}",
+        file_info.dest_filename, file_info.dest_path
+    );
+    inc_metric!(conn, ins_new_file, 1);
+    let file_record = File {
+        file_id: file_uuid,
+        file_hash: file_info.file_hash,
+        file_filename: file_info.source_filename,
+        file_source_path: file_source_path.to_string(),
+        file_dest_path: file_info.dest_path,
+        file_size: file_info.file_size,
+        file_compressed_size: file_info.file_compressed_size,
+        created_on,
+    };
+    File::insert(conn, file_record)
+        .await
+        .map_err(crate::error::InsertFile::from)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -3,5 +3,5 @@
   "environment_name": "Super Nintendo Entertainment System",
   "environment_framework": "retroarch",
   "environment_core_name": "snes9x",
-  "environment_core_version": "1.62.3"
+  "environment_core_version": "ccfb0117643bca6cd4e9c5ab82150252536ca5f9"
 }

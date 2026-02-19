@@ -1,7 +1,10 @@
-use crate::error::V86Clone;
 use crate::model_enums::Framework;
 use crate::models::{Environment, File, Instance, Object, ObjectLink, ObjectRole, StateLink};
 use crate::storage::StorageHandler;
+use crate::{
+    error::V86Clone,
+    models::{CoreFileLink, CoreFileRole},
+};
 use log::{error, info};
 use sqlx::PgConnection;
 use std::path::Path;
@@ -40,8 +43,9 @@ pub async fn clone_v86_machine(
     let objects = ObjectLink::get_all_for_instance_id(conn, instance_id).await?;
     let mut env_json = env
         .environment_config
-        .ok_or(V86Clone::EnvironmentInvalid(instance.environment_id))?
-        .to_string();
+        .ok_or(V86Clone::EnvironmentInvalid(instance.environment_id))?;
+    env_json["wasm_path"] = "v86.wasm".into();
+    let mut env_json = env_json.to_string();
     for obj in &objects {
         let file_path = format!("{storage_root}/{}", obj.file_dest_path);
         if let ObjectRole::Content = obj.object_role {
@@ -52,12 +56,39 @@ pub async fn clone_v86_machine(
             }
         }
     }
-    env_json = env_json.replace("seabios.bin", "web-dist/v86/bios/seabios.bin");
-    env_json = env_json.replace("vgabios.bin", "web-dist/v86/bios/vgabios.bin");
-    info!("Input {env_json}\n{state_file_path}");
+    let mut libv86_js = None;
+    for link in CoreFileLink::get_all_for_core(
+        conn,
+        &env.environment_core_name,
+        &env.environment_core_version,
+    )
+    .await?
+    {
+        match link.core_role {
+            CoreFileRole::Entrypoint => {
+                if libv86_js.is_some() {
+                    tracing::warn!("Second entrypoint for v86 detected in core files!");
+                }
+                libv86_js = Some(format!("{storage_root}/{}", link.file_dest_path));
+            }
+            CoreFileRole::Dependency => {
+                let file_path = format!("{storage_root}/{}", link.file_dest_path);
+                env_json = env_json.replace(&link.file_filename, &file_path);
+            }
+            CoreFileRole::Config => {
+                // nop
+                tracing::warn!("Configs are not currently supported in v86 clone");
+            }
+        }
+    }
+    info!("Input: {libv86_js:?}\n{env_json}\n{state_file_path}");
+    let libv86_js = libv86_js.ok_or(crate::error::V86Clone::EnvironmentInvalid(
+        env.environment_id,
+    ))?;
     let now = std::time::Instant::now();
     let proc_output = Command::new("node")
         .arg("v86dump.js")
+        .arg(libv86_js)
         .arg(env_json)
         .arg(state_file_path)
         .output()?;
@@ -184,6 +215,5 @@ pub async fn clone_v86_machine(
     if let Some(temp) = temp_folder {
         std::fs::remove_dir_all(temp)?;
     }
-    // TODO: index instance here
     Ok(new_id)
 }

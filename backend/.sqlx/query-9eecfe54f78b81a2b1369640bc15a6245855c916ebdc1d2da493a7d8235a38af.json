@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT core_name, core_version, core_file.core_role as \"core_role:_\",\n                   core_file.core_role_index,\n                   file.file_hash, file.file_filename,\n                   file.file_source_path, file.file_dest_path\n               FROM core_file\n               JOIN file USING(file_id)\n               WHERE core_name = $1 AND core_version = $2 ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "core_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "core_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "core_role:_",
+        "type_info": {
+          "Custom": {
+            "name": "core_file_role",
+            "kind": {
+              "Enum": [
+                "entrypoint",
+                "dependency",
+                "config"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "core_role_index",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "file_hash",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "file_filename",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "file_source_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "file_dest_path",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9eecfe54f78b81a2b1369640bc15a6245855c916ebdc1d2da493a7d8235a38af"
+}

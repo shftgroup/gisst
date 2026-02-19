@@ -3,5 +3,5 @@
   "environment_name": "Sony PlayStation",
   "environment_framework": "retroarch",
   "environment_core_name": "pcsx_rearmed",
-  "environment_core_version": "1.62.3"
+  "environment_core_version": "212114342845c3b71144cc843a9c53cdeec398aa"
 }

@@ -36,6 +36,8 @@ pub enum Table {
     State,
     Users,
     Work,
+    Core,
+    CoreFile,
 }
 
 impl fmt::Display for Table {
@@ -53,6 +55,8 @@ impl fmt::Display for Table {
             Table::State => "state",
             Table::Users => "users",
             Table::Work => "work",
+            Table::Core => "core",
+            Table::CoreFile => "core_file",
         };
         write!(f, "{s}")
     }

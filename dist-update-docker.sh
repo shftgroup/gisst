@@ -25,12 +25,14 @@ function getrepo
     local repo=$(jq -re "${jq_prefix}.repo" /manifest.json) || die "Could not get repository url"
     local vsn=$(jq -re "${jq_prefix}.version" /manifest.json) || die "Could not get repository version"
     if [ -e $dir ]; then
-        cd $dir
+        pushd $dir
         if [ $vsn != $(git rev-parse HEAD) ]; then
             echo "Checkout of $dir exists with wrong version $(git rev-parse HEAD) (expected $vsn); removing..."
+            popd
             rm -r $dir
         else
             echo "$dir already checked out at correct version"
+            popd
             return 0;
         fi
     fi
@@ -114,6 +116,7 @@ for f in $CORENAMES v86; do
     if jq -re ".retroarch.cores.$f.async == true" /manifest.json; then
         ASYNC=1
     fi
+    EXTRA_ARGS=$(jq -re ".retroarch.cores.$f.extra_build_args // [] | join(\" \")" /manifest.json)
 
     if [ $f = "v86" ]
     then
@@ -139,23 +142,23 @@ for f in $CORENAMES v86; do
         git clone --depth 1 --revision $rgbds_version $rgbds_repo || echo "Could not get rgbds or rgbds already present"
         make -C rgbds -j || die "Could not build rgbds"
         PATH="./rgbds:${PATH}" make -j CONF=release bootroms || die "could not build sameboy bootroms"
-        PATH="./rgbds:${PATH}" emmake make CONF=release platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC -j libretro || die "could not build core ${f}"
+        PATH="./rgbds:${PATH}" emmake make CONF=release platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC $EXTRA_ARGS -j libretro || die "could not build core ${f}"
         cp build/bin/${f}_libretro_emscripten.bc ../ra/libretro_emscripten.bc
     elif [ -f Makefile.libretro ]
     then
         # emmake make -f Makefile.libretro platform=emscripten clean
-        emmake make -f Makefile.libretro platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC -j || die "could not build core ${f}"
+        emmake make -f Makefile.libretro platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC $EXTRA_ARGS -j || die "could not build core ${f}"
         cp ${f}_libretro_emscripten.bc ../ra/libretro_emscripten.bc
     elif [ -d libretro ] && [ -f libretro/Makefile ]
     then
         pushd libretro
         # emmake make platform=emscripten clean
-        emmake make platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC -j || die "could not build core ${f}"
+        emmake make platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC $EXTRA_ARGS -j || die "could not build core ${f}"
         cp ${f}_libretro_emscripten.bc ../../ra/libretro_emscripten.bc
         popd
     else
         # emmake make platform=emscripten clean
-        emmake make platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC -j || die "could not build core ${f}"
+        emmake make platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC $EXTRA_ARGS -j || die "could not build core ${f}"
         cp ${f}_libretro_emscripten.bc ../ra/libretro_emscripten.bc
     fi
     pushd ../ra

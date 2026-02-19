@@ -40,7 +40,7 @@ export interface SetupResponse {
 }
 
 
-export function loadRetroArch(gisst_root:string, core:string, env:Environment, download_asset_bundle:boolean, loaded_cb:(mod:LibretroModule) => void) {
+export function loadRetroArch(gisst_root:string, core:string, dependencies:{[id:string]:string}, env:Environment, download_asset_bundle:boolean, loaded_cb:(mod:LibretroModule) => void) {
   if(download_asset_bundle) {
     if('OPFS_MOUNT' in env) {
       if(!setupWorker) {
@@ -105,9 +105,9 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
   });
   let promise:Promise<string>;
   if (gisst_root.startsWith("https://")) {
-    promise = downloadScript(gisst_root+'/cores/'+core+'_libretro.js');
+    promise = downloadScript(gisst_root+'/'+core);
   } else {
-    promise = new Promise((resolve) => resolve(gisst_root+'/cores/'+core+'_libretro.js'));
+    promise = new Promise((resolve) => resolve(gisst_root+'/'+core));
   }
   Promise.all([promise,fsready]).then(([scriptUrlOrBlob,_]) => {
     let initial_mod:LibretroModule | undefined;
@@ -153,7 +153,7 @@ export function loadRetroArch(gisst_root:string, core:string, env:Environment, d
         loaded_cb(module);
       },
       locateFile: function(path, _prefix) {
-        return gisst_root+'/cores/'+path;
+        return gisst_root+'/'+dependencies[path];
       },
       printErr: function(text:string) {
         console.log(text);

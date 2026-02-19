@@ -7,15 +7,15 @@ use crate::args::CreateScreenshot;
 use crate::cliconfig::CLIConfig;
 use anyhow::Result;
 use args::{
-    AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment,
+    AddCoreArgs, AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment,
     CreateInstance, CreateObject, CreateReplay, CreateSave, CreateState, CreateWork, GISSTCli,
-    GISSTCliError, PatchData,
+    GISSTCliError, PatchData, UpgradeEnvironmentArgs,
 };
 use clap::Parser;
 use gisst::{
     models::{
-        Creator, Duplicate, Environment, Instance, Object, ObjectRole, Replay, Save, Screenshot,
-        State, Work, insert_file_object,
+        Core, Creator, Duplicate, Environment, Instance, Object, ObjectLink, ObjectRole, Replay,
+        Save, Screenshot, State, Work, insert_file_object,
     },
     storage::StorageHandler,
 };
@@ -30,7 +30,6 @@ use uuid::{Uuid, uuid};
 #[tokio::main]
 async fn main() -> Result<(), GISSTCliError> {
     let args = GISSTCli::parse();
-
     env_logger::Builder::new()
         .filter_level(args.verbose.log_level_filter())
         .init();
@@ -60,6 +59,12 @@ async fn main() -> Result<(), GISSTCliError> {
         Commands::InitIndices => (),
         Commands::Reindex => reindex(db, &indexer).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
+        Commands::UpgradeEnvironment(args) => {
+            upgrade_env(args, db).await?;
+        }
+        Commands::AddCore(args) => {
+            add_core(args, db, &storage_root).await?;
+        }
         Commands::AddWorkInstance(cmd) => {
             add_work_instance(cmd, db, &storage_root, &indexer).await?;
         }
@@ -118,6 +123,178 @@ async fn main() -> Result<(), GISSTCliError> {
             add_patched_instance(db, instance, data, storage_root, depth, &indexer).await?;
         }
     }
+    Ok(())
+}
+
+async fn upgrade_env(
+    UpgradeEnvironmentArgs {
+        old_core_name,
+        old_core_version,
+        core_meta,
+    }: UpgradeEnvironmentArgs,
+    db: PgPool,
+) -> Result<(), GISSTCliError> {
+    use gisst::danger::{DestructiveEnvironment, DestructiveObject};
+    let mut tx = db.begin().await?;
+    // find envs with core name and version
+    let envs = Environment::get_for_core(&mut tx, &old_core_name, &old_core_version).await?;
+    if envs.is_empty() {
+        println!("No environments using this core name were found.");
+        return Ok(());
+    }
+    let core_meta_path = Path::new(&core_meta);
+    let core_hash_path = core_meta_path.with_extension("hash");
+    let core_hash = std::fs::read_to_string(core_hash_path)?;
+    let core_hash = core_hash.trim();
+    let core_meta: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
+    let name = core_meta["core_name"].as_str().unwrap().to_string();
+    let Some(_) = Core::get(&mut tx, &name, core_hash).await? else {
+        println!(
+            "Core {name}:{core_hash} is not present in the database, use gisst-cli add-core first"
+        );
+        return Err(GISSTCliError::CoreNotFound(name, core_hash.to_string()));
+    };
+    let deps: Vec<_> = core_meta["dependencies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|x| x.as_str())
+        .map(std::string::ToString::to_string)
+        .collect();
+    println!("Replacing instanceobject links to files in {deps:?} with core file links...");
+    let changed_envs: Vec<_> = envs.iter().map(|e| e.environment_id).collect();
+    let mut changed_instances = vec![];
+    for env in envs {
+        Environment::update_core(&mut tx, env.environment_id, &name, core_hash).await?;
+        let instances = Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
+        for inst in instances {
+            let mut changed = false;
+            // delete dependency links of objects with name of any dependency in core_meta.dependencies
+            for link in ObjectLink::get_all_for_instance_id(&mut tx, inst.instance_id).await? {
+                if link.object_role == ObjectRole::Dependency && deps.contains(&link.file_filename)
+                {
+                    // We can just unlink, the core offers the dependency now
+                    Object::unlink(&mut tx, link.object_id, inst.instance_id).await?;
+                    changed = true;
+                }
+            }
+            if changed {
+                changed_instances.push(inst.instance_id);
+            }
+        }
+    }
+    println!("------DANGER ZONE-----");
+    println!(
+        "This command will apply irreversible changes!  Content will potentially be run on different cores if you haven't been very careful!"
+    );
+    println!("Affected environments: {changed_envs:?}");
+    println!("Instances with changed objects: {changed_instances:?}");
+    println!("Type 'yes' to confirm!");
+    let mut out = String::new();
+    std::io::stdin().read_line(&mut out)?;
+    if out.trim() != "yes" {
+        println!("Aborting operation");
+        return Ok(());
+    }
+    println!("Performing destructive changes!");
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn add_core(
+    AddCoreArgs {
+        core_meta_path,
+        configs,
+        depth,
+    }: AddCoreArgs,
+    db: PgPool,
+    storage_root: &str,
+) -> Result<(), GISSTCliError> {
+    use gisst::models::CoreFileRole;
+    let mut tx = db.begin().await?;
+    let now = chrono::Utc::now();
+    let core_meta_path = Path::new(&core_meta_path);
+    let core_dir = core_meta_path.parent().unwrap_or(Path::new(""));
+    let core_hash_path = core_meta_path.with_extension("hash");
+    let core_hash = std::fs::read_to_string(core_hash_path)?;
+    let core_hash = core_hash.trim();
+    let core_meta: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
+    let name = core_meta["core_name"].as_str().unwrap().to_string();
+    let entrypoints: Vec<_> = core_meta["entrypoints"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|x| x.as_str())
+        .map(std::string::ToString::to_string)
+        .collect();
+    let deps: Vec<_> = core_meta["dependencies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|x| x.as_str())
+        .map(std::string::ToString::to_string)
+        .collect();
+    let core = Core {
+        core_name: name.clone(),
+        core_version: core_hash.to_string(),
+        core_metadata: core_meta,
+        created_on: now,
+    };
+    Core::insert(&mut tx, core).await?;
+    // make a core record with name and version (hash) derived from core meta path;
+    // then, make a file and corefilelink for each entrypoint, dependency, and config file
+    for (role, idx, file) in entrypoints
+        .into_iter()
+        .enumerate()
+        .map(|(x, y)| (CoreFileRole::Entrypoint, x, y))
+        .chain(
+            deps.into_iter()
+                .enumerate()
+                .map(|(x, y)| (CoreFileRole::Dependency, x, y)),
+        )
+        .chain(
+            configs
+                .into_iter()
+                .enumerate()
+                .map(|(x, y)| (CoreFileRole::Config, x, y)),
+        )
+    {
+        let hash = StorageHandler::get_file_hash(core_dir.join(&file))?;
+        let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut tx, &hash).await? {
+            file.file_id
+        } else {
+            let mut source_path = PathBuf::from(&file);
+            let file_name = source_path
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
+            source_path.pop();
+            gisst::models::insert_new_file(
+                &mut tx,
+                storage_root,
+                depth,
+                &file_name,
+                &(core_dir.join(Path::new(&file))),
+                &source_path.to_string_lossy().to_string().replace("./", ""),
+                now,
+            )
+            .await?
+            .file_id
+        };
+        Core::link_file(
+            &mut tx,
+            &name,
+            core_hash,
+            role,
+            u16::try_from(idx).map_err(GISSTCliError::IntegerTooBig)?,
+            file_id,
+        )
+        .await?;
+    }
+    tx.commit().await?;
     Ok(())
 }
 
@@ -694,38 +871,27 @@ async fn create_replay(
         })
         .map_or(chrono::Utc::now(), chrono::DateTime::<chrono::Utc>::from);
     let mut conn = db.acquire().await?;
+    let cwd = Path::new("");
     let hash = StorageHandler::get_file_hash(file)?;
     let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut conn, &hash).await? {
         info!("File exists in DB already");
         file.file_id
     } else {
-        let uuid = Uuid::new_v4();
-
-        let filename = file.file_name().unwrap().to_string_lossy().to_string();
-
-        let file_info =
-            StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, file)
-                .await?;
-        info!(
-            "Wrote file {} to {}",
-            file_info.dest_filename, file_info.dest_path
-        );
-
-        let mut source_path = PathBuf::from(file);
+        let path = cwd.join(file);
+        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(&path));
         source_path.pop();
-
-        let file_record = gisst::models::File {
-            file_id: uuid,
-            file_hash: hash,
-            file_filename: filename,
-            file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
-            file_dest_path: file_info.dest_path,
-            file_size: file_info.file_size,
-            file_compressed_size: file_info.file_compressed_size,
+        gisst::models::insert_new_file(
+            &mut conn,
+            &storage_path,
+            depth,
+            &file_name,
+            &path,
+            &source_path.to_string_lossy().to_string().replace("./", ""),
             created_on,
-        };
-        gisst::models::File::insert(&mut conn, file_record).await?;
-        uuid
+        )
+        .await?
+        .file_id
     };
     info!("File ID: {file_id}");
     let replay = Replay {
@@ -818,38 +984,25 @@ async fn create_state(
         ));
     }
 
-    let uuid = Uuid::new_v4();
-
-    let filename = file.file_name().unwrap().to_string_lossy().to_string();
-
-    let file_info =
-        StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, file)
-            .await?;
-    info!(
-        "Wrote file {} to {}",
-        file_info.dest_filename, file_info.dest_path
-    );
-
     let mut source_path = PathBuf::from(file);
     source_path.pop();
-
-    let file_record = gisst::models::File {
-        file_id: uuid,
-        file_hash: hash,
-        file_filename: filename,
-        file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
-        file_dest_path: file_info.dest_path,
-        file_size: file_info.file_size,
-        file_compressed_size: file_info.file_compressed_size,
+    let file_name = file.file_name().unwrap().to_string_lossy().to_string();
+    let file_id = gisst::models::insert_new_file(
+        &mut conn,
+        &storage_path,
+        depth,
+        &file_name,
+        file,
+        &source_path.to_string_lossy().to_string().replace("./", ""),
         created_on,
-    };
-    gisst::models::File::insert(&mut conn, file_record).await?;
-
+    )
+    .await?
+    .file_id;
     let state = State {
         state_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
         is_checkpoint: replay_id.is_some(),
-        file_id: uuid,
+        file_id,
         state_name: state_name.clone(),
         state_description: state_description.unwrap_or_else(|| state_name.clone()),
         screenshot_id,
@@ -898,41 +1051,29 @@ async fn create_save(
         .map_or(chrono::Utc::now(), chrono::DateTime::<chrono::Utc>::from);
 
     let mut conn = db.acquire().await?;
-    let mut source_path = PathBuf::from(file);
-    source_path.pop();
     let hash = StorageHandler::get_file_hash(file)?;
-
-    let uuid = Uuid::new_v4();
-
-    let filename = file.file_name().unwrap().to_string_lossy().to_string();
-
-    let file_info =
-        StorageHandler::write_file_to_uuid_folder(&storage_path, depth, uuid, &filename, file)
-            .await?;
-    info!(
-        "Wrote file {} to {}",
-        file_info.dest_filename, file_info.dest_path
-    );
-
-    let mut source_path = PathBuf::from(file);
-    source_path.pop();
-
-    let file_record = gisst::models::File {
-        file_id: uuid,
-        file_hash: hash,
-        file_filename: filename,
-        file_source_path: source_path.to_string_lossy().to_string().replace("./", ""),
-        file_dest_path: file_info.dest_path,
-        file_size: file_info.file_size,
-        file_compressed_size: file_info.file_compressed_size,
-        created_on,
+    let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut conn, &hash).await? {
+        file.file_id
+    } else {
+        let mut source_path = PathBuf::from(file);
+        source_path.pop();
+        let file_name = file.file_name().unwrap().to_string_lossy().to_string();
+        gisst::models::insert_new_file(
+            &mut conn,
+            &storage_path,
+            depth,
+            &file_name,
+            file,
+            &source_path.to_string_lossy().to_string().replace("./", ""),
+            created_on,
+        )
+        .await?
+        .file_id
     };
-    gisst::models::File::insert(&mut conn, file_record).await?;
-
     let save = Save {
         save_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
-        file_id: uuid,
+        file_id,
         save_short_desc: save_short_desc.clone(),
         save_description: save_description.unwrap_or_else(|| save_short_desc.clone()),
         created_on,

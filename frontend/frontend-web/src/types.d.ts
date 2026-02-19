@@ -30,6 +30,17 @@ export interface ObjectLink {
   file_hash:string,
 }
 
+export interface CoreFileLink {
+  core_name:string,
+  core_version:string,
+  core_role:string,
+  core_role_index:integer,
+  file_hash:string,
+  file_filename:string,
+  file_source_path:string,
+  file_dest_path:string,
+}
+
 export interface ColdStart {
   type:string
 }

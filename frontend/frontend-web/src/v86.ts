@@ -1,13 +1,44 @@
 import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo,ReplayEvent} from 'embedv86';
-import {Environment, ColdStart, StateStart, ReplayStart, ObjectLink, EmbedOptions} from './types.d';
+import {Environment, ColdStart, StateStart, ReplayStart, CoreFileLink, ObjectLink, EmbedOptions} from './types.d';
 let ui_state:UI<ReplayEvent>;
 let db:GISSTDBConnector;
 
+// qua https://zacharycouchman.com/Dynamically-Loading-JavaScript/
+async function loadScript(url:string) {
+  return new Promise((resolve, reject) => {
+    const ourScript = document.createElement('script');
+    ourScript.addEventListener('load', (evt) => {
+      resolve(evt);
+    });
+    ourScript.addEventListener('error', (reason) => {
+      reject(reason);
+    });
+     // add your script's src here
+    ourScript.src = url;
+    document.head.appendChild(ourScript);
+  });
+}
 
-export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, manifest:ObjectLink[], boot_into_record:boolean, _embed_options:EmbedOptions) {
+export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, core_manifest:CoreFileLink[], manifest:ObjectLink[], boot_into_record:boolean, _embed_options:EmbedOptions) {
   db = new GISSTDBConnector(gisst_root);
+  let v86_wasm = null;
+  for (const obj of core_manifest) {
+    if (obj.core_role == "dependency") {
+      const filename = obj.file_filename;
+      const obj_path = "storage/"+obj.file_dest_path;
+      if (filename == "v86.wasm") {
+        v86_wasm = obj_path;
+      } else {
+        nested_replace(environment.environment_config, filename, obj_path);
+      }
+    } else if (obj.core_role == "entrypoint") {
+        // libv86.js
+        await loadScript(gisst_root+"/storage/"+obj.file_dest_path);
+    }
+  }
+    if (!v86_wasm) { throw "No v86 wasm path defined"; }
   for (const obj of manifest) {
     if (obj.object_role == "content") {
       const obj_path = "storage/"+obj.file_dest_path;
@@ -17,7 +48,7 @@ export async function init(gisst_root:string, environment:Environment, start:Col
         nested_replace(environment.environment_config, "$CONTENT", obj_path);
       }
     }
-  } 
+  }
   let entry_state:string|null = null;
   let entry_screenshot:string|null = null;
   if (start.type == "state") {
@@ -152,8 +183,8 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   );
   const container = <HTMLDivElement>document.getElementById("canvas_div")!;
   v86 = new EmbedV86({
-    wasm_root:gisst_root+"/v86",
-    bios_root:gisst_root+"/v86/bios",
+    wasm_file:gisst_root+"/"+v86_wasm,
+    bios_root:gisst_root,
     record_from_start:boot_into_record,
     content_root:gisst_root,
     container,

@@ -76,9 +76,9 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
   const kind = config.environment.environment_framework;
   let emu:EmuControls;
   if(kind == "v86") {
-    emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.start, config.manifest, config.saves, container, options ?? {controls:ControllerOverlayMode.Auto});
+      emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.start, config.core_manifest, config.manifest, config.saves, container, options ?? {controls:ControllerOverlayMode.Auto});
   } else {
-    emu = await ra.init(gisst_http_proto+"://"+gisst_root, config.environment.environment_core_name, config.start, config.saves, config.manifest, container, options ?? {controls:ControllerOverlayMode.Auto});
+    emu = await ra.init(gisst_http_proto+"://"+gisst_root, config.environment.environment_core_name, config.start, config.saves, config.core_manifest, config.manifest, container, options ?? {controls:ControllerOverlayMode.Auto});
   }
 
   mute_a.classList.remove("gisst-embed-hidden");

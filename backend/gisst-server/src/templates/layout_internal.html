@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}GISST{% endblock %}</title>
-    <link rel="stylesheet" href="/ui/ui.css">
+    <link rel="stylesheet" href="{{ base_url }}/ui/ui.css">
     <!-- Base site-wide styling-->
     {% block style_imports %}
     {% endblock style_imports %}
@@ -26,7 +26,7 @@
                     <line x1="3" y1="18" x2="21" y2="18"></line>
                 </svg>
             </button>
-            <a href="/instances" class="gisst-internal-topbar-logo">
+            <a href="{{ base_url }}/instances" class="gisst-internal-topbar-logo">
                 <div class="gisst-internal-nav-logo">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="5 3 19 12 5 21 5 3" fill="white" stroke="white"></polygon>
@@ -36,7 +36,7 @@
             </a>
         </div>
         <div class="gisst-internal-topbar-user">
-            <div class="gisst-internal-user-avatar"><a href="/creators/{{ user.creator_id }}">{{ user.initials }}</a></div>
+            <div class="gisst-internal-user-avatar"><a href="{{ base_url }}/creators/{{ user.creator_id }}">{{ user.initials }}</a></div>
         </div>
     </nav>
     {% endblock mobile_top_bar %}
@@ -53,7 +53,7 @@
 
         <ul class="gisst-internal-nav-menu">
             <li class="gisst-internal-nav-item">
-                <a href="/instances" class="gisst-internal-nav-link">
+                <a href="{{ base_url }}/instances" class="gisst-internal-nav-link">
                     <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         <circle cx="9" cy="9" r="2"></circle>
@@ -63,7 +63,7 @@
                 </a>
             </li>
 <!--            <li class="gisst-internal-nav-item">-->
-<!--                <a href="/states" class="gisst-internal-nav-link">-->
+<!--                <a href="{{ base_url }}/states" class="gisst-internal-nav-link">-->
 <!--                    <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">-->
 <!--                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>-->
 <!--                        <circle cx="12" cy="13" r="3"></circle>-->
@@ -72,7 +72,7 @@
 <!--                </a>-->
 <!--            </li>-->
 <!--            <li class="gisst-internal-nav-item">-->
-<!--                <a href="/saves" class="gisst-internal-nav-link">-->
+<!--                <a href="{{ base_url }}/saves" class="gisst-internal-nav-link">-->
 <!--                    <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">-->
 <!--                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>-->
 <!--                        <polyline points="17,21 17,13 7,13 7,21"></polyline>-->
@@ -82,7 +82,7 @@
 <!--                </a>-->
 <!--            </li>-->
 <!--            <li class="gisst-internal-nav-item">-->
-<!--                <a href="/performances" class="gisst-internal-nav-link">-->
+<!--                <a href="{{ base_url }}/performances" class="gisst-internal-nav-link">-->
 <!--                    <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">-->
 <!--                        <polygon points="5 3 19 12 5 21 5 3"></polygon>-->
 <!--                    </svg>-->
@@ -90,7 +90,7 @@
 <!--                </a>-->
 <!--            </li>-->
 <!--            <li class="gisst-internal-nav-item">-->
-<!--                <a href="/creators" class="gisst-internal-nav-link">-->
+<!--                <a href="{{ base_url }}/creators" class="gisst-internal-nav-link">-->
 <!--                    <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">-->
 <!--                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>-->
 <!--                        <circle cx="12" cy="7" r="4"></circle>-->
@@ -103,10 +103,10 @@
             <div class="gisst-internal-user-info">
                 <div class="gisst-internal-user-avatar">{{ user.initials }}</div>
                 <div>
-                    <div class="gisst-internal-user-email"><a href="/creators/{{ user.creator_id }}">{{ user.email }}</a></div>
+                    <div class="gisst-internal-user-email"><a href="{{ base_url }}/creators/{{ user.creator_id }}">{{ user.email }}</a></div>
                 </div>
             </div>
-            <a href="/logout" class="gisst-internal-logout-btn">Logout</a>
+            <a href="{{ base_url }}/logout" class="gisst-internal-logout-btn">Logout</a>
         </div>
     </nav>
     {% endblock sidebar %}
@@ -115,7 +115,7 @@
         <div class="gisst-internal-mobile-nav-content">
             <ul class="gisst-internal-mobile-nav-menu">
                 <li class="gisst-internal-mobile-nav-item">
-                    <a href="/instances" class="gisst-internal-mobile-nav-link active">
+                    <a href="{{ base_url }}/instances" class="gisst-internal-mobile-nav-link active">
                         <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                             <circle cx="9" cy="9" r="2"></circle>
@@ -125,7 +125,7 @@
                     </a>
                 </li>
 <!--                <li class="gisst-internal-mobile-nav-item">-->
-<!--                    <a href="/states" class="gisst-internal-mobile-nav-link">-->
+<!--                    <a href="{{ base_url }}/states" class="gisst-internal-mobile-nav-link">-->
 <!--                        <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">-->
 <!--                            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>-->
 <!--                            <circle cx="12" cy="13" r="3"></circle>-->
@@ -134,7 +134,7 @@
 <!--                    </a>-->
 <!--                </li>-->
 <!--                <li class="gisst-internal-mobile-nav-item">-->
-<!--                    <a href="/saves" class="gisst-internal-mobile-nav-link">-->
+<!--                    <a href="{{ base_url }}/saves" class="gisst-internal-mobile-nav-link">-->
 <!--                        <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">-->
 <!--                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>-->
 <!--                            <polyline points="17,21 17,13 7,13 7,21"></polyline>-->
@@ -144,7 +144,7 @@
 <!--                    </a>-->
 <!--                </li>-->
 <!--                <li class="gisst-internal-mobile-nav-item">-->
-<!--                    <a href="/performances" class="gisst-internal-mobile-nav-link">-->
+<!--                    <a href="{{ base_url }}/performances" class="gisst-internal-mobile-nav-link">-->
 <!--                        <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">-->
 <!--                            <polygon points="5 3 19 12 5 21 5 3"></polygon>-->
 <!--                        </svg>-->
@@ -152,7 +152,7 @@
 <!--                    </a>-->
 <!--                </li>-->
 <!--                <li class="gisst-internal-mobile-nav-item">-->
-<!--                    <a href="/creators" class="gisst-internal-mobile-nav-link">-->
+<!--                    <a href="{{ base_url }}/creators" class="gisst-internal-mobile-nav-link">-->
 <!--                        <svg class="gisst-internal-nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">-->
 <!--                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>-->
 <!--                            <circle cx="12" cy="7" r="4"></circle>-->

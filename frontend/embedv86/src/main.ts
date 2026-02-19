@@ -5,7 +5,7 @@ export interface StateInfo {
 }
 export {ReplayMode,Evt,ReplayEvent} from './v86replay';
 export interface EmbedV86Config {
-  wasm_root:string;
+  wasm_file:string;
   bios_root:string;
   content_root:string;
   container:HTMLDivElement;
@@ -169,7 +169,7 @@ export class EmbedV86 {
     this.clear();
     const content_folder = this.config.content_root;
     const config:V86Config = {
-      wasm_path: this.config.wasm_root+"/v86.wasm",
+      wasm_path: this.config.wasm_file,
       screen_container:this.config.container,
       autostart: true
     };
