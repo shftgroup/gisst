@@ -1,0 +1,14 @@
+---
+- name: Test playbook
+  hosts: testing
+  become: yes
+  gather_facts: yes
+  roles:
+   - node
+   - database
+   - search
+   - server
+   - metrics
+   - collector
+   - dashboard
+   - examples

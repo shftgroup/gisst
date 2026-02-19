@@ -4,6 +4,7 @@ retroarch-web/
 simple/content/
 .idea/
 ra-build
+build
 gisst.campus.pomona.edu.*
 id_deploy*
 backend/roms-*
@@ -29,6 +30,9 @@ backend/test
 backend/rdb-sys/libretro-util
 backend/rdb
 backend/web-dist
+backend/etc/ansible/group_vars
+backend/etc/ansible/inventory.yml
+backend/etc/ansible/ansible.cfg
 backend/embed-dist
 backend/examples/data/v86/local
 backend/examples/records/v86/local

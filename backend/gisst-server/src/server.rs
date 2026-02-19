@@ -67,8 +67,10 @@ impl ServerState {
             &config.search.meili_external_url,
             &config.search.meili_search_key,
         )?;
+        let pool = db::new_pool(config).await?;
+        sqlx::migrate!("../migrations").run(&pool).await?;
         Ok(Self {
-            pool: db::new_pool(config).await?,
+            pool,
             root_storage_path: config.storage.root_folder_path.clone(),
             temp_storage_path: config.storage.temp_folder_path.clone(),
             folder_depth: config.storage.folder_depth,
@@ -176,7 +178,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             "/storage",
             builder.clone()
                 /* if the x-accept-encoding header is present, dispatch to the custom servedir that does not serve precompressed stuff */
-                .service(selective_serve_dir::SelectiveServeDir::new("storage")),
+                .service(selective_serve_dir::SelectiveServeDir::new(&config.storage.root_folder_path)),
         )
         .nest_service(
             "/assets",

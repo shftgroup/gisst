@@ -1,0 +1,238 @@
+---
+- name: Get meilisearch keys
+  include_role:
+    name: joeosborn.meilisearch
+    tasks_from: fetch_keys
+  vars:
+    meilisearch_master_key: "{{ search_master_key }}"
+- name: Create gisst_server group
+  ansible.builtin.group:
+    name: "{{ gisst_server_group }}"
+    system: true
+    state: present
+- name: Create gisst_server user
+  ansible.builtin.user:
+    name: "{{ gisst_server_user }}"
+    group: "{{ gisst_server_group }}"
+    system: true
+    create_home: true
+    home: "{{ gisst_server_home }}"
+    shell: /sbin/nologin
+    state: present
+- name: Create required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ gisst_server_user }}"
+    group: "{{ gisst_server_group }}"
+    mode: '0755'
+  loop:
+    - "{{ gisst_server_home }}"
+    - "{{ gisst_server_storage_dir }}"
+    - "{{ gisst_server_temp_dir }}"
+- name: Install node dependency for v86dump
+  include_role:
+    name: geerlingguy.nodejs
+  vars:
+    nodejs_version: "23.x"
+    nodejs_install_npm_user: "{{ gisst_server_user }}"
+- name: Copy SSL keys if needed
+  when: gisst_server_terminate_ssl and gisst_server_ssl_cert != ""
+  copy:
+    src: "{{ item.from }}"
+    dest: "{{ item.to }}"
+    owner: "{{ gisst_server_user }}"
+  loop:
+    - from: "{{ gisst_server_ssl_cert }}"
+      to: "{{ gisst_server_home }}/cert.pem"
+    - from: "{{ gisst_server_ssl_key }}"
+      to: "{{ gisst_server_home }}/cert.key"
+- name: Generate SSL keys if needed
+  when: gisst_server_terminate_ssl and gisst_server_ssl_cert == ""
+  block:
+    - name: Produce private key
+      openssl_privatekey:
+        path: "{{ gisst_server_home }}/cert.key"
+        owner: "{{ gisst_server_user }}"
+        size: 4096
+    - name: Produce CSR
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ gisst_server_home }}/cert.key"
+        common_name: "{{ gisst_server_host_name }}"
+        organization_name: GISST
+        subject_alt_name:
+          - "DNS:{{ gisst_server_host_name }}"
+          #- "DNS:www.ansible.com"
+          #- "DNS:docs.ansible.com"
+      register: gisst_csr
+    - name: Create self-signed certificate from CSR
+      community.crypto.x509_certificate:
+        path: "{{ gisst_server_home }}/cert.pem"
+        csr_content: "{{ gisst_csr.csr }}"
+        privatekey_path: "{{ gisst_server_home }}/cert.key"
+        owner: "{{ gisst_server_user }}"
+        provider: selfsigned
+        selfsigned_not_after: "+3650d"
+    - name: Force cert variables to self-signed certificates
+      ansible.builtin.set_fact:
+        gisst_server_ssl_cert: "{{ gisst_server_home }}/cert.pem"
+        gisst_server_ssl_key: "{{ gisst_server_home }}/cert.key"
+- name: Clone gisst server (dev)
+  block:
+    - name: Download development dependencies
+      apt:
+        state: latest
+        update_cache: yes
+        name:
+          - git
+          - rustup
+          - build-essential
+          - pkgconf
+          - libssl-dev
+    - name: Use latest stable rust (gisst user)
+      become_user: "{{ gisst_server_user }}"
+      command: rustup default stable
+    - name: Checkout GISST branch (dev)
+      become_user: "{{ gisst_server_user }}"
+      git:
+        repo: 'https://github.com/shftgroup/gisst'
+        dest: "{{ gisst_server_home }}/repo"
+        version: "{{ gisst_server_version }}"
+    - name: Install cargo-sqlx
+      become_user: "{{ gisst_server_user }}"
+      command: cargo install sqlx-cli
+    - name: Run migrations
+      become_user: "{{ gisst_server_user }}"
+      command:
+        cmd: "cargo sqlx migrate run --database-url {{ gisst_server_database_full_url }}"
+        chdir: "{{ gisst_server_home }}/repo/backend"
+    - name: Build GISST binaries
+      become_user: "{{ gisst_server_user }}"
+      ansible.builtin.shell:
+        chdir: "{{ gisst_server_home }}/repo/backend"
+        cmd: "cargo build --all-targets --features {{ gisst_server_dev_cargo_features }}"
+      notify: Restart gisst-server
+    - name: Get frontend deps
+      become_user: "{{ gisst_server_user }}"
+      community.general.npm:
+        ci: yes
+        path: "{{ gisst_server_home }}/repo/frontend"
+    - name: Build frontend
+      become_user: "{{ gisst_server_user }}"
+      ansible.builtin.command:
+        chdir: "{{ gisst_server_home }}/repo/frontend"
+        cmd: "npm run build --workspaces --if-present"
+    - name: Dist frontend
+      become_user: "{{ gisst_server_user }}"
+      ansible.builtin.command:
+        chdir: "{{ gisst_server_home }}/repo/frontend"
+        cmd: "npm run dist --workspaces --if-present"
+    - name: Specify paths for templates
+      become_user: "{{ gisst_server_user }}"
+      ansible.builtin.set_fact:
+        gisst_server_env_config_path: "{{ gisst_server_home }}/repo/backend/config/{{ gisst_server_environment }}.toml"
+  when: gisst_server_environment == "development"
+- name: Get gisst server (testing, production)
+  block:
+    - name: Determine system architecture
+      ansible.builtin.set_fact:
+        gisst_server_arch: "{{ 'X64' if ansible_architecture == 'x86_64' else 'aarch64' if ansible_architecture == 'aarch64' else ansible_architecture }}"
+    - name: Check if gisst-server binary exists
+      ansible.builtin.stat:
+        path: "{{ gisst_server_home }}/gisst-server"
+      register: gisst_server_binary
+    - name: Get current gisst-server version
+      ansible.builtin.command:
+        cmd: "{{ gisst_server_home }}/gisst-server --version"
+      register: gisst_server_current_version
+      failed_when: false
+      changed_when: false
+      when: gisst_server_binary.stat.exists
+    - name: Extract current version number
+      ansible.builtin.set_fact:
+        gisst_server_current_version_number: "{{ gisst_server_current_version.stdout | regex_search('gisst-server ([0-9]+\\.[0-9]+\\.[0-9]+)', '\\1') | first }}"
+      when:
+        - gisst_server_binary.stat.exists
+        - gisst_server_current_version.rc == 0
+        - gisst_server_current_version.stdout is defined
+    - name: Set current version to empty when binary doesn't exist or version check failed
+      ansible.builtin.set_fact:
+        gisst_server_current_version_number: ""
+      when: >
+        not gisst_server_binary.stat.exists or
+        gisst_server_current_version.rc != 0 or
+        gisst_server_current_version.stdout is not defined
+    - name: Extract desired version number
+      ansible.builtin.set_fact:
+        gisst_server_desired_version_number: "{{ gisst_server_version | regex_replace('^v', '') }}"
+    - name: Download gisst-server binaries
+      ansible.builtin.get_url:
+        url: "https://github.com/shftgroup/gisst/releases/download/{{ gisst_server_version }}/{{ item }}"
+        dest: "{{ gisst_server_home }}/{{ item }}"
+        mode: '0755'
+        owner: root
+        group: root
+        timeout: 120
+      loop:
+        - "bin-linux-{{ gisst_server_arch }}.tgz"
+        - "gisst.tgz"
+      when: >
+        not gisst_server_binary.stat.exists or
+        (gisst_server_binary.stat.exists and
+         gisst_server_current_version_number != gisst_server_desired_version_number)
+      retries: 3
+      delay: 10
+    - name: Untar binaries
+      ansible.builtin.unarchive:
+        src: "{{ gisst_server_home }}/bin-linux-{{ gisst_server_arch }}.tgz"
+        dest: "{{ gisst_server_home }}"
+        remote_src: yes
+      notify: Restart gisst-server
+    - name: Untar assets
+      ansible.builtin.unarchive:
+        src: "{{ gisst_server_home }}/gisst.tgz"
+        dest: "{{ gisst_server_home }}"
+        remote_src: yes
+      notify: Restart gisst-server
+    - name: Specify paths for templates
+      ansible.builtin.set_fact:
+        gisst_server_env_config_path: "{{ gisst_server_home }}/config/{{ gisst_server_environment }}.toml"
+  when: gisst_server_environment != "development"
+- name: Deploy gisst env file
+  template:
+    src: gisst-server.env.j2
+    dest: "{{ gisst_server_home }}/gisst-server.env"
+    owner: "{{ gisst_server_user }}"
+    group: "{{ gisst_server_user }}"
+    mode: '0640'
+- name: Deploy gisst configuration
+  template:
+    src: gisst-server.config.toml.j2
+    dest: "{{ gisst_server_env_config_path }}"
+    owner: "{{ gisst_server_user }}"
+    group: "{{ gisst_server_user }}"
+    mode: '0640'
+- name: Deploy systemd service file
+  ansible.builtin.template:
+    src: gisst-server.service.j2
+    dest: /etc/systemd/system/gisst-server.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Reload systemd
+    - Restart gisst-server
+- name: Start and enable gisst-server service
+  ansible.builtin.systemd_service:
+    name: gisst-server
+    state: started
+    enabled: true
+    daemon_reload: true
+- name: Flush handlers before health check
+  ansible.builtin.meta: flush_handlers
+- name: Add nginx location include
+  when: gisst_server_use_proxy
+  template:
+    src: templates/gisst-server.nginx.inserver.j2
+    dest: "{{ gisst_server_proxy_snippets_dir }}/gisst_server.conf"
+  notify: nginx-restart

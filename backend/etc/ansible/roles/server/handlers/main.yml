@@ -1,0 +1,8 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+- name: Restart gisst-server
+  ansible.builtin.systemd_service:
+    name: gisst-server
+    state: restarted
