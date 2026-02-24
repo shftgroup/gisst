@@ -1,14 +1,28 @@
-FROM mcr.microsoft.com/devcontainers/universal:5
+FROM ubuntu:noble
+
+ENV RUST_VERSION 1.93.1
+ENV NODE_VERSION 25.6.0
 
 RUN apt-get update && apt-get install -y \
-  libssl-dev nginx \
+  libssl-dev nginx build-essential make curl clang git \
   libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
   libxkbcommon0 libatspi2.0-0t64 libxcomposite1 \
   libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64 \
-  postgresql-client
+  postgresql-client pkg-config sudo zsh
 
-USER codespace
+ENV USER=ubuntu
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y -c rust-analyzer,rust-src,rustfmt,clippy,rust-docs
-ENV PATH="/home/codespace/.cargo/bin:${PATH}"
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+RUN mkdir -p /home/$USER/.vscode-server && \
+    chown -R $USER:$USER /home/$USER
+
+USER $USER
+
+ENV NVM_DIR=/home/$USER/.nvm
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+RUN bash -c ". ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION}"
+ENV PATH="/home/$USER/.nvm/versions/node/25.6.0/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y -c rust-analyzer,rust-src,rustfmt,clippy,rust-docs,cargo --default-toolchain=${RUST_VERSION}
+ENV PATH="/home/$USER/.cargo/bin:${PATH}"
 RUN cargo install sqlx-cli
+COPY .devcontainer/nginx.conf /etc/nginx/sites-enabled/default

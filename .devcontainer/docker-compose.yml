@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   devcontainer:
     build:
@@ -9,9 +8,8 @@ services:
     environment:
       PODMAN_USERNS: keep-id
     volumes:
-      - ../../:/workspaces:cached
-      - ./nginx.conf:/etc/nginx/sites-enabled/default:ro
-      - ./certs:/certs:ro
+      - ../../:/workspaces:cached,Z
+      - ./certs:/certs:Z
     command: sleep infinity
     expose:
       - "3000"
