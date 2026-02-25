@@ -3,7 +3,7 @@
   "dockerComposeFile": "docker-compose.yml",
   "service":"devcontainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "initializeCommand": "[ -f certs/local.crt ] || (mkdir -p certs && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs/local.key -out certs/local.crt -subj '/CN=localhost')",
+  "initializeCommand": "[ -f .devcontainer/certs/local.crt ] || (mkdir -p .devcontainer/certs && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout .devcontainer/certs/local.key -out .devcontainer/certs/local.crt -subj '/CN=localhost')",
   "postStartCommand": "sudo service nginx start",
   "customizations": {
     "vscode": {
