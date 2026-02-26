@@ -138,6 +138,10 @@ pub struct UpgradeEnvironmentArgs {
     /// file should be in the same directory as the other build
     /// outputs.
     pub core_meta: String,
+    /// Whether to destructively modify the environment or create
+    /// cascading clones of environment, referring instances, etc.
+    #[arg(default_value_t = false)]
+    pub in_place: bool
 }
 
 #[derive(Debug, Subcommand)]

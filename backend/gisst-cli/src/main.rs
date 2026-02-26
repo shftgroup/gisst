@@ -60,7 +60,7 @@ async fn main() -> Result<(), GISSTCliError> {
         Commands::Reindex => reindex(db, &indexer).await?,
         Commands::RecalcSizes => recalc_sizes(db, &storage_root).await?,
         Commands::UpgradeEnvironment(args) => {
-            upgrade_env(args, db).await?;
+            upgrade_env(args, db, &indexer).await?;
         }
         Commands::AddCore(args) => {
             add_core(args, db, &storage_root).await?;
@@ -131,10 +131,11 @@ async fn upgrade_env(
         old_core_name,
         old_core_version,
         core_meta,
+        in_place
     }: UpgradeEnvironmentArgs,
     db: PgPool,
+    indexer: &gisst::search::MeiliIndexer,
 ) -> Result<(), GISSTCliError> {
-    use gisst::danger::{DestructiveEnvironment, DestructiveObject};
     let mut tx = db.begin().await?;
     // find envs with core name and version
     let envs = Environment::get_for_core(&mut tx, &old_core_name, &old_core_version).await?;
@@ -165,6 +166,8 @@ async fn upgrade_env(
     println!("Replacing instanceobject links to files in {deps:?} with core file links...");
     let changed_envs: Vec<_> = envs.iter().map(|e| e.environment_id).collect();
     let mut changed_instances = vec![];
+    if in_place {
+    use gisst::danger::{DestructiveEnvironment, DestructiveObject};
     for env in envs {
         Environment::update_core(&mut tx, env.environment_id, &name, core_hash).await?;
         let instances = Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
@@ -191,14 +194,74 @@ async fn upgrade_env(
     println!("Affected environments: {changed_envs:?}");
     println!("Instances with changed objects: {changed_instances:?}");
     println!("Type 'yes' to confirm!");
-    let mut out = String::new();
-    std::io::stdin().read_line(&mut out)?;
-    if out.trim() != "yes" {
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+    if input.trim() != "yes" {
         println!("Aborting operation");
         return Ok(());
     }
     println!("Performing destructive changes!");
     tx.commit().await?;
+    } else {
+        let now = chrono::Utc::now();
+        for mut env in envs {
+            let new_id = Uuid::new_v4();
+            let old_id = env.environment_id.clone();
+            env.environment_derived_from = Some(old_id);
+            env.environment_id = new_id;
+            env.environment_core_name = name.clone();
+            env.environment_core_version = core_hash.to_string();
+            env.created_on = now;
+            let env = Environment::insert(&mut tx, env).await?;
+            let instances = Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
+            for mut inst in instances {
+                let new_inst_id = Uuid::new_v4();
+                let old_inst_id = inst.instance_id.clone();
+                inst.instance_id = new_inst_id;
+                inst.environment_id = new_id;
+                inst.derived_from_instance = Some(old_inst_id);
+                Instance::insert(&mut tx, inst, indexer).await?;
+                // link objects to new instance; skip objects with name of any dependency in core_meta.dependencies
+                for link in ObjectLink::get_all_for_instance_id(&mut tx, old_inst_id).await? {
+                    if !(link.object_role == ObjectRole::Dependency && deps.contains(&link.file_filename))
+                    {
+                        Object::link_object_to_instance(&mut tx, link.object_id, new_inst_id, link.object_role, link.object_role_index.try_into()?).await?;
+                    }
+                }
+                let mut remapping = Vec::with_capacity(1024);
+                for mut replay in Replay::get_all_for_instance(&mut tx, old_inst_id).await? {
+                    let old_replay_id = replay.replay_id;
+                    replay.replay_id = Uuid::new_v4();
+                    remapping.push((old_replay_id, replay.replay_id));
+                    replay.instance_id = new_inst_id;
+                    Replay::insert(&mut tx, replay, indexer).await?;
+                }
+                for (old_rid, new_rid) in remapping {
+                    sqlx::query!(r#"UPDATE replay SET replay_forked_from=$3 WHERE replay_forked_from=$2 AND instance_id=$1"#, new_inst_id, old_rid, new_rid).execute(tx.as_mut()).await?;
+                }
+                // fixup replay fork relations
+                for mut state in State::get_all_for_instance(&mut tx, old_inst_id).await? {
+                    let old_state_id = state.state_id;
+                    state.state_id = Uuid::new_v4();
+                    state.state_derived_from = Some(old_state_id);
+                    state.instance_id = new_inst_id;
+                    State::insert(&mut tx, state, indexer).await?;
+                }
+                // save + instance_save
+                for mut save in Save::get_all_for_instance(&mut tx, old_inst_id).await? {
+                    let old_save_id = save.save_id;
+                    save.save_id = Uuid::new_v4();
+                    save.save_derived_from = Some(old_save_id);
+                    save.instance_id = new_inst_id;
+                    sqlx::query!(r#"INSERT INTO instance_save SELECT $3, $4 FROM instance_save WHERE instance_id=$1 AND save_id=$2"#, old_inst_id, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
+                    // fixup state->save links
+                    sqlx::query!(r#"UPDATE state SET save_derived_from=$3 WHERE save_derived_from=$1 AND instance_id=$2"#, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
+                    Save::insert(&mut tx, save, indexer).await?;
+                }
+            }
+        }
+
+    }
     Ok(())
 }
 

@@ -637,6 +637,9 @@ impl Replay {
             .fetch_optional(conn)
             .await
     }
+    pub async fn get_all_for_instance(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(Self, r#"SELECT * FROM replay WHERE instance_id=$1"#, id).fetch_all(conn).await
+    }
 
     pub async fn insert(
         conn: &mut PgConnection,
@@ -672,6 +675,9 @@ impl Save {
         sqlx::query_as!(Self, r#"SELECT * FROM save WHERE save_id = $1"#, id)
             .fetch_optional(conn)
             .await
+    }
+    pub async fn get_all_for_instance(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(Self, r#"SELECT * FROM save WHERE instance_id=$1"#, id).fetch_all(conn).await
     }
     pub async fn insert(
         conn: &mut PgConnection,
@@ -774,6 +780,10 @@ impl State {
         sqlx::query_as!(Self, r#"SELECT * FROM state WHERE state_id = $1"#, id,)
             .fetch_optional(conn)
             .await
+    }
+
+    pub async fn get_all_for_instance(conn: &mut PgConnection, id:Uuid) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(Self, r#"SELECT * FROM state WHERE instance_id=$1"#, id).fetch_all(conn).await
     }
 
     pub async fn insert(
