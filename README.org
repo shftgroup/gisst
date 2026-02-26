@@ -35,8 +35,14 @@ npm run test --workspaces --if-present
 For a build where you want to test cores and not just html generation, you'd want to build the cores next.  You need a =psxbios= folder with the SCPH bios files and a =v86bios= folder with e.g. =seabios_HASH.bin= and friends, or you should modify the =manifest.json= not to use those.
 
 #+BEGIN_SRC sh
-docker volume create gisst-build
-docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -v gisst-build:/gisst-build gisst-dist
+# Unfortunately, we need the next three lines due to a bug in the docker-in-docker devcontainer feature.
+sudo update-alternatives --set iptables /usr/sbin/iptables-nft
+sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
+sudo dockerd &
+# If you had to run the above, you should probably run these in a fresh terminal to keep things tidy:
+sudo docker build -t gisst-dist -f Dockerfile.dist .
+sudo docker volume create gisst-build
+sudo docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -v gisst-build:/gisst-build gisst-dist
 #+END_SRC
 
 On subsequent builds pass =-e GET_ASSETS=0= to skip downloading the large asset bundle.
