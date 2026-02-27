@@ -140,8 +140,8 @@ pub struct UpgradeEnvironmentArgs {
     pub core_meta: String,
     /// Whether to destructively modify the environment or create
     /// cascading clones of environment, referring instances, etc.
-    #[arg(default_value_t = false)]
-    pub in_place: bool
+    #[arg(long = "in-place", default_value_t = false)]
+    pub in_place: bool,
 }
 
 #[derive(Debug, Subcommand)]

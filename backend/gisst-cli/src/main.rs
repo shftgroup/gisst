@@ -131,7 +131,7 @@ async fn upgrade_env(
         old_core_name,
         old_core_version,
         core_meta,
-        in_place
+        in_place,
     }: UpgradeEnvironmentArgs,
     db: PgPool,
     indexer: &gisst::search::MeiliIndexer,
@@ -167,65 +167,77 @@ async fn upgrade_env(
     let changed_envs: Vec<_> = envs.iter().map(|e| e.environment_id).collect();
     let mut changed_instances = vec![];
     if in_place {
-    use gisst::danger::{DestructiveEnvironment, DestructiveObject};
-    for env in envs {
-        Environment::update_core(&mut tx, env.environment_id, &name, core_hash).await?;
-        let instances = Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
-        for inst in instances {
-            let mut changed = false;
-            // delete dependency links of objects with name of any dependency in core_meta.dependencies
-            for link in ObjectLink::get_all_for_instance_id(&mut tx, inst.instance_id).await? {
-                if link.object_role == ObjectRole::Dependency && deps.contains(&link.file_filename)
-                {
-                    // We can just unlink, the core offers the dependency now
-                    Object::unlink(&mut tx, link.object_id, inst.instance_id).await?;
-                    changed = true;
+        use gisst::danger::{DestructiveEnvironment, DestructiveObject};
+        for env in envs {
+            Environment::update_core(&mut tx, env.environment_id, &name, core_hash).await?;
+            let instances =
+                Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
+            for inst in instances {
+                let mut changed = false;
+                // delete dependency links of objects with name of any dependency in core_meta.dependencies
+                for link in ObjectLink::get_all_for_instance_id(&mut tx, inst.instance_id).await? {
+                    if link.object_role == ObjectRole::Dependency
+                        && deps.contains(&link.file_filename)
+                    {
+                        // We can just unlink, the core offers the dependency now
+                        Object::unlink(&mut tx, link.object_id, inst.instance_id).await?;
+                        changed = true;
+                    }
+                }
+                if changed {
+                    changed_instances.push(inst.instance_id);
                 }
             }
-            if changed {
-                changed_instances.push(inst.instance_id);
-            }
         }
-    }
-    println!("------DANGER ZONE-----");
-    println!(
-        "This command will apply irreversible changes!  Content will potentially be run on different cores if you haven't been very careful!"
-    );
-    println!("Affected environments: {changed_envs:?}");
-    println!("Instances with changed objects: {changed_instances:?}");
-    println!("Type 'yes' to confirm!");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    if input.trim() != "yes" {
-        println!("Aborting operation");
-        return Ok(());
-    }
-    println!("Performing destructive changes!");
-    tx.commit().await?;
+        println!("------DANGER ZONE-----");
+        println!(
+            "This command will apply irreversible changes!  Content will potentially be run on different cores if you haven't been very careful!"
+        );
+        println!("Affected environments: {changed_envs:?}");
+        println!("Instances with changed objects: {changed_instances:?}");
+        println!("Type 'yes' to confirm!");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        if input.trim() != "yes" {
+            println!("Aborting operation");
+            return Ok(());
+        }
+        println!("Performing destructive changes!");
+        tx.commit().await?;
     } else {
         let now = chrono::Utc::now();
         for mut env in envs {
             let new_id = Uuid::new_v4();
             let old_id = env.environment_id.clone();
+            println!("Clone env {old_id} into {new_id}");
             env.environment_derived_from = Some(old_id);
             env.environment_id = new_id;
             env.environment_core_name = name.clone();
             env.environment_core_version = core_hash.to_string();
             env.created_on = now;
             let env = Environment::insert(&mut tx, env).await?;
-            let instances = Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
+            let instances = Instance::get_all_for_environment_id(&mut tx, old_id).await?;
             for mut inst in instances {
                 let new_inst_id = Uuid::new_v4();
                 let old_inst_id = inst.instance_id.clone();
+                println!("Clone inst {old_inst_id} into {new_inst_id}");
                 inst.instance_id = new_inst_id;
                 inst.environment_id = new_id;
                 inst.derived_from_instance = Some(old_inst_id);
                 Instance::insert(&mut tx, inst, indexer).await?;
                 // link objects to new instance; skip objects with name of any dependency in core_meta.dependencies
                 for link in ObjectLink::get_all_for_instance_id(&mut tx, old_inst_id).await? {
-                    if !(link.object_role == ObjectRole::Dependency && deps.contains(&link.file_filename))
+                    if !(link.object_role == ObjectRole::Dependency
+                        && deps.contains(&link.file_filename))
                     {
-                        Object::link_object_to_instance(&mut tx, link.object_id, new_inst_id, link.object_role, link.object_role_index.try_into()?).await?;
+                        Object::link_object_to_instance(
+                            &mut tx,
+                            link.object_id,
+                            new_inst_id,
+                            link.object_role,
+                            link.object_role_index.try_into()?,
+                        )
+                        .await?;
                     }
                 }
                 let mut remapping = Vec::with_capacity(1024);
@@ -260,7 +272,7 @@ async fn upgrade_env(
                 }
             }
         }
-
+        tx.commit().await?;
     }
     Ok(())
 }
