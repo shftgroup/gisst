@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO instance_save SELECT $3, $4 FROM instance_save WHERE instance_id=$1 AND save_id=$2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cea325da3800f723a0aa13231976e8c75f0a81a960dc11683560b8e6fb057ead"
+}
