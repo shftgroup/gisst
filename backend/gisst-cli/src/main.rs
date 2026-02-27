@@ -208,18 +208,18 @@ async fn upgrade_env(
         let now = chrono::Utc::now();
         for mut env in envs {
             let new_id = Uuid::new_v4();
-            let old_id = env.environment_id.clone();
+            let old_id = env.environment_id;
             println!("Clone env {old_id} into {new_id}");
             env.environment_derived_from = Some(old_id);
             env.environment_id = new_id;
             env.environment_core_name = name.clone();
             env.environment_core_version = core_hash.to_string();
             env.created_on = now;
-            let env = Environment::insert(&mut tx, env).await?;
+            Environment::insert(&mut tx, env).await?;
             let instances = Instance::get_all_for_environment_id(&mut tx, old_id).await?;
             for mut inst in instances {
                 let new_inst_id = Uuid::new_v4();
-                let old_inst_id = inst.instance_id.clone();
+                let old_inst_id = inst.instance_id;
                 println!("Clone inst {old_inst_id} into {new_inst_id}");
                 inst.instance_id = new_inst_id;
                 inst.environment_id = new_id;
