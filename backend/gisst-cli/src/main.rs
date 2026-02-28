@@ -126,6 +126,117 @@ async fn main() -> Result<(), GISSTCliError> {
     Ok(())
 }
 
+async fn upgrade_envs_in_place(
+    tx: &mut sqlx::PgConnection,
+    envs: Vec<Environment>,
+    name: &str,
+    core_hash: &str,
+    deps: &[String],
+) -> Result<(Vec<Uuid>, Vec<Uuid>), GISSTCliError> {
+    use gisst::danger::{DestructiveEnvironment, DestructiveObject};
+    let changed_envs: Vec<_> = envs.iter().map(|e| e.environment_id).collect();
+    let mut changed_instances = vec![];
+    println!("Replacing instanceobject links to files in {deps:?} with core file links...");
+    for env in envs {
+        Environment::update_core(tx, env.environment_id, name, core_hash).await?;
+        let instances = Instance::get_all_for_environment_id(tx, env.environment_id).await?;
+        for inst in instances {
+            let mut changed = false;
+            // delete dependency links of objects with name of any dependency in core_meta.dependencies
+            for link in ObjectLink::get_all_for_instance_id(tx, inst.instance_id).await? {
+                if link.object_role == ObjectRole::Dependency && deps.contains(&link.file_filename)
+                {
+                    // We can just unlink, the core offers the dependency now
+                    Object::unlink(tx, link.object_id, inst.instance_id).await?;
+                    changed = true;
+                }
+            }
+            if changed {
+                changed_instances.push(inst.instance_id);
+            }
+        }
+    }
+    Ok((changed_envs, changed_instances))
+}
+
+async fn upgrade_envs_by_clone(
+    tx: &mut sqlx::PgConnection,
+    indexer: &gisst::search::MeiliIndexer,
+    envs: Vec<Environment>,
+    name: &str,
+    core_hash: &str,
+    deps: &[String],
+) -> Result<(), GISSTCliError> {
+    let now = chrono::Utc::now();
+    for mut env in envs {
+        let new_id = Uuid::new_v4();
+        let old_id = env.environment_id;
+        println!("Clone env {old_id} into {new_id}");
+        env.environment_derived_from = Some(old_id);
+        env.environment_id = new_id;
+        env.environment_core_name = name.to_string();
+        env.environment_core_version = core_hash.to_string();
+        env.created_on = now;
+        Environment::insert(tx, env).await?;
+        let instances = Instance::get_all_for_environment_id(tx, old_id).await?;
+        for mut inst in instances {
+            let new_inst_id = Uuid::new_v4();
+            let old_inst_id = inst.instance_id;
+            println!("Clone inst {old_inst_id} into {new_inst_id}");
+            inst.instance_id = new_inst_id;
+            inst.environment_id = new_id;
+            inst.derived_from_instance = Some(old_inst_id);
+            Instance::insert(tx, inst, indexer).await?;
+            // link objects to new instance; skip objects with name of any dependency in core_meta.dependencies
+            for link in ObjectLink::get_all_for_instance_id(tx, old_inst_id).await? {
+                if !(link.object_role == ObjectRole::Dependency
+                    && deps.contains(&link.file_filename))
+                {
+                    Object::link_object_to_instance(
+                        tx,
+                        link.object_id,
+                        new_inst_id,
+                        link.object_role,
+                        link.object_role_index.try_into()?,
+                    )
+                    .await?;
+                }
+            }
+            let mut remapping = Vec::with_capacity(1024);
+            for mut replay in Replay::get_all_for_instance(tx, old_inst_id).await? {
+                let old_replay_id = replay.replay_id;
+                replay.replay_id = Uuid::new_v4();
+                remapping.push((old_replay_id, replay.replay_id));
+                replay.instance_id = new_inst_id;
+                Replay::insert(tx, replay, indexer).await?;
+            }
+            for (old_rid, new_rid) in remapping {
+                sqlx::query!(r#"UPDATE replay SET replay_forked_from=$3 WHERE replay_forked_from=$2 AND instance_id=$1"#, new_inst_id, old_rid, new_rid).execute(tx.as_mut()).await?;
+            }
+            // fixup replay fork relations
+            for mut state in State::get_all_for_instance(tx, old_inst_id).await? {
+                let old_state_id = state.state_id;
+                state.state_id = Uuid::new_v4();
+                state.state_derived_from = Some(old_state_id);
+                state.instance_id = new_inst_id;
+                State::insert(tx, state, indexer).await?;
+            }
+            // save + instance_save
+            for mut save in Save::get_all_for_instance(tx, old_inst_id).await? {
+                let old_save_id = save.save_id;
+                save.save_id = Uuid::new_v4();
+                save.save_derived_from = Some(old_save_id);
+                save.instance_id = new_inst_id;
+                sqlx::query!(r#"INSERT INTO instance_save SELECT $3, $4 FROM instance_save WHERE instance_id=$1 AND save_id=$2"#, old_inst_id, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
+                // fixup state->save links
+                sqlx::query!(r#"UPDATE state SET save_derived_from=$3 WHERE save_derived_from=$1 AND instance_id=$2"#, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
+                Save::insert(tx, save, indexer).await?;
+            }
+        }
+    }
+    Ok(())
+}
+
 async fn upgrade_env(
     UpgradeEnvironmentArgs {
         old_core_name,
@@ -163,32 +274,9 @@ async fn upgrade_env(
         .filter_map(|x| x.as_str())
         .map(std::string::ToString::to_string)
         .collect();
-    println!("Replacing instanceobject links to files in {deps:?} with core file links...");
-    let changed_envs: Vec<_> = envs.iter().map(|e| e.environment_id).collect();
-    let mut changed_instances = vec![];
     if in_place {
-        use gisst::danger::{DestructiveEnvironment, DestructiveObject};
-        for env in envs {
-            Environment::update_core(&mut tx, env.environment_id, &name, core_hash).await?;
-            let instances =
-                Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
-            for inst in instances {
-                let mut changed = false;
-                // delete dependency links of objects with name of any dependency in core_meta.dependencies
-                for link in ObjectLink::get_all_for_instance_id(&mut tx, inst.instance_id).await? {
-                    if link.object_role == ObjectRole::Dependency
-                        && deps.contains(&link.file_filename)
-                    {
-                        // We can just unlink, the core offers the dependency now
-                        Object::unlink(&mut tx, link.object_id, inst.instance_id).await?;
-                        changed = true;
-                    }
-                }
-                if changed {
-                    changed_instances.push(inst.instance_id);
-                }
-            }
-        }
+        let (changed_envs, changed_instances) =
+            upgrade_envs_in_place(&mut tx, envs, &name, core_hash, &deps).await?;
         println!("------DANGER ZONE-----");
         println!(
             "This command will apply irreversible changes!  Content will potentially be run on different cores if you haven't been very careful!"
@@ -205,73 +293,7 @@ async fn upgrade_env(
         println!("Performing destructive changes!");
         tx.commit().await?;
     } else {
-        let now = chrono::Utc::now();
-        for mut env in envs {
-            let new_id = Uuid::new_v4();
-            let old_id = env.environment_id;
-            println!("Clone env {old_id} into {new_id}");
-            env.environment_derived_from = Some(old_id);
-            env.environment_id = new_id;
-            env.environment_core_name = name.clone();
-            env.environment_core_version = core_hash.to_string();
-            env.created_on = now;
-            Environment::insert(&mut tx, env).await?;
-            let instances = Instance::get_all_for_environment_id(&mut tx, old_id).await?;
-            for mut inst in instances {
-                let new_inst_id = Uuid::new_v4();
-                let old_inst_id = inst.instance_id;
-                println!("Clone inst {old_inst_id} into {new_inst_id}");
-                inst.instance_id = new_inst_id;
-                inst.environment_id = new_id;
-                inst.derived_from_instance = Some(old_inst_id);
-                Instance::insert(&mut tx, inst, indexer).await?;
-                // link objects to new instance; skip objects with name of any dependency in core_meta.dependencies
-                for link in ObjectLink::get_all_for_instance_id(&mut tx, old_inst_id).await? {
-                    if !(link.object_role == ObjectRole::Dependency
-                        && deps.contains(&link.file_filename))
-                    {
-                        Object::link_object_to_instance(
-                            &mut tx,
-                            link.object_id,
-                            new_inst_id,
-                            link.object_role,
-                            link.object_role_index.try_into()?,
-                        )
-                        .await?;
-                    }
-                }
-                let mut remapping = Vec::with_capacity(1024);
-                for mut replay in Replay::get_all_for_instance(&mut tx, old_inst_id).await? {
-                    let old_replay_id = replay.replay_id;
-                    replay.replay_id = Uuid::new_v4();
-                    remapping.push((old_replay_id, replay.replay_id));
-                    replay.instance_id = new_inst_id;
-                    Replay::insert(&mut tx, replay, indexer).await?;
-                }
-                for (old_rid, new_rid) in remapping {
-                    sqlx::query!(r#"UPDATE replay SET replay_forked_from=$3 WHERE replay_forked_from=$2 AND instance_id=$1"#, new_inst_id, old_rid, new_rid).execute(tx.as_mut()).await?;
-                }
-                // fixup replay fork relations
-                for mut state in State::get_all_for_instance(&mut tx, old_inst_id).await? {
-                    let old_state_id = state.state_id;
-                    state.state_id = Uuid::new_v4();
-                    state.state_derived_from = Some(old_state_id);
-                    state.instance_id = new_inst_id;
-                    State::insert(&mut tx, state, indexer).await?;
-                }
-                // save + instance_save
-                for mut save in Save::get_all_for_instance(&mut tx, old_inst_id).await? {
-                    let old_save_id = save.save_id;
-                    save.save_id = Uuid::new_v4();
-                    save.save_derived_from = Some(old_save_id);
-                    save.instance_id = new_inst_id;
-                    sqlx::query!(r#"INSERT INTO instance_save SELECT $3, $4 FROM instance_save WHERE instance_id=$1 AND save_id=$2"#, old_inst_id, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
-                    // fixup state->save links
-                    sqlx::query!(r#"UPDATE state SET save_derived_from=$3 WHERE save_derived_from=$1 AND instance_id=$2"#, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
-                    Save::insert(&mut tx, save, indexer).await?;
-                }
-            }
-        }
+        upgrade_envs_by_clone(&mut tx, indexer, envs, &name, core_hash, &deps).await?;
         tx.commit().await?;
     }
     Ok(())
