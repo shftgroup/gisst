@@ -21,11 +21,15 @@ let content_base:string;
 
 export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, saves:GISSTModels.SaveFileLink[], core_manifest:CoreFileLink[], manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
     db = new GISSTDBConnector(gisst_root);
-    const core_path = 'storage/'+core_manifest.find((o) => o.core_role=="entrypoint" && o.core_role_index == 0)!.file_dest_path;
+    const core_entry = core_manifest.find((o) => o.core_role=="entrypoint" && o.core_role_index == 0);
+    const core_path = core_entry ? 'storage/'+core_entry.file_dest_path : 'cores/'+core+'_libretro.js';
     const remote_deps:{[id:string]:string} = {};
     const core_config = core_manifest.find((o) => o.core_role=="config");
     const instance_config = manifest.find((o) => o.object_role=="config");
     const extra_configs:string[] = [];
+    if (!core_entry) {
+        remote_deps[core+'_libretro.wasm'] = 'cores/'+core+'_libretro.wasm';
+    }
     if (core_config) {
         extra_configs.push(core_config.file_dest_path);
     }
