@@ -127,40 +127,35 @@ async fn main() -> Result<(), GISSTCliError> {
 }
 
 async fn upgrade_envs_in_place(
-    tx: &mut sqlx::PgConnection,
+    db: sqlx::PgPool,
     envs: Vec<Environment>,
     name: &str,
     core_hash: &str,
     deps: &[String],
-) -> Result<(Vec<Uuid>, Vec<Uuid>), GISSTCliError> {
+) -> Result<(), GISSTCliError> {
     use gisst::danger::{DestructiveEnvironment, DestructiveObject};
-    let changed_envs: Vec<_> = envs.iter().map(|e| e.environment_id).collect();
-    let mut changed_instances = vec![];
     println!("Replacing instanceobject links to files in {deps:?} with core file links...");
     for env in envs {
-        Environment::update_core(tx, env.environment_id, name, core_hash).await?;
-        let instances = Instance::get_all_for_environment_id(tx, env.environment_id).await?;
+        let mut tx = db.begin().await?;
+        Environment::update_core(&mut tx, env.environment_id, name, core_hash).await?;
+        let instances = Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
         for inst in instances {
-            let mut changed = false;
             // delete dependency links of objects with name of any dependency in core_meta.dependencies
-            for link in ObjectLink::get_all_for_instance_id(tx, inst.instance_id).await? {
+            for link in ObjectLink::get_all_for_instance_id(&mut tx, inst.instance_id).await? {
                 if link.object_role == ObjectRole::Dependency && deps.contains(&link.file_filename)
                 {
                     // We can just unlink, the core offers the dependency now
-                    Object::unlink(tx, link.object_id, inst.instance_id).await?;
-                    changed = true;
+                    Object::unlink(&mut tx, link.object_id, inst.instance_id).await?;
                 }
             }
-            if changed {
-                changed_instances.push(inst.instance_id);
-            }
         }
+        tx.commit().await?;
     }
-    Ok((changed_envs, changed_instances))
+    Ok(())
 }
 
 async fn upgrade_envs_by_clone(
-    tx: &mut sqlx::PgConnection,
+    db: sqlx::PgPool,
     indexer: &gisst::search::MeiliIndexer,
     envs: Vec<Environment>,
     name: &str,
@@ -177,8 +172,9 @@ async fn upgrade_envs_by_clone(
         env.environment_core_name = name.to_string();
         env.environment_core_version = core_hash.to_string();
         env.created_on = now;
-        Environment::insert(tx, env).await?;
-        let instances = Instance::get_all_for_environment_id(tx, old_id).await?;
+        let mut tx = db.begin().await?;
+        Environment::insert(&mut tx, env).await?;
+        let instances = Instance::get_all_for_environment_id(&mut tx, old_id).await?;
         for mut inst in instances {
             let new_inst_id = Uuid::new_v4();
             let old_inst_id = inst.instance_id;
@@ -186,14 +182,14 @@ async fn upgrade_envs_by_clone(
             inst.instance_id = new_inst_id;
             inst.environment_id = new_id;
             inst.derived_from_instance = Some(old_inst_id);
-            Instance::insert(tx, inst, indexer).await?;
+            Instance::insert(&mut tx, inst, indexer).await?;
             // link objects to new instance; skip objects with name of any dependency in core_meta.dependencies
-            for link in ObjectLink::get_all_for_instance_id(tx, old_inst_id).await? {
+            for link in ObjectLink::get_all_for_instance_id(&mut tx, old_inst_id).await? {
                 if !(link.object_role == ObjectRole::Dependency
                     && deps.contains(&link.file_filename))
                 {
                     Object::link_object_to_instance(
-                        tx,
+                        &mut tx,
                         link.object_id,
                         new_inst_id,
                         link.object_role,
@@ -203,26 +199,26 @@ async fn upgrade_envs_by_clone(
                 }
             }
             let mut remapping = Vec::with_capacity(1024);
-            for mut replay in Replay::get_all_for_instance(tx, old_inst_id).await? {
+            for mut replay in Replay::get_all_for_instance(&mut tx, old_inst_id).await? {
                 let old_replay_id = replay.replay_id;
                 replay.replay_id = Uuid::new_v4();
                 remapping.push((old_replay_id, replay.replay_id));
                 replay.instance_id = new_inst_id;
-                Replay::insert(tx, replay, indexer).await?;
+                Replay::insert(&mut tx, replay, indexer).await?;
             }
             for (old_rid, new_rid) in remapping {
                 sqlx::query!(r#"UPDATE replay SET replay_forked_from=$3 WHERE replay_forked_from=$2 AND instance_id=$1"#, new_inst_id, old_rid, new_rid).execute(tx.as_mut()).await?;
             }
             // fixup replay fork relations
-            for mut state in State::get_all_for_instance(tx, old_inst_id).await? {
+            for mut state in State::get_all_for_instance(&mut tx, old_inst_id).await? {
                 let old_state_id = state.state_id;
                 state.state_id = Uuid::new_v4();
                 state.state_derived_from = Some(old_state_id);
                 state.instance_id = new_inst_id;
-                State::insert(tx, state, indexer).await?;
+                State::insert(&mut tx, state, indexer).await?;
             }
             // save + instance_save
-            for mut save in Save::get_all_for_instance(tx, old_inst_id).await? {
+            for mut save in Save::get_all_for_instance(&mut tx, old_inst_id).await? {
                 let old_save_id = save.save_id;
                 save.save_id = Uuid::new_v4();
                 save.save_derived_from = Some(old_save_id);
@@ -230,9 +226,10 @@ async fn upgrade_envs_by_clone(
                 sqlx::query!(r#"INSERT INTO instance_save SELECT $3, $4 FROM instance_save WHERE instance_id=$1 AND save_id=$2"#, old_inst_id, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
                 // fixup state->save links
                 sqlx::query!(r#"UPDATE state SET save_derived_from=$3 WHERE save_derived_from=$1 AND instance_id=$2"#, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
-                Save::insert(tx, save, indexer).await?;
+                Save::insert(&mut tx, save, indexer).await?;
             }
         }
+        tx.commit().await?;
     }
     Ok(())
 }
@@ -247,9 +244,9 @@ async fn upgrade_env(
     db: PgPool,
     indexer: &gisst::search::MeiliIndexer,
 ) -> Result<(), GISSTCliError> {
-    let mut tx = db.begin().await?;
+    let mut conn = db.acquire().await?;
     // find envs with core name and version
-    let envs = Environment::get_for_core(&mut tx, &old_core_name, &old_core_version).await?;
+    let envs = Environment::get_for_core(&mut conn, &old_core_name, &old_core_version).await?;
     if envs.is_empty() {
         println!("No environments using this core name were found.");
         return Ok(());
@@ -261,7 +258,7 @@ async fn upgrade_env(
     let core_meta: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
     let name = core_meta["core_name"].as_str().unwrap().to_string();
-    let Some(_) = Core::get(&mut tx, &name, core_hash).await? else {
+    let Some(_) = Core::get(&mut conn, &name, core_hash).await? else {
         println!(
             "Core {name}:{core_hash} is not present in the database, use gisst-cli add-core first"
         );
@@ -274,15 +271,12 @@ async fn upgrade_env(
         .filter_map(|x| x.as_str())
         .map(std::string::ToString::to_string)
         .collect();
+    drop(conn);
     if in_place {
-        let (changed_envs, changed_instances) =
-            upgrade_envs_in_place(&mut tx, envs, &name, core_hash, &deps).await?;
         println!("------DANGER ZONE-----");
         println!(
             "This command will apply irreversible changes!  Content will potentially be run on different cores if you haven't been very careful!"
         );
-        println!("Affected environments: {changed_envs:?}");
-        println!("Instances with changed objects: {changed_instances:?}");
         println!("Type 'yes' to confirm!");
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
@@ -291,10 +285,9 @@ async fn upgrade_env(
             return Ok(());
         }
         println!("Performing destructive changes!");
-        tx.commit().await?;
+        upgrade_envs_in_place(db, envs, &name, core_hash, &deps).await?;
     } else {
-        upgrade_envs_by_clone(&mut tx, indexer, envs, &name, core_hash, &deps).await?;
-        tx.commit().await?;
+        upgrade_envs_by_clone(db, indexer, envs, &name, core_hash, &deps).await?;
     }
     Ok(())
 }
