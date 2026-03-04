@@ -94,7 +94,10 @@ impl MeiliIndexer {
             "sort",
             "wordPosition",
             "exactness",
+            "work_name:asc",
+            "work_version:asc",
             "work_created_on:asc",
+            "work_platform:asc",
             "instance_created_on:desc",
             "environment_created_on:desc",
         ]).await?;
@@ -129,6 +132,8 @@ impl MeiliIndexer {
             "exactness",
             "created_on:desc",
             "environment_created_on:desc",
+            "work_name:asc",
+            "work_version:asc",
         ]).await?;
         states.set_typo_tolerance(&meilisearch_sdk::settings::TypoToleranceSettings {
             enabled: Some(true),
@@ -161,6 +166,8 @@ impl MeiliIndexer {
             "exactness",
             "created_on:desc",
             "environment_created_on:desc",
+            "work_name:asc",
+            "work_version:asc",
         ]).await?;
         saves.set_typo_tolerance(&meilisearch_sdk::settings::TypoToleranceSettings {
             enabled: Some(true),
@@ -193,6 +200,8 @@ impl MeiliIndexer {
             "exactness",
             "created_on:desc",
             "environment_created_on:desc",
+            "work_name:asc",
+            "work_version:asc",
         ]).await?;
         replays.set_typo_tolerance(&meilisearch_sdk::settings::TypoToleranceSettings {
             enabled: Some(true),

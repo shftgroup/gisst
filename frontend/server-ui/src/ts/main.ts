@@ -14,7 +14,6 @@ function search_instances(search_host:string, search_key:string, params:SearchOp
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'instance',
-    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
     searchClient
   });
 }
@@ -24,7 +23,6 @@ export function search_states(search_host:string, search_key:string, params:Sear
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'state',
-    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
     searchClient
   });
 }
@@ -34,7 +32,6 @@ export function search_saves(search_host:string, search_key:string, params:Searc
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'save',
-    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
     searchClient
   });
 }
@@ -44,7 +41,6 @@ export function search_replays(search_host:string, search_key:string, params:Sea
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'replay',
-    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
     searchClient
   });
 }
@@ -91,7 +87,7 @@ class GISSTInstanceSearch extends HTMLElement {
     search_container.appendChild(pagination);
     this.appendChild(search_container);
 
-    const search = search_instances(search_url, search_key, {finitePagination:true});
+    const search = search_instances(search_url, search_key, {});
     search.addWidgets([
         widgets.searchBox({
         container: search_box
@@ -121,7 +117,7 @@ class GISSTInstanceSearch extends HTMLElement {
           },
         }),
         widgets.configure({ hitsPerPage: 10 }),
-        widgets.pagination({ container: pagination }),
+        widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
     ]);
     search.start();
   }
@@ -190,13 +186,13 @@ class GISSTStateSearch extends HTMLElement {
     const pagination = document.createElement("div");
     search_container.appendChild(pagination);
 
-    const search = search_states(search_url, search_key, {finitePagination:true});
+    const search = search_states(search_url, search_key, {});
     search.addWidgets([
       widgets.searchBox({
         container: search_box
       }),
       widgets.configure({ hitsPerPage: 10, filters: filters.join(" AND ") }),
-      widgets.pagination({ container: pagination }),
+        widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
       /* TODO: these nested templates are gnarly, what can be done? */
       widgets.hits({
         container: results_body,
@@ -324,13 +320,13 @@ class GISSTSaveSearch extends HTMLElement {
     const pagination = document.createElement("div");
     search_container.appendChild(pagination);
 
-    const search = search_saves(search_url, search_key, {finitePagination:true});
+    const search = search_saves(search_url, search_key, {});
     search.addWidgets([
       widgets.searchBox({
         container: search_box
       }),
       widgets.configure({ hitsPerPage: 10, filters: filters.join(" AND ") }),
-      widgets.pagination({ container: pagination }),
+        widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
       /* TODO: these nested templates are gnarly, what can be done? */
       widgets.hits({
         container: results_body,
@@ -446,13 +442,13 @@ class GISSTPerformanceSearch extends HTMLElement {
     const pagination = document.createElement("div");
     search_container.appendChild(pagination);
 
-    const search = search_replays(search_url, search_key, {finitePagination:true});
+    const search = search_replays(search_url, search_key, {});
     search.addWidgets([
       widgets.searchBox({
         container: search_box
       }),
       widgets.configure({ hitsPerPage: 10, filters: filters.join(" AND ") }),
-      widgets.pagination({ container: pagination }),
+        widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
       /* TODO: these nested templates are gnarly, what can be done? */
       widgets.hits({
         container: results_body,
