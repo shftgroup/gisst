@@ -28,7 +28,7 @@
     "eslint": "^9.13.0",
     "happy-dom": "^17.4.6",
     "rollup-plugin-sourcemaps": "0.6.3",
-    "shx": "^0.3.4",
+    "shx": "^0.4.0",
     "typescript": "^5.8.2",
     "vite": "^6.2.1",
     "vite-plugin-checker": "^0.9.0",

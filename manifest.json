@@ -11,7 +11,8 @@
       "bochs-bios.bin": "v86bios/bochs-bios_6b1400c2a76c82d9535456866cc4cd23c5c70311.bin",
       "vgabios.bin": "v86bios/vgabios_c7260820bac7d2d5308baa22668f111dbb520db9.bin",
       "bochs-vgabios.bin": "v86bios/bochs-vgabios_d04f227c790a0e4d32f3cd27bad9341690de5cc6.bin"
-    }
+    },
+    "platform": "x86 PC"
   },
   "retroarch": {
     "repo": "https://github.com/libretro/retroarch",
@@ -37,20 +38,24 @@
     "cores": {
       "fceumm": {
         "repo": "https://github.com/libretro/libretro-fceumm",
-        "version": "5cd4a43e16a7f3cd35628d481c347a0a98cfdfa2"
+        "version": "5cd4a43e16a7f3cd35628d481c347a0a98cfdfa2",
+        "platform": "Nintendo Entertainment System"
       },
       "gambatte": {
         "repo": "https://github.com/libretro/gambatte-libretro",
-        "version": "6924c76ba03dadddc6e97fa3660f3d3bc08faa94"
+        "version": "6924c76ba03dadddc6e97fa3660f3d3bc08faa94",
+        "platform": "Nintendo Game Boy"
       },
       "hatari": {
         "skip": true,
         "repo": "https://github.com/JoeOsborn/hatari",
         "version": "73d89468dd5d38f90e1b4775700f07beae01eeaa",
-        "async": true
+        "async": true,
+        "platform": "Atari ST"
       },
       "mupen64plus_next": {
         "repo": "https://github.com/JoeOsborn/mupen64plus-libretro-nx",
+	"platform": "Nintendo 64",
         "version": "1c17ef178ea5818b70edf0725e22d59b96a7e3ad",
         "async": true
       },
@@ -61,76 +66,85 @@
           "scph5500.bin":"psxbios/scph5500_b05def971d8ec59f346f2d9ac21fb742e3eb6917.bin",
           "scph5501.bin":"psxbios/scph5501_0555c6fae8906f3f09baf5988f00e55f88e9f30b.bin",
           "scph5502.bin":"psxbios/scph5502_f8de9325fc36fcfa4b29124d291c9251094f2e54.bin"
-        }
+        },
+        "platform": "Sony Playstation"
       },
       "sameboy": {
         "repo": "https://github.com/LIJI32/SameBoy",
         "version": "c50fdfd222ac5a2e07cf9c6f43c645e2dbe0a62d",
         "rgbds_repo": "https://github.com/gbdev/rgbds.git",
-        "rgbds_version": "d961c697d740728f05895a2faec0dd755351e28b"
+        "rgbds_version": "d961c697d740728f05895a2faec0dd755351e28b",
+        "platform": "Nintendo Game Boy"
       },
       "snes9x": {
         "repo": "https://github.com/libretro/snes9x",
-        "version": "5a40cd5514e63e691e39141d64267798357a1424"
+        "version": "5a40cd5514e63e691e39141d64267798357a1424",
+        "platform": "Super Nintendo Entertainment System"
       },
       "stella2014": {
         "skip": true,
         "repo": "https://github.com/libretro/stella2014-libretro",
-        "version": "3cc89f0d316d6c924a5e3f4011d17421df58e615"
+        "version": "3cc89f0d316d6c924a5e3f4011d17421df58e615",
+        "platform": "Atari 2600"
       },
       "vba_next": {
         "repo": "https://github.com/JoeOsborn/vba-next",
-        "version": "e437f6c847f88161b489a7a90aba1bfe70df9244"
+        "version": "e437f6c847f88161b489a7a90aba1bfe70df9244",
+        "platform": "Nintendo Game Boy Advance"
       },
       "vice_x64": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=x64"]
+        "extra_build_args": ["EMUTYPE=x64"],
+        "platform": "Commodore 64"
       },
       "vice_x64dtv": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=x64dtv"]
-      },
-      "vice_x64sc": {
-        "repo": "https://github.com/libretro/vice-libretro",
-        "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=x64sc"]
+        "extra_build_args": ["EMUTYPE=x64dtv"],
+        "skip": "true",
+        "platform": "Commodore 64 DTV"
       },
       "vice_x128": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=x128"]
+        "extra_build_args": ["EMUTYPE=x128"],
+        "skip": "true",
+        "platform": "Commodore 128"
       },
       "vice_xcbm2": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=xcbm2"]
-      },
-      "vice_xcbm5x0": {
-        "repo": "https://github.com/libretro/vice-libretro",
-        "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=xcbm5x0"]
+        "extra_build_args": ["EMUTYPE=xcbm2"],
+        "skip": "true",
+        "platform": "Commodore CBM-II"
       },
       "vice_xpet": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=xpet"]
+        "extra_build_args": ["EMUTYPE=xpet"],
+        "skip": "true",
+        "platform": "Commodore PET"
       },
       "vice_xplus4": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=xplus4"]
+        "extra_build_args": ["EMUTYPE=xplus4"],
+        "skip": "true",
+        "platform": "Commodore PLUS4"
       },
       "vice_xscpu64": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=xscpu64"]
+        "extra_build_args": ["EMUTYPE=xscpu64"],
+        "skip": "true",
+        "platform": "Commodore SCPU64"
       },
       "vice_xvic": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=xvic"]
+        "extra_build_args": ["EMUTYPE=xvic"],
+        "platform": "Commodore VIC20"
       }
     }
   }

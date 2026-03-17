@@ -19,6 +19,7 @@ use uuid::Uuid;
 pub fn router() -> Router {
     Router::new()
         .route("/", get(get_instances))
+        .route("/new", get(get_new_instance_page))
         .route("/{id}", get(get_all_for_instance))
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/{id}/clone", get(clone_v86_instance))
@@ -201,4 +202,25 @@ async fn clone_v86_instance(
     )
     .await?;
     Ok(axum::response::Redirect::permanent(&format!("/instances/{new_instance}")).into_response())
+}
+
+async fn get_new_instance_page(
+    app_state: Extension<ServerState>,
+    headers: HeaderMap,
+    params: Query<InstanceListQueryParams>,
+    auth: axum_login::AuthSession<auth::AuthBackend>,
+) -> Result<axum::response::Response, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
+    let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
+    let instance_new = app_state
+        .templates
+        .get_template("instance_new.html")?;
+
+    Ok(Html(instance_new.render(context!(
+        base_url => BASE_URL.get(),
+        user => user,
+    ))?).into_response())
 }

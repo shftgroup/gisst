@@ -316,6 +316,7 @@ async fn add_core(
     let core_meta: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
     let name = core_meta["core_name"].as_str().unwrap().to_string();
+    let core_platform = core_meta["platform"].as_str().unwrap().to_string();
     let entrypoints: Vec<_> = core_meta["entrypoints"]
         .as_array()
         .unwrap()
@@ -333,6 +334,7 @@ async fn add_core(
     let core = Core {
         core_name: name.clone(),
         core_version: core_hash.to_string(),
+        core_platform,
         core_metadata: core_meta,
         created_on: now,
     };

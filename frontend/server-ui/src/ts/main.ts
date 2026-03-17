@@ -1,5 +1,8 @@
 import { instantMeiliSearch, InstantMeiliSearchOptions } from '@meilisearch/instant-meilisearch';
+import { meilisearchAutocompleteClient, getMeilisearchResults } from '@meilisearch/autocomplete-client';
 import { default as instantsearch, InstantSearch } from 'instantsearch.js';
+import { autocomplete } from '@algolia/autocomplete-js';
+import { default as SparkMD5 } from 'spark-md5';
 import 'instantsearch.css/themes/reset.css';
 import '../css/server-ui-main.css';
 import '../css/server-ui-search.css';
@@ -551,3 +554,169 @@ class GISSTPerformanceSearch extends HTMLElement {
 }
 
 customElements.define("gisst-performance-search", GISSTPerformanceSearch);
+
+class GISSTNewInstance extends HTMLElement {
+  content_matcher: HTMLDivElement;
+  
+  constructor() {
+    super();
+    this.content_matcher = document.createElement("div");
+  }
+  
+  /*
+    Workflow:
+    1. Use an instance search to base on an existing work+env+instance OR give platform and try to match content file
+    2. Fields:
+    2.a. core selector (can upgrade core version here)
+    2.b. work name
+    2.c. work biblio...
+    2.d. env config (for v86)
+    2.e. instance files
+    2.e.1. deps
+    2.e.2. configs
+    2.e.3. content
+    3. If any section is modified or fresh add new record for that (server side choice)
+   */
+  connectedCallback() {
+    const search_url = this.getAttribute("search-url");
+    const search_key = this.getAttribute("search-key");
+    const base_url = this.getAttribute("base-url");
+    if(!search_url || !search_key || !base_url) {
+      throw "Cannot create instance search UI without search url, search key, and base url";
+    }
+    const search_container = document.createElement("div");
+    search_container.setAttribute("class", "gisst-Search-container");
+    const search_explanation = document.createElement("p");
+    search_explanation.textContent = "Method 2: Search for an existing instance (you can change the work details or content files later).";
+    search_container.appendChild(search_explanation);
+    const search_box = document.createElement("div");
+    search_container.appendChild(search_box);
+    const results_box = document.createElement("div");
+    search_container.appendChild(results_box);
+    const search_client = meilisearchAutocompleteClient({
+      url: search_url,
+      apiKey: search_key
+    });
+    autocomplete({
+      container: search_box,
+      panelContainer: results_box,
+      detachedMediaQuery: "none",
+      placeholder: 'Search',
+      // @ts-expect-error autocomplete-js types are bad vis-a-vis meilisearch-autocomplete
+      getSources({ query }) {
+        return [
+          {
+            sourceId: 'instance',
+              getItemInputValue: ({ item }) => item.work_name as string,
+              getItems() {
+              return getMeilisearchResults({
+                searchClient:search_client,
+                queries: [
+                  {
+                    indexName: 'instance',
+                    query,
+                  },
+                ],
+              })
+            },
+            templates: {
+              item({ item, html }) {
+                return html`
+<div>
+  <div>${item.work_name}</div>
+  <div>${item.work_version}</div>
+  <div>${item.work_platform}</div>
+</div>`
+              },
+            },
+              onSelect({item, setStatus, refresh, setIsOpen, ...others}) {
+                  console.log("selected ",item,others);
+                  setStatus('idle');
+                  setIsOpen(false);
+                  refresh();
+                  if (document.activeElement) {
+                      (document.activeElement as HTMLElement)!.blur();
+                  }
+            }
+          },
+        ]
+      },
+    });
+    this.content_matcher.innerHTML = `
+<p>You can find bibliographic data by attempting to match your content file against a community-developed database (Method 1), or you can search for a similar existing work already in the GISST system (Method 2). Using either method will populate the fields below, or you can skip both methods and create a new work by hand.</p>
+<label for="core_chooser">Method 1: What platform is this work for?</label>
+<select name="core_chooser" class="core_chooser">
+  <option value="v86" data-core-name="v86" data-core-version="hash" data-platform="x86 PC">x86 PC (v86)</option>
+  <option value="fceumm" data-core-name="fceumm" data-core-version="hash" data-platform="Nintendo Entertainment System">NES (Fceumm)</option>
+  <option value="snes9x" data-core-name="snes9x" data-core-version="hash" data-platform="Super Nintendo Entertainment System">SNES (Snes9x)</option>
+</select>
+<label for="content_match_upload">Method 1: Search using the given main content file:</label>
+<input type="file" class="content_match_upload"></input>
+<p class="content_match_result"></p>
+`;
+    let self = this;
+    this.content_matcher.getElementsByTagName("input")[0]!.onchange = (event) => {
+      const files = (event.target! as HTMLInputElement).files || [];
+      if (files.length == 1) {
+        const file = files[0];
+        const filename = file.name;
+        const chunkSize = 16*1024*1024,
+        chunks = Math.ceil(file.size / chunkSize),
+        spark = new SparkMD5.ArrayBuffer(),
+        fileReader = new FileReader();
+        let currentChunk = 0;
+        fileReader.onload = function (e) {
+          spark.append((e.target! as FileReader).result as ArrayBuffer);
+          currentChunk++;
+
+          if (currentChunk < chunks) {
+            loadNext();
+          } else {
+            self.content_check_hash(filename, spark.end());
+          }
+        };
+
+        fileReader.onerror = function () {
+          self.content_check_show_error();
+        };
+
+        function loadNext() {
+          var start = currentChunk * chunkSize,
+          end = ((start + chunkSize) >= file.size) ? file.size : start + chunkSize;
+          fileReader.readAsArrayBuffer(file.slice(start,end));
+        }
+
+        loadNext();
+      }
+    };
+    /*
+      2. Fields in a form, populated from the above:
+      2.a. core selector (can upgrade core version here)
+      2.b. work name
+      2.c.... work biblio...
+      2.y. env config (for v86)
+      2.z. instance files
+      2.z.1. deps
+      2.z.2. configs
+      2.z.3. content
+     */    
+    const metadata_form = document.createElement("form");
+    metadata_form.innerHTML = `
+
+`;
+    const contents = document.createElement("div");
+    contents.appendChild(this.content_matcher);
+    contents.appendChild(search_container);
+    contents.appendChild(metadata_form);
+    this.appendChild(contents);
+  }
+  content_check_hash(filename:string, hash:string) {
+    this.content_matcher.getElementsByClassName("content_match_result")[0]!.textContent = `${filename}:${hash}`;
+  }
+  content_check_show_error() {
+    this.content_matcher.getElementsByClassName("content_match_result")[0]!.textContent = `error computing hash`;
+  }
+}
+
+
+customElements.define("gisst-new-instance", GISSTNewInstance);

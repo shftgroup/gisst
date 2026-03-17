@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT core_name, core_version, core_metadata, core_platform, created_on\nFROM core\nWHERE core_name = $1 AND core_version = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "core_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "core_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "core_metadata",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "core_platform",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4abb3586c25d8cdd118c21469f2acfe89c3f35e38178d9e3f3fbc95a60e572b4"
+}

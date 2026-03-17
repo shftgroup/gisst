@@ -24,6 +24,7 @@ export default {
     }
   },
   server: {
+    https: true,
     headers:{
       "Cross-Origin-Embedder-Policy":"require-corp",
       "Cross-Origin-Resource-Policy":"cross-origin",

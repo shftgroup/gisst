@@ -1035,6 +1035,7 @@ pub struct Core {
     pub core_name: String,
     pub core_version: String,
     pub core_metadata: sqlx::types::JsonValue,
+    pub core_platform: String,
     pub created_on: chrono::DateTime<chrono::Utc>,
 }
 
@@ -1046,7 +1047,7 @@ impl Core {
     ) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT core_name, core_version, core_metadata, created_on
+            r#"SELECT core_name, core_version, core_metadata, core_platform, created_on
 FROM core
 WHERE core_name = $1 AND core_version = $2"#,
             name,
@@ -1058,11 +1059,12 @@ WHERE core_name = $1 AND core_version = $2"#,
     pub async fn insert(conn: &mut sqlx::PgConnection, core: Self) -> Result<Self, Insert> {
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO core VALUES ($1, $2, $3, $4) RETURNING *"#,
+            r#"INSERT INTO core VALUES ($1, $2, $3, $4, $5) RETURNING *"#,
             core.core_name,
             core.core_version,
             core.core_metadata,
-            core.created_on
+            core.created_on,
+            core.core_platform
         )
         .fetch_one(conn)
         .await
