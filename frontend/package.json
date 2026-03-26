@@ -11,5 +11,8 @@
   "scripts": {
     "check": "npm run check --workspaces",
     "test": "npm run test --workspaces --if-present"
+  },
+  "dependencies": {
+    "typescript-language-server": "^5.1.3"
   }
 }

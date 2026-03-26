@@ -5,6 +5,7 @@ import { autocomplete } from '@algolia/autocomplete-js';
 import { default as SparkMD5 } from 'spark-md5';
 import 'instantsearch.css/themes/reset.css';
 import '../css/server-ui-main.css';
+import '../css/server-ui-new-instance.css';
 import '../css/server-ui-search.css';
 import '../css/server-ui-instance.css';
 export type SearchOptions = InstantMeiliSearchOptions;
@@ -58,7 +59,7 @@ class GISSTInstanceSearch extends HTMLElement {
     const search_url = this.getAttribute("search-url");
     const search_key = this.getAttribute("search-key");
     const base_url = this.getAttribute("base-url");
-    if(!search_url || !search_key || !base_url) {
+    if(search_url == undefined || search_key == undefined || base_url == undefined) {
       throw "Cannot create instance search UI without search url, search key, and base url";
     }
     this.classList.add("gisst-instance-search");
@@ -148,7 +149,7 @@ class GISSTStateSearch extends HTMLElement {
     const search_url = this.getAttribute("search-url");
     const search_key = this.getAttribute("search-key");
     const base_url = this.getAttribute("base-url");
-    if(!search_url || !search_key || !base_url) {
+    if(search_url == undefined || search_key == undefined || base_url == undefined) {
       throw "Cannot create state search UI without search url, search key, and base url";
     }
     const limit_to_instance = this.getAttribute("instance-id");
@@ -157,7 +158,7 @@ class GISSTStateSearch extends HTMLElement {
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
     // TODO: Now that environment framework is part of the info, we don't need this attribute and instead can make it hit-by-hit
     const can_clone = (this.getAttribute("can-clone") ?? "false") === 'true' ;
-    const filters = [];
+    const filters:string[] = [];
     if (limit_to_instance && limit_to_instance != "") {
       filters.push(`instance_id = "${limit_to_instance}"`);
     }
@@ -299,14 +300,14 @@ class GISSTSaveSearch extends HTMLElement {
     const search_url = this.getAttribute("search-url");
     const search_key = this.getAttribute("search-key");
     const base_url = this.getAttribute("base-url");
-    if(!search_url || !search_key || !base_url) {
+    if(search_url == undefined || search_key == undefined || base_url == undefined) {
       throw "Cannot create save search UI without search url, search key, and base url";
     }
     const limit_to_instance = this.getAttribute("instance-id");
     const limit_to_creator = this.getAttribute("creator-id");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
-    const filters = [];
+    const filters:string[] = [];
     if (limit_to_instance && limit_to_instance != "") {
       filters.push(`instance_id = "${limit_to_instance}"`);
     }
@@ -435,14 +436,14 @@ class GISSTPerformanceSearch extends HTMLElement {
     const search_url = this.getAttribute("search-url");
     const search_key = this.getAttribute("search-key");
     const base_url = this.getAttribute("base-url");
-    if(!search_url || !search_key || !base_url) {
+    if(search_url == undefined || search_key == undefined || base_url == undefined) {
       throw "Cannot create performance search UI without search url, search key, and base url";
     }
     const limit_to_instance = this.getAttribute("instance-id");
     const limit_to_creator = this.getAttribute("creator-id");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
-    const filters = [];
+    const filters:string[] = [];
     if (limit_to_instance && limit_to_instance != "") {
       filters.push(`instance_id = "${limit_to_instance}"`);
     }
@@ -555,11 +556,80 @@ class GISSTPerformanceSearch extends HTMLElement {
 
 customElements.define("gisst-performance-search", GISSTPerformanceSearch);
 
+interface Work {
+  work_id: string,
+  work_name: string,
+  work_platform: string,
+  work_version: string,
+}
+
+interface InstanceWork extends Work {
+  instance_id: string,
+  environment_id: string
+}
+
+interface Instance {
+  instance_id: string,
+  work_id: string,
+  environment_id: string,
+  instance_config: any,
+  created_on: Date,
+  derived_from_instance: string | null,
+  derived_from_state: string | null
+}
+
+interface Environment {
+  enviroment_id: string,
+  environment_name: string,
+  environment_framework: string,
+  environment_core_name: string,
+  environment_core_version: string,
+  environment_derived_from: string | null,
+  environment_config: any,
+  created_on: Date
+}
+
+type Role = "content" | "dependency" | "config";
+
+interface ObjectLink {
+  object_id: string,
+  object_role: Role,
+  object_role_index: number,
+  file_hash: string,
+  file_filename: string,
+  file_source_path: string,
+  file_dest_path: string
+}
+
+interface FullInstance {
+  work:Work,
+  info:Instance,
+  environment:Environment,
+  objects:ObjectLink[]
+}
+
+enum Upload {
+  NotStarted,
+  InProgress,
+  Finished
+}
+
+interface InstanceFile {
+  filename: string,
+  source: {existing:string} | {file:File, upload:Upload, upload_progress:number, upload_result_id:string|null}
+}
+
 class GISSTNewInstance extends HTMLElement {
   content_matcher: HTMLDivElement;
-  
+  base_url: string;
+  file_lists:{config:InstanceFile[], dependency:InstanceFile[], content:InstanceFile[]} = {
+    "config":[],
+    "dependency":[],
+    "content":[]
+  };
   constructor() {
     super();
+    this.base_url="/";
     this.content_matcher = document.createElement("div");
   }
   
@@ -581,9 +651,10 @@ class GISSTNewInstance extends HTMLElement {
     const search_url = this.getAttribute("search-url");
     const search_key = this.getAttribute("search-key");
     const base_url = this.getAttribute("base-url");
-    if(!search_url || !search_key || !base_url) {
+    if(search_url == undefined || search_key == undefined || base_url == undefined) {
       throw "Cannot create instance search UI without search url, search key, and base url";
     }
+    this.base_url = base_url;
     const search_container = document.createElement("div");
     search_container.setAttribute("class", "gisst-Search-container");
     const search_explanation = document.createElement("p");
@@ -622,21 +693,23 @@ class GISSTNewInstance extends HTMLElement {
             templates: {
               item({ item, html }) {
                 return html`
-<div>
+<div class="gisst-new-instance-selector">
   <div>${item.work_name}</div>
   <div>${item.work_version}</div>
   <div>${item.work_platform}</div>
 </div>`
               },
             },
-              onSelect({item, setStatus, refresh, setIsOpen, ...others}) {
-                  console.log("selected ",item,others);
-                  setStatus('idle');
-                  setIsOpen(false);
-                  refresh();
-                  if (document.activeElement) {
-                      (document.activeElement as HTMLElement)!.blur();
-                  }
+            onSelect({item, setStatus, refresh, setIsOpen, ...others}) {
+              console.log("selected ",item,others);
+              self.update_work_bibinfo(item as any as Work);
+              self.update_work_instanceenv_info(item as any as InstanceWork)
+              setStatus('idle');
+              setIsOpen(false);
+              refresh();
+              if (document.activeElement) {
+                (document.activeElement as HTMLElement)!.blur();
+              }
             }
           },
         ]
@@ -644,20 +717,25 @@ class GISSTNewInstance extends HTMLElement {
     });
     this.content_matcher.innerHTML = `
 <p>You can find bibliographic data by attempting to match your content file against a community-developed database (Method 1), or you can search for a similar existing work already in the GISST system (Method 2). Using either method will populate the fields below, or you can skip both methods and create a new work by hand.</p>
-<label for="core_chooser">Method 1: What platform is this work for?</label>
-<select name="core_chooser" class="core_chooser">
-  <option value="v86" data-core-name="v86" data-core-version="hash" data-platform="x86 PC">x86 PC (v86)</option>
-  <option value="fceumm" data-core-name="fceumm" data-core-version="hash" data-platform="Nintendo Entertainment System">NES (Fceumm)</option>
-  <option value="snes9x" data-core-name="snes9x" data-core-version="hash" data-platform="Super Nintendo Entertainment System">SNES (Snes9x)</option>
+<label for="match_core_chooser">Method 1: What platform is this work for?</label>
+<select name="match_core_chooser" class="core_chooser">
 </select>
 <label for="content_match_upload">Method 1: Search using the given main content file:</label>
-<input type="file" class="content_match_upload"></input>
+<input type="file" class="content-match-upload"></input>
 <p class="content_match_result"></p>
 `;
-    let self = this;
-    this.content_matcher.getElementsByTagName("input")[0]!.onchange = (event) => {
-      const files = (event.target! as HTMLInputElement).files || [];
-      if (files.length == 1) {
+    this.init_core_chooser(this.content_matcher.getElementsByClassName("core_chooser")[0]! as HTMLSelectElement);
+    const self = this;
+    const content_match_upload = this.content_matcher.getElementsByClassName("content-match-upload")[0]! as HTMLInputElement;
+    content_match_upload.disabled = true;
+    let match_platform:string|null = null;
+    (this.content_matcher.querySelector(".core_chooser")! as HTMLSelectElement).onchange = (event) => {
+      content_match_upload.disabled = false;
+      match_platform = (event.target! as HTMLInputElement).value!;
+    };
+    content_match_upload.onchange = (event) => {
+      const files = (event.target! as HTMLInputElement).files ?? [];
+      if (files.length == 1 && match_platform != null) {
         const file = files[0];
         const filename = file.name;
         const chunkSize = 16*1024*1024,
@@ -672,7 +750,7 @@ class GISSTNewInstance extends HTMLElement {
           if (currentChunk < chunks) {
             loadNext();
           } else {
-            self.content_check_hash(filename, spark.end());
+            self.content_check_hash(match_platform!, filename, spark.end());
           }
         };
 
@@ -689,32 +767,143 @@ class GISSTNewInstance extends HTMLElement {
         loadNext();
       }
     };
-    /*
-      2. Fields in a form, populated from the above:
-      2.a. core selector (can upgrade core version here)
-      2.b. work name
-      2.c.... work biblio...
-      2.y. env config (for v86)
-      2.z. instance files
-      2.z.1. deps
-      2.z.2. configs
-      2.z.3. content
-     */    
     const metadata_form = document.createElement("form");
+    metadata_form.id = "work_info";
     metadata_form.innerHTML = `
-
+<label for="work_core_chooser">Work platform:</label>
+<select name="work_core_chooser" class="core_chooser">
+</select>
+<label for="work_name">Work name:</label>
+<input name="work_name"></input>
+<label for="work_version">Version:</label>
+<input name="work_version"></input>
+<label for="env_config" id="env_config">Environment config:</label>
+<textarea name="env_config"></textarea>
+<label for="instance_dep_upload">Instance dependencies:</label>
+<input type="file" name="instance_dep_upload" class="instance-file-upload" data-target="dependency"></input>
+<ol></ol>
+<label for="instance_config_upload">Instance config files:</label>
+<input type="file" name="instance_config_upload" class="instance-file-upload" data-target="config"></input>
+<ol></ol>
+<label for="instance_content_upload">Instance content files:</label>
+<input type="file" name="instance_content_upload" class="instance-file-upload" data-target="content"></input>
+<ol></ol>
+<button class="submit" type="button">Create Instance</button>
 `;
+    this.init_core_chooser(metadata_form.getElementsByClassName("core_chooser")[0]! as HTMLSelectElement);
+    for (const input of metadata_form.getElementsByClassName("instance-file-upload") as any) {
+      const inp = input as HTMLInputElement;
+      const lst = input.nextElementSibling;
+      const group = input.getAttribute("data-target");
+      inp.onchange = (event) => {
+        console.log(event,lst);
+        const files = inp.files ?? [];
+        if (files.length == 0) { return; }
+        self.add_to_file_list(group, files[0].name, {to_upload:files[0]});
+      };
+    }
+    const button = metadata_form.querySelector("button.submit")! as HTMLButtonElement;
+    button.onclick = () => {
+      // upload objects using tus, show some spinners, replacing each file list entry with the uploaded object
+      // create environment, work
+      // create instance once objects are up
+    };
     const contents = document.createElement("div");
     contents.appendChild(this.content_matcher);
     contents.appendChild(search_container);
     contents.appendChild(metadata_form);
     this.appendChild(contents);
   }
-  content_check_hash(filename:string, hash:string) {
+  async content_check_hash(platform:string, filename:string, hash:string) {
     this.content_matcher.getElementsByClassName("content_match_result")[0]!.textContent = `${filename}:${hash}`;
+    const platform_esc = encodeURIComponent(platform);
+    const filename_esc = encodeURIComponent(filename);
+    const hash_esc = encodeURIComponent(hash);
+    const resp = await (await fetch(`${this.base_url}/lookup-work?platform=${platform_esc}&filename=${filename_esc}&hash=${hash_esc}`)).json();
+    // resp is a work, not necessarily an instancework
+    this.update_work_bibinfo(resp);
   }
   content_check_show_error() {
     this.content_matcher.getElementsByClassName("content_match_result")[0]!.textContent = `error computing hash`;
+  }
+  async init_core_chooser(elt:HTMLSelectElement) {
+    const cores = await (await fetch(`${this.base_url}/cores`)).json();
+    for (const core of cores.cores) {
+      const option = document.createElement("option");
+      option.value = core.core_platform;
+      option.dataset["coreName"] = core.core_name;
+      option.dataset["coreVersion"] = core.core_version;
+      option.dataset["corePlatform"] = core.core_platform;
+      option.textContent = `${core.core_platform} (${core.core_name})`;
+      elt.appendChild(option);
+    }
+  }
+  async update_work_bibinfo(work:Work) {
+    const core_chooser = document.querySelector("#work_info select[name=work_core_chooser]")! as HTMLSelectElement;
+    const work_name = document.querySelector("#work_info input[name=work_name]")! as HTMLInputElement;
+    const work_version = document.querySelector("#work_info input[name=work_version]")! as HTMLInputElement;
+    // TODO: fetch other bibliographic info fields...
+    core_chooser.value = work.work_platform;
+    work_name.value = work.work_name;
+    work_version.value = work.work_version;
+    // TODO: set them here...
+  }
+  clear_file_lists() {
+    this.file_lists.config.length = 0;
+    this.file_lists.dependency.length = 0;
+    this.file_lists.content.length = 0;
+    document.querySelectorAll("#work_info .instance-file-upload + ol").forEach((lst) => {lst.innerHTML = '';});
+  }
+  add_to_file_list(role:Role, filename:string, source:{existing:string} | {to_upload:File}) {
+    const is_existing = 'existing' in source;
+    const lst = document.querySelector(`#work_info input[data-target=${role}] + ol`)! as HTMLOListElement;
+    const file_record = {filename,source:is_existing ? source : {file:source.to_upload, upload:Upload.NotStarted, upload_progress:0, upload_result_id:null}};
+    const line_item = document.createElement("li");
+    line_item.innerHTML = `
+${filename} <button type="button" class="move-up">^</button> <button type="button" class="move-down">v</button> <button type="button" class="remove">X</button>
+`;
+    (line_item.querySelector("button.move-up")! as HTMLButtonElement).onclick = (_evt) => {
+      const idx = this.file_lists[role].indexOf(file_record);
+      if (idx > 0) {
+        const tmp = this.file_lists[role][idx-1];
+        this.file_lists[role][idx-1] = file_record;
+        this.file_lists[role][idx] = tmp;
+        lst.removeChild(line_item);
+        lst.insertBefore(line_item, lst.children[idx-1]);
+      }
+    };
+    (line_item.querySelector("button.move-down")! as HTMLButtonElement).onclick = (_evt) => {
+      const idx = this.file_lists[role].indexOf(file_record);
+      if (idx < this.file_lists[role].length-1) {
+        const tmp = this.file_lists[role][idx+1];
+        this.file_lists[role][idx+1] = file_record;
+        this.file_lists[role][idx] = tmp;
+        const swap_item = lst.children.item(idx+1)!;
+        lst.removeChild(swap_item);
+        lst.insertBefore(swap_item, line_item);
+      }
+    };
+    (line_item.querySelector("button.remove")! as HTMLButtonElement).onclick = (_evt) => {
+      const idx = this.file_lists[role].indexOf(file_record);
+      this.file_lists[role].splice(idx,1);
+      lst.removeChild(line_item);
+    };
+    const existing_note = document.createElement("span");
+    existing_note.textContent = is_existing ? "E" : "N";
+    line_item.appendChild(existing_note);
+    lst.appendChild(line_item);
+    this.file_lists[role].push(file_record);
+  }
+  async update_work_instanceenv_info(work:InstanceWork) {
+    const env_config = document.querySelector("#work_info textarea[name=env_config]")! as HTMLInputElement;
+    const full_instance:FullInstance = await (await fetch(`${this.base_url}/instances/${encodeURIComponent(work.instance_id)}`)).json();
+    env_config.value = JSON.stringify(full_instance.environment.environment_config);
+    this.clear_file_lists();
+    full_instance.objects.sort((a:ObjectLink,b:ObjectLink) => (a.object_role_index - b.object_role_index));
+    for (const lnk of full_instance.objects) {
+      this.add_to_file_list(lnk.object_role, lnk.file_filename, {existing:lnk.object_id});
+    }
+    // TODO make sure there is a hidden instance derived from field and update that
   }
 }
 
