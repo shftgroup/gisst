@@ -14,8 +14,8 @@ use uuid::Uuid;
 pub fn router() -> Router {
     Router::new()
         .route("/{id}", get(get_single_save))
-        .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_save))
+        .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
 
 async fn get_single_save(

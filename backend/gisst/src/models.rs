@@ -60,6 +60,7 @@ pub struct File {
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
     pub file_compressed_size: Option<i64>,
+    // TODO add creator field
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -140,6 +141,7 @@ pub struct Object {
     pub object_description: Option<String>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    // TODO add creator field
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -900,6 +902,11 @@ impl Work {
             .fetch_optional(conn)
             .await
     }
+    pub async fn get_by_metadata(conn: &mut PgConnection, work_name: &str, work_version: &str, work_platform:&str) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(Self, r#"SELECT * FROM work WHERE work_name = $1 AND work_version = $2 AND work_platform = $3"#, work_name, work_version, work_platform)
+            .fetch_optional(conn)
+            .await
+    }
 
     pub async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, Insert> {
         sqlx::query_as!(
@@ -1040,6 +1047,17 @@ pub struct Core {
 }
 
 impl Core {
+    pub async fn get_latest(conn:&mut sqlx::PgConnection) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(Self,r#"SELECT DISTINCT ON (core_name) core_name, core_version, core_metadata, core_platform, created_on
+FROM core
+ORDER BY core_name, created_on DESC, core_platform"#).fetch_all(conn).await
+    }
+    pub async fn get_versions(conn:&mut sqlx::PgConnection, core_name:&str) -> sqlx::Result<Vec<Self>> {
+        sqlx::query_as!(Self,r#"SELECT core_name, core_version, core_metadata, core_platform, created_on
+FROM core
+WHERE core_name=$1
+ORDER BY created_on DESC"#,core_name).fetch_all(conn).await
+    }
     pub async fn get(
         conn: &mut sqlx::PgConnection,
         name: &str,

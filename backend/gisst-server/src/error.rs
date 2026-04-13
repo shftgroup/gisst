@@ -68,6 +68,8 @@ pub enum ServerError {
     V86Clone(#[from] gisst::error::V86Clone),
     #[error("TUS upload too big to store metadata in postgres int")]
     UploadTooBig(std::num::TryFromIntError),
+    #[error("Route not yet implemented")]
+    NotYetImplemented,
     #[error("this should not be reachable!")]
     Unreachable,
 }
@@ -175,6 +177,7 @@ impl IntoResponse for ServerError {
             ServerError::Insert(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "database or index error")
             }
+            ServerError::NotYetImplemented => (StatusCode::INTERNAL_SERVER_ERROR, "not yet implemented"),
         };
 
         let base_url = crate::server::BASE_URL.get();
