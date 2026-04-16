@@ -2,3 +2,60 @@
 
 Easily embed any game in a browser or client, with some wrappers for showing saved states during this session and other cool stuff.
 
+* Initial setup (devcontainer)
+
+You need Docker installed to proceed.
+
+You need to run the following commands to have a working GISST installation.  If you're using a devcontainer, the postgres database and meilisearch fuzzy search endpoint will be run in separate containers.  All these commands should be run within the container from the directory containing this readme file.
+
+First, you should copy the devcontainer =.env= file and gisst-server configuration into your =backend/config= folder:
+
+#+BEGIN_SRC sh
+cp .devcontainer/devcontainer.env backend/.env
+cp .devcontainer/template.toml backend/config/local.toml
+#+END_SRC
+
+Next, build the frontend:
+
+#+BEGIN_SRC sh
+cd frontend
+npm i
+npm run build --workspaces --if-present
+npm run dist --workspaces --if-present
+#+END_SRC
+
+To run frontend tests you also need:
+
+#+BEGIN_SRC sh
+cd frontend
+npx playwright install-deps
+npx playwright install
+npm run test --workspaces --if-present
+#+END_SRC
+
+For a build where you want to test cores and not just html generation, you'd want to build the cores next.  You need a =psxbios= folder with the SCPH bios files and a =v86bios= folder with e.g. =seabios_HASH.bin= and friends, or you should modify the =manifest.json= not to use those.
+
+#+BEGIN_SRC sh
+# Unfortunately, we need the next three lines due to a bug in the docker-in-docker devcontainer feature.
+sudo update-alternatives --set iptables /usr/sbin/iptables-nft
+sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
+sudo dockerd &
+# If you had to run the above, you should probably run these in a fresh terminal to keep things tidy:
+sudo docker build -t gisst-dist -f Dockerfile.dist .
+sudo docker volume create gisst-build
+sudo docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -v gisst-build:/gisst-build gisst-dist
+#+END_SRC
+
+On subsequent builds pass =-e GET_ASSETS=0= to skip downloading the large asset bundle.
+
+After that, you can set up the initial testing database and run the gisst server:
+
+#+BEGIN_SRC sh
+cd backend
+source .env
+cargo sqlx migrate run
+./load_examples.sh
+cargo run --bin gisst-server --features dummy_auth
+#+END_SRC
+
+The =dummy_auth= feature is necessary since we don't want to hit google auth in our local testing server.

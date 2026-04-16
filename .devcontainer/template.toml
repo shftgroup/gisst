@@ -1,0 +1,18 @@
+[database]
+database_url = "postgresql://postgres:postgres@db:5432/gisstdb"
+
+[http]
+listen_address = "0.0.0.0"
+listen_port = 3030
+dev_ssl = false
+base_url = "https://localhost:3000"
+
+[env]
+jaeger_endpoint = "http://jaeger:4317/"
+prometheus_endpoint = "http://prometheus:9090/"
+
+[search]
+meili_url = "http://meili:7700"
+meili_external_url = "https://localhost:3000/search"
+meili_api_key = "devcontainer_testkey"
+meili_search_key = "devcontainer_testkey"
