@@ -28,6 +28,7 @@ To run frontend tests you also need:
 
 #+BEGIN_SRC sh
 cd frontend
+npx playwright install-deps
 npx playwright install
 npm run test --workspaces --if-present
 #+END_SRC
