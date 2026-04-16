@@ -8,20 +8,24 @@ services:
     environment:
       PODMAN_USERNS: keep-id
     volumes:
-      - ../../:/workspaces:cached,Z
+      - ../:/workspace:cached,Z
       - ./certs:/certs:Z
     command: sleep infinity
     expose:
       - "3000"
+      - "5173"
     ports:
       - "3000:443"
       - "3000:443/udp"
+      - "5173:5173"
     depends_on:
       - db
       - meili
+      - meilitest
     links:
       - db
       - meili
+      - meilitest
   db:
     image: postgres:16
     restart: unless-stopped
@@ -46,6 +50,15 @@ services:
       - "7700"
     ports:
       - "7700:7700"
+  meilitest:
+    image: getmeili/meilisearch:latest
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: test-api-key
+    expose:
+      - "7701"
+    ports:
+      - "7701:7700"
 volumes:
   postgres-data:
   meili-data:

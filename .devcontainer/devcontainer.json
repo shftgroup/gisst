@@ -2,7 +2,7 @@
   "name": "GISST Dev",
   "dockerComposeFile": "docker-compose.yml",
   "service":"devcontainer",
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "workspaceFolder": "/workspace",
   "remoteEnv": {
     "HOST_PROJECT_PATH": "${localWorkspaceFolder}"
   },
