@@ -3,9 +3,6 @@ members = ["gisst", "gisst-server", "gisst-cli", "ingest", "rdb-sys"]
 resolver = "2"
 
 [workspace.package]
-edition = "2026"
-
-[workspace.package]
 version = "0.1.0"
 edition = "2024"
 
