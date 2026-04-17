@@ -150,6 +150,7 @@ async fn upgrade_envs_in_place(
             }
         }
         tx.commit().await?;
+        println!("Performing destructive changes!");
     }
     Ok(())
 }
@@ -288,7 +289,6 @@ async fn upgrade_env(
             println!("Aborting operation");
             return Ok(());
         }
-        println!("Performing destructive changes!");
         upgrade_envs_in_place(db, envs, &name, core_hash, &deps).await?;
     } else {
         upgrade_envs_by_clone(db, indexer, envs, &name, core_hash, &deps).await?;
@@ -315,8 +315,13 @@ async fn add_core(
     let core_hash = core_hash.trim();
     let core_meta: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
+    dbg!(&core_meta);
     let name = core_meta["core_name"].as_str().unwrap().to_string();
-    let core_platform = core_meta["platform"].as_str().unwrap().to_string();
+    let core_platforms:Vec<_> = if name == "v86" {
+        core_meta[&name]["platforms"].as_array().unwrap().into_iter().map(|s| s.as_str().unwrap().to_string()).collect()
+    } else {
+        core_meta["retroarch"]["cores"][&name]["platforms"].as_array().unwrap().into_iter().map(|s| s.as_str().unwrap().to_string()).collect()
+    };
     let entrypoints: Vec<_> = core_meta["entrypoints"]
         .as_array()
         .unwrap()
@@ -331,14 +336,16 @@ async fn add_core(
         .filter_map(|x| x.as_str())
         .map(std::string::ToString::to_string)
         .collect();
-    let core = Core {
-        core_name: name.clone(),
-        core_version: core_hash.to_string(),
-        core_platform,
-        core_metadata: core_meta,
-        created_on: now,
-    };
-    Core::insert(&mut tx, core).await?;
+    for core_platform in core_platforms {
+        let core = Core {
+            core_name: name.clone(),
+            core_version: core_hash.to_string(),
+            core_platform,
+            core_metadata: core_meta.clone(),
+            created_on: now,
+        };
+        Core::insert(&mut tx, core).await?;
+    }
     // make a core record with name and version (hash) derived from core meta path;
     // then, make a file and corefilelink for each entrypoint, dependency, and config file
     for (role, idx, file) in entrypoints

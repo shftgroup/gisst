@@ -52,8 +52,8 @@ pub enum GISSTCliError {
     SearchIndex(#[from] gisst::error::SearchIndex),
     #[error("Integer too big")]
     IntegerTooBig(#[from] std::num::TryFromIntError),
-    #[error("No defined core {0}:{1}")]
-    CoreNotFound(String, String),
+    #[error("No defined core {0}:{1}:{2}")]
+    CoreNotFound(String, String, String),
 }
 
 #[derive(Debug, Parser)]

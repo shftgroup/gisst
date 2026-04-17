@@ -435,6 +435,7 @@ async fn create_metadata_records(
         environment_id: Uuid::new_v4(),
         environment_name: work.work_name.clone(),
         environment_framework: Framework::RetroArch,
+        environment_platform: platform.to_string(),
         environment_core_name: core_name.to_string(),
         environment_core_version: core_version.to_string(),
         environment_derived_from: None,

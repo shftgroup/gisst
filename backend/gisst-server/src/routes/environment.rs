@@ -16,6 +16,7 @@ struct CreateEnvironment {
     environment_id: Option<Uuid>,
     environment_name: String,
     environment_framework: Framework,
+    environment_platform: String,
     environment_core_name: String,
     environment_core_version: String,
     #[serde(deserialize_with = "crate::utils::uuid_or_empty_string")]
@@ -46,6 +47,7 @@ async fn create_or_derive_environment(
         // if this env differs from existing, derive a new env
         if env.environment_name == existing.environment_name
             && env.environment_framework == existing.environment_framework
+            && env.environment_platform == existing.environment_platform
             && env.environment_core_name == existing.environment_core_name
             && env.environment_core_version == existing.environment_core_version
             && env.environment_config == existing.environment_config
@@ -59,6 +61,7 @@ async fn create_or_derive_environment(
                         environment_id: Uuid::new_v4(),
                         environment_name: env.environment_name,
                         environment_framework: env.environment_framework,
+                        environment_platform: env.environment_platform,
                         environment_core_name: env.environment_core_name,
                         environment_core_version: env.environment_core_version,
                         environment_derived_from: Some(existing.environment_id),
@@ -79,6 +82,7 @@ async fn create_or_derive_environment(
                         environment_id: Uuid::new_v4(),
                         environment_name: env.environment_name,
                         environment_framework: env.environment_framework,
+                        environment_platform: env.environment_platform,
                         environment_core_name: env.environment_core_name,
                         environment_core_version: env.environment_core_version,
                         environment_derived_from: env.environment_derived_from,

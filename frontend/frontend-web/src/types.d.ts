@@ -19,6 +19,7 @@ export interface Environment {
   environment_framework:string,
   environment_id:string,
   environment_name:string
+  environment_platform:string
 }
 export interface ObjectLink {
   object_role:string,

@@ -1,7 +1,8 @@
 {
   "environment_id": "00000000000000000000000000000067",
   "environment_name": "Game Boy (Sameboy)",
+  "environment_platform": "Nintendo Game Boy",
   "environment_framework": "retroarch",
   "environment_core_name": "sameboy",
-  "environment_core_version": "ab720fa78fb4047b7468f5810aa2456d98a64c37"
+  "environment_core_version": "e9b4fff1d85a7c63267406f2f8224c253f5f1402"
 }

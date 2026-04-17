@@ -46,6 +46,7 @@ const instanceDataHandler:MockHandler = {
       environment:{
         enviroment_id: "1",
         environment_name: "work a environment",
+        environment_platform: "Nintendo Entertainment System",
         environment_framework: "retroarch",
         environment_core_name: "fceumm",
         environment_core_version: "some_hash",

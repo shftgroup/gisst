@@ -41,6 +41,7 @@ pub struct Environment {
     pub environment_id: Uuid,
     pub environment_name: String,
     pub environment_framework: Framework,
+    pub environment_platform: String,
     pub environment_core_name: String,
     pub environment_core_version: String,
     pub environment_derived_from: Option<Uuid>,
@@ -540,6 +541,7 @@ impl Environment {
             Self,
             r#"SELECT environment_id, environment_name,
                   environment_framework as "environment_framework:_",
+                  environment_platform,
                   environment_core_name, environment_core_version,
                   environment_derived_from, environment_config, created_on
                FROM environment
@@ -559,6 +561,7 @@ impl Environment {
             Self,
             r#"SELECT environment_id, environment_name,
                   environment_framework as "environment_framework:_",
+                  environment_platform,
                   environment_core_name, environment_core_version,
                   environment_derived_from, environment_config, created_on
                FROM environment
@@ -574,9 +577,10 @@ impl Environment {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO environment
-               VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+               VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
                RETURNING environment_id, environment_name,
                   environment_framework as "environment_framework:_",
+                  environment_platform,
                   environment_core_name, environment_core_version,
                   environment_derived_from, environment_config, created_on"#,
             model.environment_id,
@@ -586,7 +590,8 @@ impl Environment {
             model.environment_core_version,
             model.environment_derived_from,
             model.environment_config,
-            model.created_on
+            model.created_on,
+            model.environment_platform
         )
         .fetch_one(conn)
         .await
@@ -1048,9 +1053,9 @@ pub struct Core {
 
 impl Core {
     pub async fn get_latest(conn:&mut sqlx::PgConnection) -> sqlx::Result<Vec<Self>> {
-        sqlx::query_as!(Self,r#"SELECT DISTINCT ON (core_name) core_name, core_version, core_metadata, core_platform, created_on
+        sqlx::query_as!(Self,r#"SELECT DISTINCT ON (core_name, core_platform) core_name, core_version, core_metadata, core_platform, created_on
 FROM core
-ORDER BY core_name, created_on DESC, core_platform"#).fetch_all(conn).await
+ORDER BY core_name, core_platform, created_on DESC"#).fetch_all(conn).await
     }
     pub async fn get_versions(conn:&mut sqlx::PgConnection, core_name:&str) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(Self,r#"SELECT core_name, core_version, core_metadata, core_platform, created_on
@@ -1062,14 +1067,16 @@ ORDER BY created_on DESC"#,core_name).fetch_all(conn).await
         conn: &mut sqlx::PgConnection,
         name: &str,
         version: &str,
+        platform: &str,
     ) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
             r#"SELECT core_name, core_version, core_metadata, core_platform, created_on
 FROM core
-WHERE core_name = $1 AND core_version = $2"#,
+WHERE core_name = $1 AND core_version = $2 AND core_platform = $3"#,
             name,
-            version
+            version,
+            platform
         )
         .fetch_optional(conn)
         .await

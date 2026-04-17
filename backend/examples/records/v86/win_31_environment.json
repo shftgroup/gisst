@@ -1,7 +1,8 @@
 {
   "environment_id": "00000000000000000000000000000003",
   "environment_name": "Windows 3.1",
+  "environment_platform": "x86 PC",
   "environment_framework": "v86",
   "environment_core_name": "v86",
-  "environment_core_version": "5ffecd7cc3023000f30de7e0d6041693b288fe57"
+  "environment_core_version": "649baf4de6af7ae3c8812995460d79872195551d"
 }

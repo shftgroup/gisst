@@ -118,6 +118,7 @@ export interface ReplayFileLink {
 export interface Environment {
     environment_id: string,
     environment_name: string,
+    environment_platform: string,
     environment_framework: string,
     environment_core_name: string,
     environment_core_version: string,

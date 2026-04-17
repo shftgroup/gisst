@@ -586,6 +586,7 @@ interface Instance {
 interface Environment {
   environment_id: string,
   environment_name: string,
+  environment_platform: string,
   environment_framework: string,
   environment_core_name: string,
   environment_core_version: string,
@@ -695,6 +696,7 @@ class GISSTNewInstance extends HTMLElement {
     };
     this.environment = {
       environment_id: "",
+      environment_platform: "",
       environment_name: "",
       environment_framework: "",
       environment_core_name: "",

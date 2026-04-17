@@ -12,7 +12,7 @@
       "vgabios.bin": "v86bios/vgabios_c7260820bac7d2d5308baa22668f111dbb520db9.bin",
       "bochs-vgabios.bin": "v86bios/bochs-vgabios_d04f227c790a0e4d32f3cd27bad9341690de5cc6.bin"
     },
-    "platform": "x86 PC"
+    "platforms": ["x86 PC"]
   },
   "retroarch": {
     "repo": "https://github.com/libretro/retroarch",
@@ -38,12 +38,12 @@
       "fceumm": {
         "repo": "https://github.com/libretro/libretro-fceumm",
         "version": "5cd4a43e16a7f3cd35628d481c347a0a98cfdfa2",
-        "platform": "Nintendo Entertainment System"
+        "platforms": ["Nintendo Entertainment System", "Nintendo Famicom"]
       },
       "gambatte": {
         "repo": "https://github.com/libretro/gambatte-libretro",
         "version": "6924c76ba03dadddc6e97fa3660f3d3bc08faa94",
-        "platform": "Nintendo Game Boy"
+        "platforms": ["Nintendo Game Boy", "Nintendo Game Boy Color"]
       },
       "pcsx_rearmed": {
         "repo": "https://github.com/libretro/pcsx_rearmed",
@@ -53,30 +53,30 @@
           "scph5501.bin":"psxbios/scph5501_0555c6fae8906f3f09baf5988f00e55f88e9f30b.bin",
           "scph5502.bin":"psxbios/scph5502_f8de9325fc36fcfa4b29124d291c9251094f2e54.bin"
         },
-        "platform": "Sony Playstation"
+        "platforms": ["Sony Playstation"]
       },
       "sameboy": {
         "repo": "https://github.com/LIJI32/SameBoy",
         "version": "c50fdfd222ac5a2e07cf9c6f43c645e2dbe0a62d",
         "rgbds_repo": "https://github.com/gbdev/rgbds.git",
         "rgbds_version": "d961c697d740728f05895a2faec0dd755351e28b",
-        "platform": "Nintendo Game Boy"
+        "platforms": ["Nintendo Game Boy", "Nintendo Game Boy Color"]
       },
       "snes9x": {
         "repo": "https://github.com/libretro/snes9x",
         "version": "5a40cd5514e63e691e39141d64267798357a1424",
-        "platform": "Super Nintendo Entertainment System"
+        "platforms": ["Super Nintendo Entertainment System", "Nintendo Super Famicom"]
       },
       "vba_next": {
         "repo": "https://github.com/JoeOsborn/vba-next",
         "version": "e437f6c847f88161b489a7a90aba1bfe70df9244",
-        "platform": "Nintendo Game Boy Advance"
+        "platforms": ["Nintendo Game Boy Advance"]
       },
       "vice_x64": {
         "repo": "https://github.com/libretro/vice-libretro",
         "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
         "extra_build_args": ["EMUTYPE=x64"],
-        "platform": "Commodore 64"
+        "platforms": ["Commodore 64"]
       },
       "extra_core_ci_kick": {
         "skip": "true",
