@@ -18,7 +18,7 @@ rustls = "0.23.25"
 bytes = { version = "1.4.0", features = ["serde"] }
 config = {  version = "0.15.11", features = ["toml"], default-features = false }
 futures = "0.3.28"
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "macros"], default-features=false }
+sqlx = { version = "0.8", features = ["migrate","runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "macros"], default-features=false }
 minijinja = {version= "2.9.0", features=["builtins", "macros", "json", "loader", "urlencode"]}
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.159", features = ["derive"] }
