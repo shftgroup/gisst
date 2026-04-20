@@ -795,6 +795,7 @@ class GISSTNewInstance extends HTMLElement {
 <p>You can find bibliographic data by attempting to match your content file against a community-developed database (Method 1), or you can search for a similar existing work already in the GISST system (Method 2). Using either method will populate the fields below, or you can skip both methods and create a new work by hand.</p>
 <label for="match_core_chooser">Method 1: What platform is this work for?</label>
 <select name="match_core_chooser" class="core_chooser">
+  <option value="(init)">Select core...</option>
 </select>
 <label for="content_match_upload">Method 1: Search using the given main content file:</label>
 <input type="file" class="content-match-upload"></input>
@@ -806,18 +807,23 @@ class GISSTNewInstance extends HTMLElement {
     const content_match_upload = this.content_matcher.getElementsByClassName("content-match-upload")[0]! as HTMLInputElement;
     content_match_upload.disabled = true;
     let match_platform:string|null = null;
-    (this.content_matcher.querySelector(".core_chooser")! as HTMLSelectElement).onchange = (event) => {
+    const match_core_chooser = this.content_matcher.querySelector(".core_chooser")! as HTMLSelectElement;
+    match_core_chooser.onchange = (event) => {
       content_match_upload.disabled = false;
+      const first_option = match_core_chooser.firstElementChild! as HTMLOptionElement;
+      if (first_option.value == "(init)") {
+        match_core_chooser.removeChild(first_option);
+      }
       match_platform = (event.target! as HTMLInputElement).value!;
     };
     content_match_upload.onchange = (event) => {
       const files = (event.target! as HTMLInputElement).files ?? [];
       if (files.length == 1 && match_platform != null) {
         const file = files[0];
-        const filename = file.name;
+        self.clear_file_lists();
         compute_hash(file)
-          .then((hash) => self.content_check_hash(match_platform!, filename, hash))
-          .catch(() => self.content_check_show_error());
+          .then((hash) => self.content_check_hash(match_platform!, file, hash))
+          .catch((err) => {self.content_check_show_error(err)});
       }
     };
     const metadata_form = document.createElement("form");
@@ -830,7 +836,7 @@ class GISSTNewInstance extends HTMLElement {
 <input name="work_name"></input>
 <label for="work_version">Version:</label>
 <input name="work_version"></input>
-<label for="env_config" id="env_config">Environment config:</label>
+<label for="env_config">Environment config:</label>
 <textarea name="env_config"></textarea>
 <label for="instance_dep_upload">Instance dependencies:</label>
 <input type="file" name="instance_dep_upload" class="instance-file-upload" data-target="dependency"></input>
@@ -841,7 +847,8 @@ class GISSTNewInstance extends HTMLElement {
 <label for="instance_content_upload">Instance content files:</label>
 <input type="file" name="instance_content_upload" class="instance-file-upload" data-target="content"></input>
 <ol></ol>
-<button class="submit" type="button">Create Instance</button>
+    <button class="submit" type="button">Create Instance</button>
+    <p class="submit-status"></p>
 `;
     const core_chooser = metadata_form.getElementsByClassName("core_chooser")[0]! as HTMLSelectElement;
     this.init_core_chooser(core_chooser);
@@ -853,15 +860,15 @@ class GISSTNewInstance extends HTMLElement {
       self.environment.environment_core_version = opt.dataset["coreVersion"]!;
       self.environment.environment_framework = self.environment.environment_core_name == "v86" ? "v86" : "retroarch";
     };
-    (metadata_form.querySelector('input [name="work_name"]')! as HTMLInputElement).onchange = (evt) => {
+    (metadata_form.querySelector('input[name="work_name"]')! as HTMLInputElement).onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
       self.work.work_name = target.value;
     }
-    (metadata_form.querySelector('input [name="work_version"]')! as HTMLInputElement).onchange = (evt) => {
+    (metadata_form.querySelector('input[name="work_version"]')! as HTMLInputElement).onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
       self.work.work_version = target.value;
     }
-    (metadata_form.querySelector('input [name="env_config"]')! as HTMLInputElement).onchange = (evt) => {
+    (metadata_form.querySelector('textarea[name="env_config"]')! as HTMLInputElement).onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
       self.environment.environment_config = JSON.parse(target.value);
     }
@@ -878,6 +885,7 @@ class GISSTNewInstance extends HTMLElement {
       };
     }
     const button = metadata_form.querySelector("button.submit")! as HTMLButtonElement;
+    const status = metadata_form.querySelector("p.submit-status")! as HTMLParagraphElement;
     button.onclick = async () => {
       let ready = true;
       // go through all files, make sure each one is uploaded or start the upload
@@ -898,12 +906,14 @@ class GISSTNewInstance extends HTMLElement {
         }
       }
       if (!ready) {
+        status.textContent = "Please wait until all objects have been successfully uploaded";
         return;
       }
       // try to create environment and work records (but no problem if they already exist)
+      status.textContent = "Creating records...";
       try {
-        const work_id = (await (await fetch(`{this.base_url}/works/create`, {method:'POST', cache:'no-cache', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify(this.work)})).json()).work_id;
-        const environment_id = (await (await fetch(`{this.base_url}/environments/create`, {method:'POST', cache:'no-cache', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify(this.environment)})).json()).environment_id;
+        const work_id = (await (await fetch(`${this.base_url}/works/create`, {method:'POST', cache:'no-cache', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify(this.work)})).json()).work_id;
+        const environment_id = (await (await fetch(`${this.base_url}/environments/create`, {method:'POST', cache:'no-cache', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify(this.environment)})).json()).environment_id;
         this.instance.work_id = work_id;
         this.instance.environment_id = environment_id;
         const configs = [];
@@ -918,12 +928,16 @@ class GISSTNewInstance extends HTMLElement {
         for (const cont of this.file_lists.content) {
           content.push('existing' in cont.source ? cont.source.existing : cont.source.upload_result_id);
         }
-        const instance_id = (await (await fetch(`{this.base_url}/instances/create`, {method:'POST', cache:'no-cache', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({instance:this.instance, configs, dependencies, content})})).json()).instance_id;
+        const instance_id = (await (await fetch(`${this.base_url}/instances/create`, {method:'POST', cache:'no-cache', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({instance:this.instance, configs, dependencies, content})})).json()).instance_id;
         // redirect to new instance id if successful
         window.location.href = `${self.base_url}/instances/${instance_id}/all`;
       } catch (error) {
-        console.log(error);
-        alert(error);
+        console.error(error);
+        if (error instanceof Error) {
+          status.textContent = error.toString();
+        } else {
+          status.textContent = JSON.stringify(error);
+        }
       }
     };
     const contents = document.createElement("div");
@@ -932,31 +946,44 @@ class GISSTNewInstance extends HTMLElement {
     contents.appendChild(metadata_form);
     this.appendChild(contents);
   }
-  async content_check_hash(platform:string, filename:string, hash:string) {
-    this.content_matcher.getElementsByClassName("content_match_result")[0]!.textContent = `${filename}:${hash}`;
+  async content_check_hash(platform:string, file:File, hash:string) {
+    const filename = file.name;
+    const match_result = this.content_matcher.getElementsByClassName("content_match_result")[0]!;
+    match_result.textContent = `${filename}:${hash}`;
     const platform_esc = encodeURIComponent(platform);
     const filename_esc = encodeURIComponent(filename);
     const hash_esc = encodeURIComponent(hash);
+    const core_chooser = document.querySelector("#work_info select[name=work_core_chooser]")! as HTMLSelectElement;
+    const match_core_chooser = this.content_matcher.querySelector(".core_chooser")! as HTMLSelectElement;
     try {
       const resp = await (await fetch(`${this.base_url}/lookup-work?platform=${platform_esc}&filename=${filename_esc}&hash=${hash_esc}`)).json();
       // resp has work bib fields
-      this.update_work_bibinfo(resp as WorkBib);
       // and if there is an existing instance we should use that
       if (resp.instance_id) {
+        this.update_work_bibinfo(resp as WorkBib);
         this.update_work_instanceenv_info(resp.instance_id);
+        match_result.textContent = "Matched existing instance";
+      } else {
+        core_chooser.selectedIndex = match_core_chooser.selectedIndex;
+        this.update_work_bibinfo(resp as WorkBib);
+        match_result.textContent = "Matched existing work";
+        this.add_to_file_list("content", file.name, {to_upload:file});
       }
     } catch (error) {
-      console.log("No work found");
+      console.log("No work found",error);
+      core_chooser.selectedIndex = match_core_chooser.selectedIndex;
       this.update_work_bibinfo({
         work_name: filename,
         work_platform: platform,
         work_version: "",
         work_derived_from: null,
       });
-      this.content_matcher.getElementsByClassName("content_match_result")[0]!.textContent = "No match found";
+      match_result.textContent = "No match found";
+      this.add_to_file_list("content", file.name, {to_upload:file});
     }
   }
-  content_check_show_error() {
+  content_check_show_error(err:Error) {
+    console.error(err);
     this.content_matcher.getElementsByClassName("content_match_result")[0]!.textContent = `error computing hash`;
   }
   async init_core_chooser(elt:HTMLSelectElement) {
@@ -971,13 +998,14 @@ class GISSTNewInstance extends HTMLElement {
       elt.appendChild(option);
     }
   }
-  async update_work_bibinfo(work:Work) {
+  async update_work_bibinfo(work:WorkBib) {
     const core_chooser = document.querySelector("#work_info select[name=work_core_chooser]")! as HTMLSelectElement;
     const work_name = document.querySelector("#work_info input[name=work_name]")! as HTMLInputElement;
     const work_version = document.querySelector("#work_info input[name=work_version]")! as HTMLInputElement;
     // TODO: fetch other bibliographic info fields...
-    // TODO this might not work for real since many cores may share one platform
-    core_chooser.value = work.work_platform;
+    if (core_chooser.selectedOptions.length == 0) {
+      core_chooser.selectedIndex = Array.from(core_chooser.options).findIndex((o) => o.dataset["platform"] == work.work_platform);
+    }
     work_name.value = work.work_name;
     work_version.value = work.work_version;
     this.work.work_platform = work.work_platform;
@@ -1004,37 +1032,39 @@ class GISSTNewInstance extends HTMLElement {
     button.disabled = true;
     progress.max = 100;
     try {
-    const hash = await compute_hash(src.file);
-    const file_id = await (new Promise((resolve,reject) => {
-      const upload = new tus.Upload(src.file, {
-        endpoint: `${this.base_url}/resources`,
-        retryDelays: [0, 3000, 5000, 10000],
-        chunkSize: 10485760,
-        metadata: {
-          filename: file.filename,
-          hash,
-        },
-        onError: reject,
-        onProgress: (uploaded,total) => {
-          progress.value = ((uploaded/total) * 100);
-        },
-        onSuccess: () => {
-          const url_parts = upload.url!.split("/");
-          const uuid_string = url_parts[url_parts.length-1];
-          src.upload_result_id = uuid_string;
-          resolve(uuid_string)
-        }
-      });
-      upload.start();
-    }));
-      const object_id = (await (await fetch(`{this.base_url}/objects/create`, {method:'POST', cache:'no-cache', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({
-        file_id,
-        object_description:file.filename,
-      })})).json()).object_id;
+      const hash = await compute_hash(src.file);
+      const file_id = await (new Promise((resolve,reject) => {
+        const upload = new tus.Upload(src.file, {
+          endpoint: `${this.base_url}/resources`,
+          retryDelays: [0, 3000, 5000, 10000],
+          chunkSize: 10485760,
+          metadata: {
+            filename: file.filename,
+            hash,
+          },
+          onError: reject,
+          onProgress: (uploaded, total) => {
+            progress.value = ((uploaded / total) * 100);
+          },
+          onSuccess: () => {
+            const url_parts = upload.url!.split("/");
+            const uuid_string = url_parts[url_parts.length - 1];
+            progress.value = 100;
+            src.upload_result_id = uuid_string;
+            resolve(uuid_string)
+          }
+        });
+        upload.start();
+      }));
+      const object_id = (await (await fetch(`${this.base_url}/objects/create`, {
+        method: 'POST', cache: 'no-cache', headers: { 'Content-Type': 'application/json', Accept:'application/json'}, body:JSON.stringify({
+          file_id,
+          object_description:file.filename,
+        })})).json()).object_id;
       src.upload = Upload.Finished;
       src.upload_result_id = object_id;
     } catch (error) {
-      console.log(error);
+      console.error(error);
       button.disabled = false;
       button.textContent = "Retry";
       src.upload = Upload.NotStarted;
@@ -1118,6 +1148,11 @@ ${filename} <button type="button" class="move-up">^</button> <button type="butto
       this.add_to_file_list(lnk.object_role, lnk.file_filename, {existing:lnk.object_id});
     }
     this.environment = full_instance.environment;
+    const core_chooser = document.querySelector("#work_info select[name=work_core_chooser]")! as HTMLSelectElement;
+    core_chooser.selectedIndex = Array.from(core_chooser.options).findIndex((o) => 
+      o.dataset["coreName"] == this.environment.environment_core_name &&
+        o.dataset["corePlatform"] == this.environment.environment_platform
+    );
     this.instance = full_instance.info;
     this.work = full_instance.work;
     // TODO: fetch other bibliographic info fields...
