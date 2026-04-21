@@ -1,7 +1,7 @@
 [package]
 name                    = "gisst"
-version                 = "0.1.0"
-edition                 = "2024"
+version.workspace = true
+edition.workspace = true
 
 [features]
 default=[]
@@ -9,12 +9,9 @@ fatfs_logging=["fatfs/log_level_trace"]
 
 [dependencies]
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "macros", "bigdecimal"], default-features=false }
-time                    = { version = "0.3.21", features = ["serde", "parsing"] }
 uuid                    = { version = "1.8", features = ["serde", "v4"] }
 serde                   = { version = "1.0.159", features = ["derive"] }
-serde_json              = { version = "1.0.96", features = ["raw_value"] }
 thiserror               = "2.0.12"
-async-trait             = "0.1.68"
 log                     = "0.4.17"
 tokio                   = { version = "1.27.0", features = ["full"] }
 md-5                    = "0.10"
@@ -22,14 +19,13 @@ bytes                   = { version = "1.4.0", features = ["serde"] }
 async-compression       = { version = "0.4", features = ["tokio", "gzip", "zstdmt"] }
 chrono = {version = "0.4.28", features = ["serde"]}
 serde_with = { version = "3.3.0", features = ["base64"] }
-base64 = "0.22.1"
 tracing = "0.1.40"
 tree_magic_mini = {version="3.1.6", features=["with-gpl-data"]}
 fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="4eccb50d011146fbed20e133d33b22f3c27292e7"}
 mbrman = "0.5.2"
 fscommon = "0.1.1"
 zip = "2.1.2"
-opentelemetry = "0.29.1"
+opentelemetry = "0.31"
 num-traits = "0.2.19"
 meilisearch-sdk = "0.28.0"
 futures = "0.3.31"
