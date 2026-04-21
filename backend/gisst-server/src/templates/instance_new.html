@@ -8,6 +8,6 @@
 
 {% block content %}
 <div class="container">
-  <gisst-new-instance base-url="{{ base_url | safe }}" >new instance UI goes here</gisst-new-instance>
+  <gisst-new-instance base-url="{{ base_url | safe }}" search-url="{{ search_url | safe }}" search-key="{{ search_key }}"></gisst-new-instance>
 </div>
 {% endblock %}

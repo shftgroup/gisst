@@ -561,7 +561,7 @@ interface WorkBib {
   work_name: string,
   work_platform: string,
   work_version: string,
-  work_derived_from: string | null,
+  work_derived_from: string,
 }
 
 interface Work extends WorkBib {
@@ -579,8 +579,8 @@ interface Instance {
   environment_id: string,
   instance_config: object | null,
   created_on: Date,
-  derived_from_instance: string | null,
-  derived_from_state: string | null
+  derived_from_instance: string,
+  derived_from_state: string
 }
 
 interface Environment {
@@ -590,7 +590,7 @@ interface Environment {
   environment_framework: string,
   environment_core_name: string,
   environment_core_version: string,
-  environment_derived_from: string | null,
+  environment_derived_from: string,
   environment_config: object | null,
   created_on: Date
 }
@@ -683,7 +683,7 @@ class GISSTNewInstance extends HTMLElement {
       work_name: "",
       work_version: "",
       work_platform: "",
-      work_derived_from: null
+      work_derived_from: ""
     };
     this.instance = {
       instance_id: "",
@@ -691,8 +691,8 @@ class GISSTNewInstance extends HTMLElement {
       environment_id: "",
       instance_config: null,
       created_on: new Date(),
-      derived_from_instance: null,
-      derived_from_state: null,
+      derived_from_instance: "",
+      derived_from_state: "",
     };
     this.environment = {
       environment_id: "",
@@ -701,7 +701,7 @@ class GISSTNewInstance extends HTMLElement {
       environment_framework: "",
       environment_core_name: "",
       environment_core_version: "",
-      environment_derived_from: null,
+      environment_derived_from: "",
       environment_config: null,
       created_on: new Date()
     };
@@ -856,6 +856,7 @@ class GISSTNewInstance extends HTMLElement {
       // update work platform, environment core
       const opt = core_chooser.selectedOptions[0]! as HTMLOptionElement;
       self.work.work_platform = opt.dataset["corePlatform"]!;
+      self.environment.environment_platform = self.work.work_platform;
       self.environment.environment_core_name = opt.dataset["coreName"]!;
       self.environment.environment_core_version = opt.dataset["coreVersion"]!;
       self.environment.environment_framework = self.environment.environment_core_name == "v86" ? "v86" : "retroarch";
@@ -863,6 +864,7 @@ class GISSTNewInstance extends HTMLElement {
     (metadata_form.querySelector('input[name="work_name"]')! as HTMLInputElement).onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
       self.work.work_name = target.value;
+      self.environment.environment_name = target.value;
     }
     (metadata_form.querySelector('input[name="work_version"]')! as HTMLInputElement).onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
@@ -870,7 +872,7 @@ class GISSTNewInstance extends HTMLElement {
     }
     (metadata_form.querySelector('textarea[name="env_config"]')! as HTMLInputElement).onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
-      self.environment.environment_config = JSON.parse(target.value);
+      self.environment.environment_config = (target.value == "" || target.value == "null") ? {} : JSON.parse(target.value);
     }
     // other biblio stuff
 
@@ -930,7 +932,7 @@ class GISSTNewInstance extends HTMLElement {
         }
         const instance_id = (await (await fetch(`${this.base_url}/instances/create`, {method:'POST', cache:'no-cache', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({instance:this.instance, configs, dependencies, content})})).json()).instance_id;
         // redirect to new instance id if successful
-        window.location.href = `${self.base_url}/instances/${instance_id}/all`;
+        window.location.href = `${self.base_url}/instances/${instance_id}`;
       } catch (error) {
         console.error(error);
         if (error instanceof Error) {
@@ -976,7 +978,7 @@ class GISSTNewInstance extends HTMLElement {
         work_name: filename,
         work_platform: platform,
         work_version: "",
-        work_derived_from: null,
+        work_derived_from: "",
       });
       match_result.textContent = "No match found";
       this.add_to_file_list("content", file.name, {to_upload:file});
@@ -1140,8 +1142,8 @@ ${filename} <button type="button" class="move-up">^</button> <button type="butto
   }
   async update_work_instanceenv_info(instance_id:string) {
     const env_config = document.querySelector("#work_info textarea[name=env_config]")! as HTMLInputElement;
-    const full_instance:FullInstance = await (await fetch(`${this.base_url}/instances/${encodeURIComponent(instance_id)}`)).json();
-    env_config.value = JSON.stringify(full_instance.environment.environment_config);
+    const full_instance:FullInstance = await (await fetch(`${this.base_url}/instances/${encodeURIComponent(instance_id)}`, {headers:[["Accept","application/json"]]})).json();
+    env_config.value = JSON.stringify(full_instance.environment.environment_config || {});
     this.clear_file_lists();
     full_instance.objects.sort((a:ObjectLink,b:ObjectLink) => (a.object_role_index - b.object_role_index));
     for (const lnk of full_instance.objects) {

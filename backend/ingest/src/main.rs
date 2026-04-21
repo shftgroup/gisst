@@ -513,9 +513,8 @@ async fn create_playlist_instance_objects(
     )
     .await?;
     Object::link_object_to_instance(conn, playlist_id, instance_id, ObjectRole::Content, 0).await?;
-    let mut c_idx = 1;
     info!("inserting playlist objects {path:?}");
-    for file in files_of_playlist(roms, path)? {
+    for (c_idx, file) in files_of_playlist(roms, path)?.into_iter().enumerate() {
         let file_id = insert_file_object(
             conn,
             storage_root,
@@ -528,9 +527,14 @@ async fn create_playlist_instance_objects(
         )
         .await?;
         info!("linking {file_id} with {instance_id}");
-        Object::link_object_to_instance(conn, file_id, instance_id, ObjectRole::Content, c_idx)
-            .await?;
-        c_idx += 1;
+        Object::link_object_to_instance(
+            conn,
+            file_id,
+            instance_id,
+            ObjectRole::Content,
+            u16::try_from(c_idx + 1).map_err(|_| IngestError::RoleTooHigh(c_idx + 1))?,
+        )
+        .await?;
     }
     Ok(())
 }

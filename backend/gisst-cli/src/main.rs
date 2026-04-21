@@ -137,6 +137,17 @@ async fn upgrade_envs_in_place(
     println!("Replacing instanceobject links to files in {deps:?} with core file links...");
     for env in envs {
         let mut tx = db.begin().await?;
+        let Some(_) = Core::get(&mut tx, &name, core_hash, &env.environment_platform).await? else {
+            println!(
+                "Core {name}:{core_hash}:{} is not present in the database, use gisst-cli add-core first",
+                env.environment_platform
+            );
+            return Err(GISSTCliError::CoreNotFound(
+                name.to_string(),
+                core_hash.to_string(),
+                env.environment_platform.clone(),
+            ));
+        };
         Environment::update_core(&mut tx, env.environment_id, name, core_hash).await?;
         let instances = Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
         for inst in instances {
@@ -263,19 +274,7 @@ async fn upgrade_env(
     let core_meta: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
     let name = core_meta["core_name"].as_str().unwrap().to_string();
-    let Some(_) = Core::get(&mut conn, &name, core_hash).await? else {
-        println!(
-            "Core {name}:{core_hash} is not present in the database, use gisst-cli add-core first"
-        );
-        return Err(GISSTCliError::CoreNotFound(name, core_hash.to_string()));
-    };
-    let deps: Vec<_> = core_meta["dependencies"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(|x| x.as_str())
-        .map(std::string::ToString::to_string)
-        .collect();
+    let deps: Vec<_> = json_to_strings(&core_meta["dependencies"]);
     drop(conn);
     if in_place {
         println!("------DANGER ZONE-----");
@@ -294,6 +293,16 @@ async fn upgrade_env(
         upgrade_envs_by_clone(db, indexer, envs, &name, core_hash, &deps).await?;
     }
     Ok(())
+}
+
+fn json_to_strings(value: &serde_json::Value) -> Vec<String> {
+    value
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|x| x.as_str())
+        .map(std::string::ToString::to_string)
+        .collect()
 }
 
 async fn add_core(
@@ -315,27 +324,14 @@ async fn add_core(
     let core_hash = core_hash.trim();
     let core_meta: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
-    dbg!(&core_meta);
     let name = core_meta["core_name"].as_str().unwrap().to_string();
-    let core_platforms:Vec<_> = if name == "v86" {
-        core_meta[&name]["platforms"].as_array().unwrap().into_iter().map(|s| s.as_str().unwrap().to_string()).collect()
+    let core_platforms: Vec<_> = if name == "v86" {
+        json_to_strings(&core_meta[&name]["platforms"])
     } else {
-        core_meta["retroarch"]["cores"][&name]["platforms"].as_array().unwrap().into_iter().map(|s| s.as_str().unwrap().to_string()).collect()
+        json_to_strings(&core_meta["retroarch"]["cores"][&name]["platforms"])
     };
-    let entrypoints: Vec<_> = core_meta["entrypoints"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(|x| x.as_str())
-        .map(std::string::ToString::to_string)
-        .collect();
-    let deps: Vec<_> = core_meta["dependencies"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(|x| x.as_str())
-        .map(std::string::ToString::to_string)
-        .collect();
+    let entrypoints: Vec<_> = json_to_strings(&core_meta["entrypoints"]);
+    let deps: Vec<_> = json_to_strings(&core_meta["dependencies"]);
     for core_platform in core_platforms {
         let core = Core {
             core_name: name.clone(),

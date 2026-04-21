@@ -68,6 +68,8 @@ pub enum ServerError {
     V86Clone(#[from] gisst::error::V86Clone),
     #[error("TUS upload too big to store metadata in postgres int")]
     UploadTooBig(std::num::TryFromIntError),
+    #[error("Role index exceeds 65535, we don't support that many objects")]
+    RoleIndexTooBig(std::num::TryFromIntError),
     #[error("Route not yet implemented")]
     NotYetImplemented,
     #[error("this should not be reachable!")]
@@ -126,6 +128,9 @@ impl IntoResponse for ServerError {
             ServerError::UploadTooBig(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "file upload error")
             }
+            ServerError::RoleIndexTooBig(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "object linking error")
+            }
             ServerError::RecordLinking { .. } => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "record creation error")
             }
@@ -177,7 +182,9 @@ impl IntoResponse for ServerError {
             ServerError::Insert(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "database or index error")
             }
-            ServerError::NotYetImplemented => (StatusCode::INTERNAL_SERVER_ERROR, "not yet implemented"),
+            ServerError::NotYetImplemented => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "not yet implemented")
+            }
         };
 
         let base_url = crate::server::BASE_URL.get();

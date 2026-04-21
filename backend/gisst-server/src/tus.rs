@@ -144,7 +144,7 @@ pub async fn patch(
         );
         return Ok((
             StatusCode::CONFLICT,
-            format!("Client offset ({pu_offset}) does not match server offset ({offset})",),
+            format!("Client offset ({pu_offset}) does not match server offset ({offset})"),
         )
             .into_response());
     }

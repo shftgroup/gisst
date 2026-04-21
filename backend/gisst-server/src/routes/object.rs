@@ -168,7 +168,7 @@ async fn create_object(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let creator_id = auth
+    let _creator_id = auth
         .user
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;

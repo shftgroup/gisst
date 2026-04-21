@@ -51,14 +51,17 @@ where
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum MyHelper<'a> {
-        S(&'a str),
         U(uuid::Uuid),
+        S(&'a str),
+        Null,
     }
 
     match MyHelper::deserialize(d) {
         Ok(MyHelper::U(u)) => Ok(Some(u)),
-        Ok(MyHelper::S(s)) if s.is_empty() => Ok(None),
-        Ok(MyHelper::S(_)) => Err(D::Error::custom("only empty strings may be provided")),
+        Ok(MyHelper::Null | MyHelper::S("")) => Ok(None),
+        Ok(MyHelper::S(s)) => Err(D::Error::custom(format!(
+            "only empty strings may be provided, not {s}"
+        ))),
         Err(err) => Err(err),
     }
 }

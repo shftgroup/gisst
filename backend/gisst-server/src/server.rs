@@ -5,9 +5,8 @@ use crate::{
     auth::{self, AuthBackend},
     db,
     routes::{
-        creator_router, environment_router, instance_router, object_router, players, replay_router,
-        save_router, screenshot_router, state_router, work_router,
-        lookup
+        creator_router, environment_router, instance_router, lookup, object_router, players,
+        replay_router, save_router, screenshot_router, state_router, work_router,
     },
     serverconfig::ServerConfig,
     tus,
@@ -153,6 +152,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/play/{instance_id}", get(players::get_player))
         .route("/resources/{id}", patch(tus::patch).head(tus::head))
         .route("/resources", post(tus::creation))
+        .route("/cores", get(lookup::get_cores))
         .route("/cores/{corename}", get(lookup::get_cores))
         .route("/lookup-work", get(lookup::lookup_work))
         .nest("/objects", object_router())

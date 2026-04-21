@@ -28,6 +28,7 @@ async fn get_single_work(
     Ok(Json(Work::get_by_id(&mut conn, id).await?.unwrap()))
 }
 
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, serde::Deserialize)]
 struct CreateWork {
     #[serde(deserialize_with = "uuid_or_empty_string")]
@@ -48,7 +49,7 @@ async fn create_or_derive_work(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let creator_id = auth
+    let _creator_id = auth
         .user
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
@@ -82,8 +83,13 @@ async fn create_or_derive_work(
                 .await?,
             ))
         }
-    } else if let Some(existing) =
-        Work::get_by_metadata(&mut conn, &work.work_name, &work.work_version, &work.work_platform).await?
+    } else if let Some(existing) = Work::get_by_metadata(
+        &mut conn,
+        &work.work_name,
+        &work.work_version,
+        &work.work_platform,
+    )
+    .await?
     {
         // we had no ID to start, so use the existing work
         Ok(Json(existing))

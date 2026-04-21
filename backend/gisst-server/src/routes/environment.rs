@@ -1,8 +1,8 @@
 use crate::{auth::AuthBackend, error::ServerError, server::ServerState};
 use axum::{Extension, Router, extract::Json, routing::post};
 use axum_login::login_required;
-use gisst::models::Environment;
 use gisst::model_enums::Framework;
+use gisst::models::Environment;
 use uuid::Uuid;
 
 pub fn router() -> Router {
@@ -10,6 +10,7 @@ pub fn router() -> Router {
         .route("/create", post(create_or_derive_environment))
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, serde::Deserialize)]
 struct CreateEnvironment {
     #[serde(deserialize_with = "crate::utils::uuid_or_empty_string")]
@@ -33,7 +34,7 @@ async fn create_or_derive_environment(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let creator_id = auth
+    let _creator_id = auth
         .user
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
@@ -78,18 +79,18 @@ async fn create_or_derive_environment(
         Ok(Json(
             Environment::insert(
                 &mut conn,
-                    Environment {
-                        environment_id: Uuid::new_v4(),
-                        environment_name: env.environment_name,
-                        environment_framework: env.environment_framework,
-                        environment_platform: env.environment_platform,
-                        environment_core_name: env.environment_core_name,
-                        environment_core_version: env.environment_core_version,
-                        environment_derived_from: env.environment_derived_from,
-                        environment_config: env.environment_config,
-                        //creator_id,
-                        created_on: chrono::Utc::now(),
-                    },
+                Environment {
+                    environment_id: Uuid::new_v4(),
+                    environment_name: env.environment_name,
+                    environment_framework: env.environment_framework,
+                    environment_platform: env.environment_platform,
+                    environment_core_name: env.environment_core_name,
+                    environment_core_version: env.environment_core_version,
+                    environment_derived_from: env.environment_derived_from,
+                    environment_config: env.environment_config,
+                    //creator_id,
+                    created_on: chrono::Utc::now(),
+                },
             )
             .await?,
         ))

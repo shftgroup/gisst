@@ -11,7 +11,7 @@ use axum::{
 };
 use axum_login::login_required;
 use gisst::error::Table;
-use gisst::models::{Environment, Instance, InstanceWork, ObjectLink, Work, Object, ObjectRole};
+use gisst::models::{Environment, Instance, InstanceWork, Object, ObjectLink, ObjectRole, Work};
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -202,15 +202,13 @@ async fn clone_v86_instance(
         storage_depth,
         &app_state.indexer,
     )
-        .await?;
+    .await?;
     tx.commit().await?;
     Ok(axum::response::Redirect::permanent(&format!("/instances/{new_instance}")).into_response())
 }
 
 async fn get_new_instance_page(
     app_state: Extension<ServerState>,
-    headers: HeaderMap,
-    params: Query<InstanceListQueryParams>,
     auth: axum_login::AuthSession<auth::AuthBackend>,
 ) -> Result<axum::response::Response, ServerError> {
     tracing::Span::current().record(
@@ -219,9 +217,12 @@ async fn get_new_instance_page(
     );
     let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
     let instance_new = app_state.templates.get_template("instance_new.html")?;
+    let (search_url, search_key) = app_state.search.frontend_data();
 
     Ok(Html(instance_new.render(context!(
         base_url => BASE_URL.get(),
+        search_url => search_url,
+        search_key => search_key,
         user => user,
     ))?)
     .into_response())
@@ -233,7 +234,7 @@ struct CreateInstance {
     instance_id: Option<Uuid>,
     work_id: Uuid,
     environment_id: Uuid,
-    instance_config: Option<sqlx::types::JsonValue>
+    instance_config: Option<sqlx::types::JsonValue>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -247,14 +248,19 @@ struct CreateInstanceParams {
 async fn create_or_derive_instance(
     app_state: Extension<ServerState>,
     auth: axum_login::AuthSession<crate::auth::AuthBackend>,
-    Json(CreateInstanceParams {instance, dependencies, configs, content}): Json<CreateInstanceParams>,
+    Json(CreateInstanceParams {
+        instance,
+        dependencies,
+        configs,
+        content,
+    }): Json<CreateInstanceParams>,
 ) -> Result<Json<Instance>, ServerError> {
     use sqlx::Acquire;
     tracing::Span::current().record(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let creator_id = auth
+    let _creator_id = auth
         .user
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
@@ -267,45 +273,68 @@ async fn create_or_derive_instance(
     {
         // derive this instance from the existing one.  even if there's some duplication, it'll be fine.
         Instance::insert(
-                    &mut tx,
-                    Instance {
-                        instance_id: Uuid::new_v4(),
-                        environment_id: instance.environment_id,
-                        work_id: instance.work_id,
-                        instance_config: instance.instance_config,
-                        derived_from_instance:Some(existing.instance_id),
-                        derived_from_state:None,
-                        //creator_id,
-                        created_on: chrono::Utc::now(),
-                    },
-            &app_state.indexer
-        ).await?
+            &mut tx,
+            Instance {
+                instance_id: Uuid::new_v4(),
+                environment_id: instance.environment_id,
+                work_id: instance.work_id,
+                instance_config: instance.instance_config,
+                derived_from_instance: Some(existing.instance_id),
+                derived_from_state: None,
+                //creator_id,
+                created_on: chrono::Utc::now(),
+            },
+            &app_state.indexer,
+        )
+        .await?
     } else {
         // add a brand new instance
         Instance::insert(
-                    &mut tx,
-                    Instance {
-                        instance_id: Uuid::new_v4(),
-                        environment_id: instance.environment_id,
-                        work_id: instance.work_id,
-                        instance_config: instance.instance_config,
-                        derived_from_instance:None,
-                        derived_from_state:None,
-                        //creator_id,
-                        created_on: chrono::Utc::now(),
-                    },
-            &app_state.indexer
-        ).await?
+            &mut tx,
+            Instance {
+                instance_id: Uuid::new_v4(),
+                environment_id: instance.environment_id,
+                work_id: instance.work_id,
+                instance_config: instance.instance_config,
+                derived_from_instance: None,
+                derived_from_state: None,
+                //creator_id,
+                created_on: chrono::Utc::now(),
+            },
+            &app_state.indexer,
+        )
+        .await?
     };
     // link each object
-    for (i,dep) in dependencies.into_iter().enumerate() {
-        Object::link_object_to_instance(&mut tx, dep, inserted_instance.instance_id, ObjectRole::Dependency, i as u16).await?;
+    for (i, dep) in dependencies.into_iter().enumerate() {
+        Object::link_object_to_instance(
+            &mut tx,
+            dep,
+            inserted_instance.instance_id,
+            ObjectRole::Dependency,
+            u16::try_from(i).map_err(ServerError::RoleIndexTooBig)?,
+        )
+        .await?;
     }
-    for (i,cfg) in configs.into_iter().enumerate() {
-        Object::link_object_to_instance(&mut tx, cfg, inserted_instance.instance_id, ObjectRole::Config, i as u16).await?;
+    for (i, cfg) in configs.into_iter().enumerate() {
+        Object::link_object_to_instance(
+            &mut tx,
+            cfg,
+            inserted_instance.instance_id,
+            ObjectRole::Config,
+            u16::try_from(i).map_err(ServerError::RoleIndexTooBig)?,
+        )
+        .await?;
     }
-    for (i,cont) in content.into_iter().enumerate() {
-        Object::link_object_to_instance(&mut tx, cont, inserted_instance.instance_id, ObjectRole::Content, i as u16).await?;
+    for (i, cont) in content.into_iter().enumerate() {
+        Object::link_object_to_instance(
+            &mut tx,
+            cont,
+            inserted_instance.instance_id,
+            ObjectRole::Content,
+            u16::try_from(i).map_err(ServerError::RoleIndexTooBig)?,
+        )
+        .await?;
     }
     tx.commit().await?;
     return Ok(Json(inserted_instance));
