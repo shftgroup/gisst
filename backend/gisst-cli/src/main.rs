@@ -181,6 +181,7 @@ async fn upgrade_envs_by_clone(
             println!("Clone inst {old_inst_id} into {new_inst_id}");
             inst.instance_id = new_inst_id;
             inst.environment_id = new_id;
+            inst.created_on = now;
             inst.derived_from_instance = Some(old_inst_id);
             Instance::insert(&mut tx, inst, indexer).await?;
             // link objects to new instance; skip objects with name of any dependency in core_meta.dependencies
@@ -204,6 +205,7 @@ async fn upgrade_envs_by_clone(
                 replay.replay_id = Uuid::new_v4();
                 remapping.push((old_replay_id, replay.replay_id));
                 replay.instance_id = new_inst_id;
+                replay.created_on = now;
                 Replay::insert(&mut tx, replay, indexer).await?;
             }
             for (old_rid, new_rid) in remapping {
@@ -215,6 +217,7 @@ async fn upgrade_envs_by_clone(
                 state.state_id = Uuid::new_v4();
                 state.state_derived_from = Some(old_state_id);
                 state.instance_id = new_inst_id;
+                state.created_on = now;
                 State::insert(&mut tx, state, indexer).await?;
             }
             // save + instance_save
@@ -223,6 +226,7 @@ async fn upgrade_envs_by_clone(
                 save.save_id = Uuid::new_v4();
                 save.save_derived_from = Some(old_save_id);
                 save.instance_id = new_inst_id;
+                save.created_on = now;
                 sqlx::query!(r#"INSERT INTO instance_save SELECT $3, $4 FROM instance_save WHERE instance_id=$1 AND save_id=$2"#, old_inst_id, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
                 // fixup state->save links
                 sqlx::query!(r#"UPDATE state SET save_derived_from=$3 WHERE save_derived_from=$1 AND instance_id=$2"#, old_save_id, new_inst_id, save.save_id).execute(tx.as_mut()).await?;
