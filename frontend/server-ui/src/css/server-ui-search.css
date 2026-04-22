@@ -164,6 +164,11 @@
 .gisst-Search-results-header .gisst-Search-header-platform { width: 25%; flex: 0 0 25%; }
 .gisst-Search-results-header .gisst-Search-header-version { width: 15%; flex: 0 0 15%; }
 .gisst-Search-results-header .gisst-Search-header-actions { width: 30%; flex: 0 0 30%; }
+
+.gisst-Search-item-hidden {
+    background-color: light-dark(var(--gisst-light-theme-light), var(--gisst-dark-theme-light));
+}
+
 .gisst-Search-instance-work-name {
     font-weight: 500;
     width: 30%;
@@ -197,7 +202,7 @@
 }
 
 /* GISST State Search */
-.gisst-Search-state-actions-cell {
+.gisst-Search-actions-cell {
     width: 15%;
     flex: 0 0 15%;
     justify-content: flex-end;
@@ -294,14 +299,14 @@
 /* No creator */
 .gisst-Search-no-creator .gisst-Search-instance-info { width: 30%; flex: 0 0 30%; }
 .gisst-Search-no-creator .gisst-Search-creator-info { display: none; }
-.gisst-Search-no-creator .gisst-Search-state-actions-cell { width: 20%; flex: 0 0 20%; }
+.gisst-Search-no-creator .gisst-Search-actions-cell { width: 20%; flex: 0 0 20%; }
 /* No instance */
 .gisst-Search-no-instance .gisst-Search-state-info { width: 40%; flex: 0 0 40%; }
 .gisst-Search-no-instance .gisst-Search-save-info { width: 40%; flex: 0 0 40%; }
 .gisst-Search-no-instance .gisst-Search-performance-info { width: 40%; flex: 0 0 40%; }
 .gisst-Search-no-instance .gisst-Search-instance-info { display: none; }
 .gisst-Search-no-instance .gisst-Search-creator-info { width: 20%; flex: 0 0 20%;}
-.gisst-Search-no-instance .gisst-Search-state-actions-cell { width: 20%; flex: 0 0 20%; }
+.gisst-Search-no-instance .gisst-Search-actions-cell { width: 20%; flex: 0 0 20%; }
 /* No creator or instance */
 .gisst-Search-no-creator.gisst-Search-no-instance .gisst-Search-state-info { width: 60%; flex: 0 0 60%; }
 .gisst-Search-no-creator.gisst-Search-no-instance .gisst-Search-save-info { width: 80%; flex: 0 0 80%; }
@@ -550,21 +555,21 @@
     .gisst-Search-results-row.gisst-Search-responsive-results-row .gisst-Search-cell:last-child {
         border-bottom: none;
     }
-    .gisst-Search-state-actions-cell {
+    .gisst-Search-actions-cell {
         justify-content: center;
     }
     .gisst-Search-creator-info {
         justify-content: center;
     }
 
-    .gisst-Search-state-actions-cell .gisst-Search-btn {
+    .gisst-Search-actions-cell .gisst-Search-btn {
         font-size: 0.8rem;
         padding: 0.25rem 0.5rem;
     }
-    .gisst-Search-state-actions-cell .gisst-Search-btn-icon-only {
+    .gisst-Search-actions-cell .gisst-Search-btn-icon-only {
         display: none;
     }
-    .gisst-Search-state-actions-cell .gisst-Search-btn-text-only {
+    .gisst-Search-actions-cell .gisst-Search-btn-text-only {
         display: inline-flex;
     }
     .gisst-Search-screenshot-cell {

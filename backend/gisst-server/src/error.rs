@@ -50,6 +50,8 @@ pub enum ServerError {
     AuthBackend(#[from] AuthError),
     #[error("auth system error")]
     AuthBackendSystem(#[from] axum_login::Error<crate::auth::AuthBackend>),
+    #[error("permission denied error")]
+    PermissionDenied,
     #[error("incorrect mimetype for request")]
     MimeType,
     #[error("user not logged in")]
@@ -155,6 +157,7 @@ impl IntoResponse for ServerError {
             ServerError::Subobject(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "subobject access error")
             }
+            ServerError::PermissionDenied => (StatusCode::FORBIDDEN, "need sufficient permissions to make changes"),
             ServerError::StateRequired => (StatusCode::BAD_REQUEST, "need a state to make a clone"),
             ServerError::V86Clone(_) => (StatusCode::INTERNAL_SERVER_ERROR, "v86 clone failed"),
             ServerError::Unreachable => (StatusCode::INTERNAL_SERVER_ERROR, "uh oh error"),

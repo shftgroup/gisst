@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE replay SET hidden=$2 WHERE replay_id=$1 RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "replay_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "replay_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "replay_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "instance_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "replay_forked_from",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "file_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "hidden",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "10dc34026799629fdbc2edd6dc01afa24f798bb66312ccd24ad35b5829eb0668"
+}

@@ -154,6 +154,7 @@ pub struct Replay {
     pub file_id: Uuid,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub hidden:bool
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -169,6 +170,7 @@ pub struct Save {
     pub state_derived_from: Option<Uuid>,
     pub save_derived_from: Option<Uuid>,
     pub replay_derived_from: Option<Uuid>,
+    pub hidden:bool
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,6 +190,7 @@ pub struct State {
     pub save_derived_from: Option<Uuid>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub hidden:bool
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -224,6 +227,7 @@ pub struct CreatorStateInfo {
     pub environment_core_name: String,
     pub environment_core_version: String,
     pub environment_created_on: chrono::DateTime<chrono::Utc>,
+    pub hidden: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -245,6 +249,7 @@ pub struct CreatorReplayInfo {
     pub environment_core_name: String,
     pub environment_core_version: String,
     pub environment_created_on: chrono::DateTime<chrono::Utc>,
+    pub hidden: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -266,6 +271,7 @@ pub struct CreatorSaveInfo {
     pub environment_core_name: String,
     pub environment_core_version: String,
     pub environment_created_on: chrono::DateTime<chrono::Utc>,
+    pub hidden: bool,
 }
 
 impl CreatorSaveInfo {
@@ -277,7 +283,7 @@ impl CreatorSaveInfo {
                       file_id, instance_save.instance_id, save.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
                       environment.environment_framework as "environment_framework:_",
-                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, save.hidden
                FROM instance_save
                     JOIN save USING (save_id)
                     JOIN instance ON (instance_save.instance_id = instance.instance_id)
@@ -300,7 +306,7 @@ impl CreatorSaveInfo {
                       file_id, instance_id, save.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
                       environment.environment_framework as "environment_framework:_",
-                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, save.hidden
                FROM work
                     JOIN instance USING (work_id)
                     JOIN save USING (instance_id)
@@ -318,7 +324,7 @@ impl CreatorStateInfo {
                       file_id, instance_id, state.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
                       environment.environment_framework as "environment_framework:_",
-                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, state.hidden
                FROM work
                     JOIN instance USING (work_id)
                     JOIN state USING (instance_id)
@@ -338,7 +344,7 @@ impl CreatorStateInfo {
                       file_id, instance_id, state.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
                       environment.environment_framework as "environment_framework:_",
-                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, state.hidden
                FROM work
                     JOIN instance USING (work_id)
                     JOIN state USING (instance_id)
@@ -357,7 +363,7 @@ impl CreatorReplayInfo {
                       file_id, instance_id, replay.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
                       environment.environment_framework as "environment_framework:_",
-                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, replay.hidden
                FROM work
                     JOIN instance USING (work_id)
                     JOIN replay USING (instance_id)
@@ -376,7 +382,7 @@ impl CreatorReplayInfo {
                       file_id, instance_id, replay.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
                       environment.environment_framework as "environment_framework:_",
-                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, replay.hidden
                FROM work
                     JOIN instance USING (work_id)
                     JOIN replay USING (instance_id)
@@ -691,6 +697,15 @@ impl Replay {
             .fetch_all(conn)
             .await
     }
+    pub async fn set_hidden(conn: &mut PgConnection, id:Uuid, state:bool, indexer:&impl crate::search::SearchIndexer) -> Result<(),Insert> {
+        let replay = sqlx::query_as!(Self, "UPDATE replay SET hidden=$2 WHERE replay_id=$1 RETURNING *", id, state).fetch_one(conn.as_mut()).await.map_err(|e| RecordSQL {
+            table: Table::Replay,
+            action: Action::Insert,
+            source: e,
+        })?;
+        indexer.upsert_replay(conn, &replay).await?;
+        Ok(())
+    }
 
     pub async fn insert(
         conn: &mut PgConnection,
@@ -699,7 +714,7 @@ impl Replay {
     ) -> Result<Self, Insert> {
         let record = sqlx::query_as!(
             Replay,
-            r#"INSERT INTO replay VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"#,
+            r#"INSERT INTO replay VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *"#,
             model.replay_id,
             model.replay_name,
             model.replay_description,
@@ -708,6 +723,7 @@ impl Replay {
             model.replay_forked_from,
             model.file_id,
             model.created_on,
+            model.hidden
         )
         .fetch_one(conn.as_mut())
         .await
@@ -735,6 +751,15 @@ impl Save {
             .fetch_all(conn)
             .await
     }
+    pub async fn set_hidden(conn: &mut PgConnection, id:Uuid, state:bool, indexer:&impl crate::search::SearchIndexer) -> Result<(), Insert> {
+        let save = sqlx::query_as!(Self, "UPDATE save SET hidden=$2 WHERE save_id=$1 RETURNING *", id, state).fetch_one(conn.as_mut()).await.map_err(|e| RecordSQL {
+            table: Table::Save,
+            action: Action::Insert,
+            source: e,
+        })?;
+        indexer.upsert_save(conn, &save).await?;
+        Ok(())
+    }
     pub async fn insert(
         conn: &mut PgConnection,
         model: Self,
@@ -743,7 +768,7 @@ impl Save {
         let result =         // First, insert the new save
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *"#,
+            r#"INSERT INTO save VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *"#,
             model.save_id,
             model.instance_id,
             model.save_short_desc,
@@ -753,7 +778,8 @@ impl Save {
             model.created_on,
             model.state_derived_from,
             model.save_derived_from,
-            model.replay_derived_from
+            model.replay_derived_from,
+            model.hidden
         )
         .fetch_one(conn.as_mut())
         .await
@@ -854,7 +880,7 @@ impl State {
     ) -> Result<Self, Insert> {
         let record = sqlx::query_as!(
             State,
-            r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            r#"INSERT INTO state VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                RETURNING *"#,
             state.state_id,
             state.instance_id,
@@ -869,6 +895,7 @@ impl State {
             state.state_derived_from,
             state.created_on,
             state.save_derived_from,
+            state.hidden
         )
         .fetch_one(conn.as_mut())
         .await
@@ -879,6 +906,16 @@ impl State {
         })?;
         indexer.upsert_state(conn, &record).await?;
         Ok(record)
+    }
+
+    pub async fn set_hidden(conn: &mut PgConnection, id:Uuid, state:bool, indexer:&impl crate::search::SearchIndexer) -> Result<(),Insert> {
+        let ret = sqlx::query_as!(Self, "UPDATE state SET hidden=$2 WHERE state_id=$1 RETURNING *", id, state).fetch_one(conn.as_mut()).await.map_err(|e| RecordSQL {
+            table: Table::State,
+            action: Action::Insert,
+            source: e,
+        })?;
+        indexer.upsert_state(conn, &ret).await?;
+        Ok(())
     }
 }
 
@@ -1178,6 +1215,7 @@ pub struct ReplayLink {
     pub file_filename: String,
     pub file_source_path: String,
     pub file_dest_path: String,
+    pub hidden: bool
 }
 impl ReplayLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
@@ -1215,6 +1253,7 @@ pub struct StateLink {
     pub file_filename: String,
     pub file_source_path: String,
     pub file_dest_path: String,
+    pub hidden: bool
 }
 impl StateLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
@@ -1249,6 +1288,7 @@ pub struct SaveLink {
     pub file_filename: String,
     pub file_source_path: String,
     pub file_dest_path: String,
+    pub hidden: bool
 }
 
 impl SaveLink {

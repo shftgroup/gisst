@@ -103,7 +103,7 @@ class GISSTInstanceSearch extends HTMLElement {
                   </div>
                   <div class="gisst-Search-cell gisst-Search-instance-platform-info">${components.Highlight({hit, attribute: "work_platform"})}</div>
                   <div class="gisst-Search-cell gisst-Search-instance-version-info">${hit.work_version}</div>
-                  <div class="gisst-Search-cell gisst-Search-instance-actions-cell">
+                  <div class="gisst-Search-cell gisst-Search-actions-cell">
                     <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/play/${hit.instance_id}">Play</a>
                     <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/play/${hit.instance_id}" title="Play">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -132,6 +132,8 @@ class GISSTInstanceSearch extends HTMLElement {
         widgets.configure({ hitsPerPage: 10 }),
         widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
     ]);
+    
+
     search.start();
   }
 }
@@ -150,6 +152,9 @@ class GISSTStateSearch extends HTMLElement {
     }
     const limit_to_instance = this.getAttribute("instance-id");
     const limit_to_creator = this.getAttribute("creator-id");
+    const active_creator_id = this.getAttribute("user-creator-id") ?? "";
+    const active_creator_role = parseInt(this.getAttribute("user-role") ?? "100");
+    const show_hidden_state = active_creator_role <= 10 || (limit_to_creator == active_creator_id && active_creator_id != "");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
     // TODO: Now that environment framework is part of the info, we don't need this attribute and instead can make it hit-by-hit
@@ -160,6 +165,9 @@ class GISSTStateSearch extends HTMLElement {
     }
     if (limit_to_creator && limit_to_creator != "") {
       filters.push(`creator_id = "${limit_to_creator}"`);
+    }
+    if (!show_hidden_state) {
+      filters.push('hidden = false');
     }
     this.classList.add("gisst-state-search");
 
@@ -179,7 +187,8 @@ class GISSTStateSearch extends HTMLElement {
           <div class="gisst-Search-header-cell gisst-Search-state-info">Description</div>
           <div class="gisst-Search-header-cell gisst-Search-instance-info">Instance</div>
           <div class="gisst-Search-header-cell gisst-Search-creator-info">Creator</div>
-          <div class="gisst-Search-header-cell gisst-Search-state-actions-cell">Actions</div>
+          ${show_hidden_state ? '<div class="gisst-Search-header-cell gisst-Search-hidestate">Hidden</div>' : ''}
+          <div class="gisst-Search-header-cell gisst-Search-actions-cell">Actions</div>
       </div>
     `;
     if(!show_instance_info){
@@ -213,6 +222,7 @@ class GISSTStateSearch extends HTMLElement {
           item: (hit, { html, components }) => html`
            <div class="gisst-Search-results-row gisst-Search-responsive-results-row
            ${!show_creator_info ? "gisst-Search-no-creator":""} 
+           ${hit.hidden ? "gisst-Search-item-hidden" : ""}
            ${!show_instance_info ? "gisst-Search-no-instance":""}">
               <div class="gisst-Search-cell gisst-Search-screenshot-cell">
                 <img class="gisst-Search-screenshot" src="data:image/png;base64,${hit.screenshot_data}" alt="${hit.state_description} from instance ${hit.work_name}"/>
@@ -240,7 +250,12 @@ class GISSTStateSearch extends HTMLElement {
                   <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_full_name"})}</a>
                 </div>
               ` : ""}
-              <div class="gisst-Search-cell gisst-Search-state-actions-cell">
+              ${show_hidden_state ? html`
+                <div class="gisst-Search-cell gisst-Search-hidden-info">
+                <input name="hidden-${hit.state_id}" class="hide-show-checkbox" type="checkbox" data-id="${hit.state_id}" checked="${hit.hidden}"></input>
+                </div>
+                ` : ""}
+              <div class="gisst-Search-cell gisst-Search-actions-cell">
                 <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}">Play</a>
                 <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/play/${hit.instance_id}?state=${hit.state_id}" title="Play">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -282,6 +297,24 @@ class GISSTStateSearch extends HTMLElement {
         }
       })
     ]);
+
+    results_body.addEventListener('click', async function(event) {
+      if (event.target && (event.target! as HTMLElement).classList.contains('hide-show-checkbox')) {
+        const checkbox = event.target! as HTMLInputElement;
+        const id = checkbox.dataset["id"];
+        try {
+          await (await fetch(`${base_url}/states/${id}/hide`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({"state":checkbox.checked})})).text();
+          if (checkbox.checked) {
+            checkbox.parentElement?.parentElement?.classList.add("gisst-Search-item-hidden");
+          } else {
+            checkbox.parentElement?.parentElement?.classList.remove("gisst-Search-item-hidden");
+          }
+        } catch(error) {
+          console.error(error);
+          checkbox.checked = !checkbox.checked;
+        }
+      }
+    });
     search.start();
   }
 }
@@ -301,7 +334,10 @@ class GISSTSaveSearch extends HTMLElement {
     }
     const limit_to_instance = this.getAttribute("instance-id");
     const limit_to_creator = this.getAttribute("creator-id");
+    const active_creator_id = this.getAttribute("user-creator-id") ?? "";
+    const active_creator_role = parseInt(this.getAttribute("user-role") ?? "0");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
+    const show_hidden_state = active_creator_role <= 10 || (limit_to_creator == active_creator_id && active_creator_id != "");
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
     const filters = [];
     if (limit_to_instance && limit_to_instance != "") {
@@ -309,6 +345,9 @@ class GISSTSaveSearch extends HTMLElement {
     }
     if (limit_to_creator && limit_to_creator != "") {
       filters.push(`creator_id = "${limit_to_creator}"`);
+    }
+    if (!show_hidden_state) {
+      filters.push('hidden = false');
     }
     this.classList.add("gisst-save-search");
     const search_container = document.createElement("div");
@@ -326,7 +365,8 @@ class GISSTSaveSearch extends HTMLElement {
           <div class="gisst-Search-header-cell gisst-Search-save-info">Description</div>
           <div class="gisst-Search-header-cell gisst-Search-instance-info">Instance</div>
           <div class="gisst-Search-header-cell gisst-Search-creator-info">Creator</div>
-          <div class="gisst-Search-header-cell gisst-Search-state-actions-cell">Actions</div>
+          ${show_hidden_state ? '<div class="gisst-Search-header-cell gisst-Search-hidestate">Hidden</div>' : ''}
+          <div class="gisst-Search-header-cell gisst-Search-actions-cell">Actions</div>
       </div>
     `;
     if(!show_instance_info){
@@ -359,7 +399,8 @@ class GISSTSaveSearch extends HTMLElement {
         templates: {
           item: (hit, { html, components }) => html`
              <div class="gisst-Search-results-row gisst-Search-responsive-results-row
-           ${!show_creator_info ? "gisst-Search-no-creator":""} 
+           ${!show_creator_info ? "gisst-Search-no-creator":""}
+           ${hit.hidden ? "gisst-Search-item-hidden" : ""}
            ${!show_instance_info ? "gisst-Search-no-instance":""}">
               <div class="gisst-Search-cell gisst-Search-save-info">
                 <div class="gisst-Search-name">
@@ -384,7 +425,16 @@ class GISSTSaveSearch extends HTMLElement {
                   <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_full_name"})}</a>
                 </div>
               ` : ""}
-              <div class="gisst-Search-cell gisst-Search-state-actions-cell">
+              ${show_hidden_state ? html`
+                <div class="gisst-Search-cell gisst-Search-hidden-info">
+                <input name="hidden-${hit.state_id}" class="hide-show-checkbox" type="checkbox" data-id="${hit.state_id}" checked="${hit.hidden}"></input>
+                </div>
+                ` : ""}
+              <div class="gisst-Search-cell gisst-Search-actions-cell">
+                ${show_hidden_state ? html`
+                <label for="hidden-${hit.save_id}" class="gisst-Search-checkbox-label">Hide?</label>
+                <input name="hidden-${hit.save_id}" class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only hide-show-checkbox" type="checkbox" data-id="${hit.save_id}" checked="${hit.hidden}"></input>
+                ` : ""}
                 <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/play/${hit.instance_id}?save=${hit.save_id}">Play</a>
                 <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/play/${hit.instance_id}?save=${hit.save_id}" title="Play">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -418,6 +468,23 @@ class GISSTSaveSearch extends HTMLElement {
         }
       })
     ]);
+    results_body.addEventListener('click', async function(event) {
+      if (event.target && (event.target! as HTMLElement).classList.contains('hide-show-checkbox')) {
+        const checkbox = event.target! as HTMLInputElement;
+        const id = checkbox.dataset["id"];
+        try {
+          await (await fetch(`${base_url}/saves/${id}/hide`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({"state":checkbox.checked})})).text();
+          if (checkbox.checked) {
+            checkbox.parentElement?.parentElement?.classList.add("gisst-Search-item-hidden");
+          } else {
+            checkbox.parentElement?.parentElement?.classList.remove("gisst-Search-item-hidden");
+          }
+        } catch(error) {
+          console.error(error);
+          checkbox.checked = !checkbox.checked;
+        }
+      }
+    });
     search.start();
   }
 }
@@ -437,7 +504,10 @@ class GISSTPerformanceSearch extends HTMLElement {
     }
     const limit_to_instance = this.getAttribute("instance-id");
     const limit_to_creator = this.getAttribute("creator-id");
+    const active_creator_id = this.getAttribute("user-creator-id") ?? "";
+    const active_creator_role = parseInt(this.getAttribute("user-role") ?? "0");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
+    const show_hidden_state = active_creator_role <= 10 || (limit_to_creator == active_creator_id && active_creator_id != "");
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
     const filters = [];
     if (limit_to_instance && limit_to_instance != "") {
@@ -445,6 +515,9 @@ class GISSTPerformanceSearch extends HTMLElement {
     }
     if (limit_to_creator && limit_to_creator != "") {
       filters.push(`creator_id = "${limit_to_creator}"`);
+    }
+    if (!show_hidden_state) {
+      filters.push('hidden = false');
     }
     this.classList.add("gisst-performance-search");
     const search_container = document.createElement("div");
@@ -462,7 +535,8 @@ class GISSTPerformanceSearch extends HTMLElement {
           <div class="gisst-Search-header-cell gisst-Search-performance-info">Description</div>
           <div class="gisst-Search-header-cell gisst-Search-instance-info">Instance</div>
           <div class="gisst-Search-header-cell gisst-Search-creator-info">Creator</div>
-          <div class="gisst-Search-header-cell gisst-Search-state-actions-cell">Actions</div>
+          ${show_hidden_state ? '<div class="gisst-Search-header-cell gisst-Search-hidestate">Hidden</div>' : ''}
+          <div class="gisst-Search-header-cell gisst-Search-actions-cell">Actions</div>
       </div>
     `;
     if(!show_instance_info){
@@ -496,6 +570,7 @@ class GISSTPerformanceSearch extends HTMLElement {
           item: (hit, { html, components }) => html`
             <div class="gisst-Search-results-row gisst-Search-responsive-results-row
            ${!show_creator_info ? "gisst-Search-no-creator":""} 
+           ${hit.hidden ? "gisst-Search-item-hidden" : ""}
            ${!show_instance_info ? "gisst-Search-no-instance":""}">
               <div class="gisst-Search-cell gisst-Search-performance-info">
                 <div class="gisst-Search-name">
@@ -520,7 +595,16 @@ class GISSTPerformanceSearch extends HTMLElement {
                   <a href="${base_url}/creators/${hit.creator_id}">${components.Highlight({ hit, attribute: "creator_full_name"})}</a>
                 </div>
               ` : ""}
-              <div class="gisst-Search-cell gisst-Search-state-actions-cell">
+              ${show_hidden_state ? html`
+                <div class="gisst-Search-cell gisst-Search-hidden-info">
+                <input name="hidden-${hit.state_id}" class="hide-show-checkbox" type="checkbox" data-id="${hit.state_id}" checked="${hit.hidden}"></input>
+                </div>
+                ` : ""}
+              <div class="gisst-Search-cell gisst-Search-actions-cell">
+                ${show_hidden_state ? html`
+                <label for="hidden-${hit.replay_id}" class="gisst-Search-checkbox-label">Hide?</label>
+                <input name="hidden-${hit.replay_id}" class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only hide-show-checkbox" type="checkbox" data-id="${hit.replay_id}" checked="${hit.hidden}"></input>
+                ` : ""}
                 <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/play/${hit.instance_id}?replay=${hit.replay_id}">Play</a>
                 <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/play/${hit.instance_id}?replay=${hit.replay_id}" title="Play">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -546,6 +630,24 @@ class GISSTPerformanceSearch extends HTMLElement {
         }
       })
     ]);
+
+    results_body.addEventListener('click', async function(event) {
+      if (event.target && (event.target! as HTMLElement).classList.contains('hide-show-checkbox')) {
+        const checkbox = event.target! as HTMLInputElement;
+        const id = checkbox.dataset["id"];
+        try {
+          await (await fetch(`${base_url}/replays/${id}/hide`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({"state":checkbox.checked})})).text();
+          if (checkbox.checked) {
+            checkbox.parentElement?.parentElement?.classList.add("gisst-Search-item-hidden");
+          } else {
+            checkbox.parentElement?.parentElement?.classList.remove("gisst-Search-item-hidden");
+          }
+        } catch(error) {
+          console.error(error);
+          checkbox.checked = !checkbox.checked;
+        }
+      }
+    });
     search.start();
   }
 }

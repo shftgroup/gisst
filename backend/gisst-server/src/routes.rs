@@ -17,6 +17,10 @@ pub use screenshot::router as screenshot_router;
 pub use state::router as state_router;
 pub use work::router as work_router;
 
+#[derive(serde::Deserialize, Debug)]
+pub struct HideShowParams {
+    state: bool
+}
 #[derive(serde::Serialize, Debug)]
 pub struct LoggedInUserInfo {
     email: Option<String>,

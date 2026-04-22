@@ -1,0 +1,5 @@
+-- Add up migration script here
+
+ALTER TABLE save ADD COLUMN hidden BOOLEAN NOT NULL DEFAULT(false);
+ALTER TABLE state ADD COLUMN hidden BOOLEAN NOT NULL DEFAULT(false);
+ALTER TABLE replay ADD COLUMN hidden BOOLEAN NOT NULL DEFAULT(false);
