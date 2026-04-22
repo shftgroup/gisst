@@ -57,6 +57,11 @@
         "ordinal": 10,
         "name": "iss",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "user_role",
+        "type_info": "Int4"
       }
     ],
     "parameters": {
@@ -76,6 +81,7 @@
       true,
       true,
       true,
+      false,
       false
     ]
   },

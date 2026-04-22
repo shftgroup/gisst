@@ -29,6 +29,7 @@ pub struct LoggedInUserInfo {
     initials: Option<String>,
     username: Option<String>,
     creator_id: uuid::Uuid,
+    role: i32,
 }
 
 impl LoggedInUserInfo {
@@ -57,6 +58,7 @@ impl LoggedInUserInfo {
             initials: initials.clone(),
             username: user.preferred_username.clone(),
             creator_id: user.creator_id,
+            role: user.user_role
         }
     }
 }
