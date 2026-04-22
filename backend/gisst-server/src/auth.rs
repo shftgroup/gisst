@@ -45,6 +45,7 @@ pub struct User {
     pub preferred_username: Option<String>, //OpenID
     pub email: Option<String>,              //OpenID
     picture: Option<String>,                //OpenID (this is a url string)
+    #[expect(clippy::struct_field_names)]
     pub user_role: i32 // 0 = root, 5 = admin, 50 = regular, 100 = visitor
 }
 impl User {
