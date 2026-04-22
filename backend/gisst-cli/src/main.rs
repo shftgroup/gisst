@@ -3,11 +3,10 @@
 mod args;
 mod cliconfig;
 
-use crate::args::CreateScreenshot;
 use crate::cliconfig::CLIConfig;
 use anyhow::Result;
 use args::{
-    AddCoreArgs, AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment,
+    AddCoreArgs, AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment, CreateScreenshot, SetUserRole,
     CreateInstance, CreateObject, CreateReplay, CreateSave, CreateState, CreateWork, GISSTCli,
     GISSTCliError, PatchData, UpgradeEnvironmentArgs,
 };
@@ -121,6 +120,9 @@ async fn main() -> Result<(), GISSTCliError> {
             depth,
         } => {
             add_patched_instance(db, instance, data, storage_root, depth, &indexer).await?;
+        },
+        Commands::SetUserRole(params) => {
+            set_user_role(db, params).await?;
         }
     }
     Ok(())
@@ -235,6 +237,20 @@ async fn upgrade_envs_by_clone(
         }
         tx.commit().await?;
     }
+    Ok(())
+}
+async fn set_user_role(
+    db: PgPool,
+    SetUserRole {
+        id,
+        role,
+    }: SetUserRole,
+) -> Result<(), GISSTCliError> {
+    let mut conn = db.acquire().await?;
+    sqlx::query!(
+        "UPDATE users SET user_role=$2 WHERE creator_id=$1",
+        id, role
+    ).execute(conn.as_mut()).await?;
     Ok(())
 }
 

@@ -36,7 +36,17 @@
             </a>
         </div>
         <div class="gisst-internal-topbar-user">
-            <div class="gisst-internal-user-avatar"><a href="{{ base_url }}/creators/{{ user.creator_id }}">{{ user.initials }}</a></div>
+          <div class="gisst-internal-user-avatar"><a href="{{ base_url }}/creators/{{ user.creator_id }}">{{ user.initials }}</a>
+            {% if user.role >= 100 %}
+            <div class="role visitor">(Visitor)</div>
+            {% elif user.role >= 50 %}
+            <div class="role regular">(User)</div>
+            {% elif user.role >= 5 %}
+            <div class="role admin">(Admin)</div>
+            {% elif user.role <= 0 %}
+            <div class="role superuser">(Superuser)</div>
+            {% endif %}
+          </div>
         </div>
     </nav>
     {% endblock mobile_top_bar %}
@@ -104,6 +114,15 @@
                 <div class="gisst-internal-user-avatar">{{ user.initials }}</div>
                 <div>
                     <div class="gisst-internal-user-email"><a href="{{ base_url }}/creators/{{ user.creator_id }}">{{ user.email }}</a></div>
+            {% if user.role >= 100 %}
+            <div class="role visitor">(Visitor)</div>
+            {% elif user.role >= 50 %}
+            <div class="role regular">(User)</div>
+            {% elif user.role >= 5 %}
+            <div class="role admin">(Admin)</div>
+            {% elif user.role <= 0 %}
+            <div class="role superuser">(Superuser)</div>
+            {% endif %}
                 </div>
             </div>
             <a href="{{ base_url }}/logout" class="gisst-internal-logout-btn">Logout</a>
@@ -167,6 +186,15 @@
                     <div class="gisst-internal-user-avatar">{{ user.initials }}</div>
                     <div>
                         <div class="gisst-internal-user-email"><a href="/creators/{{ user.creator_id }}">{{ user.email }}</a></div>
+            {% if user.role >= 100 %}
+            <div class="role visitor">(Visitor)</div>
+            {% elif user.role >= 50 %}
+            <div class="role regular">(User)</div>
+            {% elif user.role >= 5 %}
+            <div class="role admin">(Admin)</div>
+            {% elif user.role <= 0 %}
+            <div class="role superuser">(Superuser)</div>
+            {% endif %}
                     </div>
                 </div>
                 <a href="/logout" class="gisst-internal-mobile-logout-btn">Logout</a>
