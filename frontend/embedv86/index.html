@@ -7,7 +7,31 @@
     <title>Vite + TS</title>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <a href="#" id="gobutton">GO</a>
+    <div id="app" style="width:640px; height:480px; background-color:black; font-family: monospace;">
+      <canvas class="gisst-embed-webplayer gisst-embed-hidden" tabindex="1" id="embed_canvas_0"></canvas>
+      <div class="gisst-embed-webplayer-textmode gisst-embed-hidden"></div>
+    </div>
+    <!-- <script type="module" src="/src/main.ts"></script> -->
+    <script src="/build/libv86-debug.js"></script>
+    <script type="module">
+      import {EmbedV86} from './src/main.ts';
+      async function go() {
+      const v86 = new EmbedV86({
+        wasm_file:"/build/v86-debug.wasm",
+        bios_root:"/build",
+        content_root:"/backend/examples/data/v86",
+        container:document.querySelector("#app"),
+        record_from_start:true,
+        register_replay:(_) => {},
+        stop_replay:() => {},
+        states_changed:(_add,_rem) => {},
+        replay_checkpoints_changed:(_add,_rem) => {}
+      });
+      await v86.run({"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"freedos722.img","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}, null, null);
+        
+      }
+      document.querySelector("#gobutton").addEventListener("click", go);
+    </script>
   </body>
 </html>

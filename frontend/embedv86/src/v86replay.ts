@@ -49,17 +49,17 @@ export class Checkpoint {
 }
 
 export class Replay {
-  events:ReplayEvent[]=[];
-  checkpoints:Checkpoint[]=[];
+  events:ReplayEvent[]=[]; // replace with file
+  checkpoints:Checkpoint[]=[]; // replace with file
   index:number=0;
   checkpoint_index:number=0;
   id:string="";
   mode:ReplayMode=ReplayMode.Inactive;
   last_time:number=0;
-  wraps:number=0;
-  superblock_index!: BlockIndex;
-  block_index!: BlockIndex;
-  version:number=REPLAY_VERSION;
+  wraps:number=0; // store in file??
+  superblock_index!: BlockIndex; // read from / write to file
+  block_index!: BlockIndex; // read from / write to file
+  version:number=REPLAY_VERSION; // store in file header
   last_state?:Uint8Array;
 
   public static async create(id:string, mode:ReplayMode) : Promise<Replay> {
@@ -68,6 +68,7 @@ export class Replay {
     ths.mode = mode;
     ths.block_index = await BlockIndex.create(BLOCK_SIZE); // measured in bytes
     ths.superblock_index = await BlockIndex.create(SUPERBLOCK_SIZE*4); // blocks*sizeof(int)
+    // create file
     return ths;
   }
   public async restore_checkpoint(header_info:Uint8Array, superblock_seq:Uint32Array):Promise<ArrayBuffer> {
@@ -78,6 +79,7 @@ export class Replay {
     const full_size = (new Uint32Array(header_info.buffer,0,4))[2];
     const buffer = new ArrayBuffer(full_size);
     const state = new Uint8Array(buffer);
+    // TODO: maybe use jsonpatch / micropatch to patch this info block from the previous one, but this means restores need to be sequential
     state.set(header_info, 0);
     for (let i = 0; i < superblock_seq.length; i++) {
       const superblock_idx = superblock_seq[i];
@@ -103,6 +105,7 @@ export class Replay {
     return buffer;
   }
   async reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86):Promise<Checkpoint[]> {
+    // for file: rewind or fast forward until checkpoint is found, can't just skip like this
     const checkpoint = this.checkpoints[n];
     this.checkpoint_index = n+1;
     const state = await this.restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
@@ -117,6 +120,7 @@ export class Replay {
     return dropped_checkpoints;
   }
   private seek_internal(event_index:number, t:number) {
+    // seek file, do reads
     if(event_index > this.events.length) { throw "Seek: event index out of bounds"; }
     const [wraps, time] = this.cpu_time(t);
     if(event_index < this.events.length) {
@@ -165,14 +169,17 @@ export class Replay {
     return [wraps, rem];
   }
   log_evt(emulator:V86, code:Evt, val:object|number) {
+    // write to file
     if(this.mode == ReplayMode.Record) {
       this.events.push(new ReplayEvent(this.replay_time(emulator.get_instruction_counter()), code, val));
       this.index += 1;
     }
   }
   async encode_checkpoint(time:number, event_index:number, screenshot:string, state:Uint8Array) : Promise<Checkpoint> {
+    // write to file
     const header_block = new Int32Array(state.buffer, state.byteOffset, 4);
     const info_block_len = header_block[STATE_INDEX_INFO_LEN];
+    // TODO: maybe use jsondiff / microdiff to take a diff of this info block from the last one
     const info_block_buffer = state.slice(0, STATE_INFO_BLOCK_START + info_block_len);
     state = state.subarray(STATE_INFO_BLOCK_START + info_block_len);
     const state_size = state.length;
@@ -237,6 +244,7 @@ export class Replay {
     this.checkpoint_index += 1;
   }
   async tick(emulator:V86) {
+    // read from / write to file
     const t = emulator.get_instruction_counter();
     if (t < this.last_time) { // counter wrapped around, increase wraps
       this.wraps += 1;
@@ -303,6 +311,7 @@ export class Replay {
     this.mode = ReplayMode.Finished;
   }
   private async finish_recording(emulator:V86) {
+    // close file
     this.make_checkpoint(emulator);
     this.mode = ReplayMode.Finished;
   }
@@ -310,6 +319,7 @@ export class Replay {
     if(this.mode == ReplayMode.Record) {
       await this.finish_recording(emulator);
     }
+    // close file
     if(this.mode == ReplayMode.Playback) {
       this.finish_playback(emulator);
     }
@@ -326,7 +336,9 @@ export class Replay {
     // TODO read initial superblock seq?
   }
   /* TODO: this api should be in terms of a stream not a buffer, to account for very long/large replays; also maybe shouldn't serialize/deserialize the whole thing at once!! */
+  // not needed if file is used, will be part of all the other functions
   async serialize():Promise<ArrayBuffer> {
+    // header data
     const frame_count = this.events.length;
     const checkpoint_count = this.checkpoints.length;
     const last_check = this.checkpoints[this.checkpoints.length-1];
@@ -355,6 +367,7 @@ export class Replay {
     x += 4;
     view.setUint32(x,checkpoint_count,true);
     x += 4;
+    // these will be written as we go
     for(const evt of this.events) {
       view.setUint8(x,evt.code as number);
       x += 1;
@@ -396,6 +409,7 @@ export class Replay {
         throw "Unhandled event type";
       }
     }
+    // these will be written as we go
     for(const check of this.checkpoints) {
       // the when
       view.setBigUint64(x,BigInt(check.when),true);
@@ -419,6 +433,7 @@ export class Replay {
       // write header
       {
         const dst = new Uint8Array(ret, x, check.header_info.byteLength);
+        // low budget idea: do json diff generation here from the last decoded info block
         dst.set(check.header_info);
         x += check.header_info.byteLength;
       }
@@ -452,6 +467,7 @@ export class Replay {
     return ret;
   }
   /* TODO: this api should be in terms of a stream not a buffer, to account for very long/large replays */
+  // will just need to read header from file
   static async deserialize(buf: ArrayBuffer): Promise<Replay> {
     const events = [];
     const view = new DataView(buf);
@@ -476,6 +492,7 @@ export class Replay {
     x += 4;
     const checkpoint_count = view.getUint32(x, true);
     x += 4;
+    // these will be read as we go
     for (let i = 0; i < frame_count; i++) {
       const code = view.getUint8(x);
       x += 1;
@@ -529,6 +546,7 @@ export class Replay {
     const r = await Replay.create(id, ReplayMode.Inactive);
     r.version = version;
     r.events = events;
+    // these will be read as we go
     for (let i = 0; i < checkpoint_count; i++) {
       const when_b = view.getBigUint64(x, true);
       x += 8;
@@ -564,6 +582,7 @@ export class Replay {
         const info_len = view.getUint32(x, true);
         x += 4;
         const info = new Uint8Array(buf, x, info_len);
+        // low budget idea: do json diff application here from the last decoded info block
         x += info_len;
         const new_blocks = [];
         const new_block_count = view.getUint32(x, true);

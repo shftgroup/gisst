@@ -1,7 +1,15 @@
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import sirv from 'sirv';
 
+const ServerFilesPlugin = {
+    name: 'serve-server-files',
+    configureServer(server) {
+        const serverStatic = sirv('../../', {})
+        server.middlewares.use(serverStatic);
+    }
+}
 export default defineConfig({
   build: {
     lib: {
@@ -14,7 +22,10 @@ export default defineConfig({
     sourcemap:true,
     outDir:"dist",
   },
-  plugins: [dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],})],
+  plugins: [
+    dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],}),
+    ServerFilesPlugin
+  ],
   rollupOptions: {
     // make sure to externalize deps that shouldn't be bundled
     // into your library
