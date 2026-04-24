@@ -81,11 +81,28 @@ impl MeiliIndexer {
         let mut instances = self.create_index("instance", "instance_id").await?;
         instances.set_primary_key("instance_id").await?;
         instances
-            .set_filterable_attributes(["work_platform"])
+            .set_filterable_attributes(["work_platform", "environment_core_name", "environment_core_version"])
             .await?;
         instances
-            .set_sortable_attributes(["work_name", "work_version", "work_platform"])
+            .set_sortable_attributes(["work_name", "work_version", "work_platform", "work_created_on", "environment_framework", "environment_core_name", "environment_core_version", "environment_created_on", "instance_created_on"])
             .await?;
+        instances.set_ranking_rules([
+            "words",
+            "typo",
+            "proximity",
+            "attributeRank",
+            "sort",
+            "wordPosition",
+            "exactness",
+            "work_created_on:asc",
+            "instance_created_on:desc",
+            "environment_created_on:desc",
+        ]).await?;
+        instances.set_typo_tolerance(&meilisearch_sdk::settings::TypoToleranceSettings {
+            enabled: Some(true),
+            disable_on_numbers: Some(true),
+            ..Default::default()
+        }).await?;
         let mut states = self.create_index("state", "state_id").await?;
         states.set_primary_key("state_id").await?;
         states
@@ -102,6 +119,22 @@ impl MeiliIndexer {
                 "created_on",
             ])
             .await?;
+        states.set_ranking_rules([
+            "words",
+            "typo",
+            "proximity",
+            "attributeRank",
+            "sort",
+            "wordPosition",
+            "exactness",
+            "created_on:desc",
+            "environment_created_on:desc",
+        ]).await?;
+        states.set_typo_tolerance(&meilisearch_sdk::settings::TypoToleranceSettings {
+            enabled: Some(true),
+            disable_on_numbers: Some(true),
+            ..Default::default()
+        }).await?;
         let mut saves = self.create_index("save", "save_id").await?;
         saves.set_primary_key("save_id").await?;
         saves
@@ -118,6 +151,22 @@ impl MeiliIndexer {
                 "created_on",
             ])
             .await?;
+        saves.set_ranking_rules([
+            "words",
+            "typo",
+            "proximity",
+            "attributeRank",
+            "sort",
+            "wordPosition",
+            "exactness",
+            "created_on:desc",
+            "environment_created_on:desc",
+        ]).await?;
+        saves.set_typo_tolerance(&meilisearch_sdk::settings::TypoToleranceSettings {
+            enabled: Some(true),
+            disable_on_numbers: Some(true),
+            ..Default::default()
+        }).await?;
         let mut replays = self.create_index("replay", "replay_id").await?;
         replays.set_primary_key("replay_id").await?;
         replays
@@ -134,6 +183,22 @@ impl MeiliIndexer {
                 "created_on",
             ])
             .await?;
+        replays.set_ranking_rules([
+            "words",
+            "typo",
+            "proximity",
+            "attributeRank",
+            "sort",
+            "wordPosition",
+            "exactness",
+            "created_on:desc",
+            "environment_created_on:desc",
+        ]).await?;
+        replays.set_typo_tolerance(&meilisearch_sdk::settings::TypoToleranceSettings {
+            enabled: Some(true),
+            disable_on_numbers: Some(true),
+            ..Default::default()
+        }).await?;
         let mut creators = self.create_index("creator", "creator_id").await?;
         creators.set_primary_key("creator_id").await?;
         Ok(())

@@ -10,6 +10,7 @@ import * as widgets from 'instantsearch.js/es/widgets';
 export * as widgets from 'instantsearch.js/es/widgets';
 
 function search_instances(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  params.primaryKey = "instance_id";
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'instance',
@@ -19,6 +20,7 @@ function search_instances(search_host:string, search_key:string, params:SearchOp
 }
 
 export function search_states(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  params.primaryKey = "state_id";
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'state',
@@ -28,6 +30,7 @@ export function search_states(search_host:string, search_key:string, params:Sear
 }
 
 export function search_saves(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  params.primaryKey = "save_id";
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'save',
@@ -37,6 +40,7 @@ export function search_saves(search_host:string, search_key:string, params:Searc
 }
 
 export function search_replays(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  params.primaryKey = "replay_id";
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'replay',
@@ -87,7 +91,7 @@ class GISSTInstanceSearch extends HTMLElement {
     search_container.appendChild(pagination);
     this.appendChild(search_container);
 
-    const search = search_instances(search_url, search_key, {});
+    const search = search_instances(search_url, search_key, {finitePagination:true});
     search.addWidgets([
         widgets.searchBox({
         container: search_box
@@ -139,6 +143,7 @@ class GISSTStateSearch extends HTMLElement {
     const limit_to_creator = this.getAttribute("creator-id");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
+    // TODO: Now that environment framework is part of the info, we don't need this attribute and instead can make it hit-by-hit
     const can_clone = (this.getAttribute("can-clone") ?? "false") === 'true' ;
     const filters = [];
     if (limit_to_instance && limit_to_instance != "") {
@@ -185,7 +190,7 @@ class GISSTStateSearch extends HTMLElement {
     const pagination = document.createElement("div");
     search_container.appendChild(pagination);
 
-    const search = search_states(search_url, search_key, {});
+    const search = search_states(search_url, search_key, {finitePagination:true});
     search.addWidgets([
       widgets.searchBox({
         container: search_box
@@ -319,7 +324,7 @@ class GISSTSaveSearch extends HTMLElement {
     const pagination = document.createElement("div");
     search_container.appendChild(pagination);
 
-    const search = search_saves(search_url, search_key, {});
+    const search = search_saves(search_url, search_key, {finitePagination:true});
     search.addWidgets([
       widgets.searchBox({
         container: search_box
@@ -441,7 +446,7 @@ class GISSTPerformanceSearch extends HTMLElement {
     const pagination = document.createElement("div");
     search_container.appendChild(pagination);
 
-    const search = search_replays(search_url, search_key, {});
+    const search = search_replays(search_url, search_key, {finitePagination:true});
     search.addWidgets([
       widgets.searchBox({
         container: search_box

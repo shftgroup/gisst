@@ -43,4 +43,4 @@ opentelemetry-stdout = { version = "0.31" }
 opentelemetry-semantic-conventions = { version="0.31", features=["default", "semconv_experimental"] }
 tracing-opentelemetry = "0.32.0"
 axum-extra = { version = "0.10.1", features = ["query", "tracing"] }
-meilisearch-sdk = "0.28.0"
+meilisearch-sdk = "0.32.0"

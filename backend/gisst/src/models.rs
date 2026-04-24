@@ -220,7 +220,10 @@ pub struct CreatorStateInfo {
     pub creator_id: Uuid,
     pub creator_username: String,
     pub creator_full_name: String,
-    // TODO should include environment type here so we can show can-clone in creator view and not make it a UI setting
+    pub environment_framework: Framework,
+    pub environment_core_name: String,
+    pub environment_core_version: String,
+    pub environment_created_on: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -238,6 +241,10 @@ pub struct CreatorReplayInfo {
     pub creator_id: Uuid,
     pub creator_username: String,
     pub creator_full_name: String,
+    pub environment_framework: Framework,
+    pub environment_core_name: String,
+    pub environment_core_version: String,
+    pub environment_created_on: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -255,6 +262,10 @@ pub struct CreatorSaveInfo {
     pub creator_id: Uuid,
     pub creator_username: String,
     pub creator_full_name: String,
+    pub environment_framework: Framework,
+    pub environment_core_name: String,
+    pub environment_core_version: String,
+    pub environment_created_on: chrono::DateTime<chrono::Utc>,
 }
 
 impl CreatorSaveInfo {
@@ -264,12 +275,15 @@ impl CreatorSaveInfo {
             r#"SELECT work.work_id, work.work_name, work.work_version, work.work_platform,
                       save_id, save_short_desc, save_description,
                       file_id, instance_save.instance_id, save.created_on, creator.creator_id,
-                      creator.creator_username, creator.creator_full_name
+                      creator.creator_username, creator.creator_full_name,
+                      environment.environment_framework as "environment_framework:_",
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
                FROM instance_save
                     JOIN save USING (save_id)
                     JOIN instance ON (instance_save.instance_id = instance.instance_id)
                     JOIN work ON (work.work_id = instance.work_id)
                     JOIN creator ON (save.creator_id = creator.creator_id)
+                    JOIN environment ON (environment.environment_id = instance.environment_id)
                WHERE save.save_id = $1
                LIMIT 1000"#,
             save.save_id
@@ -284,8 +298,14 @@ impl CreatorSaveInfo {
             r#"SELECT work_id, work_name, work_version, work_platform,
                       save_id, save_short_desc, save_description,
                       file_id, instance_id, save.created_on, creator.creator_id,
-                      creator.creator_username, creator.creator_full_name
-               FROM work JOIN instance USING (work_id) JOIN save USING (instance_id) JOIN creator ON (save.creator_id = creator.creator_id)"#
+                      creator.creator_username, creator.creator_full_name,
+                      environment.environment_framework as "environment_framework:_",
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+               FROM work
+                    JOIN instance USING (work_id)
+                    JOIN save USING (instance_id)
+                    JOIN creator ON (save.creator_id = creator.creator_id)
+                    JOIN environment ON (environment.environment_id = instance.environment_id)"#
         ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
     }
 }
@@ -296,8 +316,15 @@ impl CreatorStateInfo {
             r#"SELECT work_id, work_name, work_version, work_platform,
                       state_id, state_name, state_description, state.screenshot_id, screenshot.screenshot_data,
                       file_id, instance_id, state.created_on, creator.creator_id,
-                      creator.creator_username, creator.creator_full_name
-               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id) JOIN screenshot ON (screenshot.screenshot_id = state.screenshot_id)
+                      creator.creator_username, creator.creator_full_name,
+                      environment.environment_framework as "environment_framework:_",
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+               FROM work
+                    JOIN instance USING (work_id)
+                    JOIN state USING (instance_id)
+                    JOIN creator ON (state.creator_id = creator.creator_id)
+                    JOIN screenshot ON (screenshot.screenshot_id = state.screenshot_id)
+                    JOIN environment ON (environment.environment_id = instance.environment_id)
                WHERE state.state_id = $1"#,
             state.state_id
         ).fetch_one(conn).await
@@ -309,8 +336,15 @@ impl CreatorStateInfo {
             r#"SELECT work_id, work_name, work_version, work_platform,
                       state_id, state_name, state_description, state.screenshot_id, screenshot.screenshot_data,
                       file_id, instance_id, state.created_on, creator.creator_id,
-                      creator.creator_username, creator.creator_full_name
-               FROM work JOIN instance USING (work_id) JOIN state USING (instance_id) JOIN creator ON (state.creator_id = creator.creator_id) JOIN screenshot ON (screenshot.screenshot_id = state.screenshot_id)"#
+                      creator.creator_username, creator.creator_full_name,
+                      environment.environment_framework as "environment_framework:_",
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+               FROM work
+                    JOIN instance USING (work_id)
+                    JOIN state USING (instance_id)
+                    JOIN creator ON (state.creator_id = creator.creator_id)
+                    JOIN screenshot ON (screenshot.screenshot_id = state.screenshot_id)
+                    JOIN environment ON (environment.environment_id = instance.environment_id)"#
         ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
     }
 }
@@ -321,8 +355,14 @@ impl CreatorReplayInfo {
             r#"SELECT work_id, work_name, work_version, work_platform,
                       replay_id, replay_name, replay_description,
                       file_id, instance_id, replay.created_on, creator.creator_id,
-                      creator.creator_username, creator.creator_full_name
-               FROM work JOIN instance USING (work_id) JOIN replay USING (instance_id) JOIN creator ON (replay.creator_id = creator.creator_id)
+                      creator.creator_username, creator.creator_full_name,
+                      environment.environment_framework as "environment_framework:_",
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+               FROM work
+                    JOIN instance USING (work_id)
+                    JOIN replay USING (instance_id)
+                    JOIN creator ON (replay.creator_id = creator.creator_id)
+                    JOIN environment ON (environment.environment_id = instance.environment_id)
                WHERE replay.replay_id = $1"#,
             replay.replay_id
         ).fetch_one(conn).await
@@ -334,8 +374,14 @@ impl CreatorReplayInfo {
             r#"SELECT work_id, work_name, work_version, work_platform,
                       replay_id, replay_name, replay_description,
                       file_id, instance_id, replay.created_on, creator.creator_id,
-                      creator.creator_username, creator.creator_full_name
-               FROM work JOIN instance USING (work_id) JOIN replay USING (instance_id) JOIN creator ON (replay.creator_id = creator.creator_id)"#
+                      creator.creator_username, creator.creator_full_name,
+                      environment.environment_framework as "environment_framework:_",
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on
+               FROM work
+                    JOIN instance USING (work_id)
+                    JOIN replay USING (instance_id)
+                    JOIN creator ON (replay.creator_id = creator.creator_id)
+                    JOIN environment ON (environment.environment_id = instance.environment_id)"#
         ).fetch(conn).filter_map(|f| futures::future::ready(f.ok()))
     }
 }
@@ -945,8 +991,14 @@ pub struct InstanceWork {
     pub work_name: String,
     pub work_version: String,
     pub work_platform: String,
+    pub work_created_on: chrono::DateTime<chrono::Utc>,
     pub instance_id: Uuid,
-    pub row_num: i64,
+    pub instance_created_on: chrono::DateTime<chrono::Utc>,
+    pub environment_name: String,
+    pub environment_framework: Framework,
+    pub environment_core_name: String,
+    pub environment_core_version: String,
+    pub environment_created_on: chrono::DateTime<chrono::Utc>,
 }
 
 impl InstanceWork {
@@ -954,10 +1006,10 @@ impl InstanceWork {
         use futures::StreamExt;
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id as "work_id!", work_name as "work_name!",
-                      work_version as "work_version!", work_platform as "work_platform!",
-                      instance_id as "instance_id!", row_num as "row_num!"
-               FROM instancework"#
+            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on,
+instance_id, instance.created_on as instance_created_on,
+environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment.created_on as environment_created_on
+               FROM instance JOIN environment USING (environment_id) JOIN work USING (work_id)"#
         )
         .fetch(conn)
         .filter_map(|f| futures::future::ready(f.ok()))
@@ -968,10 +1020,10 @@ impl InstanceWork {
     ) -> sqlx::Result<Self> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id as "work_id!", work_name as "work_name!",
-               work_version as "work_version!", work_platform as "work_platform!",
-               instance_id as "instance_id!", row_num as "row_num!"
-               FROM instancework WHERE instance_id=$1"#,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on,
+instance_id, instance.created_on as instance_created_on,
+environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment.created_on as environment_created_on
+               FROM instance JOIN environment USING (environment_id) JOIN work USING (work_id) WHERE instance_id=$1"#,
             instance_id
         )
         .fetch_one(conn)
