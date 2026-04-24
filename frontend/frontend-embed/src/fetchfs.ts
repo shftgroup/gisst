@@ -17,7 +17,7 @@ export async function fetchZip(module:LibretroModule, zipfile:string, mount:stri
   const entries = await zipReader.getEntries();
   mkdirp(module,mount);
   for(const file of entries) {
-    if (file.getData && !file.directory) {
+    if (!file.directory) {
       const writer = new zip.Uint8ArrayWriter();
       const data:Uint8Array = await file.getData(writer);
       await module.FS.writeFile(mount+file.filename, data);

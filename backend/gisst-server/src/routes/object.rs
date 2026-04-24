@@ -168,7 +168,7 @@ async fn create_object(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let _creator_id = auth
+    let creator_id = auth
         .user
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
@@ -186,7 +186,7 @@ async fn create_object(
                     object_description: object
                         .object_description
                         .or_else(|| Some(file.file_filename.clone())),
-                    //creator_id,
+                    creator_id: Some(creator_id),
                     created_on: chrono::Utc::now(),
                 },
             )

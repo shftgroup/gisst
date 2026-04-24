@@ -32,6 +32,11 @@
         "ordinal": 5,
         "name": "work_derived_from",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "creator_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -47,6 +52,7 @@
       false,
       false,
       false,
+      true,
       true
     ]
   },

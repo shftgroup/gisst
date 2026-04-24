@@ -135,6 +135,7 @@ async fn main() -> Result<(), IngestError> {
         Some("base retroarch config".to_string()),
         String::new(),
         Duplicate::ReuseObject,
+        None
     )
     .await?;
     let indexer = gisst::search::MeiliIndexer::new(&meili_url, &meili_api_key)?;
@@ -153,6 +154,7 @@ async fn main() -> Result<(), IngestError> {
             Some(dep_path.clone()),
             dep_path.clone(),
             Duplicate::ReuseObject,
+        None
         )
         .await?;
         dep_ids.push(dep_id);
@@ -429,6 +431,7 @@ async fn create_metadata_records(
         // TODO this should use the real cataloguing data
         created_on,
         work_derived_from: None,
+        creator_id: None,
     };
     info!("creating work {} with file {file_name}", work.work_name);
     let env = Environment {
@@ -441,6 +444,7 @@ async fn create_metadata_records(
         environment_derived_from: None,
         environment_config: None,
         created_on,
+        creator_id: None,
     };
     let instance_id = Uuid::new_v4();
     let instance = Instance {
@@ -451,6 +455,7 @@ async fn create_metadata_records(
         created_on,
         derived_from_instance: None,
         derived_from_state: None,
+        creator_id: None,
     };
     Work::insert(conn, work).await?;
     Environment::insert(conn, env).await?;
@@ -480,6 +485,7 @@ async fn create_single_file_instance_objects(
             .to_string_lossy()
             .to_string(),
         Duplicate::ReuseData,
+        None
     )
     .await?;
     Object::link_object_to_instance(conn, object_id, instance_id, ObjectRole::Content, 0).await?;
@@ -510,6 +516,7 @@ async fn create_playlist_instance_objects(
         desc.clone(),
         src_path.clone(),
         Duplicate::ReuseData,
+        None
     )
     .await?;
     Object::link_object_to_instance(conn, playlist_id, instance_id, ObjectRole::Content, 0).await?;
@@ -524,6 +531,7 @@ async fn create_playlist_instance_objects(
             desc.clone(),
             src_path.clone(),
             Duplicate::ReuseData,
+        None
         )
         .await?;
         info!("linking {file_id} with {instance_id}");

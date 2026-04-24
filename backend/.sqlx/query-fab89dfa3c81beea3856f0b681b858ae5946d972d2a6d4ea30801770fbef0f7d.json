@@ -37,6 +37,11 @@
         "ordinal": 6,
         "name": "derived_from_state",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "creator_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -50,6 +55,7 @@
       false,
       true,
       false,
+      true,
       true,
       true
     ]

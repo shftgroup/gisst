@@ -19,6 +19,7 @@ pub async fn clone_v86_machine(
     storage_root: &str,
     depth: u8,
     indexer: &impl crate::search::SearchIndexer,
+    creator_id:Option<Uuid>,
 ) -> Result<Uuid, V86Clone> {
     use crate::inc_metric;
     use std::process::Command;
@@ -109,6 +110,7 @@ pub async fn clone_v86_machine(
     // create the new instance
     let mut instance = instance;
     instance.created_on = chrono::Utc::now();
+    instance.creator_id = creator_id;
     instance.derived_from_instance = Some(instance.instance_id);
     instance.derived_from_state = Some(state_id);
     instance.instance_id = Uuid::new_v4();
@@ -156,12 +158,14 @@ pub async fn clone_v86_machine(
             file_size,
             file_compressed_size: None,
             created_on: chrono::Utc::now(),
+            creator_id,
         };
         let object = Object {
             object_id: Uuid::new_v4(),
             file_id: file_record.file_id,
             object_description: Some(file_name),
             created_on: chrono::Utc::now(),
+            creator_id,
         };
         let file_info = StorageHandler::write_file_to_uuid_folder(
             storage_root,

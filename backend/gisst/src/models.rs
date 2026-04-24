@@ -48,6 +48,7 @@ pub struct Environment {
     pub environment_config: Option<sqlx::types::JsonValue>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
+    pub creator_id: Option<Uuid>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,7 +62,7 @@ pub struct File {
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
     pub file_compressed_size: Option<i64>,
-    // TODO add creator field
+    pub creator_id: Option<Uuid>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,6 +75,7 @@ pub struct Instance {
     pub created_on: DateTime<Utc>,
     pub derived_from_instance: Option<Uuid>,
     pub derived_from_state: Option<Uuid>,
+    pub creator_id: Option<Uuid>
 }
 
 #[serde_as]
@@ -82,6 +84,9 @@ pub struct Screenshot {
     pub screenshot_id: Uuid,
     #[serde_as(as = "Base64")]
     pub screenshot_data: Vec<u8>,
+    #[serde(default = "utc_datetime_now")]
+    pub created_on: DateTime<Utc>,
+    pub creator_id: Option<Uuid>
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
@@ -142,7 +147,7 @@ pub struct Object {
     pub object_description: Option<String>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
-    // TODO add creator field
+    pub creator_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -202,6 +207,7 @@ pub struct Work {
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
     pub work_derived_from: Option<Uuid>,
+    pub creator_id: Option<Uuid>
 }
 
 #[serde_as]
@@ -211,6 +217,7 @@ pub struct CreatorStateInfo {
     pub work_name: String,
     pub work_version: String,
     pub work_platform: String,
+    pub work_creator: Option<Uuid>,
     pub state_id: Uuid,
     pub state_name: String,
     pub state_description: String,
@@ -235,6 +242,7 @@ pub struct CreatorReplayInfo {
     pub work_name: String,
     pub work_version: String,
     pub work_platform: String,
+    pub work_creator: Option<Uuid>,
     pub replay_id: Uuid,
     pub replay_name: String,
     pub replay_description: String,
@@ -256,6 +264,7 @@ pub struct CreatorSaveInfo {
     pub work_name: String,
     pub work_version: String,
     pub work_platform: String,
+    pub work_creator: Option<Uuid>,
     pub save_id: Uuid,
     pub save_short_desc: String,
     pub save_description: String,
@@ -275,7 +284,7 @@ impl CreatorSaveInfo {
     pub async fn get_for_save(conn: &mut PgConnection, save: &Save) -> sqlx::Result<Vec<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work.work_id, work.work_name, work.work_version, work.work_platform,
+            r#"SELECT work.work_id, work.work_name, work.work_version, work.work_platform, work.creator_id as work_creator,
                       save_id, save_short_desc, save_description,
                       file_id, instance_save.instance_id, save.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
@@ -298,7 +307,7 @@ impl CreatorSaveInfo {
         use futures::StreamExt;
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.creator_id as work_creator,
                       save_id, save_short_desc, save_description,
                       file_id, instance_id, save.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
@@ -316,7 +325,7 @@ impl CreatorStateInfo {
     pub async fn get_for_state(conn: &mut PgConnection, state: &State) -> sqlx::Result<Self> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.creator_id as work_creator,
                       state_id, state_name, state_description, state.screenshot_id, screenshot.screenshot_data,
                       file_id, instance_id, state.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
@@ -336,7 +345,7 @@ impl CreatorStateInfo {
         use futures::StreamExt;
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.creator_id as work_creator,
                       state_id, state_name, state_description, state.screenshot_id, screenshot.screenshot_data,
                       file_id, instance_id, state.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
@@ -355,7 +364,7 @@ impl CreatorReplayInfo {
     pub async fn get_for_replay(conn: &mut PgConnection, replay: &Replay) -> sqlx::Result<Self> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.creator_id as work_creator,
                       replay_id, replay_name, replay_description,
                       file_id, instance_id, replay.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
@@ -374,7 +383,7 @@ impl CreatorReplayInfo {
         use futures::StreamExt;
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.creator_id as work_creator,
                       replay_id, replay_name, replay_description,
                       file_id, instance_id, replay.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
@@ -450,7 +459,7 @@ impl File {
     pub async fn insert(conn: &mut PgConnection, model: File) -> Result<Self, Insert> {
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
+            r#"INSERT INTO file VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
             "#,
             model.file_id,
             model.file_hash,
@@ -460,6 +469,7 @@ impl File {
             model.file_size,
             model.created_on,
             model.file_compressed_size,
+            model.creator_id
         )
         .fetch_one(conn)
         .await
@@ -487,14 +497,15 @@ impl Instance {
     ) -> Result<Self, Insert> {
         let record = sqlx::query_as!(
             Instance,
-            r#"INSERT INTO instance VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *"#,
+            r#"INSERT INTO instance VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"#,
             model.instance_id,
             model.environment_id,
             model.work_id,
             model.instance_config,
             model.created_on,
             model.derived_from_instance,
-            model.derived_from_state
+            model.derived_from_state,
+            model.creator_id
         )
         .fetch_one(conn.as_mut())
         .await
@@ -543,7 +554,7 @@ impl Environment {
                   environment_framework as "environment_framework:_",
                   environment_platform,
                   environment_core_name, environment_core_version,
-                  environment_derived_from, environment_config, created_on
+                  environment_derived_from, environment_config, created_on, creator_id
                FROM environment
                WHERE environment_id = $1"#,
             id
@@ -563,7 +574,7 @@ impl Environment {
                   environment_framework as "environment_framework:_",
                   environment_platform,
                   environment_core_name, environment_core_version,
-                  environment_derived_from, environment_config, created_on
+                  environment_derived_from, environment_config, created_on, creator_id
                FROM environment
                WHERE environment_core_name = $1
                  AND environment_core_version = $2"#,
@@ -577,12 +588,12 @@ impl Environment {
         sqlx::query_as!(
             Self,
             r#"INSERT INTO environment
-               VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
+               VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                RETURNING environment_id, environment_name,
                   environment_framework as "environment_framework:_",
                   environment_platform,
                   environment_core_name, environment_core_version,
-                  environment_derived_from, environment_config, created_on"#,
+                  environment_derived_from, environment_config, created_on, creator_id"#,
             model.environment_id,
             model.environment_name,
             model.environment_framework as _,
@@ -591,7 +602,8 @@ impl Environment {
             model.environment_derived_from,
             model.environment_config,
             model.created_on,
-            model.environment_platform
+            model.environment_platform,
+            model.creator_id
         )
         .fetch_one(conn)
         .await
@@ -921,13 +933,14 @@ impl Work {
     pub async fn insert(conn: &mut PgConnection, work: Self) -> Result<Self, Insert> {
         sqlx::query_as!(
             Work,
-            r#"INSERT INTO work VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"#,
+            r#"INSERT INTO work VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"#,
             work.work_id,
             work.work_name,
             work.work_version,
             work.work_platform,
             work.created_on,
-            work.work_derived_from
+            work.work_derived_from,
+            work.creator_id
         )
         .fetch_one(conn)
         .await
@@ -976,9 +989,11 @@ impl Screenshot {
     pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, Insert> {
         sqlx::query_as!(
             Screenshot,
-            r#"INSERT INTO screenshot VALUES ($1, $2) RETURNING *"#,
+            r#"INSERT INTO screenshot VALUES ($1, $2, $3, $4) RETURNING *"#,
             model.screenshot_id,
-            model.screenshot_data
+            model.screenshot_data,
+            model.created_on,
+            model.creator_id
         )
         .fetch_one(conn)
         .await
@@ -1009,6 +1024,7 @@ pub struct InstanceWork {
     pub work_version: String,
     pub work_platform: String,
     pub work_created_on: chrono::DateTime<chrono::Utc>,
+    pub work_creator: Option<Uuid>,
     pub instance_id: Uuid,
     pub instance_created_on: chrono::DateTime<chrono::Utc>,
     pub environment_name: String,
@@ -1023,7 +1039,7 @@ impl InstanceWork {
         use futures::StreamExt;
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on, work.creator_id as work_creator,
 instance_id, instance.created_on as instance_created_on,
 environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment.created_on as environment_created_on
                FROM instance JOIN environment USING (environment_id) JOIN work USING (work_id)"#
@@ -1037,7 +1053,7 @@ environment_name, environment_framework as "environment_framework:_", environmen
     ) -> sqlx::Result<Self> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on, work.creator_id as work_creator,
 instance_id, instance.created_on as instance_created_on,
 environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment.created_on as environment_created_on
                FROM instance JOIN environment USING (environment_id) JOIN work USING (work_id) WHERE instance_id=$1"#,
@@ -1342,6 +1358,7 @@ pub async fn insert_file_object(
     object_description: Option<String>,
     file_source_path: String,
     duplicate: Duplicate,
+    creator_id: Option<Uuid>
 ) -> Result<Uuid, crate::error::InsertFile> {
     use crate::error::InsertFile;
     use crate::inc_metric;
@@ -1378,6 +1395,7 @@ pub async fn insert_file_object(
                     path,
                     &file_source_path,
                     created_on,
+                    creator_id
                 )
                 .await?;
                 let object = Object {
@@ -1385,6 +1403,7 @@ pub async fn insert_file_object(
                     file_id: file.file_id,
                     object_description,
                     created_on,
+                    creator_id,
                 };
                 Object::insert(conn, object).await?;
                 Some(object_id)
@@ -1407,6 +1426,7 @@ pub async fn insert_file_object(
             path,
             &file_source_path,
             created_on,
+            creator_id,
         )
         .await?;
         let object = Object {
@@ -1414,6 +1434,7 @@ pub async fn insert_file_object(
             file_id: file.file_id,
             object_description,
             created_on,
+            creator_id,
         };
         Object::insert(conn, object).await?;
         Ok(object_id)
@@ -1430,6 +1451,7 @@ pub async fn insert_new_file(
     path: &std::path::Path,
     file_source_path: &str,
     created_on: chrono::DateTime<chrono::Utc>,
+    creator_id: Option<Uuid>
 ) -> Result<File, crate::error::InsertFile> {
     use crate::inc_metric;
     use crate::storage::StorageHandler;
@@ -1452,6 +1474,7 @@ pub async fn insert_new_file(
         file_size: file_info.file_size,
         file_compressed_size: file_info.file_compressed_size,
         created_on,
+        creator_id
     };
     File::insert(conn, file_record)
         .await

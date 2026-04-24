@@ -49,7 +49,7 @@ async fn create_or_derive_work(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let _creator_id = auth
+    let creator_id = auth
         .user
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
@@ -76,7 +76,7 @@ async fn create_or_derive_work(
                         work_version: work.work_version.clone(),
                         work_platform: work.work_platform.clone(),
                         work_derived_from: Some(existing.work_id),
-                        //creator_id,
+                        creator_id:Some(creator_id),
                         created_on: chrono::Utc::now(),
                     },
                 )
@@ -104,7 +104,7 @@ async fn create_or_derive_work(
                     work_version: work.work_version.clone(),
                     work_platform: work.work_platform.clone(),
                     work_derived_from: work.work_derived_from,
-                    //creator_id,
+                        creator_id:Some(creator_id),
                     created_on: chrono::Utc::now(),
                 },
             )

@@ -137,7 +137,7 @@ async fn upgrade_envs_in_place(
     println!("Replacing instanceobject links to files in {deps:?} with core file links...");
     for env in envs {
         let mut tx = db.begin().await?;
-        let Some(_) = Core::get(&mut tx, &name, core_hash, &env.environment_platform).await? else {
+        let Some(_) = Core::get(&mut tx, name, core_hash, &env.environment_platform).await? else {
             println!(
                 "Core {name}:{core_hash}:{} is not present in the database, use gisst-cli add-core first",
                 env.environment_platform
@@ -379,6 +379,7 @@ async fn add_core(
                 &(core_dir.join(Path::new(&file))),
                 &source_path.to_string_lossy().to_string().replace("./", ""),
                 now,
+                None
             )
             .await?
             .file_id
@@ -427,6 +428,7 @@ async fn add_work_instance(
             work_platform: platform_name,
             created_on: now,
             work_derived_from: None,
+            creator_id: None
         };
         Work::insert(&mut tx, work).await?;
     } else {
@@ -441,6 +443,7 @@ async fn add_work_instance(
         created_on: now,
         derived_from_instance: None,
         derived_from_state: None,
+        creator_id: None,
     };
     Instance::insert(&mut tx, instance, indexer).await?;
     let cwd = cwd.as_deref().map_or(Path::new(""), Path::new);
@@ -458,6 +461,7 @@ async fn add_work_instance(
             Some(file_name.clone()),
             source_path.to_string_lossy().to_string().replace("./", ""),
             Duplicate::ReuseObject,
+        None
         )
         .await?;
         Object::link_object_to_instance(
@@ -483,6 +487,7 @@ async fn add_work_instance(
             Some(file_name.clone()),
             source_path.to_string_lossy().to_string().replace("./", ""),
             Duplicate::ReuseObject,
+        None
         )
         .await?;
         Object::link_object_to_instance(
@@ -508,6 +513,7 @@ async fn add_work_instance(
             Some(file_name.clone()),
             source_path.to_string_lossy().to_string().replace("./", ""),
             Duplicate::ReuseObject,
+            None
         )
         .await?;
         Object::link_object_to_instance(
@@ -610,6 +616,7 @@ async fn clone_v86_machine(
         &storage_root,
         depth,
         indexer,
+        None
     )
     .await?;
     Ok(uuid)
@@ -652,6 +659,7 @@ async fn add_patched_instance(
         work_version: data.version,
         work_name: data.name,
         work_platform: work.work_platform,
+        creator_id: None
     };
     Work::insert(&mut tx, new_work).await?;
     Instance::insert(&mut tx, new_inst, indexer).await?;
@@ -677,6 +685,7 @@ async fn add_patched_instance(
                 None,
                 link.file_source_path,
                 gisst::models::Duplicate::ReuseData,
+        None
             )
             .await?;
             Object::link_object_to_instance(
@@ -761,6 +770,7 @@ async fn create_object(
         Some(file_name.clone()),
         source_path.to_string_lossy().to_string().replace("./", ""),
         gisst::models::Duplicate::ForceUuid(force_uuid),
+        None
     )
     .await?;
     if let Some(inst) = link {
@@ -988,6 +998,7 @@ async fn create_replay(
             &path,
             &source_path.to_string_lossy().to_string().replace("./", ""),
             created_on,
+            None
         )
         .await?
         .file_id
@@ -1030,6 +1041,8 @@ async fn create_screenshot(
         Screenshot {
             screenshot_data: std::fs::read(file)?,
             screenshot_id: force_uuid.unwrap_or_else(Uuid::new_v4),
+            created_on: chrono::Utc::now(),
+            creator_id: None
         },
     )
     .await
@@ -1094,6 +1107,7 @@ async fn create_state(
         file,
         &source_path.to_string_lossy().to_string().replace("./", ""),
         created_on,
+            None
     )
     .await?
     .file_id;
@@ -1165,6 +1179,7 @@ async fn create_save(
             file,
             &source_path.to_string_lossy().to_string().replace("./", ""),
             created_on,
+            None
         )
         .await?
         .file_id

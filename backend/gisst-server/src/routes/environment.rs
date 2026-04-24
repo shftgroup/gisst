@@ -34,7 +34,7 @@ async fn create_or_derive_environment(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let _creator_id = auth
+    let creator_id = auth
         .user
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
@@ -67,7 +67,7 @@ async fn create_or_derive_environment(
                         environment_core_version: env.environment_core_version,
                         environment_derived_from: Some(existing.environment_id),
                         environment_config: env.environment_config,
-                        //creator_id,
+                        creator_id: Some(creator_id),
                         created_on: chrono::Utc::now(),
                     },
                 )
@@ -88,7 +88,7 @@ async fn create_or_derive_environment(
                     environment_core_version: env.environment_core_version,
                     environment_derived_from: env.environment_derived_from,
                     environment_config: env.environment_config,
-                    //creator_id,
+                    creator_id: Some(creator_id),
                     created_on: chrono::Utc::now(),
                 },
             )

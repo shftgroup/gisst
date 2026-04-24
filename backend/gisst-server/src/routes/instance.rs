@@ -189,6 +189,10 @@ async fn clone_v86_instance(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
+    let creator_id = auth
+        .user
+        .ok_or(ServerError::AuthUserNotAuthenticated)?
+        .creator_id;
     let mut conn = app_state.pool.acquire().await?;
     let mut tx = conn.begin().await?;
     let state_id = params.state.ok_or(ServerError::StateRequired)?;
@@ -201,6 +205,7 @@ async fn clone_v86_instance(
         storage_path,
         storage_depth,
         &app_state.indexer,
+        Some(creator_id)
     )
     .await?;
     tx.commit().await?;
@@ -260,7 +265,7 @@ async fn create_or_derive_instance(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let _creator_id = auth
+    let creator_id = auth
         .user
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
@@ -281,7 +286,7 @@ async fn create_or_derive_instance(
                 instance_config: instance.instance_config,
                 derived_from_instance: Some(existing.instance_id),
                 derived_from_state: None,
-                //creator_id,
+                creator_id: Some(creator_id),
                 created_on: chrono::Utc::now(),
             },
             &app_state.indexer,
@@ -298,7 +303,7 @@ async fn create_or_derive_instance(
                 instance_config: instance.instance_config,
                 derived_from_instance: None,
                 derived_from_state: None,
-                //creator_id,
+                creator_id: Some(creator_id),
                 created_on: chrono::Utc::now(),
             },
             &app_state.indexer,
