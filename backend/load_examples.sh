@@ -4,8 +4,10 @@
 #  https://archive.org/details/magic-castle-2021-07-may
 #  https://nitroyuash.itch.io/petscop-restored
 
-#set -e
-#set -o pipefail
+if "${STOP_ON_ERR:-false}"; then
+  set -e
+  set -o pipefail
+fi
 
 source .env
 
