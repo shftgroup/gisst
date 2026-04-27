@@ -606,7 +606,7 @@ function elementFromTemplates(template_name: string): Node {
 }
 
 function valid_for_css(s:string): string {
-  return s.replace(/[^_a-zA-Z0-9-]/g, "_")
+  return "_" + s.replace(/[^_a-zA-Z0-9-]/g, "_")
 }
 
 function nonnull(obj:number|object|null):asserts obj {
