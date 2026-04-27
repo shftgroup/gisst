@@ -10,37 +10,37 @@ import * as widgets from 'instantsearch.js/es/widgets';
 export * as widgets from 'instantsearch.js/es/widgets';
 
 function search_instances(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  params.primaryKey = "instance_id";
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'instance',
-    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
     searchClient
   });
 }
 
 export function search_states(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  params.primaryKey = "state_id";
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'state',
-    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
     searchClient
   });
 }
 
 export function search_saves(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  params.primaryKey = "save_id";
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'save',
-    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
     searchClient
   });
 }
 
 export function search_replays(search_host:string, search_key:string, params:SearchOptions):InstantSearch {
+  params.primaryKey = "replay_id";
   const { searchClient } = instantMeiliSearch(search_host, search_key, params);
   return instantsearch({
     indexName: 'replay',
-    // @ts-expect-error instantsearch.js types are bad vis-a-vis instant-meilisearch
     searchClient
   });
 }
@@ -117,7 +117,7 @@ class GISSTInstanceSearch extends HTMLElement {
           },
         }),
         widgets.configure({ hitsPerPage: 10 }),
-        widgets.pagination({ container: pagination }),
+        widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
     ]);
     search.start();
   }
@@ -139,6 +139,7 @@ class GISSTStateSearch extends HTMLElement {
     const limit_to_creator = this.getAttribute("creator-id");
     const show_creator_info = (this.getAttribute("creator-info") ?? "true") == "true";
     const show_instance_info = (this.getAttribute("instance-info") ?? "true") == "true";
+    // TODO: Now that environment framework is part of the info, we don't need this attribute and instead can make it hit-by-hit
     const can_clone = (this.getAttribute("can-clone") ?? "false") === 'true' ;
     const filters = [];
     if (limit_to_instance && limit_to_instance != "") {
@@ -191,7 +192,7 @@ class GISSTStateSearch extends HTMLElement {
         container: search_box
       }),
       widgets.configure({ hitsPerPage: 10, filters: filters.join(" AND ") }),
-      widgets.pagination({ container: pagination }),
+        widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
       /* TODO: these nested templates are gnarly, what can be done? */
       widgets.hits({
         container: results_body,
@@ -325,7 +326,7 @@ class GISSTSaveSearch extends HTMLElement {
         container: search_box
       }),
       widgets.configure({ hitsPerPage: 10, filters: filters.join(" AND ") }),
-      widgets.pagination({ container: pagination }),
+        widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
       /* TODO: these nested templates are gnarly, what can be done? */
       widgets.hits({
         container: results_body,
@@ -447,7 +448,7 @@ class GISSTPerformanceSearch extends HTMLElement {
         container: search_box
       }),
       widgets.configure({ hitsPerPage: 10, filters: filters.join(" AND ") }),
-      widgets.pagination({ container: pagination }),
+        widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
       /* TODO: these nested templates are gnarly, what can be done? */
       widgets.hits({
         container: results_body,
