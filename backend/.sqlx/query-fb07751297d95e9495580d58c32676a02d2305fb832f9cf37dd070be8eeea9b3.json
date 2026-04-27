@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE replay SET replay_forked_from=$3 WHERE replay_forked_from=$2 AND instance_id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fb07751297d95e9495580d58c32676a02d2305fb832f9cf37dd070be8eeea9b3"
+}

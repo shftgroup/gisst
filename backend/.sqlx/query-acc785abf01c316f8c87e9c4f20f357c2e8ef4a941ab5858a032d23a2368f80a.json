@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE state SET save_derived_from=$3 WHERE save_derived_from=$1 AND instance_id=$2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "acc785abf01c316f8c87e9c4f20f357c2e8ef4a941ab5858a032d23a2368f80a"
+}
