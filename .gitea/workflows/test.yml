@@ -112,8 +112,8 @@ jobs:
       working-directory: backend
       run: cargo run --bin gisst-cli -- init-indices
     - name: Create test data
-      working-directory: frontend
-      run: npm run gendata --workspaces --if-present
+      working-directory: frontend/server-ui
+      run: node scripts/gendata.js $MEILI_URL
     - name: ensure playwright binaries present
       run: npx playwright install
       working-directory: frontend
