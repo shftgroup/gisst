@@ -1,8 +1,6 @@
 services:
   devcontainer:
-    build:
-      context: ../
-      dockerfile: Dockerfile.dev
+    image: cafe.cs.pomona.edu/shftgroup/gisst-dev:latest
     env_file:
       - ./devcontainer.env
     environment:
@@ -27,7 +25,7 @@ services:
       - meili
       - meilitest
   db:
-    image: postgres:16
+    image: postgres:18
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data

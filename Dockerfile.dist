@@ -20,13 +20,18 @@ WORKDIR /gisst-build
 RUN apt update && \
     apt install -y software-properties-common && \
     add-apt-repository ppa:git-core/ppa && \
+    apt update && \
     apt install -y bash curl git jq bison libpng-dev \
-        bsdmainutils build-essential pkgconf cmake clang && \
-    apt-get clean
+       bsdmainutils build-essential pkgconf cmake clang && \
+    apt-get clean && echo kick
+
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
 ENV PATH="/root/.cargo/bin:${PATH}"
+
 RUN rustup default $RUST_VERSION && \
     rustup target add wasm32-unknown-unknown
 COPY dist-update-docker.sh /usr/local/bin/dist-update
 RUN chmod +x /usr/local/bin/dist-update
+
 ENTRYPOINT ["/usr/local/bin/dist-update"]

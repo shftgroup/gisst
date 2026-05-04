@@ -5,6 +5,8 @@ SCRIPT_VERSION="1.0.0"
 set -o pipefail
 set -e
 
+git --version
+
 git config --global advice.detachedHead false
 
 function die

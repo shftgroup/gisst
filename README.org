@@ -1,7 +1,3 @@
-* About this Project
-
-Easily embed any game in a browser or client, with some wrappers for showing saved states during this session and other cool stuff.
-
 * Initial setup (devcontainer)
 
 You need Docker installed to proceed.

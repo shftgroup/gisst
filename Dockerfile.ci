@@ -1,0 +1,58 @@
+FROM ubuntu:resolute AS base
+
+ENV PLAYWRIGHT_VERSION=1.53.0
+ENV RUST_VERSION=1.93.1
+ENV NODE_VERSION=25.6.0
+
+RUN apt-get update && apt-get install -y \
+  libssl-dev nginx build-essential make curl clang git \
+  libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
+  libxkbcommon0 libatspi2.0-0t64 libxcomposite1 \
+  libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64 \
+    postgresql pkg-config sudo zsh ripgrep ca-certificates \
+  zstd
+
+ENV USER=ubuntu
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+USER $USER
+ENV NVM_DIR=/home/$USER/.nvm
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+RUN bash -c ". ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION}"
+ENV PATH="/home/$USER/.nvm/versions/node/v${NODE_VERSION}/bin:${PATH}"
+RUN npm i -g "@playwright/test@${PLAYWRIGHT_VERSION}" && npx playwright install --with-deps
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y -c rust-analyzer,rust-src,rustfmt,clippy,rust-docs,cargo --default-toolchain=${RUST_VERSION}
+ENV PATH="/home/$USER/.cargo/bin:${PATH}"
+ENV CARGO_HOME=/home/$USER/.cargo
+RUN cargo install sqlx-cli
+RUN cargo install cargo-chef
+RUN <<EOF
+    cd
+    curl -L https://install.meilisearch.com | sh
+    sudo mv meilisearch /usr/local/bin/
+EOF
+RUN mkdir -p /tmp/frontend /tmp/backend
+
+FROM base AS frontend
+COPY --chown=$USER frontend/package-lock.json /tmp/frontend/package-lock.json
+COPY --chown=$USER frontend/package.json /tmp/frontend/package.json
+COPY --chown=$USER --parents frontend/*/package.json /tmp/
+RUN <<EOF
+    cd /tmp/frontend
+    npm ci
+EOF
+
+FROM base AS backend-plan
+COPY --chown=$USER backend /tmp/backend
+RUN <<EOF
+    cd /tmp/backend
+    cargo chef prepare --recipe-path recipe.json
+EOF
+
+FROM base AS backend-build
+COPY --chown=$USER --from=backend-plan /tmp/backend/recipe.json /tmp/backend/recipe.json
+RUN cd /tmp/backend && cargo chef cook --recipe-path recipe.json --all-targets && cargo chef cook --recipe-path recipe.json --clippy --all-targets && cargo fetch
+
+FROM frontend AS ci
+COPY --chown=$USER --from=backend-build /tmp/backend/ /tmp/backend
+COPY --chown=$USER --from=backend-build /home/$USER/.cargo/git /home/$USER/.cargo/git
+COPY --chown=$USER --from=backend-build /home/$USER/.cargo/registry /home/$USER/.cargo/registry

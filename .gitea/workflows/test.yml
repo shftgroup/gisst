@@ -1,0 +1,204 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cores:
+    # We have to build cores in the test workflow because the backend
+    # tests rely on cores with the right hashes. This means we also
+    # need to build the core container here because changes to the
+    # emscripten version, rust version, etc need to be mirrored in the
+    # dockerfile and the manifest.
+    runs-on: ubuntu-latest
+    outputs:
+      cores-hash: ${{ steps.hash-manifest.outputs.hash }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Login to registry
+      uses: docker/login-action@v4
+      with:
+        username: jcoa2018
+        password: ${{ secrets.REGISTRY_TOKEN }}
+        registry: cafe.cs.pomona.edu
+    - name: Compute core manifest hash
+      id: hash-manifest
+      uses: seepine/hash-files@v1
+      with:
+        patterns: |
+          manifest-ci.json
+          Dockerfile.dist
+          dist-update-docker.sh
+    - name: Get cached cores
+      id: cache
+      uses: actions/cache/restore@v5
+      with:
+        path: ./build
+        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
+        lookup-only: true
+    - name: Rebuild cores (setup buildx)
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: docker/setup-buildx-action@v2
+    - name: Rebuild cores (build container)
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: "Dockerfile.dist"
+        tags: "cafe.cs.pomona.edu/shftgroup/gisst-dist:${{ steps.hash-manifest.outputs.hash }}"
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        push: true
+    - name: Rebuild cores (run dist script)
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        docker run --privileged --rm -v ./build:/out -v ./manifest-ci.json:/manifest.json -v ./v86bios:/files/v86bios -e GET_ASSETS=0 cafe.cs.pomona.edu/shftgroup/gisst-dist:${{ steps.hash-manifest.outputs.hash  }}
+    - name: Cache cores
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ./build
+        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
+
+  frontend:
+    runs-on: ubuntu-latest
+    container:
+      image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
+      credentials:
+          username: jcoa2018
+          password: ${{ secrets.REGISTRY_TOKEN }}
+    env:
+      GISST_CONFIG_PATH: ./config
+      MEILI_URL: http://localhost:7701
+      MEILI_MASTER_KEY: test-api-key
+      MEILI_API_KEY: test-api-key
+    steps:
+    - uses: actions/checkout@v3
+    - name: Pull cached backend dependencies
+      run: mv /tmp/backend/target backend/
+    - name: Restore cached node modules
+      run: |
+        mv /tmp/frontend/node_modules frontend/
+        cd frontend
+        npm i
+    - name: build
+      run: npm run build --workspaces --if-present
+      working-directory: frontend
+    - name: tsc
+      run: npm run check --workspaces --if-present
+      working-directory: frontend
+    - name: dist
+      run: npm run dist --workspaces --if-present
+      working-directory: frontend
+    - uses: JarvusInnovations/background-action@v1
+      name: Run meili
+      with:
+        run: |
+          meilisearch --no-analytics --master-key test-api-key --env development --db-path ./test --http-addr localhost:7701 &
+        wait-on: '{"resources":["http-get://localhost:7701/version"],"headers":{"Authorization":"Bearer test-api-key"}}'
+        tail: true # true = stderr,stdout
+        log-output-resume: stderr
+        wait-for: 1m
+        log-output: stderr,stdout # same as true
+        log-output-if: failure
+        working-directory: backend/meili
+    - name: Create meili index # TODO: this should be factored into a different rust crate because it doesn't strictly need a lot of dependencies, but we'll pay the build time cost twice during CI
+      working-directory: backend
+      run: cargo run --bin gisst-cli -- init-indices
+    - name: Create test data
+      working-directory: frontend
+      run: npm run gendata --workspaces --if-present
+    - name: test
+      run: npm run test --workspaces --if-present
+      working-directory: frontend
+    - uses: actions/upload-artifact@v3
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: frontend/playwright-report/
+        retention-days: 15  
+  backend:
+    needs:
+      - cores
+    runs-on: ubuntu-latest
+    container:
+      image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
+      credentials:
+          username: jcoa2018
+          password: ${{ secrets.REGISTRY_TOKEN }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Get cached cores
+      id: cache
+      uses: actions/cache/restore@v5
+      with:
+        path: ./build
+        key: "cache-${{ needs.cores.outputs.cores-hash }}"
+        fail-on-cache-miss: true
+    - name: Pull cached backend dependencies
+      run: mv /tmp/backend/target backend/
+    - name: Clippy
+      working-directory: backend
+      run: SQLX_OFFLINE=1 cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
+    - name: Run meili
+      uses: JarvusInnovations/background-action@v1
+      with:
+        run: meilisearch --no-analytics --master-key test-api-key-github-actions --env development &
+        wait-on: '{"resources":["http-get://localhost:7700/version"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
+        tail: true # true = stderr,stdout
+        log-output-resume: stderr
+        wait-for: 1m
+        log-output: stderr,stdout # same as true
+        log-output-if: failure
+        working-directory: backend/meili
+    - name: Run postgres
+      run: |
+        sudo service postgresql start
+        sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+    - name: Load example data into DB
+      working-directory: backend
+      run: |
+        rm -rf storage && mkdir storage
+        export GISST_CONFIG=./
+        export GISST_CONFIG_PATH=./config
+        export MEILI_URL=http://localhost:7700
+        export MEILI_MASTER_KEY=test-api-key-github-actions
+        export MEILI_API_KEY=test-api-key-github-actions
+        export MEILI_SEARCH_KEY=test-api-key-github-actions
+        export GISST_CI=true
+        export DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb
+        touch .env
+        cargo sqlx database reset -y -f
+        LOAD_WIN=0 zsh -e ./load_examples.sh
+    - name: Check DB contents
+      working-directory: backend
+      run: |
+        DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb
+        psql $DATABASE_URL -c "select count(*) from instance;" | sed "s/[[:space:]]//g;3q;d"  | grep -Fx "55"
+        psql $DATABASE_URL -c "select count(*) from work;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "43"
+        psql $DATABASE_URL -c "select count(*) from state;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        psql $DATABASE_URL -c "select count(*) from save;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "4"
+        psql $DATABASE_URL -c "select count(*) from instance_save;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "6"
+        psql $DATABASE_URL -c "select count(*) from replay;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        psql $DATABASE_URL -c "select count(*) from screenshot;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        psql $DATABASE_URL -c "select count(*) from creator;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "1"
+        psql $DATABASE_URL -c "select count(*) from environment;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "8"
+        psql $DATABASE_URL -c "select count(*) from file;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "72"
+        psql $DATABASE_URL -c "select count(*) from object;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "48"
+        psql $DATABASE_URL -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "59"
+        echo "All DB table counts OK"
+        find storage -type f -print0 | du -a --files0-from=- --total | sort -k 2 > du-out.txt
+        grep -x "89076\s*total" du-out.txt
+        echo "Total byte count OK"
+        wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "137"
+        echo "Total file count OK"
+    - name: Test
+      working-directory: backend
+      run: SQLX_OFFLINE=1 cargo test
