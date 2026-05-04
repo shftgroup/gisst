@@ -1,6 +1,6 @@
 [Unit]
 Description=GISST
-Requires=postgresql@16-main.service
+Requires=postgresql@18-main.service
 Wants=gisst-tracing.service gisst-search.service
 
 [Service]

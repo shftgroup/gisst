@@ -4,8 +4,8 @@
     state: latest
     update_cache: yes
     name:
-      - postgresql-16
-      - postgresql-client-16
+      - postgresql-18
+      - postgresql-client-18
       - python3-psycopg2
   notify: postgres-restart
 - name: Create GISST DB
@@ -56,7 +56,7 @@
         objs: ALL_IN_SCHEMA
     - name: Allow connections by "{{ db_user_read }}" from sources
       community.postgresql.postgresql_pg_hba:
-        dest: /etc/postgresql/16/main/pg_hba.conf
+        dest: /etc/postgresql/18/main/pg_hba.conf
         rules: "{{ db_user_read_hba_rules }}"
       notify: postgres-restart
     - name: Activate postgresql_exporter
