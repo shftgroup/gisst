@@ -110,6 +110,19 @@ class GISSTInstanceSearch extends HTMLElement {
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                       </svg>
                     </a>
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/data/${hit.instance_id}">Cite</a>
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/data/${hit.instance_id}" title="Cite">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+ <g transform="translate(-25.751 -58.132)">
+  <circle cx="30.974" cy="63.355" r="5.2227" stroke-width=".26458"/>
+  <path d="m32.322 58.603s1.6069 0.77464 3.8938 5.3045c0.38114 5.5264-3.5746 10.109-7.339 12.176" stroke-width=".27134"/>
+ </g>
+ <g transform="translate(-14.007 -58.132)">
+  <circle cx="30.974" cy="63.355" r="5.2227" stroke-width=".26458"/>
+  <path d="m32.322 58.603s1.6069 0.77464 3.8938 5.3045c0.38114 5.5264-3.5746 10.109-7.339 12.176" stroke-width=".27134"/>
+ </g>
+                </svg>
+                </a>
                   </div>
                 </div>
               `;
@@ -240,6 +253,19 @@ class GISSTStateSearch extends HTMLElement {
                     <circle cx="12" cy="12" r="10"/>
                     <circle cx="12" cy="12" r="4" fill="currentColor"/>
                   </svg>
+                </a>
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/data/${hit.instance_id}?state=${hit.state_id}">Cite</a>
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/data/${hit.instance_id}?state=${hit.state_id}" title="Cite">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+ <g transform="translate(-25.751 -58.132)">
+  <circle cx="30.974" cy="63.355" r="5.2227" stroke-width=".26458"/>
+  <path d="m32.322 58.603s1.6069 0.77464 3.8938 5.3045c0.38114 5.5264-3.5746 10.109-7.339 12.176" stroke-width=".27134"/>
+ </g>
+ <g transform="translate(-14.007 -58.132)">
+  <circle cx="30.974" cy="63.355" r="5.2227" stroke-width=".26458"/>
+  <path d="m32.322 58.603s1.6069 0.77464 3.8938 5.3045c0.38114 5.5264-3.5746 10.109-7.339 12.176" stroke-width=".27134"/>
+ </g>
+                </svg>
                 </a>
                 ${can_clone ? html`
                   <a class="gisst-Search-btn gisst-Search-btn-accent gisst-Search-btn-text-only" href="${hit.instance_id}/clone?state=${hit.state_id}">Clone</a>
@@ -372,7 +398,21 @@ class GISSTSaveSearch extends HTMLElement {
                     <circle cx="12" cy="12" r="4" fill="currentColor"/>
                   </svg>
                 </a>
-              </div>
+
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/data/${hit.instance_id}?save=${hit.save_id}">Cite</a>
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/data/${hit.instance_id}?save=${hit.save_id}" title="Cite">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+ <g transform="translate(-25.751 -58.132)">
+  <circle cx="30.974" cy="63.355" r="5.2227" stroke-width=".26458"/>
+  <path d="m32.322 58.603s1.6069 0.77464 3.8938 5.3045c0.38114 5.5264-3.5746 10.109-7.339 12.176" stroke-width=".27134"/>
+ </g>
+ <g transform="translate(-14.007 -58.132)">
+  <circle cx="30.974" cy="63.355" r="5.2227" stroke-width=".26458"/>
+  <path d="m32.322 58.603s1.6069 0.77464 3.8938 5.3045c0.38114 5.5264-3.5746 10.109-7.339 12.176" stroke-width=".27134"/>
+ </g>
+                </svg>
+</a>
+</div>
             </div>  
           `
         }
@@ -487,6 +527,19 @@ class GISSTPerformanceSearch extends HTMLElement {
                     <polygon points="5 3 19 12 5 21 5 3" />
                   </svg>
                 </a>
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only" href="${base_url}/data/${hit.instance_id}?replay=${hit.replay_id}">Cite</a>
+                <a class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-icon gisst-Search-btn-icon-only" href="${base_url}/data/${hit.instance_id}?replay=${hit.replay_id}" title="Cite">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+ <g transform="translate(-25.751 -58.132)">
+  <circle cx="30.974" cy="63.355" r="5.2227" stroke-width=".26458"/>
+  <path d="m32.322 58.603s1.6069 0.77464 3.8938 5.3045c0.38114 5.5264-3.5746 10.109-7.339 12.176" stroke-width=".27134"/>
+ </g>
+ <g transform="translate(-14.007 -58.132)">
+  <circle cx="30.974" cy="63.355" r="5.2227" stroke-width=".26458"/>
+  <path d="m32.322 58.603s1.6069 0.77464 3.8938 5.3045c0.38114 5.5264-3.5746 10.109-7.339 12.176" stroke-width=".27134"/>
+ </g>
+                </svg>
+</a>
               </div>
             </div>  
         `
