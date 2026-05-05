@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    container:
+      image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
+      credentials:
+        username: jcoa2018
+        password: ${{ secrets.REGISTRY_TOKEN }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Pull cached backend dependencies
+      run: mv /tmp/backend/target backend/
+    - name: Restore cached node modules
+      run: |
+        mv /tmp/frontend/node_modules frontend/
+        cd frontend
+        npm i
+    - name: npm i
+      run: npm i
+      working-directory: frontend
+    - name: build
+      run: npm run build --workspaces --if-present
+      working-directory: frontend
+    - name: dist
+      run: npm run dist --workspaces --if-present
+      working-directory: frontend
+    - name: Build ingest
+      working-directory: backend
+      run: cargo build --bin ingest --release
+    - name: Build gisst-cli
+      working-directory: backend
+      run: cargo build --bin gisst-cli --release
+    - name: Build gisst-server
+      working-directory: backend
+      run: cargo build --bin gisst-server --release
+    - name: tgz assets
+      working-directory: backend
+      run: tar czf ../gisst-assets.tgz ./*-dist ./config ./v86dump.js env.template ../manifest.json ./gisst-server/src/templates ./docker-compose.yml ./docker-configs ./meili/README.org ./etc
+    - name: tgz examples
+      working-directory: backend
+      run: tar czf ../examples.tgz ./examples ./load_examples.sh
+    - name: package binaries
+      run: |
+        mkdir -p bin
+        cp backend/target/release/gisst-cli bin
+        cp backend/target/release/gisst-server bin
+        cp backend/target/release/ingest bin
+        tar czf bin-linux-${{ runner.arch }}.tgz ./bin
+    - name: Release
+      uses: https://gitea.com/actions/gitea-release-action@v1
+      with:
+        body: "These packages do not include built core files, since those might require BIOS files or other copyrighted material. You can build them yourself with `docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -e GET_ASSETS=0 cafe.cs.pomona.edu/shftgroup/gisst-dist:latest`"
+        files: |
+          bin-linux-${{ runner.arch }}.tgz
+          gisst-assets.tgz
+          examples.tgz
