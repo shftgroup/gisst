@@ -115,6 +115,9 @@ jobs:
     - name: Create test data
       working-directory: frontend
       run: npm run gendata --workspaces --if-present
+    - name: ensure playwright binaries present
+      run: npx playwright install
+      working-directory: frontend
     - name: test
       run: npm run test --workspaces --if-present
       working-directory: frontend
@@ -195,6 +198,8 @@ jobs:
         psql $DATABASE_URL -c "select count(*) from instanceobject;" | sed "s/[[:space:]]//g;3q;d" | grep -Fx "59"
         echo "All DB table counts OK"
         find storage -type f -print0 | du -a --files0-from=- --total | sort -k 2 > du-out.txt
+        cat du-out.txt
+        wc -l du-out.txt
         grep -x "89076\s*total" du-out.txt
         echo "Total byte count OK"
         wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "137"
