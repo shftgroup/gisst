@@ -200,7 +200,7 @@ jobs:
         cat du-out.txt
         echo "lines:"
         wc -l du-out.txt
-        grep -x "89076\s*total" du-out.txt
+        grep -x "89260\s*total" du-out.txt
         echo "Total byte count OK"
         wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "137"
         echo "Total file count OK"
