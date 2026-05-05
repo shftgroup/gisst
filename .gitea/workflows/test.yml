@@ -198,6 +198,7 @@ jobs:
         echo "All DB table counts OK"
         find storage -type f -print0 | du -a --files0-from=- --total | sort -k 2 > du-out.txt
         cat du-out.txt
+        echo "lines:"
         wc -l du-out.txt
         grep -x "89076\s*total" du-out.txt
         echo "Total byte count OK"
