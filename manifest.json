@@ -50,9 +50,8 @@
         "async": true
       },
       "mupen64plus_next": {
-        "skip": true,
         "repo": "https://github.com/JoeOsborn/mupen64plus-libretro-nx",
-        "version": "a08d8a0b26a39e0f8ab62baaac22ffddf9d1fc67",
+        "version": "1c17ef178ea5818b70edf0725e22d59b96a7e3ad",
         "async": true
       },
       "pcsx_rearmed": {
