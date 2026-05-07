@@ -18,7 +18,7 @@
     "repo": "https://github.com/libretro/retroarch",
     "version": "ee96a134660b4dfdce2bef8457a7e76c29b4d021",
     "build_args": [
-      "HAVE_CHD=1",
+      "HAVE_CHD=0",
       "HAVE_RWEBAUDIO=0",
       "HAVE_THREADS=1",
       "PTHREAD_POOL_SIZE=4",
