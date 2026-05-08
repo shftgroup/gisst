@@ -1,10 +1,11 @@
-import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gisst-player';
+import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode, ZoomLevel} from 'gisst-player';
 import {saveAs, nested_replace} from './util';
 import {EmbedV86,StateInfo,ReplayEvent} from 'embedv86';
 import {Environment, ColdStart, StateStart, ReplayStart, CoreFileLink, ObjectLink, EmbedOptions} from './types.d';
 let ui_state:UI<ReplayEvent>;
 let db:GISSTDBConnector;
-
+let zoom_fit = false;
+let current_zoom = 1.0;
 // qua https://zacharycouchman.com/Dynamically-Loading-JavaScript/
 async function loadScript(url:string) {
   return new Promise((resolve, reject) => {
@@ -80,6 +81,18 @@ export async function init(gisst_root:string, environment:Environment, start:Col
     const replay = v86.replays[v86.active_replay];
     ui_state.evtlog_append(replay.events.slice(fromidx,toidx).map((evt) => {return {t:evt.when,evt}}))
   }
+  function zoom_to(n:number) {
+    if (n == current_zoom) { return; }
+    current_zoom = n;
+    v86.emulator.screen_set_scale(n,n);
+  }
+  function zoom_to_fit() {
+    const container = <HTMLDivElement>document.querySelector(".gisst-internal-content-body")!;
+    const screen = <HTMLDivElement>document.getElementById("canvas")!.parentElement!.parentElement!;
+    const rect = screen.getBoundingClientRect();
+    const n = Math.min(container.clientWidth/rect.width,container.clientHeight/rect.height);
+    zoom_to(n);
+  }
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
@@ -91,6 +104,33 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       "toggle_mute": () => {
         is_muted = !is_muted;
         v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined);
+      },
+      "set_zoom": (level:ZoomLevel) => {
+        zoom_fit = level == ZoomLevel.Fit;
+        switch(level) {
+          case ZoomLevel.X05:
+            zoom_to(0.5);
+            break;
+          case ZoomLevel.X1:
+            zoom_to(1);
+            break;
+          case ZoomLevel.X2:
+            zoom_to(2);
+            break;
+          case ZoomLevel.Fit:
+            zoom_to_fit();
+            break;
+        }
+      },
+      "enter_fullscreen": () => {
+        zoom_fit = false;
+        v86.emulator.screen_set_scale(1,1);
+        const container = <HTMLDivElement>document.getElementById("canvas_div")!;
+        container.requestFullscreen().then(() => {
+          // const n = Math.min(container.clientWidth/window.innerWidth,container.clientHeight/window.innerHeight);
+          // zoom_to(n);
+          v86.emulator.lock_mouse();
+        });
       },
       "activate_save": (_savefile) => {},
       "create_save": () => {},
@@ -182,6 +222,13 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       JSON.parse(document.getElementById("config")!.textContent!) as GISSTModels.FrontendConfig
   );
   const container = <HTMLDivElement>document.getElementById("canvas_div")!;
+  // const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
+  const ro = new ResizeObserver((_entries, _observer) => {
+    if (!zoom_fit) { return; }
+    zoom_to_fit();
+  });
+  // ro.observe(canv);
+  ro.observe(container.parentElement!);
   v86 = new EmbedV86({
     wasm_file:gisst_root+"/"+v86_wasm,
     bios_root:gisst_root,

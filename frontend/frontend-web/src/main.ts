@@ -12,30 +12,7 @@ window.onload = async function() {
   } else {
     await ra.init(gisst_root, config.environment.environment_core_name, config.start, config.saves, config.core_manifest, config.manifest, config.boot_into_record, config.embed_options??{controls:ControllerOverlayMode.Auto});
   }
-  const container = <HTMLCanvasElement>document.getElementById("canvas_div")!;
   const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
-  const ro = new ResizeObserver((_entries, _observer) => {
-    const w = canv.width;
-    const h = canv.height;
-    if (w == 0 || h == 0) { return; }
-    const target_w = container.offsetWidth;
-    let target_h = container.offsetHeight;
-    if (kind == "v86") {
-      const aspect = w / h;
-      target_h = target_w / aspect;
-    }
-    const new_w = `${target_w}px`;
-    const new_h = `${target_h}px`;
-    if (canv.style.width != new_w || canv.style.height != new_h) {
-      canv.style.width = new_w;
-      canv.style.height = new_h;
-    }
-  });
-  if(kind == "v86") {
-    ro.observe(canv);
-    ro.observe(container);
-  }
-
   canv.style.touchAction = "none";
   canv.addEventListener("touchstart", touchHandler, true);
   canv.addEventListener("touchmove", touchHandler, true);

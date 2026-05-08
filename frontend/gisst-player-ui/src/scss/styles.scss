@@ -83,6 +83,7 @@
 .webplayer-container {
   background-color: black;
   line-height: 0;
+  font-family: monospace;
    //height: 600px;
    //width: 800px;
 }
@@ -110,7 +111,7 @@
 #webplayer-textmode {
   white-space: pre;
   font: 14px monospace;
-  line-height: 14px;
+  transform-origin: top left;
 }
 
 textarea {

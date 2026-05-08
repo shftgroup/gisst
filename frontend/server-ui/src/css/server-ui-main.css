@@ -42,7 +42,6 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 html, body {
@@ -265,7 +264,7 @@ html, body {
     background-color: light-dark(var(--gisst-light-theme-card-bg), rgba(var(--gisst-dark-theme-card-bg), 0.95));
     backdrop-filter: blur(10px);
     border-right: 1px solid light-dark(rgba(var(--gisst-light-theme-border), 0.3), rgba(var(--gisst-dark-theme-border), 0.3));
-    padding: 1rem;
+    /* padding: 1rem; */
     overflow-y: auto;
     transition: transform 0.3s ease;
     z-index: 1000;
@@ -490,7 +489,7 @@ html, body {
 
 .gisst-internal-content-body {
     flex: 1;
-    padding: 2rem;
+    /* padding: 2rem; */
 }
 
 /* Mobile top dropdown */
@@ -604,7 +603,7 @@ html, body {
     }
 
     .gisst-internal-content-body {
-        padding: 1rem;
+        /* padding: 1rem; */
     }
 }
 

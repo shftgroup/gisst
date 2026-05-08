@@ -17,12 +17,12 @@ import {
 } from "./models";
 
 import imgUrl from '../img/canvas.svg';
-import '../scss/styles.scss'
-import * as bootstrap from 'bootstrap'
+import '../scss/styles.scss';
+import * as bootstrap from 'bootstrap';
 // import * as uuid from 'uuid'
 
-import templates from "../html/templates.html?raw"
-import {UITemplateConst, UIIDConst } from "./template_consts"
+import templates from "../html/templates.html?raw";
+import {UITemplateConst, UIIDConst } from "./template_consts";
 
 export enum ReplayMode {
   Inactive=0,
@@ -31,8 +31,17 @@ export enum ReplayMode {
   Finished,
 }
 
+export enum ZoomLevel {
+  X1,
+  X2,
+  Fit,
+  X05
+}
+
 interface UIController<Evt> {
   toggle_mute: () => void;
+  set_zoom: (level:ZoomLevel) => void;
+  enter_fullscreen: () => void;
   load_state: (state_num:number) => void;
   save_state: () => void;
   // This should force the emulator to save and backup the current save, which may not be an "active" save in the list.
@@ -76,7 +85,7 @@ export class UI<Evt> {
   evtlog:InputLogEvent<Evt>[];
   evtlog_playhead:number;
   evtlog_playhead_eltidx:number;
-  
+
   // ... functions go here
   constructor(ui_root:HTMLDivElement, control:UIController<Evt>, headless:boolean, config:FrontendConfig) {
     const _unused = bootstrap.Alert; // needed to force TS compile to import bootstrap
@@ -122,6 +131,19 @@ export class UI<Evt> {
       this.ui_root.appendChild(ui_embedded_grid);
       
       this.ui_root.querySelector("#"+UIIDConst.EMU_TOGGLE_MUTE_BUTTON)!.addEventListener("click", this.control.toggle_mute);
+      this.ui_root.querySelector("#"+UIIDConst.EMU_ZOOM_X05_BUTTON)!.addEventListener("click", () => {
+        this.control.set_zoom(ZoomLevel.X05);
+      });
+      this.ui_root.querySelector("#"+UIIDConst.EMU_ZOOM_X1_BUTTON)!.addEventListener("click", () => {
+        this.control.set_zoom(ZoomLevel.X1);
+      });
+      this.ui_root.querySelector("#"+UIIDConst.EMU_ZOOM_X2_BUTTON)!.addEventListener("click", () => {
+        this.control.set_zoom(ZoomLevel.X2);
+      });
+      this.ui_root.querySelector("#"+UIIDConst.EMU_ZOOM_FIT_BUTTON)!.addEventListener("click", () => {
+        this.control.set_zoom(ZoomLevel.Fit);
+      });
+      this.ui_root.querySelector("#"+UIIDConst.EMU_ENTER_FULLSCREEN_BUTTON)!.addEventListener("click", this.control.enter_fullscreen);
       this.ui_root.querySelector("#"+UIIDConst.EMU_SAVE_STATE_BUTTON)!.addEventListener("click", this.control.save_state);
       this.ui_root.querySelector("#"+UIIDConst.EMU_CREATE_SAVE_BUTTON)!.addEventListener("click", this.control.create_save);
       this.ui_root.querySelector("#"+UIIDConst.EMU_START_REPLAY_BUTTON)!.addEventListener("click", this.control.start_replay);

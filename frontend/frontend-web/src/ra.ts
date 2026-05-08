@@ -1,4 +1,4 @@
-import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode} from 'gisst-player';
+import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode, ZoomLevel} from 'gisst-player';
 import {saveAs,base64EncArr} from './util';
 import * as ra_util from 'ra-util';
 import {ColdStart, StateStart, ReplayStart, ObjectLink, CoreFileLink, EmbedOptions, ControllerOverlayMode} from './types.d';
@@ -18,6 +18,18 @@ let ui_state:UI<string>;
 let db:GISSTDBConnector;
 
 let content_base:string;
+
+let base_width:number = 480;
+let base_height:number = 360;
+let zoom_fit = false;
+
+function zoom_to_fit() {
+  const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
+  const content = <HTMLDivElement>document.querySelector(".gisst-internal-content-body")!;
+  const n = Math.min(content.clientWidth/base_width,content.clientHeight/base_height);
+  canv.style.width = `${base_width*n}px`;
+  canv.style.height = `${base_height*n}px`;
+}
 
 export async function init(gisst_root:string, core:string, start:ColdStart | StateStart | ReplayStart, saves:GISSTModels.SaveFileLink[], core_manifest:CoreFileLink[], manifest:ObjectLink[], boot_into_record:boolean, embed_options:EmbedOptions) {
     db = new GISSTDBConnector(gisst_root);
@@ -99,7 +111,6 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
   retro_args.push("/fetch/content/" + source_path + "/" + content.file_filename!);
   console.log(retro_args);
   let ra_cfg_text:string = await ((await fetch(gisst_root+"/assets/retroarch_web_base.cfg")).text());
-
   ui_state = new UI(
     <HTMLDivElement>document.getElementById("ui")!,
     {
@@ -111,6 +122,32 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
       "activate_save": (savefile) => activate_save(savefile),
       "create_save": () => create_save(),
       "toggle_mute": () => send_message("MUTE"),
+      "set_zoom": (level:ZoomLevel) => {
+        const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
+        zoom_fit = level == ZoomLevel.Fit;
+        switch(level) {
+          case ZoomLevel.X05:
+            canv.style.width = `${base_width*0.5}px`;
+            canv.style.height = `${base_height*0.5}px`;
+            break;
+          case ZoomLevel.X1:
+            canv.style.width = `${base_width}px`;
+            canv.style.height = `${base_height}px`;
+            break;
+          case ZoomLevel.X2:
+            canv.style.width = `${base_width*2}px`;
+            canv.style.height = `${base_height*2}px`;
+            break;
+          case ZoomLevel.Fit: {
+            zoom_to_fit();
+            break;
+          }
+        }
+      },
+      "enter_fullscreen": () => {
+        zoom_fit = false;
+        send_message("FULLSCREEN_TOGGLE");
+      },
       "load_state": (num: number) => load_state_slot(num),
       "save_state": () => save_state(),
       "play_replay": (num: number) => play_replay_slot(num),
@@ -318,6 +355,15 @@ function retroReady(): void {
     "click",
     function () {
       const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
+      {
+        const container = canv.parentElement!;
+        const ro = new ResizeObserver((_entries, _observer) => {
+          if (zoom_fit) {
+            zoom_to_fit();
+          }
+        });
+        ro.observe(container);
+      }
       prev.classList.add("hidden");
       canv.classList.remove("hidden");
       RA.startRetroArch(canv, retro_args, function () {
@@ -326,6 +372,9 @@ function retroReady(): void {
         window.RA = RA;
         window.UI = ui_state;
         window.DB = db;
+        base_width = parseInt(canv.style.width.slice(0,canv.style.width.length-2)) || 480;
+        base_height = parseInt(canv.style.height.slice(0,canv.style.height.length-2)) || 360;
+        console.log("Base dimensions:",base_width,base_height);
       });
 
       return false;

@@ -14,6 +14,11 @@ export class UIIDConst {
     static readonly EMU_EMBEDDED_COL:string = "emulator_col";
     static readonly EMU_CONTROL_BAR_COL:string = "emulator_control_bar_col";
     static readonly EMU_TOGGLE_MUTE_BUTTON:string = "toggle_mute_button";
+    static readonly EMU_ZOOM_X05_BUTTON:string = "zoom_x05_button";
+    static readonly EMU_ZOOM_X1_BUTTON:string = "zoom_x1_button";
+    static readonly EMU_ZOOM_X2_BUTTON:string = "zoom_x2_button";
+    static readonly EMU_ZOOM_FIT_BUTTON:string = "zoom_fit_button";
+    static readonly EMU_ENTER_FULLSCREEN_BUTTON:string = "enter_fullscreen_button";
     static readonly EMU_SAVE_STATE_BUTTON:string = "save_state_button";
     static readonly EMU_CREATE_SAVE_BUTTON:string = "create_save_button";
     static readonly EMU_START_REPLAY_BUTTON:string = "start_replay_button";
