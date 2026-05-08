@@ -38,7 +38,7 @@ function getrepo
             return 0;
         fi
     fi
-    git clone --depth 1 --revision $vsn $repo $dir
+    git clone --depth 1 --recursive --revision $vsn $repo $dir
     return $?
 }
 
@@ -165,6 +165,9 @@ for f in $CORENAMES v86; do
     fi
     pushd ../ra
     cp libretro_emscripten.bc libretro_emscripten.a
+    # flags may have changed so we should really clean the build here
+    rm -rf obj-emscripten
+    emmake make -f Makefile.emscripten LIBRETRO=$f clean
     emmake make -f Makefile.emscripten LIBRETRO=$f ASYNC=$ASYNC "${build_args[@]}" -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* /out/cores
     # compute hash from manifest (except for v86 and non-this-core RA cores)
