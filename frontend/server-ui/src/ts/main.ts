@@ -833,7 +833,7 @@ class GISSTNewInstance extends HTMLElement {
 <select name="work_core_chooser" class="core_chooser">
 </select>
 <label for="work_name">Work name:</label>
-<input name="work_name"></input>
+<input name="work_name" required></input>
 <label for="work_version">Version:</label>
 <input name="work_version"></input>
 <label for="env_config">Environment config:</label>
@@ -908,7 +908,7 @@ class GISSTNewInstance extends HTMLElement {
         }
       }
       if (!ready) {
-        status.textContent = "Please wait until all objects have been successfully uploaded";
+        status.textContent = "Please wait until all objects have been successfully uploaded, and then click on \"Create Instance\" again";
         return;
       }
       // try to create environment and work records (but no problem if they already exist)
@@ -990,6 +990,12 @@ class GISSTNewInstance extends HTMLElement {
   }
   async init_core_chooser(elt:HTMLSelectElement) {
     const cores = await (await fetch(`${this.base_url}/cores`)).json();
+    const default_option = document.createElement("option");
+    default_option.disabled = true;
+    default_option.selected = true;
+    default_option.value = "";
+    default_option.textContent = `-- Please select a platform --`;
+    elt.appendChild(default_option);
     for (const core of cores.cores) {
       const option = document.createElement("option");
       option.value = core.core_platform;

@@ -12,6 +12,11 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {"moby":false}
   },
   "customizations": {
+    "jetbrains": {
+      "settings": {
+        "com.intellij:app:HttpConfigurable.use_proxy_pac": true
+      }
+    },
     "vscode": {
       "extensions": [
         "rust-lang.rust-analyzer",
