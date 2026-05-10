@@ -2,6 +2,7 @@
   "environment_id": "00000000000000000000000000000001",
   "environment_name": "Super Nintendo Entertainment System",
   "environment_framework": "retroarch",
+  "environment_platform": "Super Nintendo Entertainment System",
   "environment_core_name": "snes9x",
-  "environment_core_version": "ccfb0117643bca6cd4e9c5ab82150252536ca5f9"
+  "environment_core_version": "259ecfc4118ff2b0e2d6a62fc095f98166232d8c"
 }

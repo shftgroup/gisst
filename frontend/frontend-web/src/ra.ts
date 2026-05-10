@@ -140,7 +140,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
           console.error("Invalid save category", category, file_name);
         }
         const data = RA.FS.readFile(path + "/" + file_name);
-        saveAs(new Blob([data]), file_name);
+        saveAs(new Blob([new Uint8Array(data)]), file_name);
       },
       "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
         return new Promise((resolve, reject) => {
@@ -157,7 +157,7 @@ export async function init(gisst_root:string, core:string, start:ColdStart | Sta
           }
           const data = RA.FS.readFile(path + "/" + file_name);
 
-          db.uploadFile(new File([data], file_name), metadata.record.file_id,
+          db.uploadFile(new File([new Uint8Array(data)], file_name), metadata.record.file_id,
             (error:Error) => { reject(console.error("ran error callback", error.message))},
             (_percentage: number) => {},
             (uuid_string: string) => {

@@ -22,6 +22,11 @@
         "ordinal": 3,
         "name": "created_on",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "creator_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -33,7 +38,8 @@
       false,
       false,
       true,
-      false
+      false,
+      true
     ]
   },
   "hash": "7d421f2b3bde0e79b1f45c7c562c4200b46f9cdf1c4934ce0396d027dc7313f4"

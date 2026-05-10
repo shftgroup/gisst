@@ -137,6 +137,17 @@ async fn upgrade_envs_in_place(
     println!("Replacing instanceobject links to files in {deps:?} with core file links...");
     for env in envs {
         let mut tx = db.begin().await?;
+        let Some(_) = Core::get(&mut tx, name, core_hash, &env.environment_platform).await? else {
+            println!(
+                "Core {name}:{core_hash}:{} is not present in the database, use gisst-cli add-core first",
+                env.environment_platform
+            );
+            return Err(GISSTCliError::CoreNotFound(
+                name.to_string(),
+                core_hash.to_string(),
+                env.environment_platform.clone(),
+            ));
+        };
         Environment::update_core(&mut tx, env.environment_id, name, core_hash).await?;
         let instances = Instance::get_all_for_environment_id(&mut tx, env.environment_id).await?;
         for inst in instances {
@@ -150,6 +161,7 @@ async fn upgrade_envs_in_place(
             }
         }
         tx.commit().await?;
+        println!("Performing destructive changes!");
     }
     Ok(())
 }
@@ -262,19 +274,7 @@ async fn upgrade_env(
     let core_meta: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
     let name = core_meta["core_name"].as_str().unwrap().to_string();
-    let Some(_) = Core::get(&mut conn, &name, core_hash).await? else {
-        println!(
-            "Core {name}:{core_hash} is not present in the database, use gisst-cli add-core first"
-        );
-        return Err(GISSTCliError::CoreNotFound(name, core_hash.to_string()));
-    };
-    let deps: Vec<_> = core_meta["dependencies"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(|x| x.as_str())
-        .map(std::string::ToString::to_string)
-        .collect();
+    let deps: Vec<_> = json_to_strings(&core_meta["dependencies"]);
     drop(conn);
     if in_place {
         println!("------DANGER ZONE-----");
@@ -288,12 +288,21 @@ async fn upgrade_env(
             println!("Aborting operation");
             return Ok(());
         }
-        println!("Performing destructive changes!");
         upgrade_envs_in_place(db, envs, &name, core_hash, &deps).await?;
     } else {
         upgrade_envs_by_clone(db, indexer, envs, &name, core_hash, &deps).await?;
     }
     Ok(())
+}
+
+fn json_to_strings(value: &serde_json::Value) -> Vec<String> {
+    value
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|x| x.as_str())
+        .map(std::string::ToString::to_string)
+        .collect()
 }
 
 async fn add_core(
@@ -316,27 +325,23 @@ async fn add_core(
     let core_meta: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
     let name = core_meta["core_name"].as_str().unwrap().to_string();
-    let entrypoints: Vec<_> = core_meta["entrypoints"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(|x| x.as_str())
-        .map(std::string::ToString::to_string)
-        .collect();
-    let deps: Vec<_> = core_meta["dependencies"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter_map(|x| x.as_str())
-        .map(std::string::ToString::to_string)
-        .collect();
-    let core = Core {
-        core_name: name.clone(),
-        core_version: core_hash.to_string(),
-        core_metadata: core_meta,
-        created_on: now,
+    let core_platforms: Vec<_> = if name == "v86" {
+        json_to_strings(&core_meta[&name]["platforms"])
+    } else {
+        json_to_strings(&core_meta["retroarch"]["cores"][&name]["platforms"])
     };
-    Core::insert(&mut tx, core).await?;
+    let entrypoints: Vec<_> = json_to_strings(&core_meta["entrypoints"]);
+    let deps: Vec<_> = json_to_strings(&core_meta["dependencies"]);
+    for core_platform in core_platforms {
+        let core = Core {
+            core_name: name.clone(),
+            core_version: core_hash.to_string(),
+            core_platform,
+            core_metadata: core_meta.clone(),
+            created_on: now,
+        };
+        Core::insert(&mut tx, core).await?;
+    }
     // make a core record with name and version (hash) derived from core meta path;
     // then, make a file and corefilelink for each entrypoint, dependency, and config file
     for (role, idx, file) in entrypoints
@@ -374,6 +379,7 @@ async fn add_core(
                 &(core_dir.join(Path::new(&file))),
                 &source_path.to_string_lossy().to_string().replace("./", ""),
                 now,
+                None
             )
             .await?
             .file_id
@@ -422,6 +428,7 @@ async fn add_work_instance(
             work_platform: platform_name,
             created_on: now,
             work_derived_from: None,
+            creator_id: None
         };
         Work::insert(&mut tx, work).await?;
     } else {
@@ -436,6 +443,7 @@ async fn add_work_instance(
         created_on: now,
         derived_from_instance: None,
         derived_from_state: None,
+        creator_id: None,
     };
     Instance::insert(&mut tx, instance, indexer).await?;
     let cwd = cwd.as_deref().map_or(Path::new(""), Path::new);
@@ -453,6 +461,7 @@ async fn add_work_instance(
             Some(file_name.clone()),
             source_path.to_string_lossy().to_string().replace("./", ""),
             Duplicate::ReuseObject,
+        None
         )
         .await?;
         Object::link_object_to_instance(
@@ -478,6 +487,7 @@ async fn add_work_instance(
             Some(file_name.clone()),
             source_path.to_string_lossy().to_string().replace("./", ""),
             Duplicate::ReuseObject,
+        None
         )
         .await?;
         Object::link_object_to_instance(
@@ -503,6 +513,7 @@ async fn add_work_instance(
             Some(file_name.clone()),
             source_path.to_string_lossy().to_string().replace("./", ""),
             Duplicate::ReuseObject,
+            None
         )
         .await?;
         Object::link_object_to_instance(
@@ -605,6 +616,7 @@ async fn clone_v86_machine(
         &storage_root,
         depth,
         indexer,
+        None
     )
     .await?;
     Ok(uuid)
@@ -647,6 +659,7 @@ async fn add_patched_instance(
         work_version: data.version,
         work_name: data.name,
         work_platform: work.work_platform,
+        creator_id: None
     };
     Work::insert(&mut tx, new_work).await?;
     Instance::insert(&mut tx, new_inst, indexer).await?;
@@ -672,6 +685,7 @@ async fn add_patched_instance(
                 None,
                 link.file_source_path,
                 gisst::models::Duplicate::ReuseData,
+        None
             )
             .await?;
             Object::link_object_to_instance(
@@ -756,6 +770,7 @@ async fn create_object(
         Some(file_name.clone()),
         source_path.to_string_lossy().to_string().replace("./", ""),
         gisst::models::Duplicate::ForceUuid(force_uuid),
+        None
     )
     .await?;
     if let Some(inst) = link {
@@ -983,6 +998,7 @@ async fn create_replay(
             &path,
             &source_path.to_string_lossy().to_string().replace("./", ""),
             created_on,
+            None
         )
         .await?
         .file_id
@@ -1025,6 +1041,8 @@ async fn create_screenshot(
         Screenshot {
             screenshot_data: std::fs::read(file)?,
             screenshot_id: force_uuid.unwrap_or_else(Uuid::new_v4),
+            created_on: chrono::Utc::now(),
+            creator_id: None
         },
     )
     .await
@@ -1089,6 +1107,7 @@ async fn create_state(
         file,
         &source_path.to_string_lossy().to_string().replace("./", ""),
         created_on,
+            None
     )
     .await?
     .file_id;
@@ -1160,6 +1179,7 @@ async fn create_save(
             file,
             &source_path.to_string_lossy().to_string().replace("./", ""),
             created_on,
+            None
         )
         .await?
         .file_id

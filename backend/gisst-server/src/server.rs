@@ -5,8 +5,8 @@ use crate::{
     auth::{self, AuthBackend},
     db,
     routes::{
-        creator_router, instance_router, object_router, players, replay_router, save_router,
-        screenshot_router, state_router, work_router,
+        creator_router, environment_router, instance_router, lookup, object_router, players,
+        replay_router, save_router, screenshot_router, state_router, work_router,
     },
     serverconfig::ServerConfig,
     tus,
@@ -152,6 +152,9 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .route("/play/{instance_id}", get(players::get_player))
         .route("/resources/{id}", patch(tus::patch).head(tus::head))
         .route("/resources", post(tus::creation))
+        .route("/cores", get(lookup::get_cores))
+        .route("/cores/{corename}", get(lookup::get_cores))
+        .route("/lookup-work", get(lookup::lookup_work))
         .nest("/objects", object_router())
         .route("/logout", get(auth::logout_handler))
         .nest("/creators", creator_router())
@@ -161,6 +164,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/screenshots", screenshot_router())
         .nest("/states", state_router())
         .nest("/works", work_router())
+        .nest("/environments", environment_router())
         .route_layer(
             // This is ugly, but it achieves the goal; the unwrap is fine
             // because BASE_URL was initialized earlier in this function.
@@ -193,10 +197,6 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest_service(
             "/ra",
             builder.clone().service(selective_serve_dir::SelectiveServeDir::new("web-dist/ra")),
-        )
-        .nest_service(
-            "/cores",
-            builder.clone().service(selective_serve_dir::SelectiveServeDir::new("web-dist/cores")),
         )
         .nest_service(
             "/embed",

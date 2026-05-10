@@ -1,7 +1,8 @@
 {
   "environment_id": "00000000000000000000000000000068",
   "environment_name": "Game Boy Advance (Visual Boy Advance Next)",
+  "environment_platform": "Nintendo Game Boy Advance",
   "environment_framework": "retroarch",
   "environment_core_name": "vba_next",
-  "environment_core_version": "0b12629d06ce55ae26e2db913400c1501e075f8a"
+  "environment_core_version": "29896ccb348320a9fe87a56a550e63fcf3070d17"
 }

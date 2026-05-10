@@ -24,6 +24,7 @@ const mock_embed_config = {
     "environment": {
         "environment_id": "00000000-0000-0000-0000-000000000002",
         "environment_name": "FreeDOS",
+        "environment_platform": "x86 PC",
         "environment_framework": "v86",
         "environment_core_name": "v86",
         "environment_core_version": "0.1.0",

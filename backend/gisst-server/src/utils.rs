@@ -42,3 +42,26 @@ pub fn get_metadata(headers: &HeaderMap) -> Option<HashMap<String, String>> {
             meta_map
         })
 }
+
+pub fn uuid_or_empty_string<'de, D>(d: D) -> Result<Option<uuid::Uuid>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::{Deserialize, de::Error};
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum MyHelper<'a> {
+        U(uuid::Uuid),
+        S(&'a str),
+        Null,
+    }
+
+    match MyHelper::deserialize(d) {
+        Ok(MyHelper::U(u)) => Ok(Some(u)),
+        Ok(MyHelper::Null | MyHelper::S("")) => Ok(None),
+        Ok(MyHelper::S(s)) => Err(D::Error::custom(format!(
+            "only empty strings may be provided, not {s}"
+        ))),
+        Err(err) => Err(err),
+    }
+}

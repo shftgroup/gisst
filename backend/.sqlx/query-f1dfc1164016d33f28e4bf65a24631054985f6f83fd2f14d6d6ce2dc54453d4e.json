@@ -12,6 +12,16 @@
         "ordinal": 1,
         "name": "screenshot_data",
         "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "creator_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -21,7 +31,9 @@
     },
     "nullable": [
       false,
-      false
+      false,
+      false,
+      true
     ]
   },
   "hash": "f1dfc1164016d33f28e4bf65a24631054985f6f83fd2f14d6d6ce2dc54453d4e"

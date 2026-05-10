@@ -1,7 +1,8 @@
 {
   "environment_id": "00000000000000000000000000000065",
-  "environment_name": "Sony PlayStation",
+  "environment_name": "Sony Playstation",
+  "environment_platform": "Sony Playstation",
   "environment_framework": "retroarch",
   "environment_core_name": "pcsx_rearmed",
-  "environment_core_version": "043fec37ea8517efedf6c39421d99018dbc23470"
+  "environment_core_version": "0da9ef1261ccfa0a78a60136663ea1bc618c81f5"
 }

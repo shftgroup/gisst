@@ -13,8 +13,8 @@ use uuid::Uuid;
 pub fn router() -> Router {
     Router::new()
         .route("/{id}", get(get_single_screenshot))
-        .route_layer(login_required!(AuthBackend, login_url = "/login"))
         .route("/create", post(create_screenshot))
+        .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
 
 #[serde_as]
@@ -30,9 +30,10 @@ async fn create_screenshot(
     auth: axum_login::AuthSession<auth::AuthBackend>,
     Json(screenshot): Json<ScreenshotCreateInfo>,
 ) -> Result<Json<gisst::models::Screenshot>, ServerError> {
+    let user_id = auth.user.as_ref().map(|u| u.creator_id);
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        user_id.map(|u| u.to_string()),
     );
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(
@@ -41,6 +42,8 @@ async fn create_screenshot(
             gisst::models::Screenshot {
                 screenshot_id: Uuid::new_v4(),
                 screenshot_data: screenshot.screenshot_data,
+                created_on: chrono::Utc::now(),
+                creator_id: user_id
             },
         )
         .await?,

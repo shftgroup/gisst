@@ -49,12 +49,17 @@ impl ServerStateExt for ServerState {
     }
 }
 
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(app_state,auth),fields(userid))]
 pub async fn head(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
+    auth: axum_login::AuthSession<crate::auth::AuthBackend>,
     Path(id): Path<Uuid>,
 ) -> Result<Response, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
     let tus_resumable: Option<String> = parse_header(&headers, "Tus-Resumable");
     if tus_resumable.is_none() || tus_resumable.unwrap() != "1.0.0" {
         return Ok(([("Tus-Version", "1.0.0")], StatusCode::PRECONDITION_FAILED).into_response());
@@ -96,13 +101,23 @@ fn is_octet_stream(val: &str) -> bool {
 }
 
 #[allow(clippy::too_many_lines)]
-#[tracing::instrument(skip(app_state, body))]
+#[tracing::instrument(skip(app_state, body, auth),fields(userid))]
 pub async fn patch(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
     Path(id): Path<Uuid>,
+    auth: axum_login::AuthSession<crate::auth::AuthBackend>,
     body: Bytes,
 ) -> Result<axum::response::Response, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
+    let creator_id = auth
+        .user
+        .ok_or(ServerError::AuthUserNotAuthenticated)?
+        .creator_id;
+
     if !check_header(&headers, "Content-Type", is_octet_stream) {
         return Ok((StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unknown content-type.").into_response());
     }
@@ -144,7 +159,7 @@ pub async fn patch(
         );
         return Ok((
             StatusCode::CONFLICT,
-            format!("Client offset ({pu_offset}) does not match server offset ({offset})",),
+            format!("Client offset ({pu_offset}) does not match server offset ({offset})"),
         )
             .into_response());
     }
@@ -239,6 +254,7 @@ pub async fn patch(
                 file_size: i64::try_from(pu_length).map_err(ServerError::UploadTooBig)?,
                 file_compressed_size: gz_length,
                 created_on: chrono::Utc::now(),
+                creator_id: Some(creator_id)
             },
         )
         .await?;
@@ -255,11 +271,16 @@ pub async fn patch(
         .into_response())
 }
 
-#[tracing::instrument(skip(app_state))]
+#[tracing::instrument(skip(app_state,auth),fields(userid))]
 pub async fn creation(
     app_state: Extension<ServerState>,
+    auth: axum_login::AuthSession<crate::auth::AuthBackend>,
     headers: HeaderMap,
 ) -> Result<Response, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
     // Get file length header information
     // We are not allowing deferred length at this time
     let length: Option<usize> = parse_header(&headers, "Upload-Length");

@@ -11,11 +11,11 @@ export async function fetchZip(module:LibretroModule, zipfile:string, mount:stri
   const zipReader = new zip.ZipReader(new zip.HttpReader(zipfile), {useWebWorkers:false});
   const entries = await zipReader.getEntries();
   for(const file of entries) {
-    if (file.getData && !file.directory) {
+    if (!file.directory) {
       const writer = new zip.Uint8ArrayWriter();
       const data:Uint8Array = await file.getData(writer);
       module.FS.createPreloadedFile(mount+file.filename, undefined, data, true, true);
-    } else if (file.directory) {
+    } else {
       module.FS.createPath(mount, file.filename, true, true);
     }
   }

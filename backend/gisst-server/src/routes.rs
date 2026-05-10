@@ -1,5 +1,7 @@
 mod creator;
+mod environment;
 mod instance;
+pub mod lookup;
 mod object;
 pub mod players;
 mod replay;
@@ -9,6 +11,7 @@ mod state;
 mod work;
 
 pub use creator::router as creator_router;
+pub use environment::router as environment_router;
 pub use instance::router as instance_router;
 pub use object::router as object_router;
 pub use replay::router as replay_router;

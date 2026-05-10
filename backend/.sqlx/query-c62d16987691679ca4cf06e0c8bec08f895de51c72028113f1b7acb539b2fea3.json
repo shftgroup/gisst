@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT ON (core_name, core_platform) core_name, core_version, core_metadata, core_platform, created_on\nFROM core\nORDER BY core_name, core_platform, created_on DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "core_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "core_version",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "core_metadata",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "core_platform",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_on",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c62d16987691679ca4cf06e0c8bec08f895de51c72028113f1b7acb539b2fea3"
+}

@@ -1,3 +1,4 @@
+use crate::auth::AuthBackend;
 use crate::server::BASE_URL;
 use crate::{auth, error::ServerError, server::ServerState, utils::parse_header};
 use axum::{
@@ -5,8 +6,9 @@ use axum::{
     extract::{Json, Path},
     http::header::HeaderMap,
     response::{Html, IntoResponse},
-    routing::get,
+    routing::{get, post},
 };
+use axum_login::login_required;
 use gisst::models::{File, Object};
 use gisst::{error::Table, inc_metric};
 use minijinja::context;
@@ -16,6 +18,8 @@ pub fn router() -> Router {
     Router::new()
         .route("/{id}", get(get_single_object))
         .route("/{id}/{*path}", get(get_subobject))
+        .route("/create", post(create_object))
+        .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
 
 #[tracing::instrument(skip(app_state, auth), fields(userid))]
@@ -146,4 +150,52 @@ async fn get_subobject(
         ),
     ];
     Ok((headers, data).into_response())
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct CreateObject {
+    pub file_id: Uuid,
+    pub object_description: Option<String>,
+}
+
+#[tracing::instrument(skip(app_state, auth), fields(userid))]
+async fn create_object(
+    app_state: Extension<ServerState>,
+    auth: axum_login::AuthSession<auth::AuthBackend>,
+    Json(object): Json<CreateObject>,
+) -> Result<Json<Object>, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
+    let creator_id = auth
+        .user
+        .ok_or(ServerError::AuthUserNotAuthenticated)?
+        .creator_id;
+
+    let mut conn = app_state.pool.acquire().await?;
+
+    if let Some(file) = File::get_by_id(&mut conn, object.file_id).await? {
+        tracing::info!("Inserting object {object:?}");
+        Ok(Json(
+            Object::insert(
+                &mut conn,
+                Object {
+                    object_id: Uuid::new_v4(),
+                    file_id: object.file_id,
+                    object_description: object
+                        .object_description
+                        .or_else(|| Some(file.file_filename.clone())),
+                    creator_id: Some(creator_id),
+                    created_on: chrono::Utc::now(),
+                },
+            )
+            .await?,
+        ))
+    } else {
+        Err(ServerError::RecordMissing {
+            table: Table::File,
+            uuid: object.file_id,
+        })?
+    }
 }

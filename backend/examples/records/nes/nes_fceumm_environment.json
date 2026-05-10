@@ -1,7 +1,8 @@
 {
   "environment_id": "00000000000000000000000000000000",
   "environment_name": "Nintendo Entertainment System",
+  "environment_platform": "Nintendo Entertainment System",
   "environment_framework": "retroarch",
   "environment_core_name": "fceumm",
-  "environment_core_version": "48f62af982a832162b3a002aae856c22aaf35f59"
+  "environment_core_version": "de0b6c37d05d1db6ec7559b60df5b7c5938379c3"
 }

@@ -1,0 +1,3 @@
+li[aria-selected="true"] .gisst-new-instance-selector {
+    border: 2px red solid;
+}
