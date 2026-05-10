@@ -45,6 +45,17 @@ pub struct User {
     pub preferred_username: Option<String>, //OpenID
     pub email: Option<String>,              //OpenID
     picture: Option<String>,                //OpenID (this is a url string)
+    #[expect(clippy::struct_field_names)]
+    pub user_role: i32 // 0 = root, 5 = admin, 50 = regular, 100 = visitor
+}
+impl User {
+    #[allow(dead_code)]
+    pub const ROLE_VISITOR:i32 = 100;
+    pub const ROLE_REGULAR:i32 = 50;
+    #[allow(dead_code)]
+    pub const ROLE_ADMIN:i32 = 10;
+    #[allow(dead_code)]
+    pub const ROLE_SUPERUSER:i32 = 0;
 }
 
 // Based on OpenID standard claims https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
@@ -92,8 +103,8 @@ impl User {
     async fn insert(conn: &mut PgConnection, model: &User) -> Result<Self, AuthError> {
         sqlx::query_as!(
             Self,
-            r#"INSERT INTO users (iss, sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture)
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            r#"INSERT INTO users (iss, sub, creator_id, password_hash, name, given_name, family_name, preferred_username, email, picture, user_role)
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT(iss,sub) DO UPDATE SET PASSWORD_HASH=excluded.password_hash
             RETURNING
             id,
@@ -106,7 +117,8 @@ impl User {
             family_name,
             preferred_username,
             email,
-            picture
+            picture,
+            user_role
             "#,
             model.iss,
             model.sub,
@@ -118,6 +130,7 @@ impl User {
             model.preferred_username,
             model.email,
             model.picture,
+            model.user_role
         )
             .fetch_one(conn)
             .await
@@ -436,6 +449,7 @@ impl axum_login::AuthnBackend for AuthBackend {
                     preferred_username: profile.preferred_username.clone(),
                     email: profile.email.clone(),
                     picture: profile.picture.clone(),
+                    user_role: User::ROLE_REGULAR
                 },
             )
             .await?;
