@@ -4,9 +4,13 @@ SCRIPT_VERSION="1.0.0"
 
 set -o pipefail
 set -e
+set -v
+
+MANIFEST_FILE="${MANIFEST_FILE:-/manifest.json}"
+OUT_DIR="${OUT_DIR:-/out/}"
+FILE_ROOT="${FILE_ROOT:-/files/}"
 
 git --version
-
 git config --global advice.detachedHead false
 
 function die
@@ -15,17 +19,16 @@ function die
     [ -z "$message" ] && message="Died"
     echo "${BASH_SOURCE[1]}: line ${BASH_LINENO[0]}: ${FUNCNAME[1]}: $message." >&2
     exit 1
-
 }
 
-[ -e /manifest.json ] || die "No manifest file available in container at /manifest.json"
+[ -e "$MANIFEST_FILE" ] || die "No manifest file available in container at $MANIFEST_FILE"
 
 function getrepo
 {
     local dir=$1
     local jq_prefix=$2
-    local repo=$(jq -re "${jq_prefix}.repo" /manifest.json) || die "Could not get repository url"
-    local vsn=$(jq -re "${jq_prefix}.version" /manifest.json) || die "Could not get repository version"
+    local repo=$(jq -re "${jq_prefix}.repo" "$MANIFEST_FILE") || die "Could not get repository url"
+    local vsn=$(jq -re "${jq_prefix}.version" "$MANIFEST_FILE") || die "Could not get repository version"
     if [ -e $dir ]; then
         pushd $dir
         if [ $vsn != $(git rev-parse HEAD) ]; then
@@ -38,19 +41,22 @@ function getrepo
             return 0;
         fi
     fi
-    git clone --depth 1 --recursive --revision $vsn $repo $dir
+    git clone --recursive $repo $dir
+    pushd $dir
+    git checkout $vsn
+    popd
     return $?
 }
 
 # check script, rust, and emsdk versions from env var against manifest
-MANIFEST_SCRIPT_VERSION=$(jq -r ".script_version" /manifest.json)
+MANIFEST_SCRIPT_VERSION=$(jq -r ".script_version" "$MANIFEST_FILE")
 [ $MANIFEST_SCRIPT_VERSION = "${SCRIPT_VERSION}" ] || die "Container built with wrong script version ${SCRIPT_VERSION} for manifest $MANIFEST_SCRIPT_VERSION"
-MANIFEST_RUST_VERSION=$(jq -r ".rust_version" /manifest.json)
+MANIFEST_RUST_VERSION=$(jq -r ".rust_version" "$MANIFEST_FILE")
 [ $MANIFEST_RUST_VERSION = "${RUST_VERSION}" ] || die "Container built with wrong rust version ${RUST_VERSION} for manifest $MANIFEST_RUST_VERSION"
-MANIFEST_EMSDK_VERSION=$(jq -r ".emsdk_version" /manifest.json)
+MANIFEST_EMSDK_VERSION=$(jq -r ".emsdk_version" "$MANIFEST_FILE")
 [ $MANIFEST_EMSDK_VERSION = "${EMSDK_VERSION}" ] || die "Container built with wrong emsdk version ${EMSDK_VERSION} for manifest $MANIFEST_EMSDK_VERSION"
 
-mkdir -p /out/cores
+mkdir -p "$OUT_DIR/cores"
 
 # Make asset bundle
 
@@ -78,7 +84,7 @@ rm -rf assets/{xmb,switch,glui,nxrgui,ozone}
 rm -f assets/rgui/*.cfg
 rm -rf assets/rgui/wallpaper
 zip -r -l ../assets_minimal.zip *
-cp ../assets_minimal.zip /out/assets_minimal.zip
+cp ../assets_minimal.zip "$OUT_DIR"/assets_minimal.zip
 popd
 fi
 
@@ -89,7 +95,7 @@ pushd ra-build
 getrepo v86 '.v86'
 getrepo ra '.retroarch'
 
-CORENAMES=$(jq -re '.retroarch.cores | to_entries[] | select(.value.skip|not) | .key' /manifest.json)
+CORENAMES=$(jq -re '.retroarch.cores | to_entries[] | select(.value.skip|not) | .key' "$MANIFEST_FILE")
 
 for corename in $CORENAMES; do
     getrepo $corename ".retroarch.cores.${corename}"
@@ -105,9 +111,9 @@ pushd ra
 rm -rf obj-emscripten
 popd
 
-build_args=($((jq -r '.retroarch.build_args | @sh' /manifest.json) | tr -d \'))
+build_args=($((jq -r '.retroarch.build_args | @sh' "$MANIFEST_FILE") | tr -d \'))
 
-RETROARCH_VERSION=$(jq -r '.retroarch.version' /manifest.json)
+RETROARCH_VERSION=$(jq -r '.retroarch.version' "$MANIFEST_FILE")
 for f in $CORENAMES v86; do
     if [ $f = "ra" ]; then
         continue
@@ -115,33 +121,34 @@ for f in $CORENAMES v86; do
     pushd $f
 
     ASYNC=0
-    if jq -re ".retroarch.cores.$f.async == true" /manifest.json; then
+    if jq -re ".retroarch.cores.$f.async == true" "$MANIFEST_FILE"; then
         ASYNC=1
     fi
-    EXTRA_ARGS=$(jq -re ".retroarch.cores.$f.extra_build_args // [] | join(\" \")" /manifest.json)
+    EXTRA_ARGS=$(jq -re ".retroarch.cores.$f.extra_build_args // [] | join(\" \")" "$MANIFEST_FILE")
 
     if [ $f = "v86" ]
     then
         # make clean
         WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
-        cp build/libv86.js build/v86.wasm /out/
-        for biosfile in $(jq -r ".v86.dependencies // {} | keys[]" /manifest.json); do
-            bios_src=$(jq -r ".v86.dependencies[\"$biosfile\"]" /manifest.json)
-            cp "/files/${bios_src}" "/out/${biosfile}"
+        cp build/libv86.js build/v86.wasm "$OUT_DIR"
+        for biosfile in $(jq -r ".v86.dependencies // {} | keys[]" "$MANIFEST_FILE"); do
+            bios_src=$(jq -r ".v86.dependencies[\"$biosfile\"]" "$MANIFEST_FILE")
+            cp "${FILE_ROOT}/${bios_src}" "${OUT_DIR}/${biosfile}"
         done
         ENTRYPOINTS_STR='["libv86.js"]'
-        DEPENDENCIES_STR=$(jq --compact-output '[.v86.dependencies // {} | keys[]]+["v86.wasm"]' /manifest.json)
-        jq "del(.[\"retroarch\",\"emsdk_version\"]) + {\"core_name\":\"v86\", \"entrypoints\":${ENTRYPOINTS_STR}, \"dependencies\":${DEPENDENCIES_STR}}" /manifest.json > /out/v86.json
-        sha1sum /out/v86.json | cut -f 1 -d ' ' > /out/v86.hash
-        cat /out/v86.json
-        cat /out/v86.hash
+        DEPENDENCIES_STR=$(jq --compact-output '[.v86.dependencies // {} | keys[]]+["v86.wasm"]' "$MANIFEST_FILE")
+        jq "del(.[\"retroarch\",\"emsdk_version\"]) + {\"core_name\":\"v86\", \"entrypoints\":${ENTRYPOINTS_STR}, \"dependencies\":${DEPENDENCIES_STR}}" "$MANIFEST_FILE" > "$OUT_DIR"/v86.json
+        sha1sum "$OUT_DIR"/v86.json | cut -f 1 -d ' ' > "$OUT_DIR"/v86.hash
+        echo v86
+        cat "$OUT_DIR"/v86.json
+        cat "$OUT_DIR"/v86.hash
         popd
         continue
     elif [ $f = "sameboy" ]
     then
-        rgbds_repo=$(jq -r '.retroarch.cores.sameboy.rgbds_repo' /manifest.json)
-        rgbds_version=$(jq -r '.retroarch.cores.sameboy.rgbds_version' /manifest.json)
-        git clone --depth 1 --revision $rgbds_version $rgbds_repo || echo "Could not get rgbds or rgbds already present"
+        rgbds_repo=$(jq -r '.retroarch.cores.sameboy.rgbds_repo' "$MANIFEST_FILE")
+        rgbds_version=$(jq -r '.retroarch.cores.sameboy.rgbds_version' "$MANIFEST_FILE")
+        git clone $rgbds_repo rgbds && pushd rgbds && git checkout $rgbds_version && popd
         make -C rgbds -j || die "Could not build rgbds"
         PATH="./rgbds:${PATH}" make -j CONF=release bootroms || die "could not build sameboy bootroms"
         PATH="./rgbds:${PATH}" emmake make CONF=release platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC $EXTRA_ARGS -j libretro || die "could not build core ${f}"
@@ -169,18 +176,19 @@ for f in $CORENAMES v86; do
     rm -rf obj-emscripten
     emmake make -f Makefile.emscripten LIBRETRO=$f clean
     emmake make -f Makefile.emscripten LIBRETRO=$f ASYNC=$ASYNC "${build_args[@]}" -j all || die "could not build RA dist for ${f}"
-    cp ${f}_libretro.* /out/cores
+    cp ${f}_libretro.* "$OUT_DIR"/cores
     # compute hash from manifest (except for v86 and non-this-core RA cores)
     ENTRYPOINTS_STR="[\"${f}_libretro.js\"]"
-    for depfile in $(jq -r ".retroarch.cores.${f}.dependencies // {} | keys[]" /manifest.json); do
-        dep_src=$(jq -r ".retroarch.cores.${f}.dependencies[\"$depfile\"]" /manifest.json)
-        cp "/files/${dep_src}" "/out/cores/${depfile}"
+    for depfile in $(jq -r ".retroarch.cores.${f}.dependencies // {} | keys[]" "$MANIFEST_FILE"); do
+        dep_src=$(jq -r ".retroarch.cores.${f}.dependencies[\"$depfile\"]" "$MANIFEST_FILE")
+        cp "${FILE_ROOT}/${dep_src}" "${OUT_DIR}/cores/${depfile}"
     done
-    DEPENDENCIES_STR=$(jq --compact-output "[.retroarch.cores.${f}.dependencies // {} | keys[]] + [\"${f}_libretro.wasm\"]" /manifest.json)
-    jq ".retroarch.cores = (.retroarch.cores | to_entries[] | select(.key == \"${f}\") | [.] | from_entries) | del(.[\"v86\",\"rust_version\"]) + {\"core_name\":\"${f}\", \"entrypoints\":${ENTRYPOINTS_STR}, \"dependencies\":${DEPENDENCIES_STR}}" /manifest.json > "/out/cores/${f}_libretro.json"
-    sha1sum /out/cores/${f}_libretro.json | cut -f 1 -d ' ' > /out/cores/${f}_libretro.hash
-    cat /out/cores/${f}_libretro.json
-    cat /out/cores/${f}_libretro.hash
+    DEPENDENCIES_STR=$(jq --compact-output "[.retroarch.cores.${f}.dependencies // {} | keys[]] + [\"${f}_libretro.wasm\"]" "$MANIFEST_FILE")
+    jq ".retroarch.cores = (.retroarch.cores | to_entries[] | select(.key == \"${f}\") | [.] | from_entries) | del(.[\"v86\",\"rust_version\"]) + {\"core_name\":\"${f}\", \"entrypoints\":${ENTRYPOINTS_STR}, \"dependencies\":${DEPENDENCIES_STR}}" "$MANIFEST_FILE" > "${OUT_DIR}/cores/${f}_libretro.json"
+    sha1sum "$OUT_DIR"/cores/${f}_libretro.json | cut -f 1 -d ' ' > "$OUT_DIR"/cores/${f}_libretro.hash
+    echo "${f}_libretro"
+    cat "$OUT_DIR"/cores/${f}_libretro.json
+    cat "$OUT_DIR"/cores/${f}_libretro.hash
     popd
     popd
 done

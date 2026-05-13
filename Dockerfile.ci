@@ -1,17 +1,19 @@
-FROM ubuntu:resolute AS base
+FROM ubuntu:noble AS base
 
 ENV PLAYWRIGHT_VERSION=1.53.0
 ENV RUST_VERSION=1.93.1
 ENV NODE_VERSION=25.6.0
+ENV EMSDK_VERSION=4.0.17
 
 RUN apt-get update && apt-get install -y \
-  libssl-dev nginx build-essential make curl clang git \
-  libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
+  software-properties-common \
+  libssl-dev nginx build-essential make curl wget clang default-jdk \
+  libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 git \
   libxkbcommon0 libatspi2.0-0t64 libxcomposite1 \
   libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64 \
     postgresql pkg-config sudo zsh ripgrep ca-certificates \
-  zstd
-
+    zstd bash jq binaryen bison libpng-dev bsdmainutils cmake && \
+    apt-get clean
 ENV USER=ubuntu
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER $USER
@@ -19,17 +21,27 @@ ENV NVM_DIR=/home/$USER/.nvm
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 RUN bash -c ". ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION}"
 ENV PATH="/home/$USER/.nvm/versions/node/v${NODE_VERSION}/bin:${PATH}"
+
+ENV EMSDK_DIR=/home/$USER/.emsdk
+RUN git clone https://github.com/emscripten-core/emsdk.git $EMSDK_DIR; cd $EMSDK_DIR; ./emsdk install $EMSDK_VERSION; ./emsdk activate $EMSDK_VERSION; . ./emsdk_env.sh
+ENV PATH="${EMSDK_DIR}:${EMSDK_DIR}/upstream/emscripten:${PATH}"
+
 RUN npm i -g "@playwright/test@${PLAYWRIGHT_VERSION}" && npx playwright install --with-deps
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y -c rust-analyzer,rust-src,rustfmt,clippy,rust-docs,cargo --default-toolchain=${RUST_VERSION}
+
 ENV PATH="/home/$USER/.cargo/bin:${PATH}"
 ENV CARGO_HOME=/home/$USER/.cargo
+RUN rustup target add wasm32-unknown-unknown
+
 RUN cargo install sqlx-cli
 RUN cargo install cargo-chef
+
 RUN <<EOF
     cd
     curl -L https://install.meilisearch.com | sh
     sudo mv meilisearch /usr/local/bin/
 EOF
+
 RUN mkdir -p /tmp/frontend /tmp/backend
 
 FROM base AS frontend

@@ -9,77 +9,17 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  cores:
-    # We have to build cores in the test workflow because the backend
-    # tests rely on cores with the right hashes. This means we also
-    # need to build the core container here because changes to the
-    # emscripten version, rust version, etc need to be mirrored in the
-    # dockerfile and the manifest.
-    runs-on: ubuntu-latest
-    outputs:
-      cores-hash: ${{ steps.hash-manifest.outputs.hash }}
-    steps:
-    - uses: actions/checkout@v3
-    - name: Login to registry
-      uses: docker/login-action@v4
-      with:
-        username: jcoa2018
-        password: ${{ secrets.REGISTRY_TOKEN }}
-        registry: cafe.cs.pomona.edu
-    - name: Compute core manifest hash
-      id: hash-manifest
-      uses: seepine/hash-files@v1
-      with:
-        patterns: |
-          manifest-ci.json
-          Dockerfile.dist
-          dist-update-docker.sh
-    - name: Get cached cores
-      id: cache
-      uses: actions/cache/restore@v5
-      with:
-        path: ./build
-        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
-        lookup-only: true
-    - name: Rebuild cores (setup buildx)
-      if: steps.cache.outputs.cache-hit != 'true'
-      uses: docker/setup-buildx-action@v2
-    - name: Rebuild cores (build container)
-      if: steps.cache.outputs.cache-hit != 'true'
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: "Dockerfile.dist"
-        tags: "cafe.cs.pomona.edu/shftgroup/gisst-dist:${{ steps.hash-manifest.outputs.hash }}"
-        load: true
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        push: true
-    - name: Rebuild cores (run dist script)
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        docker run --privileged --rm -v ./build:/out -v ./manifest-ci.json:/manifest.json -v ./v86bios:/files/v86bios -e GET_ASSETS=0 cafe.cs.pomona.edu/shftgroup/gisst-dist:${{ steps.hash-manifest.outputs.hash  }}
-    - name: Cache cores
-      if: steps.cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v5
-      with:
-        path: ./build
-        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
-
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
-      credentials:
-          username: jcoa2018
-          password: ${{ secrets.REGISTRY_TOKEN }}
     env:
       GISST_CONFIG_PATH: ./config
       MEILI_URL: http://localhost:7701
       MEILI_MASTER_KEY: test-api-key
       MEILI_API_KEY: test-api-key
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     - name: Pull cached backend dependencies
       run: mv /tmp/backend/target backend/
     - name: Restore cached node modules
@@ -96,7 +36,7 @@ jobs:
     - name: dist
       run: npm run dist --workspaces --if-present
       working-directory: frontend
-    - uses: JarvusInnovations/background-action@v1
+    - uses: https://github.com/JarvusInnovations/background-action@v1
       name: Run meili
       with:
         run: |
@@ -127,30 +67,50 @@ jobs:
         path: frontend/playwright-report/
         retention-days: 15  
   backend:
-    needs:
-      - cores
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
-      credentials:
-          username: jcoa2018
-          password: ${{ secrets.REGISTRY_TOKEN }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Get cached cores
+    - uses: actions/checkout@v6
+    # TODO: move ci cores and examples into a generic shftgroup
+    # package produced by a private repository (and generate example
+    # envs automatically?).  it should also create a release on its
+    # own releases page for the package that includes copyrighted
+    # material. Basically, cores (even for CI) should be versioned
+    # separately from gisst in part because permissions are different.
+    # If it's a private, owner only repo with no PRs or PRs limited to
+    # owners then we also can be chill about docker in that repo
+    - name: Compute core manifest hash
+      id: hash-manifest
+      uses: https://gitea.com/seepine/hash-files@v1
+      with:
+        patterns: |
+          manifest-ci.json
+          dist-update-docker.sh
+    - name: Check cached cores
       id: cache
       uses: actions/cache/restore@v5
       with:
         path: ./build
-        key: "cache-${{ needs.cores.outputs.cores-hash }}"
-        fail-on-cache-miss: true
+        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
+    - name: Run dist script using ci dist image
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p build
+        OUT_DIR="${PWD}/build" FILE_ROOT="$PWD" MANIFEST_FILE="${PWD}/manifest-ci.json" GET_ASSETS=0 ./dist-update-docker.sh
+    - name: Cache cores
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ./build
+        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
     - name: Pull cached backend dependencies
       run: mv /tmp/backend/target backend/
     - name: Clippy
       working-directory: backend
       run: SQLX_OFFLINE=1 cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
     - name: Run meili
-      uses: JarvusInnovations/background-action@v1
+      uses: https://github.com/JarvusInnovations/background-action@v1
       with:
         run: meilisearch --no-analytics --master-key test-api-key-github-actions --env development &
         wait-on: '{"resources":["http-get://localhost:7700/version"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
@@ -200,7 +160,7 @@ jobs:
         cat du-out.txt
         echo "lines:"
         wc -l du-out.txt
-        grep -x "89260\s*total" du-out.txt
+        grep -x "89028\s*total" du-out.txt
         echo "Total byte count OK"
         wc -l du-out.txt | cut -d' ' -f 1 | grep -Fx "137"
         echo "Total file count OK"

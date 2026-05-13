@@ -23,7 +23,7 @@ RUN apt update && \
     apt update && \
     apt install -y bash curl git jq bison libpng-dev \
        bsdmainutils build-essential pkgconf cmake clang && \
-    apt-get clean && echo kick
+    apt-get clean
 
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 
