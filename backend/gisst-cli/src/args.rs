@@ -120,7 +120,7 @@ pub struct SetUserRole {
     pub id: Uuid,
 
     /// User role. Lower values mean more privileges (0, 10, 50, 100 are the default settings for superuser, admin, regular user, and visitor).
-    pub role: i32
+    pub role: i32,
 }
 
 #[derive(Debug, Args)]
@@ -157,7 +157,7 @@ pub struct UpgradeEnvironmentArgs {
 pub enum Commands {
     /// Update a user's permission level if you know their user ID.
     SetUserRole(SetUserRole),
-    
+
     /// Add a new core to the core table, should be called before creating an environment
     AddCore(AddCoreArgs),
 

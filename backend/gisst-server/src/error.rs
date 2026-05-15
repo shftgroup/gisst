@@ -164,7 +164,10 @@ impl IntoResponse for ServerError {
             ServerError::Subobject(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "subobject access error")
             }
-            ServerError::PermissionDenied => (StatusCode::FORBIDDEN, "need sufficient permissions to make changes"),
+            ServerError::PermissionDenied => (
+                StatusCode::FORBIDDEN,
+                "need sufficient permissions to make changes",
+            ),
             ServerError::StateRequired => (StatusCode::BAD_REQUEST, "need a state to make a clone"),
             ServerError::V86Clone(_) => (StatusCode::INTERNAL_SERVER_ERROR, "v86 clone failed"),
             ServerError::Unreachable => (StatusCode::INTERNAL_SERVER_ERROR, "uh oh error"),

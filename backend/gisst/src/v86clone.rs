@@ -19,7 +19,7 @@ pub async fn clone_v86_machine(
     storage_root: &str,
     depth: u8,
     indexer: &impl crate::search::SearchIndexer,
-    creator_id:Option<Uuid>,
+    creator_id: Option<Uuid>,
 ) -> Result<Uuid, V86Clone> {
     use crate::inc_metric;
     use std::process::Command;

@@ -1,17 +1,17 @@
-use crate::auth::{self,AuthBackend,User};
+use super::{HideShowParams, LoggedInUserInfo};
+use crate::auth::{self, AuthBackend, User};
 use crate::{error::ServerError, server::ServerState};
 use axum::{
     Extension, Router,
     extract::{Json, Path},
+    response::NoContent,
     routing::{get, post},
-    response::NoContent
 };
 use axum_login::login_required;
 use gisst::error::Table;
 use gisst::models::{File, Save};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use super::{HideShowParams,LoggedInUserInfo};
 
 pub fn router() -> Router {
     Router::new()
@@ -40,9 +40,18 @@ async fn hideshow_save(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user).ok_or(ServerError::AuthUserNotAuthenticated)?;
+    let user = auth
+        .user
+        .as_ref()
+        .map(LoggedInUserInfo::generate_from_user)
+        .ok_or(ServerError::AuthUserNotAuthenticated)?;
     let mut conn = app_state.pool.acquire().await?;
-    let save = Save::get_by_id(conn.as_mut(), id).await?.ok_or(ServerError::RecordMissing{table:Table::Save,uuid:id})?;
+    let save = Save::get_by_id(conn.as_mut(), id)
+        .await?
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Save,
+            uuid: id,
+        })?;
     if user.creator_id == save.creator_id || user.role <= User::ROLE_ADMIN {
         Save::set_hidden(conn.as_mut(), id, hidden.state, &app_state.indexer).await?;
         Ok(NoContent)
@@ -95,7 +104,7 @@ async fn create_save(
                     save_derived_from: save.save_derived_from,
                     replay_derived_from: save.replay_derived_from,
                     created_on: chrono::Utc::now(),
-                    hidden: false
+                    hidden: false,
                 },
                 &app_state.indexer,
             )

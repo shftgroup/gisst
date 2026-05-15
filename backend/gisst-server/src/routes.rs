@@ -22,7 +22,7 @@ pub use work::router as work_router;
 
 #[derive(serde::Deserialize, Debug)]
 pub struct HideShowParams {
-    state: bool
+    state: bool,
 }
 #[derive(serde::Serialize, Debug)]
 pub struct LoggedInUserInfo {
@@ -62,7 +62,7 @@ impl LoggedInUserInfo {
             initials: initials.clone(),
             username: user.preferred_username.clone(),
             creator_id: user.creator_id,
-            role: user.user_role
+            role: user.user_role,
         }
     }
 }

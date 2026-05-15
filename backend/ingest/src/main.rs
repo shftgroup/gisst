@@ -135,7 +135,7 @@ async fn main() -> Result<(), IngestError> {
         Some("base retroarch config".to_string()),
         String::new(),
         Duplicate::ReuseObject,
-        None
+        None,
     )
     .await?;
     let indexer = gisst::search::MeiliIndexer::new(&meili_url, &meili_api_key)?;
@@ -154,7 +154,7 @@ async fn main() -> Result<(), IngestError> {
             Some(dep_path.clone()),
             dep_path.clone(),
             Duplicate::ReuseObject,
-        None
+            None,
         )
         .await?;
         dep_ids.push(dep_id);
@@ -485,7 +485,7 @@ async fn create_single_file_instance_objects(
             .to_string_lossy()
             .to_string(),
         Duplicate::ReuseData,
-        None
+        None,
     )
     .await?;
     Object::link_object_to_instance(conn, object_id, instance_id, ObjectRole::Content, 0).await?;
@@ -516,7 +516,7 @@ async fn create_playlist_instance_objects(
         desc.clone(),
         src_path.clone(),
         Duplicate::ReuseData,
-        None
+        None,
     )
     .await?;
     Object::link_object_to_instance(conn, playlist_id, instance_id, ObjectRole::Content, 0).await?;
@@ -531,7 +531,7 @@ async fn create_playlist_instance_objects(
             desc.clone(),
             src_path.clone(),
             Duplicate::ReuseData,
-        None
+            None,
         )
         .await?;
         info!("linking {file_id} with {instance_id}");

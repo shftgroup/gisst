@@ -31,10 +31,7 @@ async fn create_screenshot(
     Json(screenshot): Json<ScreenshotCreateInfo>,
 ) -> Result<Json<gisst::models::Screenshot>, ServerError> {
     let user_id = auth.user.as_ref().map(|u| u.creator_id);
-    tracing::Span::current().record(
-        "userid",
-        user_id.map(|u| u.to_string()),
-    );
+    tracing::Span::current().record("userid", user_id.map(|u| u.to_string()));
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(
         gisst::models::Screenshot::insert(
@@ -43,7 +40,7 @@ async fn create_screenshot(
                 screenshot_id: Uuid::new_v4(),
                 screenshot_data: screenshot.screenshot_data,
                 created_on: chrono::Utc::now(),
-                creator_id: user_id
+                creator_id: user_id,
             },
         )
         .await?,

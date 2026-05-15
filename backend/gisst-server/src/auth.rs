@@ -46,16 +46,16 @@ pub struct User {
     pub email: Option<String>,              //OpenID
     picture: Option<String>,                //OpenID (this is a url string)
     #[expect(clippy::struct_field_names)]
-    pub user_role: i32 // 0 = root, 5 = admin, 50 = regular, 100 = visitor
+    pub user_role: i32, // 0 = root, 5 = admin, 50 = regular, 100 = visitor
 }
 impl User {
     #[allow(dead_code)]
-    pub const ROLE_VISITOR:i32 = 100;
-    pub const ROLE_REGULAR:i32 = 50;
+    pub const ROLE_VISITOR: i32 = 100;
+    pub const ROLE_REGULAR: i32 = 50;
     #[allow(dead_code)]
-    pub const ROLE_ADMIN:i32 = 10;
+    pub const ROLE_ADMIN: i32 = 10;
     #[allow(dead_code)]
-    pub const ROLE_SUPERUSER:i32 = 0;
+    pub const ROLE_SUPERUSER: i32 = 0;
 }
 
 // Based on OpenID standard claims https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
@@ -449,7 +449,7 @@ impl axum_login::AuthnBackend for AuthBackend {
                     preferred_username: profile.preferred_username.clone(),
                     email: profile.email.clone(),
                     picture: profile.picture.clone(),
-                    user_role: User::ROLE_REGULAR
+                    user_role: User::ROLE_REGULAR,
                 },
             )
             .await?;

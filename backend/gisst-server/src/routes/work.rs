@@ -76,7 +76,7 @@ async fn create_or_derive_work(
                         work_version: work.work_version.clone(),
                         work_platform: work.work_platform.clone(),
                         work_derived_from: Some(existing.work_id),
-                        creator_id:Some(creator_id),
+                        creator_id: Some(creator_id),
                         created_on: chrono::Utc::now(),
                     },
                 )
@@ -104,7 +104,7 @@ async fn create_or_derive_work(
                     work_version: work.work_version.clone(),
                     work_platform: work.work_platform.clone(),
                     work_derived_from: work.work_derived_from,
-                        creator_id:Some(creator_id),
+                    creator_id: Some(creator_id),
                     created_on: chrono::Utc::now(),
                 },
             )

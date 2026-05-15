@@ -1,17 +1,17 @@
-use crate::auth::{self,AuthBackend,User};
+use super::{HideShowParams, LoggedInUserInfo};
+use crate::auth::{self, AuthBackend, User};
 use crate::{error::ServerError, server::ServerState};
 use axum::{
     Extension, Router,
     extract::{Json, Path},
+    response::NoContent,
     routing::{get, post},
-    response::NoContent
 };
 use axum_login::login_required;
 use gisst::error::Table;
 use gisst::models::{File, Replay};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use super::{HideShowParams,LoggedInUserInfo};
 
 pub fn router() -> Router {
     Router::new()
@@ -28,8 +28,6 @@ async fn get_single_replay(
     Ok(Json(Replay::get_by_id(&mut conn, id).await?.unwrap()))
 }
 
-
-
 #[tracing::instrument(skip(app_state, auth), fields(userid))]
 async fn hideshow_replay(
     app_state: Extension<ServerState>,
@@ -41,9 +39,18 @@ async fn hideshow_replay(
         "userid",
         auth.user.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user).ok_or(ServerError::AuthUserNotAuthenticated)?;
+    let user = auth
+        .user
+        .as_ref()
+        .map(LoggedInUserInfo::generate_from_user)
+        .ok_or(ServerError::AuthUserNotAuthenticated)?;
     let mut conn = app_state.pool.acquire().await?;
-    let replay = Replay::get_by_id(conn.as_mut(), id).await?.ok_or(ServerError::RecordMissing{table:Table::Replay,uuid:id})?;
+    let replay = Replay::get_by_id(conn.as_mut(), id)
+        .await?
+        .ok_or(ServerError::RecordMissing {
+            table: Table::Replay,
+            uuid: id,
+        })?;
     if user.creator_id == replay.creator_id || user.role <= User::ROLE_ADMIN {
         Replay::set_hidden(conn.as_mut(), id, hidden.state, &app_state.indexer).await?;
         Ok(NoContent)
@@ -87,7 +94,7 @@ async fn create_replay(
                     replay_forked_from: replay.replay_forked_from,
                     file_id: replay.file_id,
                     created_on: chrono::Utc::now(),
-                    hidden: false
+                    hidden: false,
                 },
                 &app_state.indexer,
             )

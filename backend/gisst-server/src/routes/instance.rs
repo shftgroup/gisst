@@ -205,7 +205,7 @@ async fn clone_v86_instance(
         storage_path,
         storage_depth,
         &app_state.indexer,
-        Some(creator_id)
+        Some(creator_id),
     )
     .await?;
     tx.commit().await?;

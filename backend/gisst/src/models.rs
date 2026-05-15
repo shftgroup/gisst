@@ -48,7 +48,7 @@ pub struct Environment {
     pub environment_config: Option<sqlx::types::JsonValue>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
-    pub creator_id: Option<Uuid>
+    pub creator_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,7 +62,7 @@ pub struct File {
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
     pub file_compressed_size: Option<i64>,
-    pub creator_id: Option<Uuid>
+    pub creator_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,7 +75,7 @@ pub struct Instance {
     pub created_on: DateTime<Utc>,
     pub derived_from_instance: Option<Uuid>,
     pub derived_from_state: Option<Uuid>,
-    pub creator_id: Option<Uuid>
+    pub creator_id: Option<Uuid>,
 }
 
 #[serde_as]
@@ -86,7 +86,7 @@ pub struct Screenshot {
     pub screenshot_data: Vec<u8>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
-    pub creator_id: Option<Uuid>
+    pub creator_id: Option<Uuid>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
@@ -162,7 +162,7 @@ pub struct Replay {
     pub file_id: Uuid,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
-    pub hidden:bool
+    pub hidden: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -178,7 +178,7 @@ pub struct Save {
     pub state_derived_from: Option<Uuid>,
     pub save_derived_from: Option<Uuid>,
     pub replay_derived_from: Option<Uuid>,
-    pub hidden:bool
+    pub hidden: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -198,7 +198,7 @@ pub struct State {
     pub save_derived_from: Option<Uuid>,
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
-    pub hidden:bool
+    pub hidden: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -210,7 +210,7 @@ pub struct Work {
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
     pub work_derived_from: Option<Uuid>,
-    pub creator_id: Option<Uuid>
+    pub creator_id: Option<Uuid>,
 }
 
 #[serde_as]
@@ -716,8 +716,21 @@ impl Replay {
             .fetch_all(conn)
             .await
     }
-    pub async fn set_hidden(conn: &mut PgConnection, id:Uuid, state:bool, indexer:&impl crate::search::SearchIndexer) -> Result<(),Insert> {
-        let replay = sqlx::query_as!(Self, "UPDATE replay SET hidden=$2 WHERE replay_id=$1 RETURNING *", id, state).fetch_one(conn.as_mut()).await.map_err(|e| RecordSQL {
+    pub async fn set_hidden(
+        conn: &mut PgConnection,
+        id: Uuid,
+        state: bool,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<(), Insert> {
+        let replay = sqlx::query_as!(
+            Self,
+            "UPDATE replay SET hidden=$2 WHERE replay_id=$1 RETURNING *",
+            id,
+            state
+        )
+        .fetch_one(conn.as_mut())
+        .await
+        .map_err(|e| RecordSQL {
             table: Table::Replay,
             action: Action::Insert,
             source: e,
@@ -770,8 +783,21 @@ impl Save {
             .fetch_all(conn)
             .await
     }
-    pub async fn set_hidden(conn: &mut PgConnection, id:Uuid, state:bool, indexer:&impl crate::search::SearchIndexer) -> Result<(), Insert> {
-        let save = sqlx::query_as!(Self, "UPDATE save SET hidden=$2 WHERE save_id=$1 RETURNING *", id, state).fetch_one(conn.as_mut()).await.map_err(|e| RecordSQL {
+    pub async fn set_hidden(
+        conn: &mut PgConnection,
+        id: Uuid,
+        state: bool,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<(), Insert> {
+        let save = sqlx::query_as!(
+            Self,
+            "UPDATE save SET hidden=$2 WHERE save_id=$1 RETURNING *",
+            id,
+            state
+        )
+        .fetch_one(conn.as_mut())
+        .await
+        .map_err(|e| RecordSQL {
             table: Table::Save,
             action: Action::Insert,
             source: e,
@@ -927,8 +953,21 @@ impl State {
         Ok(record)
     }
 
-    pub async fn set_hidden(conn: &mut PgConnection, id:Uuid, state:bool, indexer:&impl crate::search::SearchIndexer) -> Result<(),Insert> {
-        let ret = sqlx::query_as!(Self, "UPDATE state SET hidden=$2 WHERE state_id=$1 RETURNING *", id, state).fetch_one(conn.as_mut()).await.map_err(|e| RecordSQL {
+    pub async fn set_hidden(
+        conn: &mut PgConnection,
+        id: Uuid,
+        state: bool,
+        indexer: &impl crate::search::SearchIndexer,
+    ) -> Result<(), Insert> {
+        let ret = sqlx::query_as!(
+            Self,
+            "UPDATE state SET hidden=$2 WHERE state_id=$1 RETURNING *",
+            id,
+            state
+        )
+        .fetch_one(conn.as_mut())
+        .await
+        .map_err(|e| RecordSQL {
             table: Table::State,
             action: Action::Insert,
             source: e,
@@ -1272,7 +1311,7 @@ pub struct ReplayLink {
     pub file_filename: String,
     pub file_source_path: String,
     pub file_dest_path: String,
-    pub hidden: bool
+    pub hidden: bool,
 }
 impl ReplayLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
@@ -1310,7 +1349,7 @@ pub struct StateLink {
     pub file_filename: String,
     pub file_source_path: String,
     pub file_dest_path: String,
-    pub hidden: bool
+    pub hidden: bool,
 }
 impl StateLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
@@ -1345,7 +1384,7 @@ pub struct SaveLink {
     pub file_filename: String,
     pub file_source_path: String,
     pub file_dest_path: String,
-    pub hidden: bool
+    pub hidden: bool,
 }
 
 impl SaveLink {
@@ -1398,7 +1437,7 @@ pub async fn insert_file_object(
     object_description: Option<String>,
     file_source_path: String,
     duplicate: Duplicate,
-    creator_id: Option<Uuid>
+    creator_id: Option<Uuid>,
 ) -> Result<Uuid, crate::error::InsertFile> {
     use crate::error::InsertFile;
     use crate::inc_metric;
@@ -1435,7 +1474,7 @@ pub async fn insert_file_object(
                     path,
                     &file_source_path,
                     created_on,
-                    creator_id
+                    creator_id,
                 )
                 .await?;
                 let object = Object {
@@ -1491,7 +1530,7 @@ pub async fn insert_new_file(
     path: &std::path::Path,
     file_source_path: &str,
     created_on: chrono::DateTime<chrono::Utc>,
-    creator_id: Option<Uuid>
+    creator_id: Option<Uuid>,
 ) -> Result<File, crate::error::InsertFile> {
     use crate::inc_metric;
     use crate::storage::StorageHandler;
@@ -1514,7 +1553,7 @@ pub async fn insert_new_file(
         file_size: file_info.file_size,
         file_compressed_size: file_info.file_compressed_size,
         created_on,
-        creator_id
+        creator_id,
     };
     File::insert(conn, file_record)
         .await

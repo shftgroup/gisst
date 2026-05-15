@@ -6,9 +6,9 @@ mod cliconfig;
 use crate::cliconfig::CLIConfig;
 use anyhow::Result;
 use args::{
-    AddCoreArgs, AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment, CreateScreenshot, SetUserRole,
-    CreateInstance, CreateObject, CreateReplay, CreateSave, CreateState, CreateWork, GISSTCli,
-    GISSTCliError, PatchData, UpgradeEnvironmentArgs,
+    AddCoreArgs, AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment,
+    CreateInstance, CreateObject, CreateReplay, CreateSave, CreateScreenshot, CreateState,
+    CreateWork, GISSTCli, GISSTCliError, PatchData, SetUserRole, UpgradeEnvironmentArgs,
 };
 use clap::Parser;
 use gisst::{
@@ -120,7 +120,7 @@ async fn main() -> Result<(), GISSTCliError> {
             depth,
         } => {
             add_patched_instance(db, instance, data, storage_root, depth, &indexer).await?;
-        },
+        }
         Commands::SetUserRole(params) => {
             set_user_role(db, params).await?;
         }
@@ -253,16 +253,16 @@ async fn upgrade_envs_by_clone(
 }
 async fn set_user_role(
     db: PgPool,
-    SetUserRole {
-        id,
-        role,
-    }: SetUserRole,
+    SetUserRole { id, role }: SetUserRole,
 ) -> Result<(), GISSTCliError> {
     let mut conn = db.acquire().await?;
     sqlx::query!(
         "UPDATE users SET user_role=$2 WHERE creator_id=$1",
-        id, role
-    ).execute(conn.as_mut()).await?;
+        id,
+        role
+    )
+    .execute(conn.as_mut())
+    .await?;
     Ok(())
 }
 
@@ -395,7 +395,7 @@ async fn add_core(
                 &(core_dir.join(Path::new(&file))),
                 &source_path.to_string_lossy().to_string().replace("./", ""),
                 now,
-                None
+                None,
             )
             .await?
             .file_id
@@ -444,7 +444,7 @@ async fn add_work_instance(
             work_platform: platform_name,
             created_on: now,
             work_derived_from: None,
-            creator_id: None
+            creator_id: None,
         };
         Work::insert(&mut tx, work).await?;
     } else {
@@ -477,7 +477,7 @@ async fn add_work_instance(
             Some(file_name.clone()),
             source_path.to_string_lossy().to_string().replace("./", ""),
             Duplicate::ReuseObject,
-        None
+            None,
         )
         .await?;
         Object::link_object_to_instance(
@@ -503,7 +503,7 @@ async fn add_work_instance(
             Some(file_name.clone()),
             source_path.to_string_lossy().to_string().replace("./", ""),
             Duplicate::ReuseObject,
-        None
+            None,
         )
         .await?;
         Object::link_object_to_instance(
@@ -529,7 +529,7 @@ async fn add_work_instance(
             Some(file_name.clone()),
             source_path.to_string_lossy().to_string().replace("./", ""),
             Duplicate::ReuseObject,
-            None
+            None,
         )
         .await?;
         Object::link_object_to_instance(
@@ -632,7 +632,7 @@ async fn clone_v86_machine(
         &storage_root,
         depth,
         indexer,
-        None
+        None,
     )
     .await?;
     Ok(uuid)
@@ -675,7 +675,7 @@ async fn add_patched_instance(
         work_version: data.version,
         work_name: data.name,
         work_platform: work.work_platform,
-        creator_id: None
+        creator_id: None,
     };
     Work::insert(&mut tx, new_work).await?;
     Instance::insert(&mut tx, new_inst, indexer).await?;
@@ -701,7 +701,7 @@ async fn add_patched_instance(
                 None,
                 link.file_source_path,
                 gisst::models::Duplicate::ReuseData,
-        None
+                None,
             )
             .await?;
             Object::link_object_to_instance(
@@ -786,7 +786,7 @@ async fn create_object(
         Some(file_name.clone()),
         source_path.to_string_lossy().to_string().replace("./", ""),
         gisst::models::Duplicate::ForceUuid(force_uuid),
-        None
+        None,
     )
     .await?;
     if let Some(inst) = link {
@@ -1014,7 +1014,7 @@ async fn create_replay(
             &path,
             &source_path.to_string_lossy().to_string().replace("./", ""),
             created_on,
-            None
+            None,
         )
         .await?
         .file_id
@@ -1030,7 +1030,7 @@ async fn create_replay(
         replay_forked_from,
         file_id,
         created_on,
-        hidden: false
+        hidden: false,
     };
     Replay::insert(&mut conn, replay, indexer)
         .await
@@ -1059,7 +1059,7 @@ async fn create_screenshot(
             screenshot_data: std::fs::read(file)?,
             screenshot_id: force_uuid.unwrap_or_else(Uuid::new_v4),
             created_on: chrono::Utc::now(),
-            creator_id: None
+            creator_id: None,
         },
     )
     .await
@@ -1124,7 +1124,7 @@ async fn create_state(
         file,
         &source_path.to_string_lossy().to_string().replace("./", ""),
         created_on,
-            None
+        None,
     )
     .await?
     .file_id;
@@ -1142,7 +1142,7 @@ async fn create_state(
         state_replay_index,
         state_derived_from,
         save_derived_from: None,
-        hidden:false
+        hidden: false,
     };
     State::insert(&mut conn, state, indexer).await?;
     Ok(())
@@ -1197,7 +1197,7 @@ async fn create_save(
             file,
             &source_path.to_string_lossy().to_string().replace("./", ""),
             created_on,
-            None
+            None,
         )
         .await?
         .file_id
@@ -1213,7 +1213,7 @@ async fn create_save(
         state_derived_from,
         save_derived_from,
         replay_derived_from,
-        hidden: false
+        hidden: false,
     };
     Save::insert(&mut conn, save, indexer).await?;
     Ok(())

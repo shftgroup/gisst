@@ -49,7 +49,7 @@ impl ServerStateExt for ServerState {
     }
 }
 
-#[tracing::instrument(skip(app_state,auth),fields(userid))]
+#[tracing::instrument(skip(app_state, auth), fields(userid))]
 pub async fn head(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -101,7 +101,7 @@ fn is_octet_stream(val: &str) -> bool {
 }
 
 #[allow(clippy::too_many_lines)]
-#[tracing::instrument(skip(app_state, body, auth),fields(userid))]
+#[tracing::instrument(skip(app_state, body, auth), fields(userid))]
 pub async fn patch(
     app_state: Extension<ServerState>,
     headers: HeaderMap,
@@ -254,7 +254,7 @@ pub async fn patch(
                 file_size: i64::try_from(pu_length).map_err(ServerError::UploadTooBig)?,
                 file_compressed_size: gz_length,
                 created_on: chrono::Utc::now(),
-                creator_id: Some(creator_id)
+                creator_id: Some(creator_id),
             },
         )
         .await?;
@@ -271,7 +271,7 @@ pub async fn patch(
         .into_response())
 }
 
-#[tracing::instrument(skip(app_state,auth),fields(userid))]
+#[tracing::instrument(skip(app_state, auth), fields(userid))]
 pub async fn creation(
     app_state: Extension<ServerState>,
     auth: axum_login::AuthSession<crate::auth::AuthBackend>,
