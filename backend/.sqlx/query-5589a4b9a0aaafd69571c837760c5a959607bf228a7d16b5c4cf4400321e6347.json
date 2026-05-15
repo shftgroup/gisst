@@ -67,6 +67,11 @@
         "ordinal": 12,
         "name": "save_derived_from",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 13,
+        "name": "hidden",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -87,7 +92,8 @@
       true,
       true,
       false,
-      true
+      true,
+      false
     ]
   },
   "hash": "5589a4b9a0aaafd69571c837760c5a959607bf228a7d16b5c4cf4400321e6347"

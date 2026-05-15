@@ -70,21 +70,26 @@
       },
       {
         "ordinal": 13,
+        "name": "hidden",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
         "name": "file_hash",
         "type_info": "Bpchar"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "file_filename",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "file_source_path",
         "type_info": "Text"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "file_dest_path",
         "type_info": "Text"
       }
@@ -108,6 +113,7 @@
       true,
       false,
       true,
+      false,
       false,
       false,
       false,

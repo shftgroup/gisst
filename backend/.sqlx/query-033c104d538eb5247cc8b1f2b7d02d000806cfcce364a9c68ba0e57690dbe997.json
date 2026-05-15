@@ -52,6 +52,11 @@
         "ordinal": 9,
         "name": "replay_derived_from",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "hidden",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -69,7 +74,8 @@
       false,
       true,
       true,
-      true
+      true,
+      false
     ]
   },
   "hash": "033c104d538eb5247cc8b1f2b7d02d000806cfcce364a9c68ba0e57690dbe997"

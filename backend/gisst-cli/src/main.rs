@@ -1030,6 +1030,7 @@ async fn create_replay(
         replay_forked_from,
         file_id,
         created_on,
+        hidden: false
     };
     Replay::insert(&mut conn, replay, indexer)
         .await
@@ -1141,6 +1142,7 @@ async fn create_state(
         state_replay_index,
         state_derived_from,
         save_derived_from: None,
+        hidden:false
     };
     State::insert(&mut conn, state, indexer).await?;
     Ok(())
@@ -1211,6 +1213,7 @@ async fn create_save(
         state_derived_from,
         save_derived_from,
         replay_derived_from,
+        hidden: false
     };
     Save::insert(&mut conn, save, indexer).await?;
     Ok(())

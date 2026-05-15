@@ -1,19 +1,22 @@
-use crate::auth::AuthBackend;
-use crate::{auth, error::ServerError, server::ServerState};
+use crate::auth::{self,AuthBackend,User};
+use crate::{error::ServerError, server::ServerState};
 use axum::{
     Extension, Router,
     extract::{Json, Path},
     routing::{get, post},
+    response::NoContent
 };
 use axum_login::login_required;
 use gisst::error::Table;
 use gisst::models::{File, Save};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use super::{HideShowParams,LoggedInUserInfo};
 
 pub fn router() -> Router {
     Router::new()
         .route("/{id}", get(get_single_save))
+        .route("/{id}/hide", post(hideshow_save))
         .route("/create", post(create_save))
         .route_layer(login_required!(AuthBackend, login_url = "/login"))
 }
@@ -24,6 +27,28 @@ async fn get_single_save(
 ) -> Result<Json<Save>, ServerError> {
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(Save::get_by_id(&mut conn, id).await?.unwrap()))
+}
+
+#[tracing::instrument(skip(app_state, auth), fields(userid))]
+async fn hideshow_save(
+    app_state: Extension<ServerState>,
+    auth: axum_login::AuthSession<crate::auth::AuthBackend>,
+    Path(id): Path<Uuid>,
+    Json(hidden): Json<HideShowParams>,
+) -> Result<NoContent, ServerError> {
+    tracing::Span::current().record(
+        "userid",
+        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+    );
+    let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user).ok_or(ServerError::AuthUserNotAuthenticated)?;
+    let mut conn = app_state.pool.acquire().await?;
+    let save = Save::get_by_id(conn.as_mut(), id).await?.ok_or(ServerError::RecordMissing{table:Table::Save,uuid:id})?;
+    if user.creator_id == save.creator_id || user.role <= User::ROLE_ADMIN {
+        Save::set_hidden(conn.as_mut(), id, hidden.state, &app_state.indexer).await?;
+        Ok(NoContent)
+    } else {
+        Err(ServerError::PermissionDenied)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +95,7 @@ async fn create_save(
                     save_derived_from: save.save_derived_from,
                     replay_derived_from: save.replay_derived_from,
                     created_on: chrono::Utc::now(),
+                    hidden: false
                 },
                 &app_state.indexer,
             )

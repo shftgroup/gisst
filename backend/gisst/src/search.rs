@@ -131,7 +131,7 @@ impl MeiliIndexer {
         let mut states = self.create_index("state", "state_id").await?;
         states.set_primary_key("state_id").await?;
         states
-            .set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name", "work_creator"])
+            .set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name", "work_creator", "hidden"])
             .await?;
         states
             .set_sortable_attributes([
@@ -170,7 +170,7 @@ impl MeiliIndexer {
         let mut saves = self.create_index("save", "save_id").await?;
         saves.set_primary_key("save_id").await?;
         saves
-            .set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name", "work_creator"])
+            .set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name", "work_creator", "hidden"])
             .await?;
         saves
             .set_sortable_attributes([
@@ -209,7 +209,7 @@ impl MeiliIndexer {
         let mut replays = self.create_index("replay", "replay_id").await?;
         replays.set_primary_key("replay_id").await?;
         replays
-            .set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name", "work_creator"])
+            .set_filterable_attributes(["work_platform", "creator_id", "instance_id", "work_name", "work_creator", "hidden"])
             .await?;
         replays
             .set_sortable_attributes([

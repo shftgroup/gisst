@@ -46,37 +46,37 @@ const screenshot_b64 = "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAABbWlDQ1Bp
 const state_data = [
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
        state_id:0, state_name:"first state", state_description:"the first obstacle in level 1-2", screenshot_id:0, screenshot_data: screenshot_b64, file_id:0,
-       created_on: 5, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 5, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
        state_id:1, state_name:"second state", state_description:"the end of level 3-1", screenshot_id:1, screenshot_data: screenshot_b64, file_id:1,
-       created_on: 0, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 0, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
        state_id:2, state_name:"third state", state_description:"the beginning of level 1-3", screenshot_id:2, screenshot_data: screenshot_b64, file_id:2,
-       created_on: 3, creator_id:1, creator_username: "user1", creator_full_name: "user one"
+       created_on: 3, creator_id:1, creator_username: "user1", creator_full_name: "user one", hidden: true
       },
 
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
        state_id:3, state_name:"first state n", state_description:"the first obstacle in level 1-2 n", screenshot_id:3, screenshot_data: screenshot_b64, file_id:3,
-       created_on: 7, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 7, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: true
       },
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
        state_id:4, state_name:"second state n", state_description:"the end of level 3-1 n", screenshot_id:4, screenshot_data: screenshot_b64, file_id:4,
-       created_on: 11, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 11, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: true
       },
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
        state_id:5, state_name:"third state n", state_description:"the beginning of level 1-3 n", screenshot_id:5, screenshot_data: screenshot_b64, file_id:5,
-       created_on: 4, creator_id:1, creator_username: "user1", creator_full_name: "user one"
+       created_on: 4, creator_id:1, creator_username: "user1", creator_full_name: "user one", hidden: false
       },
 
       {work_id:1, work_name:"work b", work_version:"0.1", work_platform:"Nintendo N64", instance_id:2,
        state_id:6, state_name:"work b state", state_description:"yet another state", screenshot_id:6, screenshot_data: screenshot_b64, file_id:6,
-       created_on: 12, creator_id:1, creator_username: "user1", creator_full_name: "user one"
+       created_on: 12, creator_id:1, creator_username: "user1", creator_full_name: "user one", hidden: false
       },
       {work_id:1, work_name:"work b", work_version:"0.1", work_platform:"Nintendo N64", instance_id:2,
        state_id:7, state_name:"work b state", state_description:"even yet another state", screenshot_id:7, screenshot_data: screenshot_b64, file_id:7,
-       created_on: 13, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 13, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: true
       },
 ];
 await states.addDocuments(state_data);
@@ -85,37 +85,37 @@ const replays = client.index('replay');
 const replay_data = [
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
        replay_id:0, replay_name:"first replay", replay_description:"playing in level 1-2", file_id:0,
-       created_on: 5, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 5, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
        replay_id:1, replay_name:"second replay", replay_description:"beating level 3-1", file_id:1,
-       created_on: 0, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 0, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: true
       },
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
        replay_id:2, replay_name:"third replay", replay_description:"starting level 1-3", file_id:2,
-       created_on: 3, creator_id:1, creator_username: "user1", creator_full_name: "user one"
+       created_on: 3, creator_id:1, creator_username: "user1", creator_full_name: "user one", hidden: false
       },
 
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
        replay_id:3, replay_name:"first replay n", replay_description:"playing in level 1-2 n", file_id:3,
-       created_on: 7, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 7, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
        replay_id:4, replay_name:"second replay n", replay_description:"beating level 3-1 n", file_id:4,
-       created_on: 11, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 11, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
        replay_id:5, replay_name:"third replay n", replay_description:"starting level 1-3 n", file_id:5,
-       created_on: 4, creator_id:1, creator_username: "user1", creator_full_name: "user one"
+       created_on: 4, creator_id:1, creator_username: "user1", creator_full_name: "user one", hidden: true
       },
 
       {work_id:1, work_name:"work b", work_version:"0.1", work_platform:"Nintendo N64", instance_id:2,
        replay_id:6, replay_name:"work b replay", replay_description:"yet another replay", file_id:6,
-       created_on: 12, creator_id:1, creator_username: "user1", creator_full_name: "user one"
+       created_on: 12, creator_id:1, creator_username: "user1", creator_full_name: "user one", hidden: false
       },
       {work_id:1, work_name:"work b", work_version:"0.1", work_platform:"Nintendo N64", instance_id:2,
        replay_id:7, replay_name:"work b replay", replay_description:"even yet another replay", file_id:7,
-       created_on: 13, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 13, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
 ];
 await replays.addDocuments(replay_data);
@@ -124,37 +124,37 @@ const saves = client.index('save');
 const save_data = [
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
        save_id:0, save_short_desc:"first save", save_description:"save at beginning of level 1-2", file_id:0,
-       created_on: 5, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 5, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: true
       },
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
        save_id:1, save_short_desc:"second save", save_description:"save at beginning of 3-1", file_id:1,
-       created_on: 0, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 0, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
       {work_id:0, work_name:"work a", work_version:"0.1p", work_platform:"Sony Playstation", instance_id:0,
        save_id:2, save_short_desc:"third save", save_description:"save at beginning of 1-3", file_id:2,
-       created_on: 3, creator_id:1, creator_username: "user1", creator_full_name: "user one"
+       created_on: 3, creator_id:1, creator_username: "user1", creator_full_name: "user one", hidden: false
       },
 
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
        save_id:3, save_short_desc:"first save n", save_description:"save at beginning of 1-2 n", file_id:3,
-       created_on: 7, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 7, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
        save_id:4, save_short_desc:"second save n", save_description:"save at beginning of 3-1 n", file_id:4,
-       created_on: 11, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 11, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
       {work_id:0, work_name:"work a", work_version:"0.1n", work_platform:"Nintendo N64", instance_id:1,
        save_id:5, save_short_desc:"third save n", save_description:"save at beginning of 1-3 n", file_id:5,
-       created_on: 4, creator_id:1, creator_username: "user1", creator_full_name: "user one"
+       created_on: 4, creator_id:1, creator_username: "user1", creator_full_name: "user one", hidden: true
       },
 
       {work_id:1, work_name:"work b", work_version:"0.1", work_platform:"Nintendo N64", instance_id:2,
        save_id:6, save_short_desc:"work b save", save_description:"a save in work b", file_id:6,
-       created_on: 12, creator_id:1, creator_username: "user1", creator_full_name: "user one"
+       created_on: 12, creator_id:1, creator_username: "user1", creator_full_name: "user one", hidden: false
       },
       {work_id:1, work_name:"work b", work_version:"0.1", work_platform:"Nintendo N64", instance_id:2,
        save_id:7, save_short_desc:"work b save", save_description:"another save in work b", file_id:7,
-       created_on: 13, creator_id:0, creator_username: "user0", creator_full_name: "user zero"
+       created_on: 13, creator_id:0, creator_username: "user0", creator_full_name: "user zero", hidden: false
       },
 ];
 await saves.addDocuments(save_data);
