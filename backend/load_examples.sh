@@ -15,8 +15,8 @@ export GISST_CONFIG_PATH=./config
 export MEILI_URL=$MEILI_URL
 export MEILI_API_KEY=$MEILI_API_KEY
 export MEILI_MASTER_KEY=$MEILI_MASTER_KEY
-
-if ! ${GISST_CI:-false}; then
+GISST_CI=${GISST_CI:-false}
+if ! $GISST_CI; then
     PSX_ENV=./examples/records/psx/psx_pcsx_rearmed_environment.json
 else
     PSX_ENV=./examples/records/psx/psx_pcsx_rearmed_ci_environment.json
@@ -48,29 +48,29 @@ uuid_gambatte=00000000000000000000000000000066
 uuid_sameboy=00000000000000000000000000000067
 uuid_vba_next=00000000000000000000000000000068
 uuid_vice_x64=00000000000000000000000000000070
+if ! $GISST_CI; then 
 ./target/debug/gisst-cli add-core ../build/cores/fceumm_libretro.json
-./target/debug/gisst-cli add-core ../build/cores/gambatte_libretro.json
-./target/debug/gisst-cli add-core ../build/cores/pcsx_rearmed_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/sameboy_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/snes9x_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/vba_next_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/vice_x64_libretro.json
-# if ! ${GISST_CI:-false}; then
-    # ./target/debug/gisst-cli add-core ../build/cores/gliden64_libretro.json
-# fi
+./target/debug/gisst-cli add-core ../build/cores/sameboy_libretro.json
+fi
+./target/debug/gisst-cli add-core ../build/cores/gambatte_libretro.json
+./target/debug/gisst-cli add-core ../build/cores/pcsx_rearmed_libretro.json
 ./target/debug/gisst-cli add-core ../build/v86.json
-
+if ! $GISST_CI; then
 ./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/snes/snes_snes9x_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/c64/vice_x64_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/gba/vba_next_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
+fi
+
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
 ./target/debug/gisst-cli environment create --json-file ./examples/records/v86/win_31_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
-# if ! ${GISST_CI:-false}; then
-    # ./target/debug/gisst-cli environment create --json-file ./examples/records/n64/n64_gliden64_environment.json
-# fi
 ./target/debug/gisst-cli environment create --json-file $PSX_ENV
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
-./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
-./target/debug/gisst-cli environment create --json-file ./examples/records/c64/vice_x64_environment.json
 
 # Set up counter for work / instance UUID
 uuid_counter=1000
@@ -102,41 +102,48 @@ do
   file=$(basename -- "$work")
   base=${file%.*};
   ext=${file##*.};
-  work_uuid=$(get_uuid_from_counter)
-  uuid_counter=$((uuid_counter+1));
 
-
-  if [ "$folder" = "nes" ]
+  if ! $GISST_CI && [ "$folder" = "nes" ]
   then
+      work_uuid=$(get_uuid_from_counter)
+      uuid_counter=$((uuid_counter+1));
       ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo Entertainment System" --work-version "NTSC" --work-name "$base" \
                                --work-id "$work_uuid" --instance-id "$work_uuid" \
                                --environment-id $uuid_nes_fceumm --cwd examples/data/nes/ \
                                --content "$file"
-  elif [ "$folder" = "c64" ]
+  elif ! $GISST_CI && [ "$folder" = "c64" ]
   then
+      work_uuid=$(get_uuid_from_counter)
+      uuid_counter=$((uuid_counter+1));
       ./target/debug/gisst-cli add-work-instance --platform-name "Commodore 64" --work-version "NTSC" --work-name "$base" \
                                --work-id "$work_uuid" --instance-id "$work_uuid" \
                                --environment-id $uuid_vice_x64 --cwd examples/data/c64/ \
                                --content "$file"
-  elif [ "$folder" = "snes" ]
+  elif ! $GISST_CI && [ "$folder" = "snes" ]
   then
+      work_uuid=$(get_uuid_from_counter)
+      uuid_counter=$((uuid_counter+1));
       ./target/debug/gisst-cli add-work-instance --platform-name "Super Nintendo Entertainment System" --work-version "NTSC" --work-name "$base" \
                                --work-id "$work_uuid" --instance-id "$work_uuid" \
                                --environment-id $uuid_snes9x --cwd examples/data/snes/ \
                                --content "$file"
   elif [ "$folder" = "gb" ]
   then
+      work_uuid=$(get_uuid_from_counter)
+      uuid_counter=$((uuid_counter+1));
       ./target/debug/gisst-cli add-work-instance --platform-name "Game Boy" --work-version "NTSC" --work-name "$base" \
                                --work-id "$work_uuid" --instance-id "$work_uuid" \
                                --environment-id $uuid_gambatte --cwd examples/data/gb/ \
                                --content "$file"
+      if ! $GISST_CI; then
       instance_uuid=$(get_uuid_from_counter)
       uuid_counter=$((uuid_counter+1));
       ./target/debug/gisst-cli add-work-instance --platform-name "Game Boy" --work-version "NTSC" --work-name "$base" \
                                --work-id "$work_uuid" --instance-id "$instance_uuid" \
                                --environment-id $uuid_sameboy --cwd examples/data/gb/ \
                                --content "$file"
-  # elif [ "$folder" = "n64" ] && ! ${GISST_CI:-false}
+      fi
+  # elif ! $GISST_CI && [ "$folder" = "n64" ] 
   # then
       # ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo 64" --work-version "NTSC" --work-name "$base" \
                                # --work-id "$work_uuid" --instance-id "$work_uuid" \

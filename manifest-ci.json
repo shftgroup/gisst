@@ -36,11 +36,6 @@
       "HAVE_MATERIALUI=0"
     ],
     "cores": {
-      "fceumm": {
-        "repo": "https://github.com/libretro/libretro-fceumm",
-        "version": "5cd4a43e16a7f3cd35628d481c347a0a98cfdfa2",
-        "platforms": ["Nintendo Entertainment System", "Nintendo Famicom"]
-      },
       "gambatte": {
         "repo": "https://github.com/libretro/gambatte-libretro",
         "version": "6924c76ba03dadddc6e97fa3660f3d3bc08faa94",
@@ -51,29 +46,6 @@
         "version": "81814bdc6b1f22c029210082c17c819fe047232f",
         "dependencies": {},
         "platforms": ["Sony Playstation"]
-      },
-      "sameboy": {
-        "repo": "https://github.com/LIJI32/SameBoy",
-        "version": "c50fdfd222ac5a2e07cf9c6f43c645e2dbe0a62d",
-        "rgbds_repo": "https://github.com/gbdev/rgbds.git",
-        "rgbds_version": "d961c697d740728f05895a2faec0dd755351e28b",
-        "platforms": ["Nintendo Game Boy", "Nintendo Game Boy Color"]
-      },
-      "snes9x": {
-        "repo": "https://github.com/libretro/snes9x",
-        "version": "5a40cd5514e63e691e39141d64267798357a1424",
-        "platforms": ["Super Nintendo Entertainment System", "Nintendo Super Famicom"]
-      },
-      "vba_next": {
-        "repo": "https://github.com/JoeOsborn/vba-next",
-        "version": "e437f6c847f88161b489a7a90aba1bfe70df9244",
-        "platforms": ["Nintendo Game Boy Advance"]
-      },
-      "vice_x64": {
-        "repo": "https://github.com/libretro/vice-libretro",
-        "version": "e9f8ac034ddef3025f0567768f7af8219f7cfdb8",
-        "extra_build_args": ["EMUTYPE=x64"],
-        "platforms": ["Commodore 64"]
       },
       "extra_core_ci_kick": {
         "skip": "true",
