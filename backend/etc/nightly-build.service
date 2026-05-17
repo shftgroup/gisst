@@ -1,0 +1,12 @@
+[Unit]
+Description=Build GISST CI Container
+
+[Service]
+Type=oneshot
+User=jcoa2018
+WorkingDirectory=/tmp/
+LoadCredentialEncrypted=cafe-package-token:/home/jcoa2018/.local/etc/cafe-package-token.cred
+Environment=JOB_TOKEN=%d/cafe-package-token
+ExecStart=/bin/bash /home/jcoa2018/Projects/gisst/backend/etc/nightly-build.sh
+
+

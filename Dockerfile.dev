@@ -1,5 +1,6 @@
 FROM ubuntu:noble
 
+ENV PLAYWRIGHT_VERSION=1.53.0
 ENV RUST_VERSION 1.93.1
 ENV NODE_VERSION 25.6.0
 
@@ -22,6 +23,11 @@ ENV NVM_DIR=/home/$USER/.nvm
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 RUN bash -c ". ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION}"
 ENV PATH="/home/$USER/.nvm/versions/node/v${NODE_VERSION}/bin:${PATH}"
+RUN npm install -g playwright@${PLAYWRIGHT_VERSION}
+USER root
+RUN /home/$USER/.nvm/versions/node/v${NODE_VERSION}/bin/playwright install --with-deps
+USER $USER
+
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y -c rust-analyzer,rust-src,rustfmt,clippy,rust-docs,cargo --default-toolchain=${RUST_VERSION}
 ENV PATH="/home/$USER/.cargo/bin:${PATH}"
 RUN cargo install sqlx-cli

@@ -51,3 +51,14 @@ tmp
 playwright-report/
 build
 build-ci
+roms-nes
+rdb
+storage
+examples
+psxbios
+v86bios
+dist
+backend/etc
+node_modules
+.vite
+.sqlx
