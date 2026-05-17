@@ -9,6 +9,47 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  cores:
+    runs-on: ubuntu-24.04
+    container:
+      image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
+    outputs:
+      core-hash: ${{ steps.hash-manifest.outputs.hash }}
+    steps:
+    - uses: actions/checkout@v6
+    # TODO: move ci cores and examples into a generic shftgroup
+    # package produced by a private repository (and generate example
+    # envs automatically?).  it should also create a release on its
+    # own releases page for the package that includes copyrighted
+    # material. Basically, cores (even for CI) should be versioned
+    # separately from gisst in part because permissions are different.
+    # If it's a private, owner only repo with no PRs or PRs limited to
+    # owners then we also can be chill about docker in that repo
+    - name: Compute core manifest hash
+      id: hash-manifest
+      uses: https://gitea.com/seepine/hash-files@v1
+      with:
+        patterns: |
+          manifest-ci.json
+          dist-update-docker.sh
+    - name: Check cached cores
+      id: cache
+      uses: actions/cache/restore@v5
+      with:
+        path: ./build
+        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
+        lookup-only: true
+    - name: Run dist script using ci dist image
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p build
+        OUT_DIR="${PWD}/build" FILE_ROOT="$PWD" MANIFEST_FILE="${PWD}/manifest-ci.json" GET_ASSETS=0 ./dist-update-docker.sh
+    - name: Cache cores
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: ./build
+        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
   frontend:
     runs-on: ubuntu-24.04
     container:
@@ -67,43 +108,18 @@ jobs:
         path: frontend/playwright-report/
         retention-days: 15  
   backend:
+    needs:
+      - cores
     runs-on: ubuntu-24.04
     container:
       image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
     steps:
     - uses: actions/checkout@v6
-    # TODO: move ci cores and examples into a generic shftgroup
-    # package produced by a private repository (and generate example
-    # envs automatically?).  it should also create a release on its
-    # own releases page for the package that includes copyrighted
-    # material. Basically, cores (even for CI) should be versioned
-    # separately from gisst in part because permissions are different.
-    # If it's a private, owner only repo with no PRs or PRs limited to
-    # owners then we also can be chill about docker in that repo
-    - name: Compute core manifest hash
-      id: hash-manifest
-      uses: https://gitea.com/seepine/hash-files@v1
-      with:
-        patterns: |
-          manifest-ci.json
-          dist-update-docker.sh
-    - name: Check cached cores
-      id: cache
+    - name: Get cached cores
       uses: actions/cache/restore@v5
       with:
         path: ./build
-        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
-    - name: Run dist script using ci dist image
-      if: steps.cache.outputs.cache-hit != 'true'
-      run: |
-        mkdir -p build
-        OUT_DIR="${PWD}/build" FILE_ROOT="$PWD" MANIFEST_FILE="${PWD}/manifest-ci.json" GET_ASSETS=0 ./dist-update-docker.sh
-    - name: Cache cores
-      if: steps.cache.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v5
-      with:
-        path: ./build
-        key: "cache-${{ steps.hash-manifest.outputs.hash }}"
+        key: "cache-${{ needs.outputs.core-hash }}"
     - name: Pull cached backend dependencies
       run: mv /tmp/backend/target backend/
     - name: Clippy
