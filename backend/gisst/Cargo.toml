@@ -22,7 +22,7 @@ serde_with = { version = "3.3.0", features = ["base64"] }
 tracing = "0.1.40"
 tree_magic_mini = {version="3.1.6", features=["with-gpl-data"]}
 fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="4eccb50d011146fbed20e133d33b22f3c27292e7"}
-mbrman = "0.5.2"
+mbrman = "0.6.1"
 fscommon = "0.1.1"
 zip = "2.1.2"
 opentelemetry = "0.31"

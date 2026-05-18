@@ -34,3 +34,8 @@ RUN cargo install sqlx-cli
 COPY .devcontainer/nginx.conf /etc/nginx/sites-enabled/default
 
 RUN npm install -g typescript-language-server
+RUN cargo +nightly install cargo-udeps
+RUN cargo install --locked cargo-audit
+USER root
+RUN curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+USER $USER

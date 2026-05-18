@@ -1,0 +1,11 @@
+[advisories]
+ignore = [
+  # qua https://github.com/atuinsh/atuin/pull/2126/changes
+  # This is a vuln on RSA. RSA is in our lockfile, but not in cargo-tree.
+  # See:
+  # - https://github.com/launchbadge/sqlx/issues/3211
+  # - https://github.com/rust-lang/cargo/issues/10801
+  "RUSTSEC-2023-0071",
+  # bincode is not maintained, it's a dependency of mbrman -- worth investigating in the future
+  "RUSTSEC-2025-0141"
+]
