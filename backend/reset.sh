@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cargo sqlx database reset -y --force
-cargo sqlx prepare --workspace
+cargo sqlx prepare --all --check --workspace -- --all-targets
 rm -rf storage/*
 cargo run --bin gisst-cli -- init-indices
 STOP_ON_ERR=true ./load_examples.sh

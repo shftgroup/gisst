@@ -1,0 +1,2 @@
+INSERT INTO file (file_id, file_hash, file_filename, file_source_path, file_dest_path, file_size) VALUES
+    ('00000000-0000-0000-0000-000000000020', 'aabbccdd11223344aabbccdd11223344', 'test.rom', '', 'aa/bb/ccdd11223344aabbccdd11223344/test.rom', 1024);

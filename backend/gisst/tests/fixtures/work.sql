@@ -1,0 +1,1 @@
+INSERT INTO work (work_id, work_name, work_version, work_platform) VALUES ('00000000-0000-0000-0000-000000000010','Test Work', '1.0', 'Test Platform');

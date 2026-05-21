@@ -7,6 +7,17 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  GISST_CONFIG: "./"
+  GISST_CONFIG_PATH: "./config"
+  MEILI_URL: "http://localhost:7700"
+  MEILI_MASTER_KEY: "test-api-key-github-actions"
+  MEILI_API_KEY: "test-api-key-github-actions"
+  MEILI_SEARCH_KEY: "test-api-key-github-actions"
+  GISST_CI: "true"
+  DATABASE_URL: "postgresql://postgres:postgres@localhost/gisstdb"
+  LOAD_WIN: "0"
+  STOP_ON_ERR: "true"
+  SQLX_OFFLINE: 1
 
 jobs:
   cores:
@@ -81,8 +92,8 @@ jobs:
       name: Run meili
       with:
         run: |
-          meilisearch --no-analytics --master-key test-api-key --env development --db-path ./test --http-addr localhost:7701 &
-        wait-on: '{"resources":["http-get://localhost:7701/version"],"headers":{"Authorization":"Bearer test-api-key"}}'
+          meilisearch --no-analytics --master-key ${{ env.MEILI_MASTER_KEY }} --env development --db-path ./test --http-addr localhost:7701 &
+        wait-on: '{"resources":["http-get://localhost:7701/version"],"headers":{"Authorization":"Bearer ${{ env.MEILI_API_KEY }}"}}'
         tail: true # true = stderr,stdout
         log-output-resume: stderr
         wait-for: 1m
@@ -106,7 +117,7 @@ jobs:
       with:
         name: playwright-report
         path: frontend/playwright-report/
-        retention-days: 15  
+        retention-days: 15
   backend:
     needs:
       - cores
@@ -120,15 +131,18 @@ jobs:
       with:
         path: ./build
         key: "cache-${{ needs.outputs.core-hash }}"
+        fail-on-cache-miss: true
     - name: Pull cached backend dependencies
       run: mv /tmp/backend/target backend/
     - name: Clippy
       working-directory: backend
-      run: SQLX_OFFLINE=1 cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
+      run: |
+        cargo clippy --all-features --all-targets -- -Dwarnings -Dclippy::pedantic
+        cargo clippy --all-targets -- -Dwarnings -Dclippy::pedantic
     - name: Run meili
       uses: https://github.com/JarvusInnovations/background-action@v1
       with:
-        run: meilisearch --no-analytics --master-key test-api-key-github-actions --env development &
+        run: meilisearch --no-analytics --master-key ${{ env.MEILI_MASTER_KEY }} --env development &
         wait-on: '{"resources":["http-get://localhost:7700/version"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
         tail: true # true = stderr,stdout
         log-output-resume: stderr
@@ -144,17 +158,11 @@ jobs:
       working-directory: backend
       run: |
         rm -rf storage && mkdir storage
-        export GISST_CONFIG=./
-        export GISST_CONFIG_PATH=./config
-        export MEILI_URL=http://localhost:7700
-        export MEILI_MASTER_KEY=test-api-key-github-actions
-        export MEILI_API_KEY=test-api-key-github-actions
-        export MEILI_SEARCH_KEY=test-api-key-github-actions
-        export GISST_CI=true
-        export DATABASE_URL=postgresql://postgres:postgres@localhost/gisstdb
         touch .env
         cargo sqlx database reset -y -f
-        LOAD_WIN=0 zsh -e ./load_examples.sh
+        zsh -e ./load_examples.sh
     - name: Test
       working-directory: backend
-      run: SQLX_OFFLINE=1 cargo test
+      run: |
+        cargo test --workspace --all-targets
+        cargo test --workspace --all-features --all-targets

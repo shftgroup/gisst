@@ -18,6 +18,7 @@ frontend/frontend-tauri/src-tauri/ra-assets/
 frontend/frontend-web/.index-xhr
 frontend/node_modules
 frontend/frontend-embed/types
+frontend/gisst-player-ui/test-results
 vite.config.js.timestamp*
 .DS_Store
 target
@@ -49,3 +50,6 @@ tmp
 /assets
 /assets_minimal.zip
 playwright-report/
+.claude
+psxbios
+.devcontainer/certs

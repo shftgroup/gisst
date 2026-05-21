@@ -101,7 +101,8 @@ describe("frontend-embed", () => {
                 }),
             ) as Mock;
 
-    const config = await fetchConfig(mock_gisst_localhost_url)
+    const [proto, root, query] = parseGisstUrl(mock_gisst_localhost_url)
+    const config = await fetchConfig(proto, root, query)
     expect(config).toEqual(mock_embed_config)
   })
 
@@ -111,7 +112,8 @@ describe("frontend-embed", () => {
                     status: 500,
                 }),
             ) as Mock;
-    await expect(fetchConfig(mock_gisst_localhost_url)).rejects.toThrow("Request Status 500: Internal Server Error")
+    const [proto, root, query] = parseGisstUrl(mock_gisst_localhost_url)
+    await expect(fetchConfig(proto, root, query)).rejects.toThrow("Request Status 500: Internal Server Error")
   })
 
   it("should throw error when server response status is 404", async () => {
@@ -120,6 +122,7 @@ describe("frontend-embed", () => {
                     status: 404,
                 }),
             ) as Mock;
-    await expect(fetchConfig(mock_gisst_localhost_url)).rejects.toThrow("Request Status 404: Instance Not Found")
+    const [proto, root, query] = parseGisstUrl(mock_gisst_localhost_url)
+    await expect(fetchConfig(proto, root, query)).rejects.toThrow("Request Status 404: Instance Not Found")
   })
 })

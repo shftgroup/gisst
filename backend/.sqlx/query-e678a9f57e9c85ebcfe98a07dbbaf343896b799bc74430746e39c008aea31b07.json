@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT environment_core_name, environment_core_version FROM environment WHERE environment_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "environment_core_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "environment_core_version",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "e678a9f57e9c85ebcfe98a07dbbaf343896b799bc74430746e39c008aea31b07"
+}

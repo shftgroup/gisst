@@ -2,7 +2,10 @@ use sqlx::{PgConnection, postgres::PgQueryResult};
 use uuid::Uuid;
 
 use crate::models::{Environment, Object};
-
+/// # Destructive Traits
+/// This trait allows for potentially destructive modification of database entries.
+/// This is mainly used by implementations that want to modify environments to update their core, and
+/// to unlink and instance and an object.
 #[allow(async_fn_in_trait)]
 pub trait DestructiveEnvironment {
     async fn update_core(

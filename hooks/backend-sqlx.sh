@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cd backend
-cargo sqlx prepare --check --workspace
+cargo sqlx prepare --all --check --workspace -- --all-targets

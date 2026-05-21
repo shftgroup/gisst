@@ -1,0 +1,1 @@
+INSERT INTO object (object_id, file_id, object_description) VALUES ('00000000-0000-0000-0000-000000000030', '00000000-0000-0000-0000-000000000020', 'Test Object');
