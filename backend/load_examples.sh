@@ -18,8 +18,13 @@ export MEILI_MASTER_KEY=$MEILI_MASTER_KEY
 GISST_CI=${GISST_CI:-false}
 if ! $GISST_CI; then
     PSX_ENV=./examples/records/psx/psx_pcsx_rearmed_environment.json
+    GB_ENV=./examples/records/gb/gambatte_environment.json
+    V86_FREEDOS_ENV=./examples/records/v86/freedos_environment.json
+    V86_WIN31_ENV=./examples/records/v86/win_31_environment.json
 else
     PSX_ENV=./examples/records/psx/psx_pcsx_rearmed_ci_environment.json
+    GB_ENV=./examples/records/gb/gambatte_ci_environment.json
+    V86_FREEDOS_ENV=./examples/records/v86/freedos_ci_environment.json
 fi
 
 # To ensure we don't get different results at different times, touch every file to ensure it has the same ATIME/MTIME
@@ -37,6 +42,15 @@ uuid_0=00000000000000000000000000000000
 # Create default screenshot
 ./target/debug/gisst-cli screenshot create --force-uuid "$uuid_0" ./examples/data/default_screenshot.png
 
+function update_version
+{
+    local hashfile=$1
+    local env=$2
+    local CORE_VERSION=$(cat $hashfile)
+    cat $env | jq ".environment_core_version=\"$CORE_VERSION\"" > /tmp/env.json
+    mv /tmp/env.json $env
+}
+
 # Create environments for examples
 uuid_nes_fceumm=00000000000000000000000000000000
 uuid_snes9x=00000000000000000000000000000001
@@ -49,30 +63,35 @@ uuid_sameboy=00000000000000000000000000000067
 uuid_vba_next=00000000000000000000000000000068
 uuid_vice_x64=00000000000000000000000000000070
 if ! $GISST_CI; then
-./target/debug/gisst-cli add-core ../build/cores/fceumm_libretro.json
-./target/debug/gisst-cli add-core ../build/cores/sameboy_libretro.json
-./target/debug/gisst-cli add-core ../build/cores/snes9x_libretro.json
-./target/debug/gisst-cli add-core ../build/cores/vba_next_libretro.json
-./target/debug/gisst-cli add-core ../build/cores/vice_x64_libretro.json
+    ./target/debug/gisst-cli add-core ../build/cores/fceumm_libretro.json
+    update_version ../build/cores/fceumm_libretro.hash examples/records/nes/nes_fceumm_environment.json
+    ./target/debug/gisst-cli add-core ../build/cores/sameboy_libretro.json
+    update_version ../build/cores/sameboy_libretro.hash examples/records/gb/sameboy_environment.json
+    ./target/debug/gisst-cli add-core ../build/cores/snes9x_libretro.json
+    update_version ../build/cores/snes9x_libretro.hash examples/records/snes/snes_snes9x_environment.json
+    ./target/debug/gisst-cli add-core ../build/cores/vba_next_libretro.json
+    update_version ../build/cores/vba_next_libretro.hash examples/records/gba/vba_environment.json
+    ./target/debug/gisst-cli add-core ../build/cores/vice_x64_libretro.json
+    update_version ../build/cores/vice_x64_libretro.hash examples/records/c64/vice_x64_environment.json
 fi
 ./target/debug/gisst-cli add-core ../build/cores/gambatte_libretro.json
+update_version ../build/cores/gambatte_libretro.hash $GB_ENV
 ./target/debug/gisst-cli add-core ../build/cores/pcsx_rearmed_libretro.json
+update_version ../build/cores/pcsx_rearmed_libretro.hash $PSX_ENV
 ./target/debug/gisst-cli add-core ../build/v86.json
+update_version ../build/v86.hash $V86_FREEDOS_ENV
 if ! $GISST_CI; then
+update_version ../build/v86.hash $V86_WIN31_ENV
 ./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/snes/snes_snes9x_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/c64/vice_x64_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gba/vba_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
-./target/debug/gisst-cli environment create --json-file ./examples/records/v86/win_31_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
-./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
-./target/debug/gisst-cli environment create --json-file ./examples/records/psx/psx_pcsx_rearmed_environment.json
-./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
-else
-./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_ci_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
-./target/debug/gisst-cli environment create --json-file ./examples/records/psx/psx_pcsx_rearmed_ci_environment.json
-./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_ci_environment.json
+./target/debug/gisst-cli environment create --json-file $V86_WIN31_ENV --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
 fi
+./target/debug/gisst-cli environment create --json-file $V86_FREEDOS_ENV --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
+./target/debug/gisst-cli environment create --json-file $PSX_ENV
+./target/debug/gisst-cli environment create --json-file $GB_ENV
 
 
 # Set up counter for work / instance UUID
