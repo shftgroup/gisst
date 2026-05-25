@@ -170,4 +170,4 @@ const lookupWorkHandler:MockHandler = {
   }
 };
 
-export default [coresHandler,instanceDataHandler,objectCreateHandler,environmentCreateHandler,workCreateHandler,instanceCreateHandler,lookupWorkHandler,resourcesHandler,resourcesPatchHandler];
+export default [coresHandler,instanceDataHandler,objectCreateHandler,environmentCreateHandler,workCreateHandler,instanceCreateHandler,lookupWorkHandler,resourcesPatchHandler,resourcesHandler];

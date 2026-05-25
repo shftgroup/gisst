@@ -48,13 +48,12 @@ uuid_gambatte=00000000000000000000000000000066
 uuid_sameboy=00000000000000000000000000000067
 uuid_vba_next=00000000000000000000000000000068
 uuid_vice_x64=00000000000000000000000000000070
-if ! $GISST_CI; then 
+if ! $GISST_CI; then
 ./target/debug/gisst-cli add-core ../build/cores/fceumm_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/sameboy_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/snes9x_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/vba_next_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/vice_x64_libretro.json
-./target/debug/gisst-cli add-core ../build/cores/sameboy_libretro.json
 fi
 ./target/debug/gisst-cli add-core ../build/cores/gambatte_libretro.json
 ./target/debug/gisst-cli add-core ../build/cores/pcsx_rearmed_libretro.json
@@ -63,14 +62,18 @@ if ! $GISST_CI; then
 ./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/snes/snes_snes9x_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/c64/vice_x64_environment.json
-./target/debug/gisst-cli environment create --json-file ./examples/records/gba/vba_next_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/gba/vba_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/v86/win_31_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
+./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
+./target/debug/gisst-cli environment create --json-file ./examples/records/psx/psx_pcsx_rearmed_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
+else
+./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_ci_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
+./target/debug/gisst-cli environment create --json-file ./examples/records/psx/psx_pcsx_rearmed_ci_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_ci_environment.json
 fi
 
-./target/debug/gisst-cli environment create --json-file ./examples/records/v86/freedos_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}'
-./target/debug/gisst-cli environment create --json-file ./examples/records/v86/win_31_environment.json --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
-./target/debug/gisst-cli environment create --json-file $PSX_ENV
-./target/debug/gisst-cli environment create --json-file ./examples/records/gb/gambatte_environment.json
 
 # Set up counter for work / instance UUID
 uuid_counter=1000
@@ -143,7 +146,7 @@ do
                                --environment-id $uuid_sameboy --cwd examples/data/gb/ \
                                --content "$file"
       fi
-  # elif ! $GISST_CI && [ "$folder" = "n64" ] 
+  # elif ! $GISST_CI && [ "$folder" = "n64" ]
   # then
       # ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo 64" --work-version "NTSC" --work-name "$base" \
                                # --work-id "$work_uuid" --instance-id "$work_uuid" \

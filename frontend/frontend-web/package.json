@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "shx mkdir -p ../../test-cert && vite",
+    "dev": "shx mkdir -p ../../test-cert && node scripts/testdata.js && vite",
     "check": "tsc && eslint src",
     "build": "shx mkdir -p ../../test-cert && tsc && vite build",
     "dist": "shx mkdir -p ../../test-cert && vite build && shx mkdir -p ../../backend/web-dist && shx cp -r dist/* ../../backend/web-dist/",
-    "preview": "shx mkdir -p ../../test-cert && vite preview"
+    "preview": "shx mkdir -p ../../test-cert && vite preview",
+    "testdata": "node scripts/testdata.js"
   },
   "devDependencies": {
     "@types/path-browserify": "^1.0.3",
@@ -21,11 +22,14 @@
     "typescript": "^5.8.2",
     "vite": "^6.2.1",
     "vite-plugin-checker": "^0.9.0",
+    "sirv": "^3.0.2",
+    "vite-mock-api": "github:joeosborn/vite-mock-api",
     "vite-plugin-mkcert": "^1.17.7"
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.7.57",
     "embedv86": "file:../embedv86",
+    "frontend-embed": "file:../frontend-embed",
     "gisst-player": "file:../gisst-player-ui",
     "path-browserify": "^1.0.1",
     "ra-util": "file:../ra-util"

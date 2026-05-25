@@ -93,6 +93,7 @@ export class EmbedV86 {
     this.config.replay_checkpoints_changed(this.replays[this.replays.length-1].checkpoints,[]);
   }
   async stop_replay() {
+
     nonnull(this.emulator);
     if(this.active_replay != null) {
       await this.replays[this.active_replay].stop(this.emulator);
@@ -124,7 +125,11 @@ export class EmbedV86 {
     if(category == "state") {
       const checkpoint_matches = file_name.match(/replay([0-9a-f-]+)-state([0-9]+)/);
       if(checkpoint_matches != null) {
-        const replay_idx = parseInt(checkpoint_matches[1],10);
+        const replay_id = checkpoint_matches[1];
+        const replay_idx = this.replays.findIndex((r) => r.id == replay_id);
+        if (replay_idx < 0) {
+          console.log("Found replay for checkpoint is not present in context",file_name);
+        }
         const checkpoint_idx = parseInt(checkpoint_matches[2],10);
         const checkpoint = this.replays[replay_idx].checkpoints[checkpoint_idx];
         const state = await this.replays[replay_idx].restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
@@ -141,7 +146,10 @@ export class EmbedV86 {
       const replay_num = parseInt(num_str,10);
       const rep = this.replays[replay_num];
       const ser_rep = await rep.serialize();
-      return [new Blob([ser_rep]), file_name.toString()+".v86replay"];
+      const fixedBuffer = new ArrayBuffer(ser_rep.byteLength);
+      const fixed_view = new Uint8Array(fixedBuffer);
+      fixed_view.set(new Uint8Array(ser_rep));
+      return [new Blob([fixedBuffer]), file_name.toString()+".v86replay"];
     } else {
       throw "Invalid save category";
     }
@@ -238,6 +246,26 @@ export class EmbedV86 {
       };
       this.emulator!.add_listener("emulator-started", start_initial_replay);
     });
+  }
+  public set_register_replay(cb:(nom:string)=>void) {
+    this.config.register_replay = cb;
+    for (let i = 0; i < this.replays.length; i++) {
+      this.config.register_replay(`replay${i}`);
+    }
+  }
+  public set_stop_replay(cb:()=>void) {
+    this.config.stop_replay = cb;
+  }
+  public set_states_changed(cb:(added:StateInfo[], removed:StateInfo[]) => void) {
+    this.config.states_changed = cb;
+    this.config.states_changed(this.states,[]);
+  }
+  public set_replay_checkpoints_changed(cb:(added:StateInfo[], removed:StateInfo[]) => void) {
+    this.config.replay_checkpoints_changed = cb;
+    if (this.active_replay !== null) {
+      const replay = this.replays[this.active_replay];
+      this.config.replay_checkpoints_changed(replay.checkpoints,[]);
+    }
   }
 }
 function nonnull(obj:number|object|null):asserts obj {

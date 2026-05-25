@@ -57,14 +57,3 @@ export function base64EncArr(aBytes:Uint8Array) {
     (nMod3 === 2 ? "" : nMod3 === 1 ? "=" : "==")
   );
 }
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-export function nested_replace(obj:any, target:string, replacement:string) {
-  for(const key in obj) {
-    if(obj[key] == target) {
-      obj[key] = replacement;
-    } else if(typeof(obj[key]) == "object") {
-      nested_replace(obj[key], target, replacement);
-    }
-  }
-}

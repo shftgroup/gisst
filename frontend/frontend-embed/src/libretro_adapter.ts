@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 export interface LibretroModule extends EmscriptenModule, LibretroModuleDef {
   canvas:HTMLCanvasElement;
   callMain(args:string[]): void;
@@ -44,7 +42,7 @@ export function loadRetroArch(gisst_root:string, core:string, dependencies:{[id:
   if(download_asset_bundle) {
     if('OPFS_MOUNT' in env) {
       if(!setupWorker) {
-        setupWorker = new Worker(new URL('libretro.worker.ts', import.meta.url), {type:"module"});
+        setupWorker = new Worker(new URL('./libretro.worker.ts', import.meta.url), {type:"module"});
         setupWorker.onmessage = (msg:MessageEvent<SetupResponse>) => {
           if(msg.data.command == "loaded_bundle") {
             filesystem_ready = true;
@@ -107,7 +105,6 @@ export function loadRetroArch(gisst_root:string, core:string, dependencies:{[id:
   if (gisst_root.startsWith("https://")) {
     promise = downloadScript(gisst_root+'/'+core);
   } else {
-        // TODO: use core path
     promise = new Promise((resolve) => resolve(gisst_root+'/'+core));
   }
   Promise.all([promise,fsready]).then(([scriptUrlOrBlob,_]) => {

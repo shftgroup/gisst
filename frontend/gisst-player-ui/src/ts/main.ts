@@ -16,7 +16,6 @@ import {
   NEVER_UPLOADED_ID
 } from "./models";
 
-import imgUrl from '../img/canvas.svg';
 import '../scss/styles.scss';
 import * as bootstrap from 'bootstrap';
 // import * as uuid from 'uuid'
@@ -38,7 +37,7 @@ export enum ZoomLevel {
   X05
 }
 
-interface UIController<Evt> {
+interface UIController {
   toggle_mute: () => void;
   set_zoom: (level:ZoomLevel) => void;
   enter_fullscreen: () => void;
@@ -55,10 +54,10 @@ interface UIController<Evt> {
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
   upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: Metadata) => Promise<Metadata>;
   checkpoints_of:(replay_num:number) => string[];
-  evt_to_html:(evt:Evt) => HTMLElement;
+  evt_to_html:(evt:unknown) => HTMLElement;
 }
 
-export class UI<Evt> {
+export class UI {
   // static declarations for UI element names
   // assuming a single emulator window right now, will modify for multiple windows
   static readonly gisst_saves_list_content_id = "gisst-saves";
@@ -68,7 +67,7 @@ export class UI<Evt> {
     day: "2-digit", year: "numeric", month: "short",
     hour:"numeric", minute:"numeric", second:"numeric"
   }
-  control:UIController<Evt>;
+  control:UIController;
   emulator_div:HTMLDivElement;
 
   headless:boolean;
@@ -80,43 +79,57 @@ export class UI<Evt> {
 
   entries_by_name:Record<string,HTMLElement>;
   metadata_by_name:Record<string,Metadata>;
-  current_config:FrontendConfig;
+  current_config?:FrontendConfig;
 
-  evtlog:InputLogEvent<Evt>[];
+  evtlog:InputLogEvent[];
   evtlog_playhead:number;
   evtlog_playhead_eltidx:number;
 
   // ... functions go here
-  constructor(ui_root:HTMLDivElement, control:UIController<Evt>, headless:boolean, config:FrontendConfig) {
+  constructor(ui_root:HTMLDivElement, headless:boolean) {
     const _unused = bootstrap.Alert; // needed to force TS compile to import bootstrap
     if(_unused) {
       // needed to avoid TS compile issue
     }
+    this.control = {
+      toggle_mute: () => {throw "not implemented";},
+      set_zoom: (_lev:ZoomLevel) => {throw "not implemented";},
+      enter_fullscreen: () => {throw "not implemented";},
+      activate_save: (_save:string) => {throw "not implemented";},
+      create_save: () => {throw "not implemented";},
+      load_state: (_sn:number) => {throw "not implemented";},
+      save_state: () => {throw "not implemented";},
+      start_replay: () => {throw "not implemented";},
+      stop_and_save_replay: () => {throw "not implemented";},
+      play_replay: (_sn:number) => {throw "not implemented";},
+      download_file: (_category:"save"|"state"|"replay", _file_name:string) => { throw "not implemented"; },
+      upload_file: (_category:"save"|"state"|"replay", _file_name:string, _metadata:Metadata) => {
+        throw "not implemented";
+      },
+      checkpoints_of: (_replay:number) => {throw "not implemented";},
+      evt_to_html: (_evt:unknown) => {throw "not implemented";}
+    };
     this.ui_root = ui_root;
-    this.control = control;
     this.headless = headless;
-    this.current_config = config;
 
     // Make sure the ui root div has a 'container' bootstrap class
     if (!this.ui_root.classList.contains("container")){
       this.ui_root.classList.add("container-fluid");
     }
 
-    const emulator_div = <HTMLDivElement>elementFromTemplates(UITemplateConst.EMULATOR_SINGLE_DIV);
-    (<HTMLImageElement>emulator_div.querySelector("#webplayer-preview")!).src = imgUrl;
     // Configure initial UI state
     // May turn this into a separate set of functions?
     if (this.headless) {
       const ui_headless_grid = <HTMLDivElement>elementFromTemplates(UITemplateConst.GRID_CONTAINER_HEADLESS);
       this.ui_root.appendChild(ui_headless_grid);
+      this.emulator_div = document.createElement("div");
     } else {
       const gisst_header = <HTMLElement>elementFromTemplates(UITemplateConst.GISST_PAGE_DARK_HEADER);
-      const current_work = <HTMLSpanElement>document.createElement("span");
-      current_work.innerHTML = "Playing with " + this.current_config.work.work_name;
       document.body.prepend(gisst_header);
 
       const ui_embedded_grid = <HTMLDivElement>elementFromTemplates(UITemplateConst.GRID_CONTAINER_EMBEDDED);
 
+      const emulator_div = elementFromTemplates(UITemplateConst.EMULATOR_SINGLE_DIV);
       // Attach emulator div to ui root
       ui_embedded_grid.querySelector("#"+UIIDConst.EMU_EMBEDDED_COL)!
         .appendChild(emulator_div);
@@ -129,28 +142,27 @@ export class UI<Evt> {
       ui_embedded_grid.querySelector("#"+UIIDConst.EMU_CONTEXT_DIV)!
           .appendChild(elementFromTemplates(UITemplateConst.EMULATOR_OBJECTS_TABS_EMBEDDED));
       this.ui_root.appendChild(ui_embedded_grid);
-      
-      this.ui_root.querySelector("#"+UIIDConst.EMU_TOGGLE_MUTE_BUTTON)!.addEventListener("click", this.control.toggle_mute);
+      this.emulator_div = this.ui_root.querySelector("#canvas_div")!;
+
+      this.ui_root.querySelector("#"+UIIDConst.EMU_TOGGLE_MUTE_BUTTON)!.addEventListener("click", () => {this.control!.toggle_mute(); });
       this.ui_root.querySelector("#"+UIIDConst.EMU_ZOOM_X05_BUTTON)!.addEventListener("click", () => {
-        this.control.set_zoom(ZoomLevel.X05);
+        this.control!.set_zoom(ZoomLevel.X05);
       });
       this.ui_root.querySelector("#"+UIIDConst.EMU_ZOOM_X1_BUTTON)!.addEventListener("click", () => {
-        this.control.set_zoom(ZoomLevel.X1);
+        this.control!.set_zoom(ZoomLevel.X1);
       });
       this.ui_root.querySelector("#"+UIIDConst.EMU_ZOOM_X2_BUTTON)!.addEventListener("click", () => {
-        this.control.set_zoom(ZoomLevel.X2);
+        this.control!.set_zoom(ZoomLevel.X2);
       });
       this.ui_root.querySelector("#"+UIIDConst.EMU_ZOOM_FIT_BUTTON)!.addEventListener("click", () => {
-        this.control.set_zoom(ZoomLevel.Fit);
+        this.control!.set_zoom(ZoomLevel.Fit);
       });
-      this.ui_root.querySelector("#"+UIIDConst.EMU_ENTER_FULLSCREEN_BUTTON)!.addEventListener("click", this.control.enter_fullscreen);
-      this.ui_root.querySelector("#"+UIIDConst.EMU_SAVE_STATE_BUTTON)!.addEventListener("click", this.control.save_state);
-      this.ui_root.querySelector("#"+UIIDConst.EMU_CREATE_SAVE_BUTTON)!.addEventListener("click", this.control.create_save);
-      this.ui_root.querySelector("#"+UIIDConst.EMU_START_REPLAY_BUTTON)!.addEventListener("click", this.control.start_replay);
-      this.ui_root.querySelector("#"+UIIDConst.EMU_FINISH_REPLAY_BUTTON)!.addEventListener("click", this.control.stop_and_save_replay);
+      this.ui_root.querySelector("#"+UIIDConst.EMU_ENTER_FULLSCREEN_BUTTON)!.addEventListener("click", () => {this.control!.enter_fullscreen()});
+      this.ui_root.querySelector("#"+UIIDConst.EMU_SAVE_STATE_BUTTON)!.addEventListener("click", () => {this.control!.save_state()});
+      this.ui_root.querySelector("#"+UIIDConst.EMU_CREATE_SAVE_BUTTON)!.addEventListener("click", () => {this.control!.create_save()});
+      this.ui_root.querySelector("#"+UIIDConst.EMU_START_REPLAY_BUTTON)!.addEventListener("click", ()=> {this.control!.start_replay()});
+      this.ui_root.querySelector("#"+UIIDConst.EMU_FINISH_REPLAY_BUTTON)!.addEventListener("click", () => {this.control!.stop_and_save_replay()});
     }
-    // TODO do the right thing if this is headless
-    this.emulator_div = <HTMLDivElement>document.getElementById("emulator_single_div")!;
 
     // Configure emulator manipulation toolbar
     this.saves_elt = <HTMLUListElement>document.getElementById("gisst-saves-list");
@@ -162,6 +174,9 @@ export class UI<Evt> {
     this.evtlog_playhead=0;
     this.evtlog_playhead_eltidx=0;
     this.evtlog_elt = <HTMLUListElement>document.getElementById("gisst-play-log");
+  }
+  setControl(control:UIController) {
+    this.control = control;
   }
 
   setReplayMode(mode:ReplayMode) {
@@ -200,13 +215,13 @@ export class UI<Evt> {
     save_object_title.textContent = save_file + (group_key !== undefined ? " - " + group_key : "");
     save_object_title.addEventListener("click", () => {
       console.log("Activate",save_file);
-      this.control["activate_save"](save_file);
+      this.control!["activate_save"](save_file);
     });
     const save_object_description = <HTMLElement>new_save_list_object.querySelector(".card-text");
     save_object_description.textContent = save_file;
     const save_object_timestamp = <HTMLElement>new_save_list_object.querySelector("small");
     save_object_timestamp.textContent = `Created ${new Date().toLocaleDateString("en-US", this.ui_date_format)}`;
-    new_save_list_object.querySelector(".download-button")!.addEventListener("click", () => this.control.download_file("save", save_file));
+    new_save_list_object.querySelector(".download-button")!.addEventListener("click", () => this.control!.download_file("save", save_file));
 
     new_save_list_object.querySelector(".upload-button")!.addEventListener("click", () => {
       const metadata = this.metadata_by_name["sv__"+save_file];
@@ -216,7 +231,7 @@ export class UI<Evt> {
           (metadata.record as Save).save_derived_from = (metadata.record as Save).save_id;
           (metadata.record as Save).save_id = NEVER_UPLOADED_ID;
         }
-        this.control.upload_file("save", save_file, metadata)
+        this.control!.upload_file("save", save_file, metadata)
           .then((md:Metadata) =>{
             this.completeUpload("sv__"+save_file, md);
           });
@@ -231,7 +246,7 @@ export class UI<Evt> {
     gisst_save_tab.appendChild(new_save_list_object);
     this.entries_by_name["sv__"+save_file] = document.getElementById(valid_for_css(save_file))!;
 
-    nonnull(this.current_config);
+    nonnull(this.current_config!);
     const save_metadata:Metadata = {
       record: {
         save_id: metadata?.save_id || NEVER_UPLOADED_ID,
@@ -274,7 +289,7 @@ export class UI<Evt> {
     const save_num = parseInt(num_str,10);
     img.addEventListener("click", () => {
       console.log("Load",state_file,save_num);
-      this.control["load_state"](save_num);
+      this.control!["load_state"](save_num);
     });
 
     const state_object_title = <HTMLHeadElement>new_state_list_object.querySelector("h5");
@@ -284,7 +299,7 @@ export class UI<Evt> {
     const state_object_timestamp = <HTMLElement>new_state_list_object.querySelector("small");
     state_object_timestamp.textContent = `Created ${new Date().toLocaleDateString("en-US", this.ui_date_format)}`;
 
-    new_state_list_object.querySelector(".download-button")!.addEventListener("click", () => this.control.download_file("state", state_file));
+    new_state_list_object.querySelector(".download-button")!.addEventListener("click", () => this.control!.download_file("state", state_file));
 
     new_state_list_object.querySelector(".upload-button")!.addEventListener("click", () => {
       const metadata = this.metadata_by_name["st__"+state_file];
@@ -294,7 +309,7 @@ export class UI<Evt> {
           (metadata.record as State).state_derived_from = (metadata.record as State).state_id;
           (metadata.record as State).state_id = NEVER_UPLOADED_ID;
         }
-        this.control.upload_file("state", state_file, metadata)
+        this.control!.upload_file("state", state_file, metadata)
           .then((md:Metadata) =>{
             this.completeUpload("st__"+state_file, md);
           });
@@ -309,7 +324,7 @@ export class UI<Evt> {
     gisst_state_tab.appendChild(new_state_list_object);
 
     this.entries_by_name["st__"+state_file] = document.getElementById(valid_for_css(state_file))!;
-    nonnull(this.current_config);
+    nonnull(this.current_config!);
     const state_metadata:Metadata = {
       record: {
         state_id: metadata?.state_id || NEVER_UPLOADED_ID,
@@ -348,11 +363,11 @@ export class UI<Evt> {
 
     li.querySelector(".replay-list-item-play-button")!.addEventListener("click", () => {
       console.log("Play", replay_file, replay_num);
-      this.control.play_replay(replay_num);
+      this.control!.play_replay(replay_num);
     });
 
     li.querySelector(".replay-list-item-download-button")!.addEventListener("click", () => {
-      this.control.download_file("replay", replay_file);
+      this.control!.download_file("replay", replay_file);
     });
 
     li.querySelector(".replay-list-item-upload-button")!.addEventListener("click", () => {
@@ -362,11 +377,15 @@ export class UI<Evt> {
         (metadata.record as Replay).replay_derived_from = (metadata.record as Replay).replay_id;
         (metadata.record as Replay).replay_id = NEVER_UPLOADED_ID;
       }
-      this.control.upload_file("replay", replay_file, metadata)
+      this.control!.upload_file("replay", replay_file, metadata)
         .then((md:Metadata) => {
         this.completeUpload("rp__"+replay_file, md);
-        for (const state_file of this.control.checkpoints_of(replay_num)) {
+        for (const state_file of this.control!.checkpoints_of(replay_num)) {
           const smetadata = this.metadata_by_name["st__"+state_file];
+          if (!smetadata) {
+            console.warn("Missing checkpoint metadata for",state_file,"could it be an implicit checkpoint that should not have been returned from checkpoints_of?");
+            continue;
+          }
           const srec = smetadata.record as State;
           srec.replay_id = (md.record as Replay).replay_id;
           srec.is_checkpoint = true;
@@ -377,10 +396,10 @@ export class UI<Evt> {
           srec.creator_id = (md.record as Replay).creator_id;
           srec.created_on = (md.record as Replay).created_on;
           if(smetadata.editing) { this.toggleEditState(state_file); }
-          this.control.upload_file("state", state_file, smetadata)
-            .then((smd:Metadata) =>{
-              this.completeUpload("st__"+state_file, smd);
-            });
+          this.control!.upload_file("state", state_file, smetadata)
+            .then((smd:Metadata) => {
+            this.completeUpload("st__"+state_file, smd);
+          });
         }
       });
     });
@@ -388,7 +407,7 @@ export class UI<Evt> {
     li.querySelector(".replay-list-item-edit-button")!.addEventListener("click", () => {
       this.toggleEditReplay(replay_file);
     });
-
+    nonnull(this.current_config!);
     const replay_metadata:Metadata = {
       record: {
         replay_id: metadata?.replay_id || NEVER_UPLOADED_ID,
@@ -606,12 +625,12 @@ export class UI<Evt> {
     this.evtlog = [];
     this.evtlog_playhead=0;
     this.evtlog_playhead_eltidx = 0;
-    this.evtlog_elt.replaceChildren(); 
+    this.evtlog_elt.replaceChildren();
   }
-  evtlog_append(evts:InputLogEvent<Evt>[]) {
+  evtlog_append(evts:InputLogEvent[]) {
     for (const evt of evts) {
       this.evtlog.push(evt);
-      const elt = this.control.evt_to_html(evt.evt);
+      const elt = this.control!.evt_to_html(evt.evt);
       const li = document.createElement("li");
       li.innerText = evt.t.toString()+":";
       li.appendChild(elt);
@@ -641,3 +660,4 @@ function nonnull(obj:number|object|null):asserts obj {
 export {UIIDConst} from "./template_consts"
 export {GISSTDBConnector} from "./db"
 export * as GISSTModels from "./models"
+

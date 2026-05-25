@@ -6,7 +6,6 @@ export {};
 
 import * as zip from "@zip.js/zip.js";
 
-
 interface SyncAccessHandle {
   write(data:Uint8Array):number;
   close():void;

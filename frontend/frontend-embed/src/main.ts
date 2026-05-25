@@ -3,6 +3,7 @@ import * as ra from './ra';
 import * as v86 from './v86';
 import {EmuControls,EmbedOptions,ControllerOverlayMode} from './types.d';
 import imgUrl from './canvas.svg';
+export * as types from './types.d';
 
 // TODO replace with a shadow DOM thing?
 let which_canvas = 0;
@@ -19,14 +20,12 @@ async function createContainerUI(container: HTMLDivElement) {
   container.innerHTML = element_string;
 
   container.querySelector(`#embed_canvas_${which_canvas}`)!.addEventListener("contextmenu", e => e.preventDefault())
-  
+
   which_canvas += 1
 
 }
 
 export async function fetchConfig(gisst_http_proto: string, gisst_root: string, gisst_query: string) {
-  // capture groups: root, UUID, query params
-
   const data_resp = await fetch(gisst_http_proto+"://"+gisst_root+"/data/"+gisst_query, {headers:[["Accept","application/json"]]});
   console.log(data_resp);
 
@@ -45,45 +44,54 @@ export async function fetchConfig(gisst_http_proto: string, gisst_root: string, 
 export function parseGisstUrl(gisst:string): [http_proto: string, root: string, query: string] {
   const proto = gisst.slice(0,gisst.indexOf(":"));
 
-  const formated = gisst.replace("/play/", "/").replace("/data/", "/").replace("http:", "gisst:").replace("https:", "gisst:");
-  const matches = formated.match(/gisst:\/\/(.*)\/([0-9a-fA-F-]{32,})(\?.+)?$/);
+  const formatted = gisst.replace("/play/", "/").replace("/data/", "/").replace("http:", "gisst:").replace("https:", "gisst:");
+  const matches = formatted.match(/gisst:\/\/(.*)\/([0-9a-fA-F-]{32,})(\?.+)?$/);
 
-  if(!matches) { throw "malformed gisst url"; }
+  const result_proto = proto == "gisst" ? "https" : proto;
+  let result_host;
+  let result_uuid;
+  let result_startparams;
+  if(matches) {
+    result_host = matches[1];
+    result_uuid = matches[2];
+    result_startparams = matches[3] || "";
+  } else {
+    const same_origin_matches = formatted.match(/gisst:\/\/([0-9a-fA-F-]{32,})(\?.+)?$/);
+    if (!same_origin_matches) {
+      throw "malformed gisst url";
+    }
+    result_host = document.location.origin.slice(document.location.origin.indexOf("://")+3);
+    result_uuid = same_origin_matches[1];
+    result_startparams = same_origin_matches[2] || "";
+  }
 
-  return [proto == "gisst" ? "https" : proto, matches[1], matches[2] + (matches[3] || "")]
+  return [result_proto, result_host, result_uuid + result_startparams]
 }
 
-export async function embed(gisst:string, container:HTMLDivElement, options?:EmbedOptions) {
-  
+export async function embed(gisst:string, container:HTMLDivElement, options?:EmbedOptions) : Promise<EmuControls> {
   if(which_canvas == 0) {
     const style = document.createElement("style");
     style.textContent = STYLES;
     document.head.appendChild(style);
   }
-  
-  createContainerUI(container)
-
+  createContainerUI(container);
   const mute_a = container.querySelector("a.gisst-embed-webplayer-mute")! as HTMLLinkElement;
   const halt_a = container.querySelector("a.gisst-embed-webplayer-halt")! as HTMLLinkElement;
   const canvas = container.querySelector("canvas.gisst-embed-webplayer")! as HTMLCanvasElement;
   canvas.style.width = container.style.width;
   canvas.style.height = container.style.height;
-  const [gisst_http_proto, gisst_root, gisst_query] = parseGisstUrl(gisst)
-
+  const [gisst_http_proto, gisst_root, gisst_query] = parseGisstUrl(gisst);
   const config = await fetchConfig(gisst_http_proto, gisst_root, gisst_query);
-  if (!config) return
-
+  if (!config) throw "Failed to fetch config";
   const kind = config.environment.environment_framework;
   let emu:EmuControls;
   if(kind == "v86") {
-      emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.start, config.core_manifest, config.manifest, config.saves, container, options ?? {controls:ControllerOverlayMode.Auto});
+    emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.work, config.instance, config.start, config.core_manifest, config.manifest, config.saves, container, options ?? {controls:ControllerOverlayMode.Auto, record_from_start:false});
   } else {
-    emu = await ra.init(gisst_http_proto+"://"+gisst_root, config.environment.environment_core_name, config.start, config.saves, config.core_manifest, config.manifest, container, options ?? {controls:ControllerOverlayMode.Auto});
+    emu = await ra.init(gisst_http_proto+"://"+gisst_root, config.environment, config.work, config.instance, config.start, config.saves, config.core_manifest, config.manifest, container, options ?? {controls:ControllerOverlayMode.Auto, record_from_start:false});
   }
-
   mute_a.classList.remove("gisst-embed-hidden");
   halt_a.classList.remove("gisst-embed-hidden");
-
   mute_a.addEventListener(
     "click",
     function () {
@@ -97,34 +105,12 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
       container.innerHTML = "";
     }
   );
-
-  const ro = new ResizeObserver((_entries, _observer) => {
-    let target_w, target_h;
-    if (kind == "v86") {
-      const w = canvas.width;
-      const h = canvas.height;
-      if (w == 0 || h == 0) { return; }
-      const aspect = w / h;
-      target_w = container.offsetWidth;
-      target_h = target_w / aspect;
-    } else {
-      target_w = container.offsetWidth;
-      target_h = container.offsetHeight;
-    }
-    const new_w = `${target_w}px`;
-    const new_h = `${target_h}px`;
-    console.log("resize from ",canvas.style.width,canvas.style.height,"to",new_w,new_h);
-    canvas.style.width = new_w;
-    if (kind == "v86") {
-      canvas.style.height = new_h;
-    }
-  })
-  ro.observe(container);
   canvas.style.touchAction = "none";
   canvas.addEventListener("touchstart", touchHandler, true);
   canvas.addEventListener("touchmove", touchHandler, true);
   canvas.addEventListener("touchend", touchHandler, true);
   canvas.addEventListener("touchcancel", touchHandler, true);
+  return emu;
 }
 // qua https://stackoverflow.com/a/1781750
 function touchHandler(event:TouchEvent)
@@ -154,7 +140,6 @@ function controller_mode_from(s:string|null) : ControllerOverlayMode {
   else { return ControllerOverlayMode.Auto; }
 }
 
-
 class GISSTElement extends HTMLElement {
   static observedAttributes = ["src", "controller", "width", "height"];
 
@@ -171,7 +156,7 @@ class GISSTElement extends HTMLElement {
     div.style.width = this.getAttribute("width") ?? "auto";
     div.style.height = this.getAttribute("height") ?? "auto";
     this.appendChild(div);
-    embed(src!, div, {controls:controller_mode_from(this.getAttribute("controller"))});
+    embed(src!, div, {controls:controller_mode_from(this.getAttribute("controller")),record_from_start:false});
   }
 }
 customElements.define("gisst-embed", GISSTElement);

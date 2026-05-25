@@ -1,60 +1,21 @@
-import {UI, GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode, ZoomLevel} from 'gisst-player';
-import {saveAs, nested_replace} from './util';
+import {GISSTDBConnector, GISSTModels, ReplayMode as UIReplayMode, ZoomLevel, UI} from 'gisst-player';
+import {saveAs} from './util';
 import {EmbedV86,StateInfo,ReplayEvent} from 'embedv86';
-import {Environment, ColdStart, StateStart, ReplayStart, CoreFileLink, ObjectLink, EmbedOptions} from './types.d';
-let ui_state:UI<ReplayEvent>;
+import {StateStart, ReplayStart, EmuControls} from 'frontend-embed/types';
+let ui_state:UI;
 let db:GISSTDBConnector;
 let zoom_fit = false;
 let current_zoom = 1.0;
-// qua https://zacharycouchman.com/Dynamically-Loading-JavaScript/
-async function loadScript(url:string) {
-  return new Promise((resolve, reject) => {
-    const ourScript = document.createElement('script');
-    ourScript.addEventListener('load', (evt) => {
-      resolve(evt);
-    });
-    ourScript.addEventListener('error', (reason) => {
-      reject(reason);
-    });
-     // add your script's src here
-    ourScript.src = url;
-    document.head.appendChild(ourScript);
-  });
-}
+let v86:EmbedV86;
 
-export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, core_manifest:CoreFileLink[], manifest:ObjectLink[], boot_into_record:boolean, _embed_options:EmbedOptions) {
-  db = new GISSTDBConnector(gisst_root);
-  let v86_wasm = null;
-  for (const obj of core_manifest) {
-    if (obj.core_role == "dependency") {
-      const filename = obj.file_filename;
-      const obj_path = "storage/"+obj.file_dest_path;
-      if (filename == "v86.wasm") {
-        v86_wasm = obj_path;
-      } else {
-        nested_replace(environment.environment_config, filename, obj_path);
-      }
-    } else if (obj.core_role == "entrypoint") {
-        // libv86.js
-        await loadScript(gisst_root+"/storage/"+obj.file_dest_path);
-    }
-  }
-    if (!v86_wasm) { throw "No v86 wasm path defined"; }
-  for (const obj of manifest) {
-    if (obj.object_role == "content") {
-      const obj_path = "storage/"+obj.file_dest_path;
-      const idx = obj.object_role_index.toString();
-      nested_replace(environment.environment_config, "$CONTENT"+idx, obj_path);
-      if (obj.object_role_index == 0) {
-        nested_replace(environment.environment_config, "$CONTENT", obj_path);
-      }
-    }
-  }
-  let entry_state:string|null = null;
+export async function init(ui:UI, embed:EmuControls) {
+  ui_state = ui;
+  db = new GISSTDBConnector(embed.gisst_root);
+  v86 = embed.inner;
+  let entry_state:boolean = false;
   let entry_screenshot:string|null = null;
-  if (start.type == "state") {
-    const data = (start as StateStart).data;
-    entry_state = "storage/"+data.file_dest_path;
+  if (embed.start.type == "state") {
+    const data = (embed.start as StateStart).data;
     if(!data.screenshot_id) {
       console.error("No screenshot for entry state");
       entry_screenshot = "";
@@ -62,18 +23,10 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       const screenshot_data = (await db.getRecordById("screenshot", data.screenshot_id)) as GISSTModels.Screenshot;
       entry_screenshot = screenshot_data.screenshot_data;
     }
+    entry_state = true;
   }
-  let movie:string|null = null;
-  if (start.type == "replay") {
-    const data = (start as ReplayStart).data;
-    movie = "storage/"+data.file_dest_path;
-  }
-
+  const movie = embed.start.type == "replay";
   const state_to_replay:Array<number|null> = [];
-
-  /* eslint prefer-const: ["error", { ignoreReadBeforeAssign: true }], no-use-before-define: "error" */
-  let v86:EmbedV86;
-  let is_muted = false;
   const EvtNames:string[] = ["keyboard-code", "mouse-click", "mouse-delta", "mouse-absolute", "mouse-wheel"];
   let evtlog_idx = 0;
   function fill_evtlog(fromidx:number, toidx:number) {
@@ -88,22 +41,21 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   }
   function zoom_to_fit() {
     const container = <HTMLDivElement>document.querySelector(".gisst-internal-content-body")!;
-    const screen = <HTMLDivElement>document.getElementById("canvas")!.parentElement!.parentElement!;
+    const screen = <HTMLDivElement>ui_state.emulator_div.querySelector("canvas")!.parentElement!.parentElement!;
     const rect = screen.getBoundingClientRect();
     const n = Math.min(container.clientWidth/rect.width,container.clientHeight/rect.height);
     zoom_to(n);
   }
-  ui_state = new UI(
-    <HTMLDivElement>document.getElementById("ui")!,
+  ui_state.setControl(
     {
-      "evt_to_html": (evt) => {
+      "evt_to_html": (evt_:unknown) => {
+        const evt = evt_ as ReplayEvent;
         const elt = document.createElement("span");
         elt.innerText = `${EvtNames[evt.code]} ${evt.value}`;
         return elt;
       },
       "toggle_mute": () => {
-        is_muted = !is_muted;
-        v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined);
+        embed.toggle_mute();
       },
       "set_zoom": (level:ZoomLevel) => {
         zoom_fit = level == ZoomLevel.Fit;
@@ -175,13 +127,19 @@ export async function init(gisst_root:string, environment:Environment, start:Col
         v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
       },
       "checkpoints_of":(replay_slot:number) => {
-        const rep = v86.replays[replay_slot].checkpoints;
+        const cps = v86.replays[replay_slot].checkpoints;
+        // don't provide the first and last checkpoint since those are
+        // made implicitly within the replay and never would have been
+        // added via replay_checkpoints_changed --- investigate this
+        // for later or only upload ones we've witnessed through
+        // replay_checkpoints_changed
+        const rep = cps.slice(1, cps.length-1);
         return rep.map((cp) => cp.name);
       },
       "upload_file":(category:"state" | "save" | "replay", file_name:string, metadata:GISSTModels.Metadata) => {
         return new Promise((resolve, reject) => {
           v86.download_file(category, file_name).then(([blob, name]) => {
-            db.uploadFile(new File([blob], name), metadata.record.file_id, 
+            db.uploadFile(new File([blob], name), metadata.record.file_id,
               (error:Error) => { reject(error.message)},
               (_percentage:number) => {},
               (uuid_string:string) => {
@@ -217,76 +175,49 @@ export async function init(gisst_root:string, environment:Environment, start:Col
           })
         })
       }
-    },
-    false,
-      JSON.parse(document.getElementById("config")!.textContent!) as GISSTModels.FrontendConfig
+    }
   );
-  const container = <HTMLDivElement>document.getElementById("canvas_div")!;
-  // const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
+  const container = embed.container;
   const ro = new ResizeObserver((_entries, _observer) => {
     if (!zoom_fit) { return; }
     zoom_to_fit();
   });
-  // ro.observe(canv);
   ro.observe(container.parentElement!);
-  v86 = new EmbedV86({
-    wasm_file:gisst_root+"/"+v86_wasm,
-    bios_root:gisst_root,
-    record_from_start:boot_into_record,
-    content_root:gisst_root,
-    container,
-    register_replay:(nom:string)=> {
-      if(movie && nom == "replay0") {
-        const data = (start as ReplayStart).data;
-        ui_state.newReplay(nom, "init", data);
-      } else {
-        ui_state.newReplay(nom, nom);
-      }
-    },
-    stop_replay:()=>{
-    },
-    states_changed:(added:StateInfo[], _removed:StateInfo[]) => {
-      for(const si of added) {
-        if(entry_state && si.name == "state0") {
-          si.thumbnail = entry_screenshot!;
-          const data = (start as StateStart).data;
-          ui_state.newState(si.name, si.thumbnail, "init", data);
-          state_to_replay.push(null);
-        } else {
-          ui_state.newState(si.name,si. thumbnail, "no replay");
-        }
-      }
-    },
-    replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => {
-      for(const si of removed) {
-        ui_state.removeState(si.name);
-      }
-      for(const si of added) {
-        const checkpoint_matches = si.name.match(/replay([0-9a-f-]+)-state([0-9]+)/);
-        if (checkpoint_matches == null) {
-          throw "added checkpoint with bad name format";
-        }
-        const replay_idx = v86.replays.findIndex((elt) => elt.id == checkpoint_matches[1]);
-        ui_state.newState(si.name,si.thumbnail,"replay"+String(replay_idx));
-        state_to_replay.push(replay_idx);
-      }
-    },
+  v86 = embed.inner as EmbedV86;
+  v86.set_register_replay((nom:string) => {
+    if(movie && nom == "replay0") {
+      const data = (embed.start as ReplayStart).data;
+      ui_state.newReplay(nom, "init", data as GISSTModels.ReplayFileLink);
+    } else {
+      ui_state.newReplay(nom, nom);
+    }
   });
-  (<HTMLImageElement>document.getElementById("webplayer-preview")!).src = gisst_root+"/media/canvas-v86.svg";
-  // document.getElementById("v86_controls")!.classList.remove("hidden");
-  const prev = document.getElementById("webplayer-preview")!;
-  prev.classList.add("loaded");
-  prev.addEventListener(
-    "click",
-    async function () {
-      const canv = <HTMLCanvasElement>document.getElementById("canvas")!;
-      prev.classList.add("hidden");
-      document.getElementById("webplayer-textmode")!.classList.remove("hidden");
-      await v86.run(environment.environment_config, entry_state, movie);
-      container.addEventListener("click", () => { v86.emulator.lock_mouse(); } )
-      canv.classList.remove("hidden");
-      return false;
-    });
+  v86.set_states_changed((added:StateInfo[], _removed:StateInfo[]) => {
+    for(const si of added) {
+      if(entry_state && si.name == "state0") {
+        si.thumbnail = entry_screenshot!;
+        const data = (embed.start as StateStart).data;
+        ui_state.newState(si.name, si.thumbnail, "init", data as GISSTModels.StateFileLink);
+        state_to_replay.push(null);
+      } else {
+        ui_state.newState(si.name,si. thumbnail, "no replay");
+      }
+    }
+  });
+  v86.set_replay_checkpoints_changed((added:StateInfo[], removed:StateInfo[]) => {
+    for(const si of removed) {
+      ui_state.removeState(si.name);
+    }
+    for(const si of added) {
+      const checkpoint_matches = si.name.match(/replay([0-9a-f-]+)-state([0-9]+)/);
+      if (checkpoint_matches == null) {
+        throw "added checkpoint with bad name format";
+      }
+      const replay_idx = v86.replays.findIndex((elt) => elt.id == checkpoint_matches[1]);
+      ui_state.newState(si.name,si.thumbnail,"replay"+String(replay_idx));
+      state_to_replay.push(replay_idx);
+    }
+  });
   setInterval(() => {
     if(v86.active_replay === null) {
       ui_state.setReplayMode(UIReplayMode.Inactive);

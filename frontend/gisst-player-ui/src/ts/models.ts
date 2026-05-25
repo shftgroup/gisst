@@ -51,7 +51,6 @@ export interface FrontendConfig {
     manifest: ObjectFileLink[],
     saves: SaveFileLink[],
     start: PlayerStartTemplateInfo,
-    boot_into_record:boolean,
 }
 
 export interface ObjectFileLink {
@@ -115,6 +114,9 @@ export interface ReplayFileLink {
     file_dest_path: string
 
 }
+export interface StringIndexable {
+  [s:string] : StringIndexable | string;
+}
 export interface Environment {
     environment_id: string,
     environment_name: string,
@@ -123,7 +125,7 @@ export interface Environment {
     environment_core_name: string,
     environment_core_version: string,
     environment_derived_from: string,
-    environment_config: JSON,
+    environment_config: StringIndexable,
 }
 
 export interface Work {
@@ -241,9 +243,10 @@ export interface FullInstance {
     saves: Save[]
 }
 
-export interface InputLogEvent<T> {
+
+export interface InputLogEvent {
   t: number,
-  evt:T
+  evt: unknown
 }
 
 export const NEVER_UPLOADED_ID = "DECAFBADDECAFBADDECAFBADDECAFBAD";

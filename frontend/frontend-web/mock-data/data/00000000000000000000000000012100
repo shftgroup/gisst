@@ -1,0 +1,134 @@
+{
+  "gisst_root": "https://ultra64.cs.pomona.edu/gisst",
+  "instance": {
+    "instance_id": "00000000-0000-0000-0000-000000012100",
+    "work_id": "00000000-0000-0000-0000-000000012100",
+    "environment_id": "00000000-0000-0000-0000-000000000002",
+    "instance_config": null,
+    "created_on": "2026-05-19T18:20:08.471421Z",
+    "derived_from_instance": null,
+    "derived_from_state": null,
+    "creator_id": null
+  },
+  "work": {
+    "work_id": "00000000-0000-0000-0000-000000012100",
+    "work_name": "Snake",
+    "work_version": "FreeDOS",
+    "work_platform": "FreeDOS",
+    "created_on": "2026-05-19T18:20:08.471421Z",
+    "work_derived_from": null,
+    "creator_id": null
+  },
+  "environment": {
+    "environment_id": "00000000-0000-0000-0000-000000000002",
+    "environment_name": "FreeDOS",
+    "environment_framework": "v86",
+    "environment_platform": "x86 PC",
+    "environment_core_name": "v86",
+    "environment_core_version": "8d345f7d6406d2374273eebf8ca1b9bb163a2442",
+    "environment_derived_from": null,
+    "environment_config": {
+      "bios": {
+        "url": "seabios.bin"
+      },
+      "fda": {
+        "async": true,
+        "fixed_chunk_size": 44194304,
+        "url": "$CONTENT0"
+      },
+      "memory_size": 16777216,
+      "vga_bios": {
+        "url": "vgabios.bin"
+      }
+    },
+    "created_on": "2026-05-19T18:19:37.396041Z",
+    "creator_id": null
+  },
+  "saves": [],
+  "start": {
+    "type": "cold"
+  },
+  "core_manifest": [
+    {
+      "core_name": "v86",
+      "core_version": "8d345f7d6406d2374273eebf8ca1b9bb163a2442",
+      "core_role": "entrypoint",
+      "core_role_index": 0,
+      "file_hash": "c750f9b93bca846d2b583db91380a25c",
+      "file_filename": "libv86.js",
+      "file_source_path": "",
+      "file_dest_path": "e/2/7/9/c750f9b93bca846d2b583db91380a25c-libv86.js"
+    },
+    {
+      "core_name": "v86",
+      "core_version": "8d345f7d6406d2374273eebf8ca1b9bb163a2442",
+      "core_role": "dependency",
+      "core_role_index": 0,
+      "file_hash": "fd359ac2ee5e1023d414924e4ea59db2",
+      "file_filename": "bochs-bios.bin",
+      "file_source_path": "",
+      "file_dest_path": "1/1/a/7/fd359ac2ee5e1023d414924e4ea59db2-bochs-bios.bin"
+    },
+    {
+      "core_name": "v86",
+      "core_version": "8d345f7d6406d2374273eebf8ca1b9bb163a2442",
+      "core_role": "dependency",
+      "core_role_index": 1,
+      "file_hash": "ae8105414e5c898059dae94db5b95b60",
+      "file_filename": "bochs-vgabios.bin",
+      "file_source_path": "",
+      "file_dest_path": "1/4/5/4/ae8105414e5c898059dae94db5b95b60-bochs-vgabios.bin"
+    },
+    {
+      "core_name": "v86",
+      "core_version": "8d345f7d6406d2374273eebf8ca1b9bb163a2442",
+      "core_role": "dependency",
+      "core_role_index": 2,
+      "file_hash": "ed52c23d996a549f7cecee6a540bd728",
+      "file_filename": "seabios.bin",
+      "file_source_path": "",
+      "file_dest_path": "6/d/7/3/ed52c23d996a549f7cecee6a540bd728-seabios.bin"
+    },
+    {
+      "core_name": "v86",
+      "core_version": "8d345f7d6406d2374273eebf8ca1b9bb163a2442",
+      "core_role": "dependency",
+      "core_role_index": 3,
+      "file_hash": "e8acaa929079296b3ca7c691ddc30914",
+      "file_filename": "vgabios.bin",
+      "file_source_path": "",
+      "file_dest_path": "5/7/a/d/e8acaa929079296b3ca7c691ddc30914-vgabios.bin"
+    },
+    {
+      "core_name": "v86",
+      "core_version": "8d345f7d6406d2374273eebf8ca1b9bb163a2442",
+      "core_role": "dependency",
+      "core_role_index": 4,
+      "file_hash": "d68aff64381e1782fbb128b79402ec1e",
+      "file_filename": "v86.wasm",
+      "file_source_path": "",
+      "file_dest_path": "8/5/7/4/d68aff64381e1782fbb128b79402ec1e-v86.wasm"
+    }
+  ],
+  "manifest": [
+    {
+      "object_id": "3f290786-4507-4fc7-936c-0a6c0aca4e2f",
+      "object_role": "content",
+      "object_role_index": 0,
+      "file_hash": "07cd9656778aa01e7f99f37e31b76e24",
+      "file_filename": "freedos722.img",
+      "file_source_path": "",
+      "file_dest_path": "b/7/3/6/07cd9656778aa01e7f99f37e31b76e24-freedos722.img"
+    }
+  ],
+  "host_url": "ultra64.cs.pomona.edu/gisst",
+  "host_protocol": "https:",
+  "citation_data": {
+    "website_title": "",
+    "url": "/data/00000000000000000000000000012100",
+    "gs_page_view_date": "2026, May 19",
+    "mla_page_view_date": "19 May. 2026",
+    "bibtex_page_view_date": "2026-05-19",
+    "site_published_year": "2026"
+  }
+}

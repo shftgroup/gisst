@@ -1,50 +1,35 @@
-import {nested_replace,StringIndexable} from './util';
 import {EmbedV86,StateInfo} from 'embedv86';
-import {EmbedOptions,Environment, ColdStart, StateStart, ReplayStart, CoreFileLink, ObjectLink, SaveFileLink, EmuControls} from './types.d';
+import {EmbedOptions, Environment, Work, Instance, ColdStart, StateStart, ReplayStart, CoreFileLink, ObjectLink, SaveFileLink, EmuControls, StringIndexable} from './types.d';
 
-
-let v86_loading = false;
-let v86_loaded = false;
 const emulators:EmbedV86[] = [];
 
-async function downloadScript(src:string) : Promise<Blob> {
-  const resp = await fetch(src);
-  const blob = await resp.blob();
-  return blob;
-}
-
-function load_v86(v86_path:string) : Promise<Blob | string> {
-  if (v86_path.startsWith("https://")) {
-    return downloadScript(v86_path);
-  } else {
-    return new Promise((resolve) => resolve(v86_path));
-  }
-}
-
-export async function init(gisst_root:string, environment:Environment, start:ColdStart | StateStart | ReplayStart, core_manifest:CoreFileLink[], manifest:ObjectLink[], _saves:SaveFileLink[], container:HTMLDivElement, _options:EmbedOptions):Promise<EmuControls> {
-    let v86_wasm = null;
-    if(!v86_loaded && !v86_loading) {
-        v86_loading = true;
-        console.log("Loading v86");
-        const entrypoint = core_manifest.find((o) => o.core_role == "entrypoint")!;
-        let blobOrUrl = await load_v86(gisst_root + "/storage/" + entrypoint.file_dest_path);
-        if (blobOrUrl instanceof Blob) {
-            blobOrUrl = URL.createObjectURL(blobOrUrl);
-        }
-        const scpt = document.createElement("script");
-        scpt.src = blobOrUrl;
-        scpt.onload = () => {
-            v86_loaded = true;
-            v86_loading = false;
-        }
-        document.head.appendChild(scpt);
+export function nested_replace(obj:StringIndexable, target:string, replacement:string) {
+  for(const key in obj) {
+    if(typeof(obj[key]) == "object") {
+      nested_replace(obj[key] as StringIndexable, target, replacement);
+    } else if(obj[key] == target) {
+      obj[key] = replacement;
     }
-    // TODO maybe replace with an await
-  while(v86_loading) {
-    console.log("A v86 instance is loading, please wait...");
-    await new Promise(resolve => setTimeout(resolve, 1000));
   }
-  console.log("v86 loaded");
+}
+
+async function loadScript(url:string) {
+  return new Promise((resolve, reject) => {
+    const ourScript = document.createElement('script');
+    ourScript.addEventListener('load', (evt) => {
+      resolve(evt);
+    });
+    ourScript.addEventListener('error', (reason) => {
+      reject(reason);
+    });
+     // add your script's src here
+    ourScript.src = url;
+    document.head.appendChild(ourScript);
+  });
+}
+
+export async function init(gisst_root:string, environment:Environment, work:Work, instance:Instance, start:ColdStart | StateStart | ReplayStart, core_manifest:CoreFileLink[], manifest:ObjectLink[], _saves:SaveFileLink[], container:HTMLDivElement, options:EmbedOptions):Promise<EmuControls> {
+  let v86_wasm = null;
   for (const obj of core_manifest) {
     if (obj.core_role == "dependency") {
       const filename = obj.file_filename;
@@ -54,16 +39,19 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       } else {
         nested_replace(environment.environment_config as StringIndexable, filename, obj_path);
       }
+    } else if (obj.core_role == "entrypoint") {
+        // libv86.js
+        await loadScript(gisst_root+"/storage/"+obj.file_dest_path);
     }
   }
-    if (!v86_wasm) { throw "No v86 wasm path defined"; }
+  if (!v86_wasm) { throw "No v86 wasm path defined"; }
   for (const obj of manifest) {
     if (obj.object_role == "content") {
       const obj_path = "storage/"+obj.file_dest_path;
       const idx = obj.object_role_index.toString();
-      nested_replace(environment.environment_config as StringIndexable, "$CONTENT"+idx, obj_path);
+      nested_replace(environment.environment_config, "$CONTENT"+idx, obj_path);
       if (obj.object_role_index == 0) {
-        nested_replace(environment.environment_config as StringIndexable, "$CONTENT", obj_path);
+        nested_replace(environment.environment_config, "$CONTENT", obj_path);
       }
     }
   }
@@ -81,18 +69,37 @@ export async function init(gisst_root:string, environment:Environment, start:Col
   const v86 = new EmbedV86({
     wasm_file:gisst_root+"/"+v86_wasm,
     bios_root:gisst_root,
-    record_from_start:false,
+    record_from_start:options.record_from_start,
     content_root:gisst_root,
     container: container,
     register_replay:(_nom:string)=>{},
-    stop_replay:()=>{
-    },
-    states_changed:(_added:StateInfo[], _removed:StateInfo[]) => {
-    },
-    replay_checkpoints_changed:(_added:StateInfo[], _removed:StateInfo[]) => {
-    },
+    stop_replay:()=>{},
+    states_changed:(_added:StateInfo[], _removed:StateInfo[]) => {},
+    replay_checkpoints_changed:(_added:StateInfo[], _removed:StateInfo[]) => {},
   });
   emulators.push(v86);
+  const self = {
+    halt: async () => {
+      container.removeEventListener("click", click_to_activate);
+      v86.clear();
+    },
+    toggle_mute: () => {
+      is_muted = !is_muted;
+      v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined)
+    },
+    gisst_root,
+    environment,
+    work,
+    instance,
+    start,
+    saves:_saves,
+    core_manifest,
+    manifest,
+    container,
+    embed_options:options,
+    on_ready: () => {},
+    inner:v86
+  };
   const preview = container.getElementsByTagName("img")[0];
   preview.classList.add("gisst-embed-loaded");
   preview.addEventListener(
@@ -104,26 +111,18 @@ export async function init(gisst_root:string, environment:Environment, start:Col
       container.getElementsByTagName("div")[0]!.classList.remove("gisst-embed-hidden");
       await v86.run(environment.environment_config, entry_state, movie);
       activate(v86);
+      self.on_ready();
       return false;
     });
   function click_to_activate() {
-      activate(v86);
+    activate(v86);
   }
   container.addEventListener(
     "click",
     click_to_activate
   );
   let is_muted = false;
-  return {
-    halt: async () => {
-      container.removeEventListener("click", click_to_activate);
-      v86.clear();
-    },
-    toggle_mute: () => {
-      is_muted = !is_muted;
-      v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined)
-    }
-  };
+  return self;
 }
 
 function activate(v86:EmbedV86) {

@@ -4,8 +4,8 @@
     "ra-util",
     "embedv86",
     "gisst-player-ui",
-    "frontend-web",
     "frontend-embed",
+    "frontend-web",
     "server-ui"
   ],
   "scripts": {

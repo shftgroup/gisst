@@ -9,15 +9,20 @@
     ".": {
       "import": "./dist/embed.js",
       "require": "./dist/embed.umd.cjs"
+    },
+    "./types": {
+      "import": "./dist/types.d.ts",
+      "require": "./dist/types.umd.js"
     }
   },
   "scripts": {
-    "dev": "shx mkdir -p ../../test-cert && vite",
+    "dev": "shx mkdir -p ../../test-cert && node scripts/testdata.js && vite",
     "check": "tsc && eslint src",
     "build": "shx mkdir -p ../../test-cert && tsc && vite build",
     "dist": "shx mkdir -p ../../test-cert && vite build && shx mkdir -p ../../backend/embed-dist && shx cp -r dist/* ../../backend/embed-dist/",
     "preview": "vite preview",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "testdata": "node scripts/testdata.js"
   },
   "devDependencies": {
     "@types/path-browserify": "^1.0.3",
@@ -34,6 +39,7 @@
     "vite-plugin-checker": "^0.9.0",
     "vite-plugin-dts": "^4.5.3",
     "vite-plugin-mkcert": "^1.17.6",
+    "sirv": "^3.0.2",
     "vitest": "^3.0.8"
   },
   "dependencies": {

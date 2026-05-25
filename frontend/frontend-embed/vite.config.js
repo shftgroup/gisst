@@ -3,6 +3,15 @@ import checker from 'vite-plugin-checker';
 import sourcemaps from 'rollup-plugin-sourcemaps';
 import dts from 'vite-plugin-dts'
 import mkcert from 'vite-plugin-mkcert';
+import sirv from 'sirv';
+
+const ServerFilesPlugin = {
+  name: 'serve-storage-files',
+  configureServer(server) {
+    const serverStatic = sirv('mock-data', {})
+    server.middlewares.use(serverStatic);
+  }
+}
 
 export default {
   base: "./",
@@ -12,7 +21,8 @@ export default {
       typescript: true,
     }),
     dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],}),
-    sourcemaps()
+    sourcemaps(),
+    ServerFilesPlugin,
   ],
   build: {
     lib: {
@@ -23,12 +33,14 @@ export default {
     sourcemap: true,
   },
   server: {
+    port: 5177,
+    strictPort: true,
     headers:{
       "Cross-Origin-Embedder-Policy":"require-corp",
       "Cross-Origin-Resource-Policy":"cross-origin",
       "Cross-Origin-Opener-Policy":"same-origin",
       "Access-Control-Allow-Origin":"*",
-      "Content-Security-Policy": "script-src 'self' 'unsafe-inline' blob: 'wasm-unsafe-eval' https://localhost:3000/; worker-src 'self' blob: https://localhost:3000/;"
+      "Content-Security-Policy": "script-src 'self' 'unsafe-inline' blob: 'wasm-unsafe-eval'; worker-src 'self' blob: ;"
     },
   },
 }

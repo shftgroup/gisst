@@ -15,6 +15,7 @@ frontend/frontend-elec/resources/binaries/
 frontend/frontend-elec/resources/content/
 frontend/frontend-elec/resources/ra-assets/
 frontend/frontend-tauri/src-tauri/ra-assets/
+frontend/frontend-web/mock-data/assets
 frontend/frontend-web/.index-xhr
 frontend/node_modules
 frontend/frontend-embed/types

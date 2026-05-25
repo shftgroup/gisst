@@ -1,0 +1,81 @@
+{
+  "gisst_root": "https://ultra64.cs.pomona.edu/gisst",
+  "instance": {
+    "instance_id": "00000000-0000-0000-0000-000000001001",
+    "work_id": "00000000-0000-0000-0000-000000001001",
+    "environment_id": "00000000-0000-0000-0000-000000000000",
+    "instance_config": null,
+    "created_on": "2026-05-19T18:19:37.636367Z",
+    "derived_from_instance": null,
+    "derived_from_state": null,
+    "creator_id": null
+  },
+  "work": {
+    "work_id": "00000000-0000-0000-0000-000000001001",
+    "work_name": "Alter Ego",
+    "work_version": "NTSC",
+    "work_platform": "Nintendo Entertainment System",
+    "created_on": "2026-05-19T18:19:37.636367Z",
+    "work_derived_from": null,
+    "creator_id": null
+  },
+  "environment": {
+    "environment_id": "00000000-0000-0000-0000-000000000000",
+    "environment_name": "Nintendo Entertainment System",
+    "environment_framework": "retroarch",
+    "environment_platform": "Nintendo Entertainment System",
+    "environment_core_name": "fceumm",
+    "environment_core_version": "fdfbb51616ded7db12757cb82221a8cbcae544db",
+    "environment_derived_from": null,
+    "environment_config": null,
+    "created_on": "2026-05-19T18:19:37.256868Z",
+    "creator_id": null
+  },
+  "saves": [],
+  "start": {
+    "type": "cold"
+  },
+  "core_manifest": [
+    {
+      "core_name": "fceumm",
+      "core_version": "fdfbb51616ded7db12757cb82221a8cbcae544db",
+      "core_role": "entrypoint",
+      "core_role_index": 0,
+      "file_hash": "2703f155daacf3377f4cc0f5a8df1965",
+      "file_filename": "fceumm_libretro.js",
+      "file_source_path": "",
+      "file_dest_path": "9/a/5/c/2703f155daacf3377f4cc0f5a8df1965-fceumm_libretro.js"
+    },
+    {
+      "core_name": "fceumm",
+      "core_version": "fdfbb51616ded7db12757cb82221a8cbcae544db",
+      "core_role": "dependency",
+      "core_role_index": 0,
+      "file_hash": "c09ccd0799c1b369a0812884a4c064cb",
+      "file_filename": "fceumm_libretro.wasm",
+      "file_source_path": "",
+      "file_dest_path": "7/1/c/0/c09ccd0799c1b369a0812884a4c064cb-fceumm_libretro.wasm"
+    }
+  ],
+  "manifest": [
+    {
+      "object_id": "2f46092d-845b-4ecc-9c60-463164bea6f9",
+      "object_role": "content",
+      "object_role_index": 0,
+      "file_hash": "1f21f648af663fbd3c864b7283d994c7",
+      "file_filename": "Alter Ego.nes",
+      "file_source_path": "",
+      "file_dest_path": "a/9/f/e/1f21f648af663fbd3c864b7283d994c7-Alter Ego.nes"
+    }
+  ],
+  "host_url": "ultra64.cs.pomona.edu/gisst",
+  "host_protocol": "https:",
+  "citation_data": {
+    "website_title": "",
+    "url": "/data/00000000000000000000000000001001",
+    "gs_page_view_date": "2026, May 19",
+    "mla_page_view_date": "19 May. 2026",
+    "bibtex_page_view_date": "2026-05-19",
+    "site_published_year": "2026"
+  }
+}
