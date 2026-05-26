@@ -6,27 +6,57 @@
       {
         "ordinal": 0,
         "name": "core_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core",
+            "name": "core_name"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "core_version",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core",
+            "name": "core_version"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "core_metadata",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "core",
+            "name": "core_metadata"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "core_platform",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core",
+            "name": "core_platform"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "created_on",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "core",
+            "name": "created_on"
+          }
+        }
       }
     ],
     "parameters": {

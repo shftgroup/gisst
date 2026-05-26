@@ -354,14 +354,15 @@ async fn find_entry(
     db: &RDB,
     path: &std::path::Path,
 ) -> Result<FindResult, IngestError> {
-    let hash = {
+    let (hash, hash_str) = {
+        use digest_io::IoWrapper;
         use md5::Digest;
-        let mut hasher = md5::Md5::new();
+        let mut hasher = IoWrapper(md5::Md5::new());
         let mut file = std::fs::File::open(path)?;
         std::io::copy(&mut file, &mut hasher)?;
-        hasher.finalize()
+        let hash = hasher.0.finalize();
+        (hash, base16ct::lower::encode_string(&hash))
     };
-    let hash_str = format!("{hash:x}");
     if GFile::get_by_hash(conn, &hash_str).await?.is_some() {
         info!("{path:?}:{hash_str} already in DB, skip");
         return Ok(FindResult::AlreadyHave);

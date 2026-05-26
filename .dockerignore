@@ -21,6 +21,8 @@ frontend/frontend-embed/types
 vite.config.js.timestamp*
 .DS_Store
 target
+backend/target
+backend/storage
 .idea
 storage
 .env
@@ -62,3 +64,4 @@ backend/etc
 node_modules
 .vite
 .sqlx
+ra-build

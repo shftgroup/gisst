@@ -1,7 +1,7 @@
 FROM ubuntu:noble AS base
 
 ENV PLAYWRIGHT_VERSION=1.53.0
-ENV RUST_VERSION=1.93.1
+ENV RUST_VERSION=1.95.0
 ENV NODE_VERSION=25.6.0
 ENV EMSDK_VERSION=4.0.17
 
@@ -26,7 +26,7 @@ ENV EMSDK_DIR=/home/$USER/.emsdk
 RUN git clone https://github.com/emscripten-core/emsdk.git $EMSDK_DIR; cd $EMSDK_DIR; ./emsdk install $EMSDK_VERSION; ./emsdk activate $EMSDK_VERSION; . ./emsdk_env.sh
 ENV PATH="${EMSDK_DIR}:${EMSDK_DIR}/upstream/emscripten:${PATH}"
 
-RUN npm i -g "@playwright/test@${PLAYWRIGHT_VERSION}" 
+RUN npm i -g "@playwright/test@${PLAYWRIGHT_VERSION}"
 USER root
 RUN PATH="/home/$USER/.nvm/versions/node/v${NODE_VERSION}/bin:$PATH" playwright install --with-deps
 USER $USER
@@ -42,6 +42,7 @@ USER root
 RUN <<EOF
     cd
     curl -L https://install.meilisearch.com | sh
+    chmod +x meilisearch
     mv meilisearch /usr/local/bin/
 EOF
 USER $USER

@@ -38,7 +38,7 @@ repos:
         language: unsupported_script
         pass_filenames: false
         files: ^backend/
-        types: [rust,toml]
+        types_or: [rust,toml]
         stages: [pre-push]
       - id: clippy
         name: clippy
@@ -47,7 +47,7 @@ repos:
         language: unsupported_script
         pass_filenames: false
         files: ^backend/
-        types: [rust,toml]
+        types_or: [rust,toml]
         stages: [pre-push]
       - id: udeps
         name: cargo udeps
@@ -56,7 +56,7 @@ repos:
         language: unsupported_script
         pass_filenames: false
         files: ^backend/
-        types: [rust,toml]
+        types_or: [rust,toml]
         stages: [pre-push]
       - id: cargo-audit
         name: cargo audit
@@ -65,7 +65,7 @@ repos:
         language: unsupported_script
         pass_filenames: false
         files: ^backend/
-        types: [rust,toml]
+        types_or: [rust,toml]
         stages: [pre-push]
       - id: frontend-check
         name: frontend check

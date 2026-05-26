@@ -6,72 +6,156 @@
       {
         "ordinal": 0,
         "name": "state_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "state_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "instance_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "instance_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "is_checkpoint",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "is_checkpoint"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "file_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "file_id"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "state_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "state_name"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "state_description",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "state_description"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "screenshot_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "screenshot_id"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "replay_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "replay_id"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "creator_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "creator_id"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "state_replay_index",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "state_replay_index"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "state_derived_from",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "state_derived_from"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "created_on",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "created_on"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "save_derived_from",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "save_derived_from"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "hidden",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "state",
+            "name": "hidden"
+          }
+        }
       }
     ],
     "parameters": {

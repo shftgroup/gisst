@@ -64,13 +64,13 @@ impl StorageHandler {
     // TODO fixme: this is synchronous but should probably be async.
     // But we don't have an async md5 hasher out there.
     pub fn get_file_hash(path: impl AsRef<Path>) -> Result<String, Storage> {
+        use digest_io::IoWrapper;
         use md5::Digest;
-
-        let mut hasher = md5::Md5::new();
+        let mut hasher = IoWrapper(md5::Md5::new());
         let mut file = std::fs::File::open(path)?;
         std::io::copy(&mut file, &mut hasher)?;
-        let hash = hasher.finalize();
-        Ok(format!("{hash:x}"))
+        let hash = hasher.0.finalize();
+        Ok(base16ct::lower::encode_string(&hash))
     }
 
     #[must_use]

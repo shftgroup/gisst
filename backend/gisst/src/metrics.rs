@@ -37,8 +37,8 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
                 handle.block_on(async {
                     if let Ok(mut conn) = pool.acquire().await
                         && let Some(count) = sqlx::query_scalar!(
-                            r#"SELECT reltuples::bigint AS estimate 
-                               FROM pg_class 
+                            r#"SELECT reltuples::bigint AS estimate
+                               FROM pg_class
                                WHERE oid = ($1::text)::regclass"#,
                             table
                         )
@@ -73,7 +73,8 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
                         obs.observe(size.to_u64().unwrap_or(0), &[]);
                     }
                 });
-            });
+            })
+            .build();
     }
     {
         let handle = handle.clone();
@@ -94,7 +95,8 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
                         obs.observe(size.to_u64().unwrap_or(0), &[]);
                     }
                 });
-            });
+            })
+            .build();
     }
 }
 

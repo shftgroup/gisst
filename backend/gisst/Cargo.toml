@@ -8,24 +8,26 @@ default=[]
 fatfs_logging=["fatfs/log_level_trace"]
 
 [dependencies]
-sqlx = { version = "0.8", features = ["migrate", "runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "macros", "bigdecimal"], default-features=false }
-uuid                    = { version = "1.8", features = ["serde", "v4"] }
-serde                   = { version = "1.0.159", features = ["derive"] }
-thiserror               = "2.0.12"
-log                     = "0.4.17"
-tokio                   = { version = "1.27.0", features = ["full"] }
-md-5                    = "0.10"
-bytes                   = { version = "1.4.0", features = ["serde"] }
+sqlx = { version = "0.9", features = ["migrate", "runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "macros", "bigdecimal"], default-features=false }
+uuid                    = { version = "1.23", features = ["serde", "v4"] }
+serde                   = { version = "1.0.228", features = ["derive"] }
+thiserror               = "2.0.18"
+log                     = "0.4.29"
+tokio                   = { version = "1.52.3", features = ["full"] }
+md-5                    = "0.11"
+digest-io               = "0.1.0"
+base16ct                = {version="1.0.0",features=["alloc"]}
+bytes                   = { version = "1.11.1", features = ["serde"] }
 async-compression       = { version = "0.4", features = ["tokio", "gzip", "zstdmt"] }
-chrono = {version = "0.4.28", features = ["serde"]}
-serde_with = { version = "3.3.0", features = ["base64"] }
-tracing = "0.1.40"
-tree_magic_mini = {version="3.1.6", features=["with-gpl-data"]}
-fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="4eccb50d011146fbed20e133d33b22f3c27292e7"}
+chrono = {version = "0.4.44", features = ["serde"]}
+serde_with = { version = "3.20.0", features = ["base64"] }
+tracing = "0.1.44"
+tree_magic_mini = {version="3.2.2", features=["with-gpl-data"]}
+fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="c4b88477b22ca7e5131fbd8891f62a5deaa88e6e"}
 mbrman = "0.6.1"
 fscommon = "0.1.1"
-zip = "2.1.2"
-opentelemetry = "0.31"
+zip = "8.6.0"
+opentelemetry = "0.32"
 num-traits = "0.2.19"
-meilisearch-sdk = "0.32.0"
-futures = "0.3.31"
+meilisearch-sdk = "0.33.0"
+futures = "0.3.32"

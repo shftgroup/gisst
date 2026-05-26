@@ -6,20 +6,22 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-walkdir = "2.3.3"
-uuid = { version = "1.8", features = ["serde", "v4"] }
-thiserror = "2.0.12"
-log = "0.4.17"
-tokio = { version = "1.27.0", features = ["full"] }
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"], default-features=false }
-env_logger = "0.11.8"
-clap = { version = "4.2.1", features = ["derive", "cargo", "env"] }
-clap-verbosity-flag = "3.0.2"
-anyhow = {version="1.0.70", features=["backtrace"]}
+walkdir = "2.5.0"
+uuid = { version = "1.23", features = ["serde", "v4"] }
+thiserror = "2.0.18"
+log = "0.4.29"
+tokio = { version = "1.52.3", features = ["full"] }
+sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json"], default-features=false }
+env_logger = "0.11.10"
+clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
+clap-verbosity-flag = "3.0.4"
+anyhow = {version="1.0.102", features=["backtrace"]}
 gisst = { path = "../gisst" }
 rdb-sys = { path = "../rdb-sys" }
-chrono = { version = "0.4.28", features = ["clock"]}
-md-5                    = "0.10"
-regex = "1.11.1"
-rayon = "1.10.0"
-chd = "0.3.2"
+chrono = { version = "0.4.44", features = ["clock"]}
+md-5                    = "0.11"
+digest-io               = "0.1.0"
+base16ct                = {version="1.0.0",features=["alloc"]}
+regex = "1.12.3"
+rayon = "1.12.0"
+chd = "0.3.4"

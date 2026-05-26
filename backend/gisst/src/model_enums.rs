@@ -43,7 +43,7 @@ pub enum Platform {
     AtariST,
     Gameboy,
     GameboyAdvance,
-    Windows
+    Windows,
 }
 
 impl FromStr for Platform {
@@ -73,7 +73,10 @@ mod tests {
 
     #[test]
     fn framework_parses_retroarch() {
-        assert_eq!("retroarch".parse::<Framework>().unwrap(), Framework::RetroArch);
+        assert_eq!(
+            "retroarch".parse::<Framework>().unwrap(),
+            Framework::RetroArch
+        );
     }
 
     #[test]
@@ -86,19 +89,19 @@ mod tests {
         assert!("mame".parse::<Framework>().is_err());
     }
 
-    #[test ]
+    #[test]
     fn platform_parses_all_known_strings() {
         let cases = [
             ("Microsoft Disk Operating System", Platform::DOS),
             ("Microsoft Windows", Platform::Windows),
-            ("Nintendo Entertainment System",       Platform::NES),
+            ("Nintendo Entertainment System", Platform::NES),
             ("Super Nintendo Entertainment System", Platform::SNES),
-            ("Nintendo 64",                         Platform::N64),
-            ("Sony PlayStation",                    Platform::PSX),
-            ("Atari 2600",                          Platform::Atari2600),
-            ("Atari ST",                            Platform::AtariST),
-            ("Nintendo Game Boy",                   Platform::Gameboy),
-            ("Nintendo Game Boy Advance",           Platform::GameboyAdvance),
+            ("Nintendo 64", Platform::N64),
+            ("Sony PlayStation", Platform::PSX),
+            ("Atari 2600", Platform::Atari2600),
+            ("Atari ST", Platform::AtariST),
+            ("Nintendo Game Boy", Platform::Gameboy),
+            ("Nintendo Game Boy Advance", Platform::GameboyAdvance),
         ];
         for (input, expected) in cases {
             let result = input.parse::<Platform>();
@@ -116,5 +119,4 @@ mod tests {
     fn platform_error_empty_string() {
         assert!("".parse::<Platform>().is_err());
     }
-
 }

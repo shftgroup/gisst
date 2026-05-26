@@ -1,11 +1,11 @@
 {
   "format_version": "1",
   "script_version": "1.0.0",
-  "rust_version": "1.93.1",
+  "rust_version": "1.95.0",
   "emsdk_version": "4.0.17",
   "v86": {
     "repo": "https://github.com/JoeOsborn/v86",
-    "version": "a72b495ae289ac90ea8784d9e8d35d11afcad7ce",
+    "version": "d26a829336e68ad88e3cffe9074172494b659249",
     "dependencies": {
       "seabios.bin": "v86bios/seabios_a74f33d58109877723201ef02d20b46b84c36974.bin",
       "bochs-bios.bin": "v86bios/bochs-bios_6b1400c2a76c82d9535456866cc4cd23c5c70311.bin",

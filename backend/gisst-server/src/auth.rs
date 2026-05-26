@@ -1,6 +1,5 @@
 // Most of this is based on https://github.com/maxcountryman/axum-login/blob/main/examples/oauth/src/main.rs
 // We want to use Google Auth and hopefully OrcID OpenID
-use async_trait::async_trait;
 use axum::{
     extract::Query,
     response::{IntoResponse, Redirect},
@@ -341,14 +340,56 @@ impl AuthBackend {
             .add_scope(oauth2::Scope::new("openid profile email".to_string()))
             .url()
     }
+    #[cfg(not(feature = "dummy_auth"))]
+    async fn do_login(
+        &self,
+        code: String,
+    ) -> Result<(OpenIDUserInfo, oauth2::AccessToken), AuthError> {
+        let token = self
+            .client
+            .exchange_code(AuthorizationCode::new(code))
+            .request_async(&oauth2::reqwest::Client::new())
+            .await?;
+        let user_info = reqwest::Client::new()
+            .get("https://openidconnect.googleapis.com/v1/userinfo")
+            .header(axum::http::header::USER_AGENT.as_str(), "gisst-login")
+            .bearer_auth(token.access_token().secret().to_owned())
+            .send()
+            .await?;
+        let Ok(profile) = user_info.json::<OpenIDUserInfo>().await else {
+            return Err(AuthError::MissingProfileInfo {
+                field: "all".to_string(),
+            });
+        };
+        if !profile
+            .email
+            .as_ref()
+            .is_some_and(|email| self.email_whitelist.contains(email))
+        {
+            return Err(AuthError::UserNotPermitted);
+        }
+        Ok((profile, token.access_token().clone()))
+    }
+    #[cfg(feature = "dummy_auth")]
+    #[allow(clippy::unused_async)]
+    async fn do_login(
+        &self,
+        code: String,
+    ) -> Result<(OpenIDUserInfo, oauth2::AccessToken), AuthError> {
+        if code != "verysecret" {
+            return Err(AuthError::UserNotPermitted);
+        }
+        Ok((
+            OpenIDUserInfo::test_user(),
+            oauth2::AccessToken::new("verysecret".to_string()),
+        ))
+    }
 }
 
-#[async_trait]
 impl axum_login::AuthnBackend for AuthBackend {
     type User = User;
     type Credentials = Credentials;
     type Error = AuthError;
-
     #[tracing::instrument]
     async fn authenticate(
         &self,
@@ -362,39 +403,7 @@ impl axum_login::AuthnBackend for AuthBackend {
             return Err(AuthError::CsrfMissing);
         }
         let mut connection = self.pool.acquire().await?;
-        #[cfg(not(feature = "dummy_auth"))]
-        let (profile, token) = {
-            let token = self
-                .client
-                .exchange_code(AuthorizationCode::new(code))
-                .request_async(&oauth2::reqwest::Client::new())
-                .await?;
-            let user_info = reqwest::Client::new()
-                .get("https://openidconnect.googleapis.com/v1/userinfo")
-                .header(axum::http::header::USER_AGENT.as_str(), "gisst-login")
-                .bearer_auth(token.access_token().secret().to_owned())
-                .send()
-                .await?;
-            let profile: OpenIDUserInfo = user_info.json::<OpenIDUserInfo>().await.unwrap();
-            if !profile
-                .email
-                .as_ref()
-                .is_some_and(|email| self.email_whitelist.contains(email))
-            {
-                return Err(AuthError::UserNotPermitted);
-            }
-            (profile, token.access_token().clone())
-        };
-        #[cfg(feature = "dummy_auth")]
-        let (profile, token) = {
-            if code != "verysecret" {
-                return Err(AuthError::UserNotPermitted);
-            }
-            (
-                OpenIDUserInfo::test_user(),
-                oauth2::AccessToken::new("verysecret".to_string()),
-            )
-        };
+        let (profile, token) = self.do_login(code).await?;
         let mut conn = self.pool.acquire().await?;
         let user = if let Some(mut user) = sqlx::query_as!(
             Self::User,
@@ -453,7 +462,6 @@ impl axum_login::AuthnBackend for AuthBackend {
                 },
             )
             .await?;
-
             info!("User record created: {user:?}.");
             Some(user)
         };

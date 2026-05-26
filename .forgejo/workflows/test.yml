@@ -92,8 +92,8 @@ jobs:
       name: Run meili
       with:
         run: |
-          meilisearch --no-analytics --master-key ${{ env.MEILI_MASTER_KEY }} --env development --db-path ./test --http-addr localhost:7701 &
-        wait-on: '{"resources":["http-get://localhost:7701/version"],"headers":{"Authorization":"Bearer ${{ env.MEILI_API_KEY }}"}}'
+          meilisearch --master-key test-api-key --env development --db-path ./test --http-addr localhost:7701 &
+        wait-on: '{"resources":["http-get://localhost:7701/version"],"headers":{"Authorization":"Bearer test-api-key"}}'
         tail: true # true = stderr,stdout
         log-output-resume: stderr
         wait-for: 1m
@@ -142,7 +142,8 @@ jobs:
     - name: Run meili
       uses: https://github.com/JarvusInnovations/background-action@v1
       with:
-        run: meilisearch --no-analytics --master-key ${{ env.MEILI_MASTER_KEY }} --env development &
+        run: |
+          meilisearch --master-key test-api-key-github-actions --env development &
         wait-on: '{"resources":["http-get://localhost:7700/version"],"headers":{"Authorization":"Bearer test-api-key-github-actions"}}'
         tail: true # true = stderr,stdout
         log-output-resume: stderr

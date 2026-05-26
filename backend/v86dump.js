@@ -26,6 +26,25 @@ var V86 = require(libv86_path).V86;
 // let state=readfile(__dirname+"/../storage/0/3/1/e/087bbdc6dbb84234b43ce0b562d8486c-state2.v86state");
 let state=readfile(state_path);
 var emulator = new V86(emu_info);
+
+function get_disk(emulator, disk) {
+  if (emulator.disk_images) {
+    return emulator.disk_images[disk];
+  }
+  let idecontroller = emulator.v86.cpu.devices.ide.primary;
+  if (!idecontroller) {
+    idecontroller = emulator.v86.cpu.devices.ide.secondary;
+  }
+  switch (disk) {
+  case "hda": return idecontroller.master.buffer;
+  case "hdb": return idecontroller.slave.buffer;
+  case "fda": return emulator.v86.cpu.devices.fdc.drives[0].buffer;
+  case "fdb": return emulator.v86.cpu.devices.fdc.drives[1].buffer;
+  case "cdrom": return emulator.v86.cpu.devices.cdrom.buffer;
+  }
+  return null;
+}
+
 emulator.add_listener("emulator-loaded", async function(){
   // console.log("load state")
   await emulator.stop();
@@ -33,7 +52,7 @@ emulator.add_listener("emulator-loaded", async function(){
   await emulator.run();
   let out = fs.mkdtempSync("out");
   for (let disk of disks) {
-    let buf = emulator.disk_images[disk];
+    let buf = get_disk(emulator, disk);
     if (buf == null) {
       continue;
     }

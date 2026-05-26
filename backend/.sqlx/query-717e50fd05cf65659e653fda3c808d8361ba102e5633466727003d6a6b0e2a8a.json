@@ -6,27 +6,57 @@
       {
         "ordinal": 0,
         "name": "object_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "object",
+            "name": "object_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "file_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "object",
+            "name": "file_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "object_description",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "object",
+            "name": "object_description"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "created_on",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "object",
+            "name": "created_on"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "creator_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "object",
+            "name": "creator_id"
+          }
+        }
       }
     ],
     "parameters": {

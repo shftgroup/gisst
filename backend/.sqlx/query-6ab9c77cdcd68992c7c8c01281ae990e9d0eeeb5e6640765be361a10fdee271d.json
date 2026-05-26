@@ -6,37 +6,79 @@
       {
         "ordinal": 0,
         "name": "work_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "work_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "work_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "work_name"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "work_version",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "work_version"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "work_platform",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "work_platform"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "created_on",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "created_on"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "work_derived_from",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "work_derived_from"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "creator_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "creator_id"
+          }
+        }
       }
     ],
     "parameters": {

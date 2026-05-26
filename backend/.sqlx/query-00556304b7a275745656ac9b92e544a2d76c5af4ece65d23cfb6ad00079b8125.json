@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "int_value",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "metrics",
+            "name": "int_value"
+          }
+        }
       }
     ],
     "parameters": {

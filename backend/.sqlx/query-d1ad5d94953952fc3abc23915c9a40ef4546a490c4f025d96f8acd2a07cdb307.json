@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT reltuples::bigint AS estimate\n                               FROM pg_class\n                               WHERE oid = ($1::text)::regclass",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "estimate",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d1ad5d94953952fc3abc23915c9a40ef4546a490c4f025d96f8acd2a07cdb307"
+}
