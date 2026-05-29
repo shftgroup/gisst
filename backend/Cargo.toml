@@ -1,5 +1,5 @@
 [workspace]
-members = ["gisst", "gisst-server", "gisst-cli", "ingest", "rdb-sys"]
+members = ["gisst", "gisst-server", "gisst-cli", "ingest", "mirror-rdb", "rdb-sys"]
 resolver = "2"
 
 [workspace.package]

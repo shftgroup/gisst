@@ -1,0 +1,366 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO rdb_work VALUES(\n  $1, $2, $3, $4, $5, $6, $7, $8,\n  $9, $10, $11, $12, $13, $14, $15,\n  $16, $17, $18, $19, $20, $21, $22,\n  $23, $24, $25, $26, $27\n)\nON CONFLICT (platform, name) DO UPDATE SET\nserial=EXCLUDED.serial,\nsha1=EXCLUDED.sha1,\ncrc=EXCLUDED.crc,\nmd5=EXCLUDED.md5,\nsize=EXCLUDED.size,\ndescription=EXCLUDED.description,\nreleaseyear=EXCLUDED.releaseyear,\nreleasemonth=EXCLUDED.releasemonth,\nreleaseday=EXCLUDED.releaseday,\ngenre=EXCLUDED.genre,\nanalog=EXCLUDED.analog,\nfamitsu_rating=EXCLUDED.famitsu_rating,\nfranchise=EXCLUDED.franchise,\npublisher=EXCLUDED.publisher,\nrom_name=EXCLUDED.rom_name,\nusers=EXCLUDED.users,\nesrb_rating=EXCLUDED.esrb_rating,\nedge_issue=EXCLUDED.edge_issue,\nrumble=EXCLUDED.rumble,\norigin=EXCLUDED.origin,\nenhancement_hw=EXCLUDED.enhancement_hw,\nelspa_rating=EXCLUDED.elspa_rating,\nedge_rating=EXCLUDED.edge_rating,\nregion=EXCLUDED.region,\ndeveloper=EXCLUDED.developer\nRETURNING *\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "platform",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "platform"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "serial",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "serial"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "sha1",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "sha1"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "crc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "crc"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "md5",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "md5"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "size",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "size"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "releaseyear",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "releaseyear"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "releasemonth",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "releasemonth"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "releaseday",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "releaseday"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "genre",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "genre"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "analog",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "analog"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "famitsu_rating",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "famitsu_rating"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "franchise",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "franchise"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "publisher",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "publisher"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "rom_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "rom_name"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "users",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "users"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "esrb_rating",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "esrb_rating"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "edge_issue",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "edge_issue"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "rumble",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "rumble"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "origin",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "origin"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "enhancement_hw",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "enhancement_hw"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "elspa_rating",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "elspa_rating"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "edge_rating",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "edge_rating"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "region",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "region"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "developer",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "developer"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Text",
+        "Bool",
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Int4",
+        "Bool",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "4e5170111d4fc9b63a7b30399b66ad071d79a6c2d103188da19c008a7b618d45"
+}

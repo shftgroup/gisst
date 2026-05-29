@@ -137,7 +137,7 @@ class GISSTInstanceSearch extends HTMLElement {
         widgets.configure({ hitsPerPage: 10 }),
         widgets.pagination({ container: pagination, padding: 0, showFirst:false, showLast: false }),
     ]);
-    
+
 
     search.start();
   }
@@ -226,7 +226,7 @@ class GISSTStateSearch extends HTMLElement {
         templates: {
           item: (hit, { html, components }) => html`
            <div class="gisst-Search-results-row gisst-Search-responsive-results-row
-           ${!show_creator_info ? "gisst-Search-no-creator":""} 
+           ${!show_creator_info ? "gisst-Search-no-creator":""}
            ${hit.hidden ? "gisst-Search-item-hidden" : ""}
            ${!show_instance_info ? "gisst-Search-no-instance":""}">
               <div class="gisst-Search-cell gisst-Search-screenshot-cell">
@@ -293,11 +293,11 @@ class GISSTStateSearch extends HTMLElement {
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                    </svg>                  
+                    </svg>
                   </a>
                 ` : ""}
               </div>
-            </div> 
+            </div>
           `
         }
       })
@@ -468,7 +468,7 @@ class GISSTSaveSearch extends HTMLElement {
                 </svg>
 </a>
 </div>
-            </div>  
+            </div>
           `
         }
       })
@@ -574,7 +574,7 @@ class GISSTPerformanceSearch extends HTMLElement {
         templates: {
           item: (hit, { html, components }) => html`
             <div class="gisst-Search-results-row gisst-Search-responsive-results-row
-           ${!show_creator_info ? "gisst-Search-no-creator":""} 
+           ${!show_creator_info ? "gisst-Search-no-creator":""}
            ${hit.hidden ? "gisst-Search-item-hidden" : ""}
            ${!show_instance_info ? "gisst-Search-no-instance":""}">
               <div class="gisst-Search-cell gisst-Search-performance-info">
@@ -630,7 +630,7 @@ class GISSTPerformanceSearch extends HTMLElement {
                 </svg>
 </a>
               </div>
-            </div>  
+            </div>
         `
         }
       })
@@ -1060,7 +1060,7 @@ class GISSTNewInstance extends HTMLElement {
     const core_chooser = document.querySelector("#work_info select[name=work_core_chooser]")! as HTMLSelectElement;
     const match_core_chooser = this.content_matcher.querySelector(".core_chooser")! as HTMLSelectElement;
     try {
-      const resp = await (await fetch(`${this.base_url}/lookup-work?platform=${platform_esc}&filename=${filename_esc}&hash=${hash_esc}`)).json();
+      const resp = await (await fetch(`${this.base_url}/lookup-work?platform=${platform_esc}&filename=${filename_esc}&md5=${hash_esc}`)).json();
       // resp has work bib fields
       // and if there is an existing instance we should use that
       if (resp.instance_id) {
@@ -1070,7 +1070,7 @@ class GISSTNewInstance extends HTMLElement {
       } else {
         core_chooser.selectedIndex = match_core_chooser.selectedIndex;
         this.update_work_bibinfo(resp as WorkBib);
-        match_result.textContent = "Matched existing work";
+        match_result.textContent = "Matched known work";
         this.add_to_file_list("content", file.name, {to_upload:file});
       }
     } catch (error) {
@@ -1124,6 +1124,7 @@ class GISSTNewInstance extends HTMLElement {
     const opt = core_chooser.selectedOptions[0]! as HTMLOptionElement;
     this.environment.environment_core_name = opt.dataset["coreName"]!;
     this.environment.environment_core_version = opt.dataset["coreVersion"]!;
+    this.environment.environment_platform = this.work.work_platform;
     this.environment.environment_framework = this.environment.environment_core_name == "v86" ? "v86" : "retroarch";
     // TODO: set them here...
   }
@@ -1259,7 +1260,7 @@ ${filename} <button type="button" class="move-up">^</button> <button type="butto
     }
     this.environment = full_instance.environment;
     const core_chooser = document.querySelector("#work_info select[name=work_core_chooser]")! as HTMLSelectElement;
-    core_chooser.selectedIndex = Array.from(core_chooser.options).findIndex((o) => 
+    core_chooser.selectedIndex = Array.from(core_chooser.options).findIndex((o) =>
       o.dataset["coreName"] == this.environment.environment_core_name &&
         o.dataset["corePlatform"] == this.environment.environment_platform
     );

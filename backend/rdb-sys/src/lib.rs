@@ -8,7 +8,7 @@ pub type RetroCursor = c_void;
 pub type RetroQuery = c_void;
 
 #[repr(C)]
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
 pub enum RType {
     Null = 0,
     Bool,
@@ -230,23 +230,47 @@ impl From<&str> for RVal {
         Self::from(s)
     }
 }
+impl TryFrom<&RVal> for bool {
+    type Error = ();
+
+    fn try_from(value: &RVal) -> Result<Self, Self::Error> {
+        match value.tag {
+            RType::UInt => unsafe { Ok(value.value.uint_ != 0) },
+            RType::Int => unsafe { Ok(value.value.int_ != 0) },
+            RType::Bool => unsafe { Ok(value.value.bool_ != 0) },
+            _ => Err(()),
+        }
+    }
+}
 
 impl TryFrom<&RVal> for String {
     type Error = ();
 
     fn try_from(value: &RVal) -> Result<Self, Self::Error> {
-        if value.tag != RType::String {
-            return Err(());
+        match value.tag {
+            RType::String => {
+                let slc = unsafe {
+                    std::slice::from_raw_parts(
+                        value.value.str_.buf as *const u8,
+                        value.value.str_.len as usize,
+                    )
+                };
+                std::str::from_utf8(slc)
+                    .map_err(|_| ())
+                    .map(std::string::ToString::to_string)
+            }
+            RType::Binary => {
+                use base16ct;
+                let slc = unsafe {
+                    std::slice::from_raw_parts(
+                        value.value.str_.buf as *const u8,
+                        value.value.str_.len as usize,
+                    )
+                };
+                Ok(base16ct::lower::encode_string(slc))
+            }
+            _ => Err(()),
         }
-        let slc = unsafe {
-            std::slice::from_raw_parts(
-                value.value.str_.buf as *const u8,
-                value.value.str_.len as usize,
-            )
-        };
-        std::str::from_utf8(slc)
-            .map_err(|_| ())
-            .map(std::string::ToString::to_string)
     }
 }
 
@@ -282,7 +306,50 @@ impl TryFrom<&RVal> for &[u8] {
         })
     }
 }
+impl TryFrom<&RVal> for i32 {
+    type Error = ();
 
+    fn try_from(value: &RVal) -> Result<Self, Self::Error> {
+        match value.tag {
+            RType::UInt => unsafe { i32::try_from(value.value.uint_).map_err(|_| ()) },
+            RType::Int => unsafe { i32::try_from(value.value.int_).map_err(|_| ()) },
+            _ => Err(()),
+        }
+    }
+}
+impl TryFrom<&RVal> for u32 {
+    type Error = ();
+
+    fn try_from(value: &RVal) -> Result<Self, Self::Error> {
+        match value.tag {
+            RType::UInt => unsafe { u32::try_from(value.value.uint_).map_err(|_| ()) },
+            RType::Int => unsafe { u32::try_from(value.value.int_).map_err(|_| ()) },
+            _ => Err(()),
+        }
+    }
+}
+impl TryFrom<&RVal> for i64 {
+    type Error = ();
+
+    fn try_from(value: &RVal) -> Result<Self, Self::Error> {
+        match value.tag {
+            RType::UInt => unsafe { i64::try_from(value.value.uint_).map_err(|_| ()) },
+            RType::Int => unsafe { Ok(value.value.int_) },
+            _ => Err(()),
+        }
+    }
+}
+impl TryFrom<&RVal> for u64 {
+    type Error = ();
+
+    fn try_from(value: &RVal) -> Result<Self, Self::Error> {
+        match value.tag {
+            RType::UInt => unsafe { Ok(value.value.uint_) },
+            RType::Int => unsafe { u64::try_from(value.value.int_).map_err(|_| ()) },
+            _ => Err(()),
+        }
+    }
+}
 pub enum RDBError {
     IO,
     Path,
@@ -330,14 +397,9 @@ impl RDB {
         K: Into<RVal>,
         V: for<'a> TryFrom<&'a RVal> + std::cmp::PartialEq,
     {
-        let mut cursor = self.open_cursor()?;
         let key: RVal = key.into();
-        while let Some(rval) = cursor.next() {
-            if rval.map_get_rval::<V>(&key).is_some_and(&test) {
-                return Some(rval);
-            }
-        }
-        None
+        self.open_cursor()?
+            .find(|rval| rval.map_get_rval::<V>(&key).is_some_and(&test))
     }
 }
 impl Drop for RDB {
@@ -350,8 +412,9 @@ impl Drop for RDB {
 }
 
 pub struct Cursor(*mut RetroCursor);
-impl Cursor {
-    fn next(&mut self) -> Option<RVal> {
+impl std::iter::Iterator for Cursor {
+    type Item = RVal;
+    fn next(&mut self) -> Option<Self::Item> {
         let mut rval = RVal::default();
         if unsafe { libretrodb_cursor_read_item(self.0, &raw mut rval) == 0 } {
             Some(rval)

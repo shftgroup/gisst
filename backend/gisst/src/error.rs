@@ -38,6 +38,7 @@ pub enum Table {
     Work,
     Core,
     CoreFile,
+    RDBWork,
 }
 
 impl fmt::Display for Table {
@@ -57,6 +58,7 @@ impl fmt::Display for Table {
             Table::Work => "work",
             Table::Core => "core",
             Table::CoreFile => "core_file",
+            Table::RDBWork => "rdb_work",
         };
         write!(f, "{s}")
     }

@@ -72,6 +72,7 @@ pub enum ServerError {
     UploadTooBig(std::num::TryFromIntError),
     #[error("Role index exceeds 65535, we don't support that many objects")]
     RoleIndexTooBig(std::num::TryFromIntError),
+    #[allow(unused)]
     #[error("Route not yet implemented")]
     NotYetImplemented,
     #[error("this should not be reachable!")]

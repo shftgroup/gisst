@@ -1,0 +1,194 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on, work.creator_id as work_creator, work.work_derived_from as work_derived_from,\ninstance_id, instance.created_on as instance_created_on,\nenvironment_name, environment_framework as \"environment_framework:_\", environment_core_name, environment_core_version, environment.created_on as environment_created_on\n               FROM instance JOIN environment USING (environment_id) JOIN work USING (work_id) WHERE instance_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "work_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "instance",
+            "name": "work_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "work_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "work_name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "work_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "work_version"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "work_platform",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "work_platform"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "work_created_on",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "created_on"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "work_creator",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "creator_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "work_derived_from",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "work",
+            "name": "work_derived_from"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "instance_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "instance",
+            "name": "instance_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "instance_created_on",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "instance",
+            "name": "created_on"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "environment_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "environment",
+            "name": "environment_name"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "environment_framework:_",
+        "type_info": {
+          "Custom": {
+            "name": "environment_framework",
+            "kind": {
+              "Enum": [
+                "retroarch",
+                "v86"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "environment",
+            "name": "environment_framework"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "environment_core_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "environment",
+            "name": "environment_core_name"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "environment_core_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "environment",
+            "name": "environment_core_version"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "environment_created_on",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "environment",
+            "name": "created_on"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "95e445416b14225b8bd0848c94eb5c92384e466b16dca6a1b1e03aa76408a52f"
+}

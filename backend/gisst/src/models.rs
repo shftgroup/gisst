@@ -1101,6 +1101,7 @@ pub struct InstanceWork {
     pub work_platform: String,
     pub work_created_on: chrono::DateTime<chrono::Utc>,
     pub work_creator: Option<Uuid>,
+    pub work_derived_from: Option<Uuid>,
     pub instance_id: Uuid,
     pub instance_created_on: chrono::DateTime<chrono::Utc>,
     pub environment_name: String,
@@ -1115,7 +1116,7 @@ impl InstanceWork {
         use futures::StreamExt;
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on, work.creator_id as work_creator,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on, work.creator_id as work_creator, work.work_derived_from as work_derived_from,
 instance_id, instance.created_on as instance_created_on,
 environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment.created_on as environment_created_on
                FROM instance JOIN environment USING (environment_id) JOIN work USING (work_id)"#
@@ -1129,7 +1130,7 @@ environment_name, environment_framework as "environment_framework:_", environmen
     ) -> sqlx::Result<Self> {
         sqlx::query_as!(
             Self,
-            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on, work.creator_id as work_creator,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on, work.creator_id as work_creator, work.work_derived_from as work_derived_from,
 instance_id, instance.created_on as instance_created_on,
 environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment.created_on as environment_created_on
                FROM instance JOIN environment USING (environment_id) JOIN work USING (work_id) WHERE instance_id=$1"#,
@@ -1137,6 +1138,22 @@ environment_name, environment_framework as "environment_framework:_", environmen
         )
         .fetch_one(conn)
         .await
+    }
+    pub fn get_for_file_hash(
+        conn: &mut PgConnection,
+        md5: &str,
+    ) -> impl futures::Stream<Item = Self> {
+        use futures::StreamExt;
+        sqlx::query_as!(
+            Self,
+            r#"SELECT work_id, work_name, work_version, work_platform, work.created_on as work_created_on, work.creator_id as work_creator, work.work_derived_from as work_derived_from,
+instance_id, instance.created_on as instance_created_on,
+environment_name, environment_framework as "environment_framework:_", environment_core_name, environment_core_version, environment.created_on as environment_created_on
+               FROM instance JOIN environment USING (environment_id) JOIN work USING (work_id) JOIN instanceObject USING(instance_id) JOIN object USING(object_id) JOIN file USING(file_id)
+               WHERE file.file_hash = $1"#, md5
+        )
+        .fetch(conn)
+        .filter_map(|f| futures::future::ready(f.ok()))
     }
 }
 #[derive(Debug, Serialize, Deserialize)]
@@ -1565,4 +1582,144 @@ pub enum Duplicate {
     ReuseObject,
     ReuseData,
     ForceUuid(Uuid),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RDBWork {
+    pub platform: String,
+    pub name: String,
+    pub serial: Option<String>,
+    pub sha1: Option<String>,
+    pub crc: Option<String>,
+    pub md5: Option<String>,
+    pub size: Option<i64>,
+    pub description: Option<String>,
+    pub releaseyear: Option<i32>,
+    pub releasemonth: Option<i32>,
+    pub releaseday: Option<i32>,
+    pub genre: Option<String>,
+    pub analog: Option<bool>,
+    pub famitsu_rating: Option<i32>,
+    pub franchise: Option<String>,
+    pub publisher: Option<String>,
+    pub rom_name: Option<String>,
+    pub users: Option<i32>,
+    pub esrb_rating: Option<String>,
+    pub edge_issue: Option<i32>,
+    pub rumble: Option<bool>,
+    pub origin: Option<String>,
+    pub enhancement_hw: Option<String>,
+    pub elspa_rating: Option<String>,
+    pub edge_rating: Option<i32>,
+    pub region: Option<String>,
+    pub developer: Option<String>,
+}
+impl RDBWork {
+    pub async fn insert(conn: &mut PgConnection, model: RDBWork) -> Result<Self, Insert> {
+        let record = sqlx::query_as!(
+            Self,
+            r#"
+INSERT INTO rdb_work VALUES(
+  $1, $2, $3, $4, $5, $6, $7, $8,
+  $9, $10, $11, $12, $13, $14, $15,
+  $16, $17, $18, $19, $20, $21, $22,
+  $23, $24, $25, $26, $27
+)
+ON CONFLICT (platform, name) DO UPDATE SET
+serial=EXCLUDED.serial,
+sha1=EXCLUDED.sha1,
+crc=EXCLUDED.crc,
+md5=EXCLUDED.md5,
+size=EXCLUDED.size,
+description=EXCLUDED.description,
+releaseyear=EXCLUDED.releaseyear,
+releasemonth=EXCLUDED.releasemonth,
+releaseday=EXCLUDED.releaseday,
+genre=EXCLUDED.genre,
+analog=EXCLUDED.analog,
+famitsu_rating=EXCLUDED.famitsu_rating,
+franchise=EXCLUDED.franchise,
+publisher=EXCLUDED.publisher,
+rom_name=EXCLUDED.rom_name,
+users=EXCLUDED.users,
+esrb_rating=EXCLUDED.esrb_rating,
+edge_issue=EXCLUDED.edge_issue,
+rumble=EXCLUDED.rumble,
+origin=EXCLUDED.origin,
+enhancement_hw=EXCLUDED.enhancement_hw,
+elspa_rating=EXCLUDED.elspa_rating,
+edge_rating=EXCLUDED.edge_rating,
+region=EXCLUDED.region,
+developer=EXCLUDED.developer
+RETURNING *
+"#,
+            model.platform,
+            model.name,
+            model.serial,
+            model.sha1,
+            model.crc,
+            model.md5,
+            model.size,
+            model.description,
+            model.releaseyear,
+            model.releasemonth,
+            model.releaseday,
+            model.genre,
+            model.analog,
+            model.famitsu_rating,
+            model.franchise,
+            model.publisher,
+            model.rom_name,
+            model.users,
+            model.esrb_rating,
+            model.edge_issue,
+            model.rumble,
+            model.origin,
+            model.enhancement_hw,
+            model.elspa_rating,
+            model.edge_rating,
+            model.region,
+            model.developer,
+        )
+        .fetch_one(conn.as_mut())
+        .await
+        .map_err(|e| RecordSQL {
+            table: Table::RDBWork,
+            action: Action::Insert,
+            source: e,
+        })?;
+        Ok(record)
+    }
+    pub async fn lookup(
+        conn: &mut PgConnection,
+        platform: &str,
+        filename: &str,
+        md5: Option<&str>,
+    ) -> sqlx::Result<Option<Self>> {
+        if let Some(md5) = md5 {
+            sqlx::query_as!(
+                Self,
+                r#"
+SELECT * FROM rdb_work
+WHERE platform=$1 AND md5=$2
+"#,
+                platform,
+                md5,
+            )
+            .fetch_optional(conn.as_mut())
+            .await
+        } else {
+            sqlx::query_as!(
+                Self,
+                r#"
+SELECT * FROM rdb_work
+WHERE platform=$1 AND (name ILIKE $2 || '%' OR rom_name ILIKE $2|| '%')
+"#,
+                platform,
+                filename
+            )
+            .fetch_optional(conn.as_mut())
+            .await
+        }
+    }
 }

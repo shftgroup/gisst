@@ -1,0 +1,341 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT * FROM rdb_work\nWHERE platform=$1 AND (name ILIKE $2 || '%' OR rom_name ILIKE $2|| '%')\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "platform",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "platform"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "serial",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "serial"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "sha1",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "sha1"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "crc",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "crc"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "md5",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "md5"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "size",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "size"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "releaseyear",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "releaseyear"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "releasemonth",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "releasemonth"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "releaseday",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "releaseday"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "genre",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "genre"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "analog",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "analog"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "famitsu_rating",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "famitsu_rating"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "franchise",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "franchise"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "publisher",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "publisher"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "rom_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "rom_name"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "users",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "users"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "esrb_rating",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "esrb_rating"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "edge_issue",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "edge_issue"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "rumble",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "rumble"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "origin",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "origin"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "enhancement_hw",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "enhancement_hw"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "elspa_rating",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "elspa_rating"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "edge_rating",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "edge_rating"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "region",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "region"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "developer",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rdb_work",
+            "name": "developer"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "ad167a46bc84f06d247956ecec452cd6afe1790a59c0e5775376b9f0ae46ee0e"
+}
