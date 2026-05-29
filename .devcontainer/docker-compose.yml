@@ -1,15 +1,17 @@
 services:
   devcontainer:
-    build:
-      context: ../
-      dockerfile: Dockerfile.dev
+    image: cafe.cs.pomona.edu/shftgroup/gisst-dev:latest
     env_file:
       - ./devcontainer.env
     environment:
       PODMAN_USERNS: keep-id
+      SSH_AUTH_SOCK: "/run/ssh.sock"
     volumes:
       - ../:/workspace:cached,Z
       - ./certs:/certs:Z
+      - source: "${SSH_AUTH_SOCK}"
+        target: "/run/ssh.sock"
+        type: bind
     command: sleep infinity
     expose:
       - "3000"
