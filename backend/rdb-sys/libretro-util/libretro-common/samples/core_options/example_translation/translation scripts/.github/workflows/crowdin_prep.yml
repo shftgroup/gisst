@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Setup Python
         uses: actions/setup-python@v2
-        
+
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           python3 intl/crowdin_prep.py '<path/to/libretro_core_options.h directory>'
-          
+
       - name: Commit files
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"

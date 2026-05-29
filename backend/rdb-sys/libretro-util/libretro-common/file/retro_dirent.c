@@ -51,7 +51,7 @@ void dirent_vfs_init(const struct retro_vfs_interface_info* vfs_info)
    vfs_iface                 = vfs_info->iface;
 
    if (
-         vfs_info->required_interface_version < DIRENT_REQUIRED_VFS_VERSION || 
+         vfs_info->required_interface_version < DIRENT_REQUIRED_VFS_VERSION ||
          !vfs_iface)
       return;
 

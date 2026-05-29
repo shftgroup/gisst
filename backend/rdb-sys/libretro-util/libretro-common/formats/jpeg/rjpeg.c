@@ -823,9 +823,9 @@ static void rjpeg_idct_block(uint8_t *out, int out_stride, short data[64])
    for (i = 0; i < 8; ++i,++d, ++v)
    {
       /* if all zeroes, shortcut -- this avoids dequantizing 0s and IDCTing */
-      if (     d[ 8] == 0 
-            && d[16] == 0 
-            && d[24] == 0 
+      if (     d[ 8] == 0
+            && d[16] == 0
+            && d[24] == 0
             && d[32] == 0
             && d[40] == 0
             && d[48] == 0
@@ -870,7 +870,7 @@ static void rjpeg_idct_block(uint8_t *out, int out_stride, short data[64])
        * we've got an extra 1<<3, so 1<<17 total we need to remove.
        * so we want to round that, which means adding 0.5 * 1<<17,
        * aka 65536. Also, we'll end up with -128 to 127 that we want
-       * to encode as 0..255 by adding 128, so we'll add that before the shift 
+       * to encode as 0..255 by adding 128, so we'll add that before the shift
        */
       x0 += 65536 + (128<<17);
       x1 += 65536 + (128<<17);

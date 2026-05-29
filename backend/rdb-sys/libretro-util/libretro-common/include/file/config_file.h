@@ -277,7 +277,7 @@ bool config_get_path(config_file_t *conf, const char *entry, char *s, size_t len
 
 /**
  * config_get_bool:
- * 
+ *
  * Extracts a boolean from config.
  * Valid boolean true are "true" and "1". Valid false are "false" and "0".
  * Other values will be treated as an error.

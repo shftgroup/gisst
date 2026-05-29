@@ -127,7 +127,7 @@ bool rjson_check_context(rjson_t *json, unsigned int depth, ...);
 unsigned int rjson_get_context_depth(rjson_t *json);
 
 /* Return the current parsing context, that is, RJSON_OBJECT if we are inside
- * an object, RJSON_ARRAY if we are inside an array, and RJSON_DONE or 
+ * an object, RJSON_ARRAY if we are inside an array, and RJSON_DONE or
  * RJSON_ERROR if we are not yet/anymore in either. */
 enum rjson_type rjson_get_context_type(rjson_t *json);
 

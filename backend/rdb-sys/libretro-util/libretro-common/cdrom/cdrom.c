@@ -1401,7 +1401,7 @@ struct string_list* cdrom_get_available_drives(void)
          struct string_list mods = {0};
 
          string_list_initialize(&mods);
-         
+
          if (string_split_noalloc(&mods, buf, "\n"))
          {
             for (i = 0; i < (int)mods.size; i++)

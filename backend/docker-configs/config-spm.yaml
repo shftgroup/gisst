@@ -34,7 +34,7 @@ extensions:
           directories:
             keys: "/jaeger/"
             values: "/jaeger/"
-          ephemeral: false 
+          ephemeral: false
     metric_backends:
       some_metrics_storage:
         prometheus:

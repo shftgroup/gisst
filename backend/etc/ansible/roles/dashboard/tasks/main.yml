@@ -30,7 +30,7 @@
     dest: "/etc/grafana/provisioning/dashboards/default.yaml"
 - name: Default dashboard definitions
   template:
-    src: "templates/dashboards/{{ item }}.json"
+    src: "templates/dashboards/{{ item }}.json.j2"
     dest: "/var/lib/grafana/dashboards/{{ item }}.json"
   loop:
     - activity

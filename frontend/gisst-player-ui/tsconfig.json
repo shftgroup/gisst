@@ -15,8 +15,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noImplicitReturns": true,
-    "skipLibCheck": true,
-    //"types": ["vite/client"]
+    "skipLibCheck": true
   },
   "include": ["src"]
 }

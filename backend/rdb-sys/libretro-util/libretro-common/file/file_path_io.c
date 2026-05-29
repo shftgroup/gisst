@@ -48,7 +48,7 @@ static retro_vfs_mkdir_t path_mkdir_cb = retro_vfs_mkdir_impl;
 
 void path_vfs_init(const struct retro_vfs_interface_info* vfs_info)
 {
-   const struct retro_vfs_interface* 
+   const struct retro_vfs_interface*
       vfs_iface           = vfs_info->iface;
 
    path_stat_cb           = retro_vfs_stat_impl;
@@ -103,7 +103,7 @@ int32_t path_get_size(const char *path)
  * @dir                : directory
  *
  * Create directory on filesystem.
- * 
+ *
  * Recursive function.
  *
  * @return true if directory could be created, otherwise false.
@@ -116,7 +116,7 @@ bool path_mkdir(const char *dir)
    if (!(dir && *dir))
       return false;
 
-   /* Use heap. Real chance of stack 
+   /* Use heap. Real chance of stack
     * overflow if we recurse too hard. */
    if (!(basedir = strdup(dir)))
       return false;

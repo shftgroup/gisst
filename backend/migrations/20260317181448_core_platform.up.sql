@@ -4,9 +4,9 @@ ALTER TABLE core ADD COLUMN core_platform text NOT NULL DEFAULT '';
 UPDATE core
   SET core_platform = work.work_platform
   FROM environment, instance, work
-  WHERE core.core_name = environment.environment_core_name AND 
-        environment.environment_id = instance.environment_id AND 
-	instance.work_id = work.work_id; 
+  WHERE core.core_name = environment.environment_core_name AND
+        environment.environment_id = instance.environment_id AND
+	instance.work_id = work.work_id;
 
 UPDATE core
   SET core_platform = 'Nintendo Game Boy Advance'

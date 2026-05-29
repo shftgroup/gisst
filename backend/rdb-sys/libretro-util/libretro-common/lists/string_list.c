@@ -506,7 +506,7 @@ struct string_list *string_list_clone(const struct string_list *src)
    dest->size                     = src->size;
    if (src->cap < dest->size)
       dest->cap                   = dest->size;
-   else 
+   else
       dest->cap                   = src->cap;
 
    if (!(elems = (struct string_list_elem*)

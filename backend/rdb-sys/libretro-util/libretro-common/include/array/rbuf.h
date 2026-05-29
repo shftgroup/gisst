@@ -50,11 +50,11 @@
  * -- Explicitly increase allocated memory and set capacity:
  * RBUF_FIT(buf, 100);
  * -- now RBUF_LEN(buf) == 0, RBUF_CAP(buf) == 100
- * 
+ *
  * -- Resize buffer (does not initialize or zero memory!)
  * RBUF_RESIZE(buf, 200);
  * -- now RBUF_LEN(buf) == 200, RBUF_CAP(buf) == 200
- * 
+ *
  * -- To handle running out of memory:
  * bool ran_out_of_memory = !RBUF_TRYFIT(buf, 1000);
  * -- before RESIZE or PUSH. When out of memory, buf will stay unmodified.

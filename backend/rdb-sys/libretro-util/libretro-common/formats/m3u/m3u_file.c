@@ -57,7 +57,7 @@ struct content_m3u_file
 /* File Initialisation / De-Initialisation */
 
 /* Reads M3U file contents from disk
- * - Does nothing if file does not exist 
+ * - Does nothing if file does not exist
  * - Returns false in the event of an error */
 static bool m3u_file_load(m3u_file_t *m3u_file)
 {

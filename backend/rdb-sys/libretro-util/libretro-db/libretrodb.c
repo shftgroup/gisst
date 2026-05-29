@@ -455,7 +455,7 @@ int libretrodb_create_index(libretrodb_t *db,
    bintree_t *tree;
    uint64_t item_count              = 0;
    int rval                         = -1;
-   
+
    if (libretrodb_find_index(db, name, &idx) >= 0) {
      return 1;
    }
@@ -492,7 +492,7 @@ int libretrodb_create_index(libretrodb_t *db,
       if (field_size == 0)
          field_size = field->val.binary.len;
       /* Field is not of correct size */
-      else if (field->val.binary.len != field_size) 
+      else if (field->val.binary.len != field_size)
          goto clean;
 
       if (!(buff = malloc(field_size + sizeof(uint64_t))))
@@ -520,7 +520,7 @@ int libretrodb_create_index(libretrodb_t *db,
       item_loc = filestream_tell(cur.fd);
    }
    rval = 0;
-   
+
    filestream_seek(db->fd, 0, RETRO_VFS_SEEK_POSITION_END);
 
    strlcpy(idx.name, name, sizeof(idx.name));

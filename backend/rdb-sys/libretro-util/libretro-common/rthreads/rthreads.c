@@ -227,7 +227,7 @@ sthread_t *sthread_create_with_priority(void (*thread_func)(void*), void *userda
    pthread_attr_setstacksize(&thread_attr , 0x10000 );
    thread_attr_needed = true;
 #elif defined(__APPLE__)
-   /* Default stack size on Apple is 512Kb; 
+   /* Default stack size on Apple is 512Kb;
     * for PS2 disc scanning and other reasons, we'd like 2MB. */
    pthread_attr_setstacksize(&thread_attr , 0x200000 );
    thread_attr_needed = true;

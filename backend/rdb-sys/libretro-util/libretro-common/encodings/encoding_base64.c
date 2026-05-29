@@ -79,7 +79,7 @@ char* base64(const void* binaryData, int len, int *flen)
    *flen                    = 4*(len + pad)/3;
    if (!(res = (char*) malloc(*flen + 1))) /* and one for the NULL */
       return 0;
-  
+
    for (byteNo=0; byteNo <= len-3; byteNo+=3)
    {
       unsigned char BYTE0            = bin[byteNo];
@@ -91,7 +91,7 @@ char* base64(const void* binaryData, int len, int *flen)
       res[rc++] = b64[((0x0f&BYTE1)<<2) + (BYTE2>>6)];
       res[rc++] = b64[0x3f&BYTE2];
    }
-  
+
    if (pad==2)
    {
       res[rc++] = b64[bin[byteNo] >> 2];
@@ -106,7 +106,7 @@ char* base64(const void* binaryData, int len, int *flen)
       res[rc++] = b64[(0x0f&bin[byteNo+1])<<2];
       res[rc++] = '=';
    }
-  
+
    res[rc]=0; /* NULL TERMINATOR! ;) */
    return res;
 }
@@ -122,7 +122,7 @@ unsigned char* unbase64(const char* ascii, int len, int *flen)
    if (len < 2) /* 2 accesses below would be OOB (Out Of Bounds). */
    {
       /* catch empty string, return NULL as result. */
-      /* ERROR: You passed an invalid base64 string (too short). 
+      /* ERROR: You passed an invalid base64 string (too short).
        * You get NULL back. */
       *flen = 0;
       return 0;
@@ -132,29 +132,29 @@ unsigned char* unbase64(const char* ascii, int len, int *flen)
       ++pad;
    if (safeAsciiPtr[len-2]=='=')
       ++pad;
-  
+
    *flen = 3*len/4 - pad;
    if (!(bin = (unsigned char*)malloc(*flen)))
       return 0;
-  
+
    for (charNo=0; charNo <= len-4-pad; charNo+=4)
    {
       int A = unb64[safeAsciiPtr[charNo]];
       int B = unb64[safeAsciiPtr[charNo+1]];
       int C = unb64[safeAsciiPtr[charNo+2]];
       int D = unb64[safeAsciiPtr[charNo+3]];
-    
+
       bin[cb++] = (A<<2) | (B>>4);
       bin[cb++] = (B<<4) | (C>>2);
       bin[cb++] = (C<<6) | (D);
    }
-  
+
    if (pad==1)
    {
       int A = unb64[safeAsciiPtr[charNo]];
       int B = unb64[safeAsciiPtr[charNo+1]];
       int C = unb64[safeAsciiPtr[charNo+2]];
-    
+
       bin[cb++] = (A<<2) | (B>>4);
       bin[cb++] = (B<<4) | (C>>2);
    }
@@ -162,10 +162,10 @@ unsigned char* unbase64(const char* ascii, int len, int *flen)
    {
       int A = unb64[safeAsciiPtr[charNo]];
       int B = unb64[safeAsciiPtr[charNo+1]];
-    
+
       bin[cb++] = (A<<2) | (B>>4);
    }
-  
+
    return bin;
 }
 

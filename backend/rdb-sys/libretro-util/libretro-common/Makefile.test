@@ -45,7 +45,7 @@ all:
 	$(CC) $(TEST_UNIT_CFLAGS) $(TEST_GENERIC_QUEUE_SRC) -o $(TEST_GENERIC_QUEUE)
 	$(TEST_GENERIC_QUEUE)
 	lcov -c -d . -o `dirname $(TEST_GENERIC_QUEUE)`/coverage.info
-	
+
 	lcov -o test/coverage.info \
 	     -a test/utils/coverage.info \
 	     -a test/string/coverage.info \

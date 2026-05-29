@@ -61,20 +61,20 @@ static bool append_cert_x509(void* x509, size_t len)
    br_x509_pkey* pk;
    br_x509_decoder_context dc;
    br_x509_trust_anchor* ta = &TAs[TAs_NUM];
-   
+
    current_vdn              = NULL;
    current_vdn_size         = 0;
-   
+
    br_x509_decoder_init(&dc, vdn_append, NULL);
    br_x509_decoder_push(&dc, x509, len);
    pk                       = br_x509_decoder_get_pkey(&dc);
    if (!pk || !br_x509_decoder_isCA(&dc))
       return false;
-   
+
    ta->dn.len               = current_vdn_size;
    ta->dn.data              = current_vdn;
    ta->flags                = BR_X509_TA_CA;
-   
+
    switch (pk->key_type)
    {
       case BR_KEYTYPE_RSA:
@@ -93,7 +93,7 @@ static bool append_cert_x509(void* x509, size_t len)
       default:
          return false;
    }
-   
+
    TAs_NUM++;
    return true;
 }
@@ -120,7 +120,7 @@ static char* delete_linebreaks(char* in)
    return in;
 }
 
-/* this rearranges its input, it's easier to implement 
+/* this rearranges its input, it's easier to implement
  * that way and caller doesn't need it anymore anyways */
 static void append_certs_pem_x509(char * certs_pem)
 {
@@ -148,7 +148,7 @@ static void append_certs_pem_x509(char * certs_pem)
    }
 }
 
-/* TODO: not thread safe, rthreads doesn't provide any 
+/* TODO: not thread safe, rthreads doesn't provide any
  * statically allocatable mutex/etc */
 static void initialize(void)
 {
@@ -186,8 +186,8 @@ static bool process_inner(struct ssl_state *state, bool blocking)
    if (buflen)
    {
       if (blocking)
-         bytes = (socket_send_all_blocking(state->fd, buf, buflen, true) 
-               ? buflen 
+         bytes = (socket_send_all_blocking(state->fd, buf, buflen, true)
+               ? buflen
                : -1);
       else
          bytes = socket_send_all_nonblocking(state->fd, buf, buflen, true);
@@ -196,9 +196,9 @@ static bool process_inner(struct ssl_state *state, bool blocking)
          br_ssl_engine_sendrec_ack(&state->sc.eng, bytes);
       if (bytes < 0)
          return false;
-      /* if we did something, return immediately so we 
+      /* if we did something, return immediately so we
        * don't try to read if Bear still wants to send */
-      return true; 
+      return true;
    }
 
    buf = br_ssl_engine_recvrec_buf(&state->sc.eng, &buflen);
@@ -265,13 +265,13 @@ ssize_t ssl_socket_receive_all_nonblocking(void *state_data,
       *error = true;
       return -1;
    }
-   
+
    bear_data = br_ssl_engine_recvapp_buf(&state->sc.eng, &bear_data_size);
    if (bear_data_size > size) bear_data_size = size;
    memcpy(data_, bear_data, bear_data_size);
    if (bear_data_size)
       br_ssl_engine_recvapp_ack(&state->sc.eng, bear_data_size);
-   
+
    return bear_data_size;
 }
 
@@ -367,15 +367,15 @@ void ssl_socket_close(void *state_data)
 
    br_ssl_engine_close(&state->sc.eng);
    process_inner(state, false); /* send close notification */
-   socket_close(state->fd);     /* but immediately close socket 
-                                   and don't worry about recipient 
+   socket_close(state->fd);     /* but immediately close socket
+                                   and don't worry about recipient
                                    getting our message */
 }
 
 void ssl_socket_free(void *state_data)
 {
    struct ssl_state *state = (struct ssl_state*)state_data;
-   /* BearSSL does zero allocations of its own, 
+   /* BearSSL does zero allocations of its own,
     * so other than this struct, there is nothing to free */
    free(state);
 }

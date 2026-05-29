@@ -44,7 +44,7 @@
 #include <ws2tcpip.h>
 
 #if _MSC_VER && _MSC_VER <= 1600
-/* If we are using MSVC2010 or lower, disable WSAPoll support 
+/* If we are using MSVC2010 or lower, disable WSAPoll support
  * to ensure Windows XP and earlier backwards compatibility */
 #else
 #ifndef WIN32_SUPPORTS_POLL

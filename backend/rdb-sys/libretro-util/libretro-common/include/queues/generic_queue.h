@@ -50,7 +50,7 @@ generic_queue_t *generic_queue_new(void);
 
 /**
  * @brief frees the memory used by the queue
- * 
+ *
  * Frees all of the memory used by this queue. The values of all
  * remaining elements are freed using the "free_value" function. Does
  * nothing if "queue" is NULL.

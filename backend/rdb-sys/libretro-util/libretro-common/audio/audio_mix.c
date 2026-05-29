@@ -176,9 +176,9 @@ audio_chunk_t* audio_mix_load_wav_file(const char *path, int sample_rate,
             uint8_t *sample                  = (
                   (uint8_t*)chunk->rwav->samples) + i;
 
-            chunk->upsample_buf[i * 2]       = 
+            chunk->upsample_buf[i * 2]       =
                (int16_t)((sample[0] - 128) << 8);
-            chunk->upsample_buf[(i * 2) + 1] = 
+            chunk->upsample_buf[(i * 2) + 1] =
                (int16_t)((sample[0] - 128) << 8);
          }
       }
@@ -190,9 +190,9 @@ audio_chunk_t* audio_mix_load_wav_file(const char *path, int sample_rate,
                   (uint8_t*)chunk->rwav->samples) +
                (i * 2);
 
-            chunk->upsample_buf[i * 2]       = 
+            chunk->upsample_buf[i * 2]       =
                (int16_t)((sample[0] - 128) << 8);
-            chunk->upsample_buf[(i * 2) + 1] = 
+            chunk->upsample_buf[(i * 2) + 1] =
                (int16_t)((sample[1] - 128) << 8);
          }
       }
@@ -238,13 +238,13 @@ audio_chunk_t* audio_mix_load_wav_file(const char *path, int sample_rate,
          struct resampler_data info;
 
          chunk->float_buf          = (float*)memalign_alloc(128,
-               chunk->rwav->numsamples * 2 * 
+               chunk->rwav->numsamples * 2 *
                chunk->ratio * sizeof(float));
 
-         /* why is *3 needed instead of just *2? Does the 
+         /* why is *3 needed instead of just *2? Does the
           * sinc driver require more space than we know about? */
          chunk->float_resample_buf = (float*)memalign_alloc(128,
-               chunk->rwav->numsamples * 3 * 
+               chunk->rwav->numsamples * 3 *
                chunk->ratio * sizeof(float));
 
          convert_s16_to_float(chunk->float_buf,
@@ -260,7 +260,7 @@ audio_chunk_t* audio_mix_load_wav_file(const char *path, int sample_rate,
 
          chunk->resampler->process(chunk->resampler_data, &info);
 
-         /* number of output_frames does not increase with 
+         /* number of output_frames does not increase with
           * multiple channels, but assume we need space for 2 */
          chunk->resample_buf = (int16_t*)memalign_alloc(128,
                info.output_frames * 2 * sizeof(int16_t));
@@ -323,11 +323,11 @@ int16_t audio_mix_get_chunk_sample(audio_chunk_t *chunk,
 
       if (chunk->resample)
          sample = (uint8_t*)chunk->resample_buf +
-            (sample_size * index * chunk->rwav->numchannels) 
+            (sample_size * index * chunk->rwav->numchannels)
             + (channel * sample_size);
       else
          sample = (uint8_t*)chunk->upsample_buf +
-            (sample_size * index * chunk->rwav->numchannels) 
+            (sample_size * index * chunk->rwav->numchannels)
             + (channel * sample_size);
 
       sample_out = (int16_t)*sample;

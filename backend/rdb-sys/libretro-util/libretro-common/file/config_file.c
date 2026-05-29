@@ -255,7 +255,7 @@ static char *config_file_extract_value(char *line)
          return strdup(value);
    }
 
-   /* Note 2: This is an unrolled strldup call 
+   /* Note 2: This is an unrolled strldup call
     * to avoid an unnecessary dependency -
     * call is strldup("", sizeof(""))
     **/
@@ -464,8 +464,8 @@ static int config_file_load_internal(
          continue;
       }
 
-      if ( 
-              !string_is_empty(line) 
+      if (
+              !string_is_empty(line)
             && config_file_parse_line(conf, list, line, cb))
       {
          if (conf->entries)
@@ -522,7 +522,7 @@ static bool config_file_parse_line(config_file_t *conf,
       bool reference_found     = string_starts_with_size(comment,
             "reference ", STRLEN_CONST("reference "));
 
-      /* All comments except those starting with the include or 
+      /* All comments except those starting with the include or
        * reference directive are ignored */
       if (!include_found && !reference_found)
          return false;
@@ -708,7 +708,7 @@ static int config_file_from_string_internal(
       /* Get next line of config file */
       line = strtok_r(NULL, "\n", &save_ptr);
    }
-   
+
    return 0;
 }
 
@@ -826,7 +826,7 @@ config_file_t *config_file_new_from_string(char *from_string,
       const char *path)
 {
    struct config_file *conf      = config_file_new_alloc();
-   if (     conf 
+   if (     conf
          && config_file_from_string_internal(
             conf, from_string, path) != -1)
       return conf;
@@ -1195,7 +1195,7 @@ bool config_get_path(config_file_t *conf, const char *key,
 
 /**
  * config_get_bool:
- * 
+ *
  * Extracts a boolean from config.
  * Valid boolean true are "true" and "1". Valid false are "false" and "0".
  * Other values will be treated as an error.

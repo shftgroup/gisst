@@ -96,7 +96,7 @@ struct http_connection_t
  **/
 void net_http_urlencode(char **dest, const char *source)
 {
-   static const char urlencode_lut[256] = 
+   static const char urlencode_lut[256] =
    {
       0,       /* 0   */
       0,       /* 1   */
@@ -440,7 +440,7 @@ static int net_http_new_socket(struct http_connection_t *conn)
          goto done;
       }
 
-      /* TODO: Properly figure out what's going wrong when the newer 
+      /* TODO: Properly figure out what's going wrong when the newer
          timeout/poll code interacts with mbed and winsock
          https://github.com/libretro/RetroArch/issues/14742 */
 
@@ -963,7 +963,7 @@ bool net_http_update(struct http_t *state, size_t* progress, size_t* total)
                   state->error  = true;
                   goto error;
                }
-               state->status    = (int)strtoul(state->data 
+               state->status    = (int)strtoul(state->data
                      + STRLEN_CONST("HTTP/1.1 "), NULL, 10);
                state->part      = P_HEADER;
             }
@@ -1148,7 +1148,7 @@ error:
  * Report HTTP status. 200, 404, or whatever.
  *
  * Leaf function.
- * 
+ *
  * @return HTTP status code.
  **/
 int net_http_status(struct http_t *state)

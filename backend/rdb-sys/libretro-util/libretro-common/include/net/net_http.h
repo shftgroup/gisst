@@ -81,7 +81,7 @@ bool net_http_update(struct http_t *state, size_t* progress, size_t* total);
  * Report HTTP status. 200, 404, or whatever.
  *
  * Leaf function.
- * 
+ *
  * @return HTTP status code.
  **/
 int net_http_status(struct http_t *state);

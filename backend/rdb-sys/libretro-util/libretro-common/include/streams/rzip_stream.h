@@ -34,7 +34,7 @@ RETRO_BEGIN_DECLS
 
 /* Rudimentary interface for streaming data to/from a
  * zlib-compressed chunk-based RZIP archive file.
- * 
+ *
  * This is somewhat less efficient than using regular
  * gzip code, but this is by design - the intention here
  * is to create an interface that integrates seamlessly
@@ -46,13 +46,13 @@ RETRO_BEGIN_DECLS
  * not substantially worse than external archiving tools;
  * it is certainly acceptable for use in real-time
  * frontend applications)
- * 
+ *
  * When reading existing files, uncompressed content
  * is handled automatically. File type (compressed/
  * uncompressed) is detected via the RZIP header.
- * 
+ *
  * ## RZIP file format:
- * 
+ *
  * <file id header>:                8 bytes
  *                                  - [#][R][Z][I][P][v][file format version][#]
  * <uncompressed chunk size>:       4 bytes, little endian order
@@ -66,7 +66,7 @@ RETRO_BEGIN_DECLS
  * ...
  * <size of next compressed chunk> : repeated until end of file
  * <next compressed chunk>         :
- * 
+ *
  */
 
 /* Prevent direct access to rzipstream_t members */

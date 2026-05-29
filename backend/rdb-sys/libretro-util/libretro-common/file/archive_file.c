@@ -63,7 +63,7 @@ static int file_archive_get_file_list_cb(
       /* Skip if directory. */
       if (last_char == '/' || last_char == '\\' )
          return 1;
-      
+
       string_list_initialize(&ext_list);
       if (string_split_noalloc(&ext_list, valid_exts, "|"))
       {
@@ -531,7 +531,7 @@ int file_archive_compressed_read(
       const char * path, void **buf,
       const char* optional_filename, int64_t *length)
 {
-   const struct 
+   const struct
       file_archive_file_backend *backend = NULL;
    struct string_list *str_list          = NULL;
 

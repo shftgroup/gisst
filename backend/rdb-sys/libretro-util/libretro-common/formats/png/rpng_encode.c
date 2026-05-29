@@ -223,7 +223,7 @@ bool rpng_save_image_stream(const uint8_t *data, intfstream_t* intf_s,
    void *stream            = NULL;
    uint32_t total_in       = 0;
    uint32_t total_out      = 0;
-   
+
    if (!intf_s)
       GOTO_END_ERROR();
 
@@ -370,8 +370,8 @@ bool rpng_save_image_argb(const char *path, const uint32_t *data,
 {
    bool ret                      = false;
    intfstream_t* intf_s          = NULL;
-   
-   intf_s = intfstream_open_file(path, 
+
+   intf_s = intfstream_open_file(path,
          RETRO_VFS_FILE_ACCESS_WRITE,
          RETRO_VFS_FILE_ACCESS_HINT_NONE);
 
@@ -388,11 +388,11 @@ bool rpng_save_image_bgr24(const char *path, const uint8_t *data,
 {
    bool ret                      = false;
    intfstream_t* intf_s          = NULL;
-   
-   intf_s = intfstream_open_file(path, 
+
+   intf_s = intfstream_open_file(path,
          RETRO_VFS_FILE_ACCESS_WRITE,
          RETRO_VFS_FILE_ACCESS_HINT_NONE);
-   ret = rpng_save_image_stream(data, intf_s, width, height, 
+   ret = rpng_save_image_stream(data, intf_s, width, height,
                                 (signed) pitch, 3);
    intfstream_close(intf_s);
    free(intf_s);
@@ -412,14 +412,14 @@ uint8_t* rpng_save_image_bgr24_string(const uint8_t *data,
    buf_length = (int)(width*height*3*DEFLATE_PADDING)+PNG_ROUGH_HEADER;
    buf        = (uint8_t*)malloc(buf_length*sizeof(uint8_t));
    if (!buf)
-      GOTO_END_ERROR(); 
+      GOTO_END_ERROR();
 
-   intf_s = intfstream_open_writable_memory(buf, 
+   intf_s = intfstream_open_writable_memory(buf,
          RETRO_VFS_FILE_ACCESS_WRITE,
          RETRO_VFS_FILE_ACCESS_HINT_NONE,
          buf_length);
 
-   ret = rpng_save_image_stream((const uint8_t*)data, 
+   ret = rpng_save_image_stream((const uint8_t*)data,
             intf_s, width, height, pitch, 3);
 
    *bytes = intfstream_get_ptr(intf_s);

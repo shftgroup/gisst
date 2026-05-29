@@ -301,7 +301,7 @@ libretro_vfs_implementation_file *retro_vfs_file_open_impl(
 {
    int                                flags = 0;
    const char                     *mode_str = NULL;
-   libretro_vfs_implementation_file *stream = 
+   libretro_vfs_implementation_file *stream =
       (libretro_vfs_implementation_file*)
       malloc(sizeof(*stream));
 
@@ -452,14 +452,14 @@ libretro_vfs_implementation_file *retro_vfs_file_open_impl(
        *
        * https://www.freebsd.org/cgi/man.cgi?query=setvbuf&apropos=0&sektion=0&manpath=FreeBSD+11.1-RELEASE&arch=default&format=html
        *
-       * If the size argument is not zero but buf is NULL, 
+       * If the size argument is not zero but buf is NULL,
        * a buffer of the given size will be allocated immediately, and
        * released on close. This is an extension to ANSI C.
        *
-       * Since C89 does not support specifying a NULL buffer 
+       * Since C89 does not support specifying a NULL buffer
        * with a non-zero size, we create and track our own buffer for it.
        */
-      /* TODO: this is only useful for a few platforms, 
+      /* TODO: this is only useful for a few platforms,
        * find which and add ifdef */
 #if defined(_3DS)
       if (stream->scheme != VFS_SCHEME_CDROM)
@@ -648,7 +648,7 @@ int64_t retro_vfs_file_tell_impl(libretro_vfs_implementation_file *stream)
 #ifdef HAVE_MMAP
    /* Need to check stream->mapped because this function
     * is called in filestream_open() */
-   if (stream->mapped && stream->hints & 
+   if (stream->mapped && stream->hints &
          RETRO_VFS_FILE_ACCESS_HINT_FREQUENT_ACCESS)
       return stream->mappos;
 #endif

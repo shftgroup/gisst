@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # Check that sqlx-cli is installed
 if ! command -v sqlx &> /dev/null
 then

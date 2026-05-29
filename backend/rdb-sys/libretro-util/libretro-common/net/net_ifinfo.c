@@ -56,7 +56,7 @@ bool net_ifinfo_new(net_ifinfo_t *list)
    struct net_ifinfo_entry *entry;
    size_t                interfaces = 0;
    ULONG                 flags      = GAA_FLAG_SKIP_ANYCAST
-                                    | GAA_FLAG_SKIP_MULTICAST 
+                                    | GAA_FLAG_SKIP_MULTICAST
                                     | GAA_FLAG_SKIP_DNS_SERVER;
    ULONG                 len        = 15 * 1024;
    PIP_ADAPTER_ADDRESSES addresses  = (PIP_ADAPTER_ADDRESSES)calloc(1, len);

@@ -72,12 +72,12 @@ size_t utf8len(const char *string);
  *
  * Always NULL terminates. Does not copy half a character.
  * @s is assumed valid UTF-8.
- * Use only if @chars is considerably less than @d_len. 
+ * Use only if @chars is considerably less than @d_len.
  *
  * Hidden non-leaf function cost:
  * - Calls memcpy
  *
- * @return Number of bytes. 
+ * @return Number of bytes.
  **/
 size_t utf8cpy(char *d, size_t d_len, const char *s, size_t chars);
 
@@ -88,7 +88,7 @@ size_t utf8cpy(char *d, size_t d_len, const char *s, size_t chars);
  **/
 const char *utf8skip(const char *str, size_t chars);
 
-/** 
+/**
  * utf8_walk:
  *
  * Does not validate the input.
@@ -120,7 +120,7 @@ char *local_to_utf8_string_alloc(const char *str);
 
 /**
  * utf8_to_utf16_string_alloc:
- * 
+ *
  * @return Returned pointer MUST be freed by the caller if non-NULL.
  **/
 wchar_t *utf8_to_utf16_string_alloc(const char *str);

@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-if [ ${TESTING:-0} -eq 0 ]; then 
+if [ ${TESTING:-0} -eq 0 ]; then
 WORKDIR=${WORKDIR:-/tmp/gisst}
 if [ -e $WORKDIR ]; then
     pushd $WORKDIR
@@ -38,7 +38,7 @@ if [ "$OLD_VSN" != "$NEW_VSN" ]; then
     ASSETS=0
   else
     ASSETS=1
-  fi 
+  fi
   docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -v gisst-build:/gisst-build -e GET_ASSETS=$ASSETS cafe.cs.pomona.edu/shftgroup/gisst-dist:latest
   tar czvf cores.tgz build
   curl -u "jcoa2018:$JOB_TOKEN" --anyauth --request DELETE "https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz" || echo "no existing package to delete"

@@ -101,7 +101,7 @@ bool utf16_conv_utf8(uint8_t *out, size_t *out_chars,
 {
    size_t out_pos            = 0;
    size_t in_pos             = 0;
-   static const 
+   static const
       uint8_t utf8_limits[5] = { 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
 
    for (;;)
@@ -166,9 +166,9 @@ bool utf16_conv_utf8(uint8_t *out, size_t *out_chars,
  *
  * Always NULL terminates. Does not copy half a character.
  * @s is assumed valid UTF-8.
- * Use only if @chars is considerably less than @d_len. 
+ * Use only if @chars is considerably less than @d_len.
  *
- * @return Number of bytes. 
+ * @return Number of bytes.
  **/
 size_t utf8cpy(char *d, size_t d_len, const char *s, size_t chars)
 {
@@ -242,7 +242,7 @@ size_t utf8len(const char *string)
    return ret;
 }
 
-/** 
+/**
  * utf8_walk:
  *
  * Does not validate the input.
@@ -320,13 +320,13 @@ static char *mb_to_mb_string_alloc(const char *str,
    wchar_t *path_buf_wide = NULL;
    int path_buf_wide_len  = MultiByteToWideChar(cp_in, 0, str, -1, NULL, 0);
 
-   /* Windows 95 will return 0 from these functions with 
+   /* Windows 95 will return 0 from these functions with
     * a UTF8 codepage set without MSLU.
     *
     * From an unknown MSDN version (others omit this info):
-    *   - CP_UTF8 Windows 98/Me, Windows NT 4.0 and later: 
+    *   - CP_UTF8 Windows 98/Me, Windows NT 4.0 and later:
     *   Translate using UTF-8. When this is set, dwFlags must be zero.
-    *   - Windows 95: Under the Microsoft Layer for Unicode, 
+    *   - Windows 95: Under the Microsoft Layer for Unicode,
     *   MultiByteToWideChar also supports CP_UTF7 and CP_UTF8.
     */
 
@@ -412,7 +412,7 @@ char *local_to_utf8_string_alloc(const char *str)
 
 /**
  * utf8_to_utf16_string_alloc:
- * 
+ *
  * @return Returned pointer MUST be freed by the caller if non-NULL.
  **/
 wchar_t* utf8_to_utf16_string_alloc(const char *str)
@@ -513,7 +513,7 @@ char* utf16_to_utf8_string_alloc(const wchar_t *str)
       }
    }
 #else
-   /* NOTE: For now, assume non-Windows platforms' 
+   /* NOTE: For now, assume non-Windows platforms'
     * locale is already UTF-8. */
    if ((len = wcstombs(NULL, str, 0) + 1))
    {

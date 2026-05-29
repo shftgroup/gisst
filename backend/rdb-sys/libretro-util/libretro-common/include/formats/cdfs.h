@@ -53,7 +53,7 @@ typedef struct cdfs_file_t
 } cdfs_file_t;
 
 /* opens the specified file within the CD or virtual CD.
- * if path is NULL, will open the raw CD (useful for 
+ * if path is NULL, will open the raw CD (useful for
  * reading CD without having to worry about sector sizes,
  * headers, or checksum data)
  */

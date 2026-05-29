@@ -3133,7 +3133,7 @@ typedef void (RETRO_CALLCONV *retro_netpacket_disconnected_t)(uint16_t client_id
 
 /**
  * A callback interface for giving a core the ability to send and receive custom
- * network packets during a multiplayer session between two or more instances 
+ * network packets during a multiplayer session between two or more instances
  * of a libretro frontend.
  *
  * @see RETRO_ENVIRONMENT_SET_NETPACKET_INTERFACE
@@ -3179,13 +3179,13 @@ enum retro_savestate_context
 
    /* Savestate where you are guaranteed that the same instance will load the save state.
     * You can store internal pointers to code or data.
-    * It's still a full serialization and deserialization, and could be loaded or saved at any time. 
+    * It's still a full serialization and deserialization, and could be loaded or saved at any time.
     * It won't be written to disk or sent over the network.
     */
    RETRO_SAVESTATE_CONTEXT_RUNAHEAD_SAME_INSTANCE = 1,
 
    /* Savestate where you are guaranteed that the same emulator binary will load that savestate.
-    * You can skip anything that would slow down saving or loading state but you can not store internal pointers. 
+    * You can skip anything that would slow down saving or loading state but you can not store internal pointers.
     * It won't be written to disk or sent over the network.
     * Example: "Second Instance" runahead
     */

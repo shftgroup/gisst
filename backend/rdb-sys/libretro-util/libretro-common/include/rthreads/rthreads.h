@@ -259,7 +259,7 @@ uintptr_t sthread_get_thread_id(sthread_t *thread);
 
 /*
  * @brief Get thread ID of the current thread
- * @param 
+ * @param
  * @return The ID of the current thread
  */
 uintptr_t sthread_get_current_thread_id(void);

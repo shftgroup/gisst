@@ -152,7 +152,7 @@ static struct nlmsghdr *getNetlinkResponse(int p_socket,
                NLMSG_OK(l_hdr, (unsigned int)l_read);
                l_hdr = (struct nlmsghdr *)NLMSG_NEXT(l_hdr, l_read))
          {
-            if (  (pid_t)l_hdr->nlmsg_pid != l_pid || 
+            if (  (pid_t)l_hdr->nlmsg_pid != l_pid ||
                   (int)l_hdr->nlmsg_seq   != p_socket)
                continue;
 
@@ -334,7 +334,7 @@ static int interpretLink(struct nlmsghdr *p_hdr, struct ifaddrs **p_resultList)
    char *l_addr = l_name + l_nameSize;
    char *l_data = l_addr + l_addrSize;
 
-   /* save the interface index so we can look 
+   /* save the interface index so we can look
     * it up when handling the addresses. */
    memcpy(l_index, &l_info->ifi_index, sizeof(int));
 
@@ -550,7 +550,7 @@ static int interpretLinks(int p_socket, NetlinkList *p_netlinkList,
       for (l_hdr = p_netlinkList->m_data; NLMSG_OK(l_hdr, l_nlsize);
             l_hdr = NLMSG_NEXT(l_hdr, l_nlsize))
       {
-         if (  (pid_t)l_hdr->nlmsg_pid != l_pid || 
+         if (  (pid_t)l_hdr->nlmsg_pid != l_pid ||
                (int)l_hdr->nlmsg_seq   != p_socket)
             continue;
 
@@ -580,7 +580,7 @@ static int interpretAddrs(int p_socket, NetlinkList *p_netlinkList,
       for (l_hdr = p_netlinkList->m_data; NLMSG_OK(l_hdr, l_nlsize);
             l_hdr = NLMSG_NEXT(l_hdr, l_nlsize))
       {
-         if (     (pid_t)l_hdr->nlmsg_pid != l_pid 
+         if (     (pid_t)l_hdr->nlmsg_pid != l_pid
                || (int)l_hdr->nlmsg_seq   != p_socket)
             continue;
 
@@ -631,7 +631,7 @@ int getifaddrs(struct ifaddrs **ifap)
 
    l_numLinks = interpretLinks(l_socket, l_linkResults, ifap);
 
-   if (  l_numLinks == -1 || 
+   if (  l_numLinks == -1 ||
          interpretAddrs(l_socket, l_addrResults, ifap, l_numLinks) == -1)
       l_result = -1;
 

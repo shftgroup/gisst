@@ -126,7 +126,7 @@ static INLINE float saturate_value(float v)
  *
  * Returns: dot product value (derived from @a and @b).
  **/
-static INLINE float dot_product(const float* a, const float* b) 
+static INLINE float dot_product(const float* a, const float* b)
 {
    return (a[0] * b[0]) + (a[1] * b[1]) + (a[2] * b[2]);
 }
@@ -140,7 +140,7 @@ static INLINE float dot_product(const float* a, const float* b)
  *
  * Returns: Yxy colour space value (derived from @rgb).
  **/
-static INLINE void convert_rgb_to_yxy(const float* rgb, float* Yxy) 
+static INLINE void convert_rgb_to_yxy(const float* rgb, float* Yxy)
 {
    float inv;
    float xyz[3];
@@ -156,11 +156,11 @@ static INLINE void convert_rgb_to_yxy(const float* rgb, float* Yxy)
    xyz[2]              = dot_product(rgb_xyz[2], rgb);
 
    inv                 = 1.0f / dot_product(xyz, one);
-   Yxy[0]              = xyz[1]; 
+   Yxy[0]              = xyz[1];
    Yxy[1]              = xyz[0] * inv;
    Yxy[2]              = xyz[1] * inv;
 }
- 
+
 /**
  * convert_yxy_to_rgb:
  * @rgb         : in Yxy colour space value

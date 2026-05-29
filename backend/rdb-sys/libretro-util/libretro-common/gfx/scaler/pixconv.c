@@ -777,9 +777,9 @@ void conv_bgr24_rgb565(void *output_, const void *input_,
          uint16_t b = *inp++;
          uint16_t g = *inp++;
          uint16_t r = *inp++;
-    
+
          output[w] = ((r & 0x00F8) << 8) | ((g&0x00FC) << 3) | ((b&0x00F8) >> 3);
-      }  
+      }
    }
 }
 

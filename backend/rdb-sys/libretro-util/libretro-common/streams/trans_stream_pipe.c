@@ -34,7 +34,7 @@ struct pipe_trans_stream
 
 static void *pipe_stream_new(void)
 {
-   struct pipe_trans_stream *stream = 
+   struct pipe_trans_stream *stream =
       (struct pipe_trans_stream*)malloc(sizeof(*stream));
    if (!stream)
       return NULL;
@@ -58,7 +58,7 @@ static void pipe_set_in(void *data, const uint8_t *in, uint32_t in_size)
 
    if (!p)
       return;
-         
+
    p->in                       = in;
    p->in_size                  = in_size;
 }
@@ -66,7 +66,7 @@ static void pipe_set_in(void *data, const uint8_t *in, uint32_t in_size)
 static void pipe_set_out(void *data, uint8_t *out, uint32_t out_size)
 {
    struct pipe_trans_stream *p = (struct pipe_trans_stream *) data;
-   
+
    if (!p)
       return;
 

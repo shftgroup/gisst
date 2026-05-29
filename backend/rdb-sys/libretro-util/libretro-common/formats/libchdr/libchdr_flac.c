@@ -212,7 +212,7 @@ FLAC__StreamDecoderReadStatus flac_decoder_read_callback(void* client_data, FLAC
 
 	/* copy from primary buffer first */
 	uint32_t outputpos    = 0;
-    
+
 	if (outputpos < *bytes && decoder->compressed_offset < decoder->compressed_length)
 	{
 		uint32_t bytes_to_copy = (uint32_t)MIN(*bytes - outputpos, decoder->compressed_length - decoder->compressed_offset);

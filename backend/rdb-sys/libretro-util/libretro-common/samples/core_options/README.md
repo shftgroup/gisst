@@ -8,11 +8,11 @@ The basic steps for updating a core to support core options v1 are as follows:
 
 - Add `#include "libretro_core_options.h"` to `libretro.c/.cpp`
 
-- Replace any existing calls of `RETRO_ENVIRONMENT_SET_VARIABLES` with `libretro_set_core_options(retro_environment_t environ_cb)`  
-  (Note: `libretro_set_core_options()` should be called as early as possible - preferably in `retro_set_environment()`  
+- Replace any existing calls of `RETRO_ENVIRONMENT_SET_VARIABLES` with `libretro_set_core_options(retro_environment_t environ_cb)`
+  (Note: `libretro_set_core_options()` should be called as early as possible - preferably in `retro_set_environment()`
   and no later than `retro_load_game()`)
 
-- Open `libretro_core_options.h` and replace the contents of the existing `option_defs_us` struct array with all required core option parameters.  
+- Open `libretro_core_options.h` and replace the contents of the existing `option_defs_us` struct array with all required core option parameters.
 
 ## Adding core option translations
 
@@ -42,7 +42,7 @@ This can be handled easily by editing the `libretro_set_core_options()` function
 
 - Here, a `mycore_show_speedhacks` option is added to `option_defs_us`
 
-- On line 227, the following comparison allows the option to be skipped:  
+- On line 227, the following comparison allows the option to be skipped:
   (Note that another `strcmp()` may be added for each option to be omitted)
 
 ```c

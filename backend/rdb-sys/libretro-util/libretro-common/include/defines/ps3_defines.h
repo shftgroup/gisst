@@ -52,7 +52,7 @@ extern int audioAddData(uint32_t portNum, float *data,
 #define numBlocks nBlock
 #define param_attrib attr
 
-#define audioQuit cellAudioQuit 
+#define audioQuit cellAudioQuit
 #define audioInit cellAudioInit
 #define audioPortStart cellAudioPortStart
 #define audioPortOpen cellAudioPortOpen
@@ -82,8 +82,8 @@ extern int audioAddData(uint32_t portNum, float *data,
 #define SYSMODULE_NET CELL_SYSMODULE_NET
 #define PS3_SYS_NO_TIMEOUT SYS_NO_TIMEOUT
 
-#define sys_lwmutex_attr_t sys_lwmutex_attribute_t 
-#define sys_lwcond_attr_t sys_lwcond_attribute_t 
+#define sys_lwmutex_attr_t sys_lwmutex_attribute_t
+#define sys_lwcond_attr_t sys_lwcond_attribute_t
 #define sys_sem_t sys_semaphore_t
 
 #define sysGetSystemTime sys_time_get_system_time
@@ -155,17 +155,17 @@ extern int audioAddData(uint32_t portNum, float *data,
 #define cellPadGetInfo2 ioPadGetInfo2
 #define CellPadData padData
 #define cellPadGetData ioPadGetData
-#define cellPadInit ioPadInit 
+#define cellPadInit ioPadInit
 #define cellPadEnd ioPadEnd
 #else
 #include <cell/pad.h>
 #define padInfo2 CellPadInfo2
 #define padData CellPadData
-#define ioPadGetInfo2 cellPadGetInfo2 
+#define ioPadGetInfo2 cellPadGetInfo2
 #define ioPadGetData cellPadGetData
 #define ioPadInit cellPadInit
 #define ioPadEnd cellPadEnd
-#define ioPadSetPortSetting cellPadSetPortSetting 
+#define ioPadSetPortSetting cellPadSetPortSetting
 #endif
 
 /*============================================================
@@ -391,7 +391,7 @@ typedef struct KbMkey
          uint32_t reserved	   : 24;	/*!< \brief Reserved MSB */
          uint32_t r_win		   : 1;	/*!< \brief Modifier Key Right WIN 0:OFF 1:ON Bit7 */
          uint32_t r_alt		   : 1;	/*!< \brief Modifier Key Right ALT 0:OFF 1:ON Bit6 */
-         uint32_t r_shift		: 1;	/*!< \brief Modifier Key Right SHIFT 0:OFF 1:ON Bit5 */		
+         uint32_t r_shift		: 1;	/*!< \brief Modifier Key Right SHIFT 0:OFF 1:ON Bit5 */
          uint32_t r_ctrl		: 1;	/*!< \brief Modifier Key Right CTRL 0:OFF 1:ON Bit4 */
          uint32_t l_win		   : 1;	/*!< \brief Modifier Key Left WIN 0:OFF 1:ON Bit3 */
          uint32_t l_alt		   : 1;	/*!< \brief Modifier Key Left ALT 0:OFF 1:ON Bit2 */
@@ -551,15 +551,15 @@ typedef struct KbData
 #else
 #include <sys/ppu_thread.h>
 
-#define SYS_PROCESS_SPAWN_STACK_SIZE_1M SYS_PROCESS_PRIMARY_STACK_SIZE_1M 
+#define SYS_PROCESS_SPAWN_STACK_SIZE_1M SYS_PROCESS_PRIMARY_STACK_SIZE_1M
 #define SYS_THREAD_CREATE_JOINABLE SYS_PPU_THREAD_CREATE_JOINABLE
 
-#define sysThreadCreate sys_ppu_thread_create 
-#define sysThreadJoin sys_ppu_thread_join 
-#define sysThreadExit sys_ppu_thread_exit 
+#define sysThreadCreate sys_ppu_thread_create
+#define sysThreadJoin sys_ppu_thread_join
+#define sysThreadExit sys_ppu_thread_exit
 
-#define sysProcessExit sys_process_exit 
-#define sysProcessExitSpawn2 sys_game_process_exitspawn 
+#define sysProcessExit sys_process_exit
+#define sysProcessExitSpawn2 sys_game_process_exitspawn
 
 #endif
 
@@ -568,8 +568,8 @@ typedef struct KbData
 ============================================================ */
 
 #ifndef __PSL1GHT__
-#define sysMemContainerCreate sys_memory_container_create 
-#define sysMemContainerDestroy sys_memory_container_destroy 
+#define sysMemContainerCreate sys_memory_container_create
+#define sysMemContainerDestroy sys_memory_container_destroy
 #endif
 
 /*============================================================
@@ -775,7 +775,7 @@ typedef struct KbData
 #define rsxInit cellGcmInit
 #define rsxInvalidateTextureCache(a, b) cellGcmSetInvalidateVertexCache(a)
 #define rsxTextureControl cellGcmSetTextureControlInline
-#define rsxSetBlendEnable cellGcmSetBlendEnableInline 
+#define rsxSetBlendEnable cellGcmSetBlendEnableInline
 #endif
 
 /*============================================================

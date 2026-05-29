@@ -204,11 +204,11 @@ int ssl_socket_receive_all_blocking(void *state_data,
 
    for (;;)
    {
-      /* mbedtls_ssl_read wants non-const data but it only reads it, 
+      /* mbedtls_ssl_read wants non-const data but it only reads it,
        * so this cast is safe */
       int ret = mbedtls_ssl_read(&state->ctx, (unsigned char*)data, size);
 
-      if (  ret == MBEDTLS_ERR_SSL_WANT_READ || 
+      if (  ret == MBEDTLS_ERR_SSL_WANT_READ ||
             ret == MBEDTLS_ERR_SSL_WANT_WRITE)
          continue;
 
@@ -236,7 +236,7 @@ int ssl_socket_send_all_blocking(void *state_data,
 
    while ((ret = mbedtls_ssl_write(&state->ctx, data, size)) <= 0)
    {
-      if (  ret != MBEDTLS_ERR_SSL_WANT_READ && 
+      if (  ret != MBEDTLS_ERR_SSL_WANT_READ &&
             ret != MBEDTLS_ERR_SSL_WANT_WRITE)
          return false;
    }

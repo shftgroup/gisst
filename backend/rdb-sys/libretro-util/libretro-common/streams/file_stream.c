@@ -81,7 +81,7 @@ void filestream_vfs_init(const struct retro_vfs_interface_info* vfs_info)
    filestream_rename_cb   = NULL;
 
    if (
-             (vfs_info->required_interface_version < 
+             (vfs_info->required_interface_version <
              FILESTREAM_REQUIRED_VFS_VERSION)
          || !vfs_iface)
       return;
@@ -269,9 +269,9 @@ int filestream_vscanf(RFILE *stream, const char* format, va_list *args)
             *subfmtiter++    = *format++;
          }
          else if (
-               *format == 'j' || 
-               *format == 'z' || 
-               *format == 't' || 
+               *format == 'j' ||
+               *format == 'z' ||
+               *format == 't' ||
                *format == 'L')
          {
             *subfmtiter++ = *format++;
@@ -470,8 +470,8 @@ int filestream_putc(RFILE *stream, int c)
    char c_char = (char)c;
    if (!stream)
       return EOF;
-   return filestream_write(stream, &c_char, 1) == 1 
-      ? (int)(unsigned char)c 
+   return filestream_write(stream, &c_char, 1) == 1
+      ? (int)(unsigned char)c
       : EOF;
 }
 

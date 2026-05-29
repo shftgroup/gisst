@@ -359,7 +359,7 @@ void word_wrap_wideglyph(char *dst, size_t dst_size,
    unsigned counter_normalized       = 0;
    int line_width_normalized         = line_width * 100;
    int additional_counter_normalized = wideglyph_width - 100;
- 
+
    /* Early return if src string length is less
     * than line width */
    if (src_end - src < line_width)
@@ -592,7 +592,7 @@ unsigned string_hex_to_unsigned(const char *str)
    if (str[0] != '\0' && str[1] != '\0')
    {
       if ( (str[0] == '0') &&
-          ((str[1] == 'x') || 
+          ((str[1] == 'x') ||
            (str[1] == 'X')))
       {
          hex_str = str + 2;
@@ -635,7 +635,7 @@ int string_count_occurrences_single_character(const char *str, char c)
 
 /**
  * string_replace_whitespace_with_single_character:
- * 
+ *
  * Leaf function.
  *
  * Replaces all spaces with given character @c.
