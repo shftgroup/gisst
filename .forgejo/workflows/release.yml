@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
+      credentials:
+        username: jcoa2018
+        password: ${{ secrets.CI_PULL_IMAGE }}
     steps:
     - uses: actions/checkout@v6
     - name: Pull cached backend dependencies
