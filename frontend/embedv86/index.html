@@ -8,28 +8,65 @@
   </head>
   <body>
     <a href="#" id="gobutton">GO</a>
+    <a href="#" id="savebutton">SAVE</a>
+    <a href="#" id="recbutton">RECORD</a>
+    <a href="#" id="stopbutton">STOP</a>
+    <a href="#" id="save_replay_button">SAVE</a>
+    <a href="#" id="replaybutton">REPLAY</a>
     <div id="app" style="width:640px; height:480px; background-color:black; font-family: monospace;">
       <canvas class="gisst-embed-webplayer gisst-embed-hidden" tabindex="1" id="embed_canvas_0"></canvas>
       <div class="gisst-embed-webplayer-textmode gisst-embed-hidden"></div>
     </div>
     <!-- <script type="module" src="/src/main.ts"></script> -->
-    <script src="/build/libv86-debug.js"></script>
+    <script src="/build/libv86.js"></script>
     <script type="module">
       import {EmbedV86} from './src/main.ts';
+      import {Replay} from './src/v86replay.ts';
+      let v86;
+      function saveAs(blob, name) {
+        const a = document.createElementNS('http://www.w3.org/1999/xhtml', 'a');
+        a.download = name;
+        a.rel = 'noopener';
+        a.href = URL.createObjectURL(blob);
+        setTimeout(() => URL.revokeObjectURL(a.href), 40 /* sec */ * 1000);
+        setTimeout(() => a.click(), 0);
+      }
+      let replay;
+      let state;
       async function go() {
-      const v86 = new EmbedV86({
-        wasm_file:"/build/v86-debug.wasm",
-        bios_root:"/build",
-        content_root:"/backend/examples/data/v86",
-        container:document.querySelector("#app"),
-        record_from_start:true,
-        register_replay:(_) => {},
-        stop_replay:() => {},
-        states_changed:(_add,_rem) => {},
-        replay_checkpoints_changed:(_add,_rem) => {}
+        v86 = new EmbedV86({
+          wasm_file:"/build/v86.wasm",
+          bios_root:"/build",
+          content_root:"/backend/examples/data/v86",
+          container:document.querySelector("#app"),
+          record_from_start:false,
+          register_replay:(r) => {replay=r;},
+          stop_replay:() => {},
+          states_changed:(add,_rem) => {
+            console.log("state:",add[0]);
+            state=add[0];
+          },
+          replay_checkpoints_changed:(_add,_rem) => {}
+        });
+        document.querySelector("#recbutton").addEventListener("click", async () => {
+          await v86.emulator.lock_mouse();
+          await v86.record_replay();
+        });
+        document.querySelector("#stopbutton").addEventListener("click", () => { v86.stop_replay(); });
+        document.querySelector("#replaybutton").addEventListener("click", () => { v86.play_replay_slot(0); });
+        document.querySelector("#savebutton").addEventListener("click", async () => {
+          await v86.save_state();
+          const [blob,name] = await v86.download_file("state", state.name);
+          saveAs(blob, name);
+        });
+      document.querySelector("#save_replay_button").addEventListener("click", async () => {
+        const [blob,name] = await v86.download_file("replay", replay);
+        saveAs(blob, name);
       });
-      await v86.run({"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"freedos722.img","async":true,"fixed_chunk_size":44194304}, "memory_size":16777216}, null, null);
-
+        const init_state = null;//"win95.v86state";
+        const init_replay = null;//"xcom144.v86replay";
+        window.v86 = v86;
+        await v86.run({"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"freedos722.img","async":true,"fixed_chunk_size":44194304},"memory_size": 67108864, "vga_memory_size": 8388608}, init_state, init_replay);
       }
       document.querySelector("#gobutton").addEventListener("click", go);
     </script>

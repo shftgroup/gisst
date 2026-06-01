@@ -27,7 +27,7 @@
     "@typescript-eslint/parser": "^8.12.2",
     "eslint": "^9.13.0",
     "node-dev": "^8.0.0",
-    "sirv": "^3.0.2",
+    "serve-static": "^2.2.1",
     "shx": "^0.4.0",
     "typescript": "^5.8.2",
     "vite": "^6.2.1",
