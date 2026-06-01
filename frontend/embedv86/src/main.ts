@@ -70,7 +70,7 @@ export class EmbedV86 {
     if(this.active_replay != null) {
       // console.log("save replay checkpoint");
       const replay = this.replays[this.active_replay];
-      await replay.make_checkpoint(this.emulator);
+      await replay.make_checkpoint(this.emulator,new Uint8Array(await this.emulator.save_state()));
       this.config.replay_checkpoints_changed([replay.checkpoints[replay.checkpoints.length-1]], []);
     } else {
       // console.log("save state");
