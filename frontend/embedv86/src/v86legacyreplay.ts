@@ -1,14 +1,6 @@
 import {BlockIndex} from './blockindex';
-import {memcmp} from './utils';
-
-export enum Evt {
-  KeyCode = 0,
-  MouseClick = 1,
-  MouseDelta = 2,
-  MouseAbsolute = 3,
-  MouseWheel = 4
-}
-export const EvtNames:string[] = ["keyboard-code", "mouse-click", "mouse-delta", "mouse-absolute", "mouse-wheel"];
+import {bytes_to_uuid,blobToDataURL} from './utils';
+import {Evt,EvtNames,ReplayMode,Checkpoint,ReplayEvent} from './v86replay';
 
 //const REPLAY_CHECKPOINT_INTERVAL:number = 100003*1000*4;
 /* Cycles per millisecond (appx) * milliseconds per second * number of seconds */
@@ -19,33 +11,6 @@ const BLOCK_SIZE = 256;
 const SUPERBLOCK_SIZE = 256;
 const STATE_INDEX_INFO_LEN = 3;
 const STATE_INFO_BLOCK_START = 16;
-
-export enum ReplayMode {
-  Inactive=0,
-  Playback,
-  Finished,
-}
-
-export class Checkpoint {
-  header_info:Uint8Array;
-  superblock_seq:Uint32Array;
-  name:string;
-  thumbnail:string;
-  when:number;
-  event_index:number;
-  new_blocks:number[];
-  new_superblocks:number[];
-  constructor(when:number, name:string, event_index:number, header_info:Uint8Array, new_blocks:number[], new_superblocks:number[], superblock_seq:Uint32Array, thumbnail:string) {
-    this.when = when;
-    this.name = name;
-    this.event_index = event_index;
-    this.header_info = header_info;
-    this.superblock_seq = superblock_seq;
-    this.new_blocks = new_blocks;
-    this.new_superblocks = new_superblocks;
-    this.thumbnail = thumbnail;
-  }
-}
 
 export class LegacyReplay {
   events:ReplayEvent[]=[]; // replace with file
@@ -59,7 +24,6 @@ export class LegacyReplay {
   superblock_index!: BlockIndex; // read from / write to file
   block_index!: BlockIndex; // read from / write to file
   version:number=REPLAY_VERSION; // store in file header
-  last_state?:Uint8Array;
   public static async create(id:string, mode:ReplayMode) : Promise<LegacyReplay> {
     const ths = new LegacyReplay();
     ths.id = id;
@@ -100,7 +64,6 @@ export class LegacyReplay {
         }
       }
     }
-    this.last_state = state.slice(header_info_length);
     return buffer;
   }
   async reset_to_checkpoint(_n:number, mode:ReplayMode, emulator:V86):Promise<Checkpoint[]> {
@@ -113,6 +76,9 @@ export class LegacyReplay {
     this.seek_internal(checkpoint.event_index, checkpoint.when);
     this.resume(mode, emulator);
     return [];
+  }
+  log_evt(_emulator:V86, _code:Evt, _val:object|number) {
+    // no-op
   }
   private seek_internal(event_index:number, t:number) {
     // seek file, do reads
@@ -132,6 +98,7 @@ export class LegacyReplay {
     // ensure emulator time is current time
     this.mode = mode;
     console.log("Resume",mode);
+    emulator.v86.cpu.instruction_counter[0] = this.last_time;
     if(this.mode == ReplayMode.Playback) {
       emulator.mouse_set_status(false);
       emulator.keyboard_set_status(false);
@@ -175,7 +142,6 @@ export class LegacyReplay {
     const block_buf = new Uint8Array(block_byte_size);
     const new_blocks = [];
     const new_superblocks = [];
-    const USE_MEMCMP = false;
     for (let i = 0; i < superblock_count; i++) {
       const superblock_offset = i * superblock_byte_size;
       for (let j = 0; j < superblock_block_count; j++) {
@@ -183,11 +149,6 @@ export class LegacyReplay {
         const block_end = Math.min(block_start + block_byte_size, state_size);
         if (block_start >= state_size) {
           superblock_buf[j] = 0;
-        } else if (USE_MEMCMP && this.last_state && memcmp(this.last_state.subarray(block_start, block_end), state.subarray(block_start, block_end))) {
-          const old_super = this.checkpoints[this.checkpoints.length-1].superblock_seq[i];
-          const old_super_contents = this.superblock_index.get(old_super);
-          superblock_buf[j] = old_super_contents[j];
-          continue;
         } else {
           let result;
           if(block_start + block_byte_size > state_size) {
@@ -213,9 +174,6 @@ export class LegacyReplay {
     }
     const checkpoint = new Checkpoint(time, "replay"+this.id+"-state"+this.checkpoints.length.toString(), event_index, info_block_buffer, new_blocks, new_superblocks, superblock_seq, screenshot);
     this.checkpoints.push(checkpoint);
-    if (USE_MEMCMP) {
-      this.last_state = state;
-    }
     const DO_ROUNDTRIP = false;
     if (DO_ROUNDTRIP) {
       const restore = await this.restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
@@ -287,6 +245,7 @@ export class LegacyReplay {
     this.index = 0;
     this.wraps = 0;
     this.last_time = 0;
+    emulator.v86.cpu.instruction_counter[0] = 0;
     emulator.mouse_set_status(false);
     emulator.keyboard_set_status(false);
     const check = this.checkpoints[0];
@@ -439,44 +398,10 @@ export class LegacyReplay {
         r.checkpoints.push(new Checkpoint(when, name, event_index, info.slice(), new_blocks, new_superblocks, superblock_seq.slice(), thumb));
       }
     }
-    r.last_state = undefined;
     r.index = 0;
     r.checkpoint_index = 0;
     r.last_time = 0;
     r.wraps = 0;
     return r;
   }
-}
-export class ReplayEvent {
-  when:number;
-  code:Evt;
-  value:object|number;
-  constructor(when:number, code:Evt, value:object|number) {
-    this.when = when;
-    this.code = code;
-    this.value = value;
-  }
-}
-
-function bytes_to_uuid(buf:Uint8Array):string {
-  // https://stackoverflow.com/a/50767210
-  function bufferToHex (buffer:Uint8Array) {
-    return [...buffer]
-        .map (b => b.toString (16).padStart (2, "0"))
-        .join ("");
-  }
-  // format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-  const s = bufferToHex(buf);
-  return [s.slice(0,8),s.slice(8,12),s.slice(12,16),s.slice(16,20),s.slice(20,32)].join("-");
-}
-
-//https://stackoverflow.com/a/67551175
-function blobToDataURL(blob: Blob): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.onabort = () => reject(new Error("Read aborted"));
-    reader.readAsDataURL(blob);
-  });
 }
