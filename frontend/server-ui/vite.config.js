@@ -8,9 +8,7 @@ import mockApiPlugin from "vite-mock-api";
 
 export default {
   base: "./",
-  define: {
-    'process.env': {'NODE_ENV': 'production'}
-  },
+	define: { 'process.env.NODE_ENV': '"production"' },
   plugins: [
     mkcert({savePath: "../../test-cert/"}),
     checker({
@@ -25,9 +23,20 @@ export default {
     lib: {
       entry: resolve(__dirname, 'src/ts/main.ts'),
       name: 'UI',
+      formats: ['es'],
       fileName: 'ui',
     },
     sourcemap: true,
+    rolldownOptions: {
+      transform: { define: { 'process.env.NODE_ENV': "'production'" } }
+    },
+  },
+  optimizeDeps: {
+    entries: "build.rolldownOptions.input",
+    force:true,
+    rolldownOptions: {
+      transform: { define: { 'process.env.NODE_ENV': "'production'" } }
+    }
   },
   server: {
     https: true,

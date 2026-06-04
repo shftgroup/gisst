@@ -3,16 +3,13 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "main": "./dist/embed.umd.cjs",
   "module": "./dist/embed.js",
   "exports": {
     ".": {
-      "import": "./dist/embed.js",
-      "require": "./dist/embed.umd.cjs"
+      "import": "./dist/embed.js"
     },
     "./types": {
-      "import": "./dist/types.d.ts",
-      "require": "./dist/types.umd.js"
+      "import": "./dist/types.d.ts"
     }
   },
   "scripts": {
@@ -28,19 +25,19 @@
     "@types/path-browserify": "^1.0.3",
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
-    "@vitest/ui": "^3.0.8",
+    "@vitest/ui": "^4.1.8",
     "coffeescript": "^2.7.0",
     "eslint": "^9.13.0",
-    "happy-dom": "^17.4.6",
+    "happy-dom": "^20.10.1",
     "rollup-plugin-sourcemaps": "0.6.3",
     "shx": "^0.4.0",
+    "sirv": "^3.0.2",
     "typescript": "^5.8.2",
-    "vite": "^6.2.1",
+    "vite": "^8.0.16",
     "vite-plugin-checker": "^0.9.0",
     "vite-plugin-dts": "^4.5.3",
     "vite-plugin-mkcert": "^1.17.6",
-    "sirv": "^3.0.2",
-    "vitest": "^3.0.8"
+    "vitest": "^4.1.8"
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.7.53",

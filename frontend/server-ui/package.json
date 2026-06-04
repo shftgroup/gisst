@@ -3,12 +3,10 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "main": "./dist/ui.umd.cjs",
   "module": "./dist/ui.js",
   "exports": {
     ".": {
-      "import": "./dist/ui.js",
-      "require": "./dist/ui.umd.cjs"
+      "import": "./dist/ui.js"
     }
   },
   "scripts": {
@@ -24,21 +22,21 @@
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
     "eslint": "^9.22.0",
-    "meilisearch": "^0.50.0",
+    "meilisearch": "^0.57.0",
     "rollup-plugin-sourcemaps": "0.6.3",
     "shx": "^0.4.0",
     "typescript": "^5.8.2",
-    "vite": "^6.2.1",
+    "vite": "^8.0.16",
     "vite-mock-api": "github:joeosborn/vite-mock-api",
     "vite-plugin-checker": "^0.9.0",
     "vite-plugin-mkcert": "^1.17.7"
   },
   "dependencies": {
-    "@algolia/autocomplete-js": "^1.19.7",
-    "@meilisearch/autocomplete-client": "^0.7.0",
-    "@meilisearch/instant-meilisearch": "^0.30.0",
-    "instantsearch.css": "^8.11.1",
-    "instantsearch.js": "^4.90.0",
+    "@algolia/autocomplete-js": "^1.19.8",
+    "@meilisearch/autocomplete-client": "^0.8.0",
+    "@meilisearch/instant-meilisearch": "^0.31.1",
+    "instantsearch.css": "^8.17.0",
+    "instantsearch.js": "^4.101.0",
     "spark-md5": "^3.0.2",
     "tus-js-client": "^4.3.1"
   }

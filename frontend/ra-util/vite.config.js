@@ -8,6 +8,7 @@ export default defineConfig({
       // Could also be a dictionary or array of multiple entry points
       entry: resolve(__dirname, 'src/main.ts'),
       name: 'ra-util',
+      formats: ['es'],
       // the proper extensions will be added
       fileName: 'ra-util',
     },

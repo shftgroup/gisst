@@ -6,19 +6,17 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/embedv86.umd.cjs",
   "module": "./dist/embedv86.js",
   "exports": {
     ".": {
-      "import": "./dist/embedv86.js",
-      "require": "./dist/embedv86.umd.cjs"
+      "import": "./dist/embedv86.js"
     }
   },
   "types": "./dist/embedv86.d.ts",
   "scripts": {
     "dev": "vite",
     "check": "tsc && eslint src",
-    "build": "tsc && vite build && shx cp dist/embedv86.d.ts dist/embedv86.umd.d.ts",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "tsc && eslint src && vitest --run"
   },
@@ -26,15 +24,16 @@
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
     "eslint": "^9.13.0",
-    "node-dev": "^8.0.0",
     "serve-static": "^2.2.1",
     "shx": "^0.4.0",
     "typescript": "^5.8.2",
-    "vite": "^6.2.1",
+    "vite": "^8.0.16",
     "vite-plugin-dts": "^4.5.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.8"
   },
   "dependencies": {
+    "@vitest/ui": "4.1.8",
+    "happy-dom": "20.10.1",
     "hash-wasm": "^4.12.0"
   }
 }
