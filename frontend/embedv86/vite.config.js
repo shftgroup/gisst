@@ -1,12 +1,12 @@
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
-import sirv from 'sirv';
+import serveStatic from 'serve-static';
 
 const ServerFilesPlugin = {
     name: 'serve-server-files',
     configureServer(server) {
-        const serverStatic = sirv('../../', {})
+      const serverStatic = serveStatic('../../', {acceptRanges:true, cacheControl:false,index:false})
         server.middlewares.use(serverStatic);
     }
 }
