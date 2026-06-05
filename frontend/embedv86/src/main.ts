@@ -93,7 +93,6 @@ export class EmbedV86 {
     this.config.replay_checkpoints_changed(this.replays[this.replays.length-1].checkpoints,[]);
   }
   async stop_replay() {
-
     nonnull(this.emulator);
     if(this.active_replay != null) {
       await this.replays[this.active_replay].stop(this.emulator);
@@ -178,7 +177,10 @@ export class EmbedV86 {
     const content_folder = this.config.content_root;
     const config:V86Config = {
       wasm_path: this.config.wasm_file,
-      screen_container:this.config.container,
+      screen:{
+        container: this.config.container,
+        use_graphical_text: true
+      },
       autostart: true
     };
     if(entryState && movie) {
@@ -226,6 +228,7 @@ export class EmbedV86 {
     if(content_json.vga_memory_size) {
       config.vga_memory_size = content_json.vga_memory_size;
     }
+    config.disable_jit = content_json.disable_jit ?? false;
 
     this.emulator = new V86(config);
     this.emulator.emulator_bus.register("keyboard-code", (k:number) => this.replay_log(Evt.KeyCode,k));

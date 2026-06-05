@@ -44,7 +44,7 @@ interface V86Config {
   vga_bios?:V86Image,
   memory_size?:int,
   vga_memory_size?:int,
-  screen_container:HTMLDivElement,
+  screen:ScreenConfig,
   initial_state?:V86Image,
   autostart:boolean,
   fda?:V86Image,
@@ -52,5 +52,12 @@ interface V86Config {
   hda?:V86Image,
   hdb?:V86Image,
   cdrom?:V86Image,
+}
+interface ScreenConfig {
+  container?: HTMLElement | null;
+  encoding?: "ascii" | "cp437" | "cp858";
+  scaling?: number;
+  use_graphical_text?: boolean;
+  ansi?: boolean;
 }
 type V86Image = {buffer:ArrayBuffer|File} | {url:string, size?:number, async?:boolean, fixed_chunk_size?: number, use_parts?: boolean};
