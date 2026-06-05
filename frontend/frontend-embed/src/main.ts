@@ -78,8 +78,8 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
   const mute_a = container.querySelector("a.gisst-embed-webplayer-mute")! as HTMLLinkElement;
   const halt_a = container.querySelector("a.gisst-embed-webplayer-halt")! as HTMLLinkElement;
   const canvas = container.querySelector("canvas.gisst-embed-webplayer")! as HTMLCanvasElement;
-  canvas.style.width = container.style.width;
-  canvas.style.height = container.style.height;
+  canvas.style.width = container.style.width == "auto" ? "480px" : container.style.width;
+  canvas.style.height = container.style.height == "auto" ? "360px" : container.style.height;
   const [gisst_http_proto, gisst_root, gisst_query] = parseGisstUrl(gisst);
   const config = await fetchConfig(gisst_http_proto, gisst_root, gisst_query);
   if (!config) throw "Failed to fetch config";
