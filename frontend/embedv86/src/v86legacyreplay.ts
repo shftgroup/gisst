@@ -243,6 +243,8 @@ export class LegacyReplay {
     const real_t = this.replay_time(t);
     switch(this.mode) {
       case ReplayMode.Playback: {
+        emulator.keyboard_set_status(false);
+        emulator.mouse_set_status(false);
         // What is earlier: next checkpoint or next event?
         while(true) {
           const event_t = (this.index < this.events.length) ? this.events[this.index].when : Number.MAX_SAFE_INTEGER;
