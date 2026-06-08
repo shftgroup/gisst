@@ -55,15 +55,26 @@ export async function init(gisst_root:string, environment:Environment, work:Work
       }
     }
   }
-  const use_graphical_text = true;
+  let use_graphical_text = true;
   let entry_state:string|null = null;
   if (start.type == "state") {
     const data = (start as StateStart).data;
+    // Compatibility Note 1: Before this time, and while we were still
+    // using ambient cores, states and replays output by v86 did not
+    // include all the VGA memory they need to in order to recreate
+    // the graphical text display properly.
+    if (new Date(data.created_on) < new Date('2025-05-01')) {
+      use_graphical_text = false;
+    }
     entry_state = "storage/"+data.file_dest_path;
   }
   let movie:string|null = null;
   if (start.type == "replay") {
     const data = (start as ReplayStart).data;
+    // See Compatibility Note 1
+    if (new Date(data.created_on) < new Date('2025-05-01')) {
+      use_graphical_text = false;
+    }
     movie = "storage/"+data.file_dest_path;
   }
 
