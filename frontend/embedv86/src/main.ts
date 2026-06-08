@@ -9,6 +9,7 @@ export interface EmbedV86Config {
   bios_root:string;
   content_root:string;
   container:HTMLDivElement;
+  use_graphical_text:boolean;
   record_from_start:boolean;
   register_replay:(nom:string)=>void;
   stop_replay:()=>void;
@@ -179,7 +180,7 @@ export class EmbedV86 {
       wasm_path: this.config.wasm_file,
       screen:{
         container: this.config.container,
-        use_graphical_text: true
+        use_graphical_text: this.config.use_graphical_text
       },
       autostart: true
     };

@@ -55,6 +55,7 @@ export async function init(gisst_root:string, environment:Environment, work:Work
       }
     }
   }
+  const use_graphical_text = true;
   let entry_state:string|null = null;
   if (start.type == "state") {
     const data = (start as StateStart).data;
@@ -71,7 +72,8 @@ export async function init(gisst_root:string, environment:Environment, work:Work
     bios_root:gisst_root,
     record_from_start:options.record_from_start,
     content_root:gisst_root,
-    container: container,
+    container,
+    use_graphical_text,
     register_replay:(_nom:string)=>{},
     stop_replay:()=>{},
     states_changed:(_added:StateInfo[], _removed:StateInfo[]) => {},
