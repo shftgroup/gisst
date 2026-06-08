@@ -74,7 +74,7 @@ export interface StateFileLink {
     state_replay_index?: number,
     state_derived_from?: string,
     save_derived_from?: string,
-    created_on?: Date,
+    created_on?: string,
     file_id: string,
     file_hash: string,
     file_filename: string,
@@ -91,7 +91,7 @@ export interface SaveFileLink {
     save_derived_from?: string,
     state_derived_from?: string,
     replay_derived_from?: string,
-    created_on?: Date,
+    created_on?: string,
     file_id: string,
     file_hash: string,
     file_filename: string,
@@ -106,7 +106,7 @@ export interface ReplayFileLink {
     instance_id: string,
     creator_id: string,
     replay_forked_from?: string,
-    created_on?: Date,
+    created_on?: string,
     file_id: string,
     file_hash: string,
     file_filename: string,
@@ -133,7 +133,7 @@ export interface Work {
     work_name: string,
     work_version: string,
     work_platform: string,
-    created_on: Date
+    created_on: string
 }
 
 export interface Save {
@@ -143,11 +143,11 @@ export interface Save {
     save_description: string,
     file_id: string,
     creator_id: string,
-    created_on: Date
+    created_on: string,
     state_derived_from: string|null,
     save_derived_from: string|null,
     replay_derived_from: string|null,
-    [key:string]: string | boolean | Date | null
+    [key:string]: string | boolean | null
 }
 export function generateSaveFields():DBField[] {
     return [
@@ -157,7 +157,7 @@ export function generateSaveFields():DBField[] {
         {field_name: "save_short_desc" , value_type:"string", editable: true},
         {field_name: "save_description" , value_type:"string", editable: true},
         {field_name: "creator_id" , value_type:"string", editable: false},
-        {field_name: "created_on" , value_type:"Date", editable: false},
+        {field_name: "created_on" , value_type:"string", editable: false},
         {field_name: "state_derived_from" , value_type:"string", editable: false},
         {field_name: "save_derived_from" , value_type:"string", editable: false},
         {field_name: "replay_derived_from" , value_type:"string", editable: false}
@@ -176,8 +176,8 @@ export interface State {
     creator_id: string,
     state_derived_from: string|null,
     save_derived_from: string|null,
-    created_on: Date,
-    [key:string]: string | boolean | Date | null
+    created_on: string,
+    [key:string]: string | boolean | null
 }
 export function generateStateFields():DBField[] {
     return [
@@ -192,7 +192,7 @@ export function generateStateFields():DBField[] {
         {field_name: "creator_id" , value_type:"string", editable: false},
         {field_name: "state_derived_from" , value_type:"string", editable: false},
         {field_name: "save_derived_from" , value_type:"string", editable: false},
-        {field_name: "created_on" , value_type:"Date", editable: false}
+        {field_name: "created_on" , value_type:"string", editable: false}
     ]
 }
 
@@ -204,8 +204,8 @@ export interface Replay {
     creator_id: string,
     replay_forked_from: string|null,
     file_id: string,
-    created_on: Date,
-    [key:string]: string | Date | null
+    created_on: string,
+    [key:string]: string | null
 }
 export function generateReplayFields():DBField[] {
     return [
@@ -216,7 +216,7 @@ export function generateReplayFields():DBField[] {
         {field_name: "creator_id" , value_type:"string", editable: false},
         {field_name: "replay_forked_from" , value_type:"string", editable: false},
         {field_name: "file_id" , value_type:"string", editable: false},
-        {field_name: "created_on" , value_type:"Date", editable: false}
+        {field_name: "created_on" , value_type:"string", editable: false}
     ]
 }
 export interface Instance {
@@ -224,7 +224,7 @@ export interface Instance {
     environment_id: string,
     work_id: string,
     instance_config: JSON,
-    created_on: Date
+    created_on: string
 }
 export interface Screenshot {
     screenshot_id: string,

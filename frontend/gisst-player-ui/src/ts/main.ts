@@ -258,7 +258,7 @@ export class UI {
         state_derived_from: metadata?.state_derived_from || (this.current_config.start.type === "state" ? (this.current_config.start.data! as StateFileLink).state_id : null),
         replay_derived_from: metadata?.replay_derived_from || (this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : null),
         creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
-        created_on: metadata?.created_on || new Date()
+        created_on: metadata?.created_on || (new Date()).toJSON()
       },
       screenshot: "",
       stored_on_server: false,
@@ -338,7 +338,7 @@ export class UI {
         screenshot_id: metadata?.screenshot_id || NEVER_UPLOADED_ID,
         replay_id: metadata?.replay_id || null,
         creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
-        created_on: metadata?.created_on || new Date()
+        created_on: metadata?.created_on || (new Date()).toJSON()
       },
       screenshot: state_thumbnail,
       stored_on_server: false,
@@ -417,7 +417,7 @@ export class UI {
         creator_id: metadata?.creator_id || "00000000-0000-0000-0000-000000000000",
         replay_forked_from: metadata?.replay_forked_from || (this.current_config.start.type === "replay" ? (this.current_config.start.data! as ReplayFileLink).replay_id : null),
         file_id: metadata?.file_id || NEVER_UPLOADED_ID,
-        created_on: metadata?.created_on || new Date()
+        created_on: metadata?.created_on || (new Date()).toJSON()
       },
       stored_on_server: false,
       editing: false,
