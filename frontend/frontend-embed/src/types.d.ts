@@ -1,6 +1,7 @@
 export interface EmbedOptions {
   controls: ControllerOverlayMode,
-  record_from_start: bool
+  record_from_start: bool,
+  record_video: bool
 }
 
 export enum ControllerOverlayMode {

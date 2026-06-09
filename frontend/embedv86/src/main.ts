@@ -12,6 +12,7 @@ export interface EmbedV86Config {
   container:HTMLDivElement;
   use_graphical_text:boolean;
   record_from_start:boolean;
+  record_video:boolean;
   register_replay:(nom:string)=>void;
   stop_replay:()=>void;
   states_changed:(added:StateInfo[], removed:StateInfo[]) => void;
@@ -43,20 +44,25 @@ export class State {
 export class EmbedV86 {
   emulator:V86 | null;
   config:EmbedV86Config;
-  // TODO wrap in a State class that includes the current replay ID if any
   states:State[];
   replays:Replay[];
+  // TODO: use OPFS in the future instead of RAM
+  videos:Blob[][];
+  audioDestination: MediaStreamAudioDestinationNode|null = null;
+  recorder: MediaRecorder|null = null;
   active_replay:number|null;
   constructor(config:EmbedV86Config) {
     this.active_replay = null;
     this.config = config;
     this.states = [];
     this.replays = [];
+    this.videos = [];
     this.emulator = null;
   }
   clear() {
     this.states = [];
     this.replays = [];
+    this.videos = [];
     this.active_replay = null;
     if(this.emulator) {
       this.emulator.destroy();
@@ -85,22 +91,57 @@ export class EmbedV86 {
   async record_replay() {
     nonnull(this.emulator);
     if(this.active_replay != null) {
-      await this.replays[this.active_replay!].stop(this.emulator);
-      this.config.stop_replay();
+      await this.stop_replay();
     }
     this.config.register_replay("replay"+this.replays.length.toString());
     this.replays.push(await Replay.start_recording(this.emulator));
     this.active_replay = this.replays.length-1;
+    await this.start_video_recording();
     // console.log("add initial checkpoints");
     this.config.replay_checkpoints_changed(this.replays[this.replays.length-1].checkpoints,[]);
   }
   async stop_replay() {
     nonnull(this.emulator);
     if(this.active_replay != null) {
-      await this.replays[this.active_replay].stop(this.emulator);
+      const replay = this.replays[this.active_replay];
+      const proms = [];
+      if (replay.mode == ReplayMode.Record) {
+        proms.push(this.stop_video_recording());
+      }
+      proms.push(replay.stop(this.emulator));
+      await Promise.all(proms);
       this.config.stop_replay();
       this.active_replay = null;
     }
+  }
+  async start_video_recording():Promise<void> {
+    if (!this.config.record_video) { return; }
+    if (this.active_replay == null || this.replays[this.active_replay].mode != ReplayMode.Record || !this.audioDestination) {
+      throw "Can't start a video without a replay in record mode";
+    }
+    const replay_num = this.active_replay;
+    this.videos.push([]);
+    const canvas = this.config.container.getElementsByTagName("canvas")[0];
+    const canvas_stream = canvas.captureStream(30);
+    const audio_stream = this.audioDestination.stream;
+    const stream = new MediaStream(canvas_stream.getTracks().concat(audio_stream.getTracks()));
+    this.recorder = new MediaRecorder(stream, {mimeType:"video/webm"});
+    this.recorder.ondataavailable = (e) => {
+      this.videos[replay_num].push(e.data);
+    };
+    this.recorder.start();
+  }
+  async stop_video_recording():Promise<void> {
+    if (!this.config.record_video) { return; }
+    if (!this.recorder) {
+      throw "Can't finish a video without a replay in record mode";
+    }
+    const rec = this.recorder;
+    this.recorder = null;
+    return new Promise((resolve) => {
+      rec.onstop = (_e) => {resolve()};
+      rec.stop();
+    });
   }
   async load_state_slot(n:number) {
     nonnull(this.emulator);
@@ -122,7 +163,7 @@ export class EmbedV86 {
     await this.replays[n].start_playback(this.emulator);
     this.active_replay = n;
   }
-  async download_file(category:"state" | "save" | "replay", file_name:string):Promise<[Blob,string]> {
+  async download_file(category:"state" | "save" | "replay" | "video", file_name:string):Promise<[Blob,string]> {
     if(category == "state") {
       const checkpoint_matches = file_name.match(/replay([0-9a-f-]+)-state([0-9]+)/);
       if(checkpoint_matches != null) {
@@ -151,9 +192,26 @@ export class EmbedV86 {
       const fixed_view = new Uint8Array(fixedBuffer);
       fixed_view.set(new Uint8Array(ser_rep));
       return [new Blob([fixedBuffer]), file_name.toString()+".v86replay"];
+    } else if(category == "video") {
+      const num_str = (file_name.match(/replay([0-9]+)$/)?.[1]) ?? "0";
+      const replay_num = parseInt(num_str,10);
+      const file = await this.get_replay_video(replay_num);
+      return [file, file.name];
     } else {
       throw "Invalid save category";
     }
+  }
+  async get_replay_video(replay_num:number) : Promise<File> {
+    if (!this.config.record_video) {
+      throw "Can't obtain video, recording not enabled in config";
+    }
+    const rep = this.replays[replay_num];
+    if (rep.mode == ReplayMode.Record) {
+      throw "Can't obtain video, recording not finished";
+    }
+    // TODO: replace with opfs or temp file
+    const file = new File(this.videos[replay_num], `replay${replay_num}.webm`, {type:"video/webm"});
+    return file;
   }
   replay_log(evt:Evt, val:number|object) {
     nonnull(this.emulator);
@@ -168,6 +226,16 @@ export class EmbedV86 {
       const old_cp_count = replay.checkpoints.length;
       // console.log("old count",old_cp_count);
       replay.tick(this.emulator);
+      if (replay.mode == ReplayMode.Record && !this.config.use_graphical_text) {
+        const canvas = this.config.container.getElementsByTagName("canvas")[0]!;
+        if (canvas.style.display == "none") {
+          // hidden because we're in text mode, so we absolutely must make a screenshot!
+          const screen = this.emulator.screen_make_screenshot();
+          canvas.width = screen.width;
+          canvas.height = screen.height;
+          canvas.getContext("2d")!.drawImage(screen, 0, 0);
+        }
+      }
       if(old_cp_count < replay.checkpoints.length) {
         // console.log("new cp!",replay.checkpoints.length);
         this.config.replay_checkpoints_changed(replay.checkpoints.slice(old_cp_count),[]);
@@ -241,6 +309,11 @@ export class EmbedV86 {
     return new Promise(resolve => {
       // first time it runs, play_replay_slot 0 if movie is used or else start recording
       const start_initial_replay = () => {
+        if (this.config.record_video) {
+          const speaker = this.emulator!.speaker_adapter.mixer.node_merger;
+          this.audioDestination = (speaker.context as AudioContext).createMediaStreamDestination();
+          speaker.connect(this.audioDestination!);
+        }
         this.emulator!.remove_listener("emulator-started", start_initial_replay);
         if(movie) {
           this.play_replay_slot(0);
