@@ -63,6 +63,7 @@ pub struct CreateReplay {
     pub replay_name: String,
     pub replay_description: String,
     pub instance_id: Uuid,
+    pub video_id: Option<Uuid>,
     pub replay_forked_from: Option<Uuid>,
     pub file_id: Uuid,
 }
@@ -84,6 +85,7 @@ async fn create_replay(
                 &mut conn,
                 Replay {
                     replay_id: Uuid::new_v4(),
+                    video_id: replay.video_id,
                     replay_name: replay.replay_name,
                     replay_description: replay.replay_description,
                     instance_id: replay.instance_id,

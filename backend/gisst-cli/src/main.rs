@@ -972,6 +972,7 @@ async fn create_replay(
         force_uuid,
         file,
         creator_id,
+        video_id,
         replay_forked_from,
         replay_name,
         replay_description,
@@ -1023,6 +1024,7 @@ async fn create_replay(
     let replay = Replay {
         replay_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
+        video_id,
         creator_id: creator_id.unwrap_or_else(|| uuid!("00000000-0000-0000-0000-000000000000")),
         replay_name: replay_name.unwrap_or_else(|| "a replay".to_string()),
         replay_description: replay_description
