@@ -40,6 +40,13 @@ const replayCreateHandler:MockHandler = {
     res.end();
   }
 };
+const videoCreateHandler:MockHandler = {
+  path: "/videos/create",
+  handler: (_req:MockApiHandlerRequest, res:MockApiHandlerResponse) => {
+    setJSON(res,{video_id:"96f7f017-0de4-4f03-9696-96c89d16c90a"});
+    res.end();
+  }
+};
 const saveCreateHandler:MockHandler = {
   path: "/saves/create",
   handler: (_req:MockApiHandlerRequest, res:MockApiHandlerResponse) => {
@@ -61,4 +68,4 @@ const stateCreateHandler:MockHandler = {
     res.end();
   }
 };
-export default [resourcesPatchHandler, resourcesHandler, replayCreateHandler, screenshotCreateHandler, saveCreateHandler, stateCreateHandler];
+export default [resourcesPatchHandler, resourcesHandler, replayCreateHandler, screenshotCreateHandler, saveCreateHandler, stateCreateHandler, videoCreateHandler];

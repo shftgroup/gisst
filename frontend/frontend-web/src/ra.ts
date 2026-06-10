@@ -110,61 +110,36 @@ export async function init(ui:UI, embed:EmuControls) {
         saveAs(new Blob([new Uint8Array(data)]), file_name);
       },
       "upload_file": (category: "state" | "save" | "replay", file_name: string, metadata:GISSTModels.Metadata ) => {
-        return new Promise((resolve, reject) => {
-          let path;
-          if (category === "state") {
-            path = state_dir;
-          } else if (category === "save") {
-            path = saves_dir;
+        let path;
+        if (category === "state") {
+          path = state_dir;
+        } else if (category === "save") {
+          path = saves_dir;
+        } else if (category === "replay") {
+          path = state_dir;
+        } else {
+          console.error("Invalid save category", category, file_name);
+          throw ("Invalid save category:" + category + ":" + file_name);
+        }
+        const data = RA.module.FS.readFile(path + "/" + file_name);
+        return (async () => {
+          metadata.record.file_id = await db.uploadFile(new File([new Uint8Array(data)], file_name), metadata.record.file_id, (_percentage: number) => {});
+          if (category === "state"){
+            const screenshot = await db.uploadRecord({screenshot_data: metadata.screenshot}, "screenshot");
+            (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
+            const state = await db.uploadRecord(metadata.record, category);
+            (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
           } else if (category === "replay") {
-            path = state_dir;
-            // TODO: idea -- add a video category? or make it part of regular replay upload?
-          } else {
-            console.error("Invalid save category", category, file_name);
-            reject("Invalid save category:" + category + ":" + file_name);
-            return;
+            const replay = await db.uploadRecord(metadata.record, category);
+            (metadata.record as GISSTModels.Replay).replay_id = (replay as GISSTModels.Replay).replay_id;
+            // upload all associated states too
+          } else if (category === "save") {
+            const save = await db.uploadRecord(metadata.record, category);
+            (metadata.record as GISSTModels.Save).save_id = (save as GISSTModels.Save).save_id;
+            // upload all associated states too
           }
-          const data = RA.module.FS.readFile(path + "/" + file_name);
-
-          db.uploadFile(new File([new Uint8Array(data)], file_name), metadata.record.file_id,
-            (error:Error) => { reject(console.error("ran error callback", error.message))},
-            (_percentage: number) => {},
-            (uuid_string: string) => {
-              metadata.record.file_id = uuid_string;
-              if (category === "state"){
-                db.uploadRecord({screenshot_data: metadata.screenshot}, "screenshot")
-                  .then((screenshot:GISSTModels.DBRecord) => {
-                    (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
-                    db.uploadRecord(metadata.record, category)
-                      .then((state:GISSTModels.DBRecord) => {
-                        (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id;
-                        resolve(metadata)
-                      })
-                      .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
-                  })
-                  .catch((e) => {console.error(e); reject("Screenshot upload from RA failed.");})
-              } else if (category === "replay") {
-                // TODO: be sure video_id is linked by now
-                db.uploadRecord(metadata.record, category)
-                  .then((replay:GISSTModels.DBRecord) => {
-                    (metadata.record as GISSTModels.Replay).replay_id = (replay as GISSTModels.Replay).replay_id;
-                    resolve(metadata)
-                  })
-                  .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
-                // upload all associated states too
-              } else if (category === "save") {
-                db.uploadRecord(metadata.record, category)
-                  .then((save:GISSTModels.DBRecord) => {
-                    (metadata.record as GISSTModels.Save).save_id = (save as GISSTModels.Save).save_id;
-                    resolve(metadata)
-                  })
-                  .catch((e) => {console.error(e); reject(`${category} upload from RA failed.`);})
-                // upload all associated states too
-              }
-            })
-            .catch(() => reject("File upload from RA failed."));
-
-        })
+          return metadata;
+        })();
       }
     },
   );
