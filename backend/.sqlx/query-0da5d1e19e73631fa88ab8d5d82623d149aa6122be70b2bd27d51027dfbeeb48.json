@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO video VALUES($1, $2, $3, $4) RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "video_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "video",
+            "name": "video_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "video",
+            "name": "file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_on",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "video",
+            "name": "created_on"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "creator_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "video",
+            "name": "creator_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0da5d1e19e73631fa88ab8d5d82623d149aa6122be70b2bd27d51027dfbeeb48"
+}

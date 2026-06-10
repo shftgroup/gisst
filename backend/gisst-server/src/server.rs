@@ -6,7 +6,7 @@ use crate::{
     db,
     routes::{
         creator_router, environment_router, instance_router, lookup, object_router, players,
-        replay_router, save_router, screenshot_router, state_router, work_router,
+        replay_router, save_router, screenshot_router, state_router, video_router, work_router,
     },
     serverconfig::ServerConfig,
     tus,
@@ -164,6 +164,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .nest("/screenshots", screenshot_router())
         .nest("/states", state_router())
         .nest("/works", work_router())
+        .nest("/videos", video_router())
         .nest("/environments", environment_router())
         .route_layer(
             // This is ugly, but it achieves the goal; the unwrap is fine
