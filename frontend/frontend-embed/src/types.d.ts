@@ -32,7 +32,7 @@ export interface Work {
   work_name: string,
   work_version: string,
   work_platform: string,
-  created_on: Date
+  created_on: string
 }
 
 export interface Instance {
@@ -41,7 +41,7 @@ export interface Instance {
   environment_id: string,
   work_id: string,
   instance_config: JSON,
-  created_on: Date
+  created_on: string
 }
 
 
@@ -78,7 +78,7 @@ export interface SaveFileLink {
   save_derived_from?: string,
   state_derived_from?: string,
   replay_derived_from?: string,
-  created_on?: Date,
+  created_on?: string,
   file_id: string,
   file_hash: string,
   file_filename: string,
@@ -100,6 +100,7 @@ export interface StartStateData {
   file_source_path:string,
   file_hash:string,
   screenshot_id:string,
+  created_on:string,
   state?:Uint8Array
 }
 
@@ -115,6 +116,7 @@ export interface StartReplayData {
   file_filename:string,
   file_source_path:string,
   file_hash:string,
+  created_on:string,
   replay?:Uint8Array
 }
 
