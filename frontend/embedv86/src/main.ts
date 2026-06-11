@@ -1,6 +1,6 @@
 import {Replay,ReplayMode,Evt} from './v86replay';
-export {ReplayEvent} from './v86replay';
-
+import {nonnull} from './utils';
+export {ReplayEvent} from './v86replay'
 export interface StateInfo {
   name:string;
   thumbnail:string;
@@ -271,11 +271,6 @@ export class EmbedV86 {
       const replay = this.replays[this.active_replay];
       this.config.replay_checkpoints_changed(replay.checkpoints,[]);
     }
-  }
-}
-function nonnull(obj:number|object|null):asserts obj {
-  if(obj == null) {
-    throw "Must be non-null";
   }
 }
 function setup_image(img:"bios"|"vga_bios"|"fda"|"fdb"|"hda"|"hdb"|"cdrom", content_json:ConfigSettings, config:V86Config, content_folder:string) {
