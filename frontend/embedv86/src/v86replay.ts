@@ -271,6 +271,8 @@ export class Replay {
       }
       case ReplayMode.Playback: {
         // What is earlier: next checkpoint or next event?
+        emulator.keyboard_set_status(false);
+        emulator.mouse_set_status(false);
         while(true) {
           const event_t = (this.index < this.events.length) ? this.events[this.index].when : Number.MAX_SAFE_INTEGER;
           const checkpoint_t = (this.checkpoint_index < this.checkpoints.length) ? this.checkpoints[this.checkpoint_index].when : Number.MAX_SAFE_INTEGER;
