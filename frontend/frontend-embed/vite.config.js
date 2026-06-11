@@ -29,6 +29,7 @@ export default {
       entry: resolve(__dirname, 'src/main.ts'),
       name: 'GISST',
       fileName: 'embed',
+      formats: ['es'],
     },
     sourcemap: true,
   },

@@ -6,19 +6,17 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/ra-util.umd.cjs",
   "module": "./dist/ra-util.js",
   "exports": {
     ".": {
-      "import": "./dist/ra-util.js",
-      "require": "./dist/ra-util.umd.cjs"
+      "import": "./dist/ra-util.js"
     }
   },
   "types": "./dist/ra-util.d.ts",
   "scripts": {
     "dev": "vite",
     "check": "npx tsc && eslint src",
-    "build": "tsc && vite build && shx cp dist/ra-util.d.ts dist/ra-util.umd.d.ts",
+    "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -27,7 +25,7 @@
     "eslint": "^9.13.0",
     "shx": "^0.4.0",
     "typescript": "^5.8.2",
-    "vite": "^6.2.1",
+    "vite": "^8.0.16",
     "vite-plugin-dts": "^4.5.3"
   }
 }

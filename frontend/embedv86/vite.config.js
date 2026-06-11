@@ -15,6 +15,7 @@ export default defineConfig({
     lib: {
       // Could also be a dictionary or array of multiple entry points
       entry: resolve(__dirname, 'src/main.ts'),
+      formats: ['es'],
       name: 'embedv86',
       // the proper extensions will be added
       fileName: 'embedv86',
@@ -26,12 +27,6 @@ export default defineConfig({
     dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],}),
     ServerFilesPlugin
   ],
-  rollupOptions: {
-    // make sure to externalize deps that shouldn't be bundled
-    // into your library
-    external: [],
-    output: {globals:{}},
-  },
   test: {
     includeSource: ['src/**/*.{js,ts}'],
   },

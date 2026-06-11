@@ -1,4 +1,4 @@
-import { MeiliSearch } from "meilisearch";
+import { Meilisearch } from "meilisearch";
 
 console.log("Please make sure a meilisearch instance is running at :7701");
 console.log("e.g.: cd backend/meili; ./meilisearch --no-analytics --master-key test-api-key --env development --db-path ./test --http-addr localhost:7701");
@@ -7,7 +7,7 @@ console.log(`
   cd backend; MEILI_URL=http://localhost:7701 MEILI_API_KEY=test-api-key cargo run --bin gisst-cli -- init-indices
 `);
 
-const client = new MeiliSearch({
+const client = new Meilisearch({
   host: process.argv[2] ?? "http://localhost:7701",
   apiKey: "test-api-key",
 });

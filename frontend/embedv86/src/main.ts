@@ -1,9 +1,10 @@
 import {Replay,ReplayMode,Evt} from './v86replay';
+export {ReplayEvent} from './v86replay';
+
 export interface StateInfo {
   name:string;
   thumbnail:string;
 }
-export {ReplayMode,Evt,ReplayEvent} from './v86replay';
 export interface EmbedV86Config {
   wasm_file:string;
   bios_root:string;
