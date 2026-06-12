@@ -408,9 +408,11 @@ export class UI {
       this.toggleEditReplay(replay_file);
     });
     nonnull(this.current_config!);
+    // TODO: Upload video before committing replay metadata and link it here
     const replay_metadata:Metadata = {
       record: {
         replay_id: metadata?.replay_id || NEVER_UPLOADED_ID,
+        video_id: metadata?.video_id || null,
         replay_name: metadata?.replay_name || replay_file,
         replay_description: metadata?.replay_description || replay_file,
         instance_id: this.current_config.instance.instance_id,

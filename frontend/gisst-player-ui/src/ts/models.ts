@@ -103,6 +103,7 @@ export interface ReplayFileLink {
     replay_id: string,
     replay_name: string,
     replay_description: string,
+    video_id: string,
     instance_id: string,
     creator_id: string,
     replay_forked_from?: string,
@@ -198,6 +199,7 @@ export function generateStateFields():DBField[] {
 
 export interface Replay {
     replay_id: string,
+    video_id: string|null,
     replay_name: string,
     replay_description: string,
     instance_id: string,
@@ -210,6 +212,7 @@ export interface Replay {
 export function generateReplayFields():DBField[] {
     return [
         {field_name: "replay_id" , value_type: "string", editable: false},
+        {field_name: "video_id" , value_type: "string", editable: false},
         {field_name: "replay_name" , value_type: "string", editable: true},
         {field_name: "replay_description" , value_type: "string", editable: true},
         {field_name: "instance_id" , value_type:"string", editable: false},

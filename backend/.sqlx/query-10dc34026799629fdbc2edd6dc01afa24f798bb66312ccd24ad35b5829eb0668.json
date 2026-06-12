@@ -101,6 +101,17 @@
             "name": "hidden"
           }
         }
+      },
+      {
+        "ordinal": 9,
+        "name": "video_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "replay",
+            "name": "video_id"
+          }
+        }
       }
     ],
     "parameters": {
@@ -118,7 +129,8 @@
       true,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
   "hash": "10dc34026799629fdbc2edd6dc01afa24f798bb66312ccd24ad35b5829eb0668"

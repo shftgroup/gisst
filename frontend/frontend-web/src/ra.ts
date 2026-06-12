@@ -118,6 +118,7 @@ export async function init(ui:UI, embed:EmuControls) {
             path = saves_dir;
           } else if (category === "replay") {
             path = state_dir;
+            // TODO: idea -- add a video category? or make it part of regular replay upload?
           } else {
             console.error("Invalid save category", category, file_name);
             reject("Invalid save category:" + category + ":" + file_name);
@@ -143,6 +144,7 @@ export async function init(ui:UI, embed:EmuControls) {
                   })
                   .catch((e) => {console.error(e); reject("Screenshot upload from RA failed.");})
               } else if (category === "replay") {
+                // TODO: be sure video_id is linked by now
                 db.uploadRecord(metadata.record, category)
                   .then((replay:GISSTModels.DBRecord) => {
                     (metadata.record as GISSTModels.Replay).replay_id = (replay as GISSTModels.Replay).replay_id;

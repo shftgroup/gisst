@@ -386,6 +386,9 @@ pub struct CreateReplay {
     #[arg(short, long)]
     pub link: Uuid,
 
+    #[arg(long)]
+    pub video_id: Option<Uuid>,
+
     /// Folder depth to use for input file to path based off of characters in assigned UUID
     #[arg(short, long, default_value_t = 4)]
     pub depth: u8,

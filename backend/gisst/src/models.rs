@@ -163,6 +163,7 @@ pub struct Replay {
     #[serde(default = "utc_datetime_now")]
     pub created_on: DateTime<Utc>,
     pub hidden: bool,
+    pub video_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -261,6 +262,7 @@ pub struct CreatorReplayInfo {
     pub environment_core_version: String,
     pub environment_created_on: chrono::DateTime<chrono::Utc>,
     pub hidden: bool,
+    pub video_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -375,7 +377,7 @@ impl CreatorReplayInfo {
                       file_id, instance_id, replay.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
                       environment.environment_framework as "environment_framework:_",
-                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, replay.hidden
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, replay.hidden, replay.video_id
                FROM work
                     JOIN instance USING (work_id)
                     JOIN replay USING (instance_id)
@@ -394,7 +396,7 @@ impl CreatorReplayInfo {
                       file_id, instance_id, replay.created_on, creator.creator_id,
                       creator.creator_username, creator.creator_full_name,
                       environment.environment_framework as "environment_framework:_",
-                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, replay.hidden
+                      environment.environment_core_name, environment.environment_core_version, environment.created_on as environment_created_on, replay.hidden, replay.video_id
                FROM work
                     JOIN instance USING (work_id)
                     JOIN replay USING (instance_id)
@@ -746,7 +748,7 @@ impl Replay {
     ) -> Result<Self, Insert> {
         let record = sqlx::query_as!(
             Replay,
-            r#"INSERT INTO replay VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *"#,
+            r#"INSERT INTO replay VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *"#,
             model.replay_id,
             model.replay_name,
             model.replay_description,
@@ -755,7 +757,8 @@ impl Replay {
             model.replay_forked_from,
             model.file_id,
             model.created_on,
-            model.hidden
+            model.hidden,
+            model.video_id
         )
         .fetch_one(conn.as_mut())
         .await
@@ -824,7 +827,7 @@ impl Save {
             model.state_derived_from,
             model.save_derived_from,
             model.replay_derived_from,
-            model.hidden
+            model.hidden,
         )
         .fetch_one(conn.as_mut())
         .await
@@ -1323,12 +1326,13 @@ pub struct ReplayLink {
     pub creator_id: Uuid,
     pub replay_forked_from: Option<Uuid>,
     pub created_on: Option<chrono::DateTime<chrono::Utc>>,
+    pub hidden: bool,
+    pub video_id: Option<Uuid>,
     pub file_id: Uuid,
     pub file_hash: String,
     pub file_filename: String,
     pub file_source_path: String,
     pub file_dest_path: String,
-    pub hidden: bool,
 }
 impl ReplayLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
