@@ -16,14 +16,15 @@
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
     "coffeescript": "^2.7.0",
+    "esbuild": "^0.28.1",
     "eslint": "^9.22.0",
     "rollup-plugin-sourcemaps": "0.6.3",
     "shx": "^0.4.0",
+    "sirv": "^3.0.2",
     "typescript": "^5.8.2",
     "vite": "^8.0.16",
-    "vite-plugin-checker": "^0.9.0",
-    "sirv": "^3.0.2",
     "vite-mock-api": "github:joeosborn/vite-mock-api",
+    "vite-plugin-checker": "^0.9.0",
     "vite-plugin-mkcert": "^1.17.7"
   },
   "dependencies": {
