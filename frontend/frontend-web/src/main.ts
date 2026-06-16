@@ -10,7 +10,8 @@ window.onload = async function() {
   const params = new URLSearchParams(gisst_url.slice(gisst_url.indexOf("?")+1));
   const options = {
     controls:ControllerOverlayMode.Auto,
-    record_from_start:params.get("boot_into_record")
+    record_from_start:params.get("boot_into_record"),
+    record_video:true
   };
   const ui = new UI(
     <HTMLDivElement>document.getElementById("ui")!,

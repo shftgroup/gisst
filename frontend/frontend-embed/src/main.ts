@@ -86,9 +86,9 @@ export async function embed(gisst:string, container:HTMLDivElement, options?:Emb
   const kind = config.environment.environment_framework;
   let emu:EmuControls;
   if(kind == "v86") {
-    emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.work, config.instance, config.start, config.core_manifest, config.manifest, config.saves, container, options ?? {controls:ControllerOverlayMode.Auto, record_from_start:false});
+    emu = await v86.init(gisst_http_proto+"://"+gisst_root, config.environment, config.work, config.instance, config.start, config.core_manifest, config.manifest, config.saves, container, options ?? {controls:ControllerOverlayMode.Auto, record_from_start:false, record_video:true});
   } else {
-    emu = await ra.init(gisst_http_proto+"://"+gisst_root, config.environment, config.work, config.instance, config.start, config.saves, config.core_manifest, config.manifest, container, options ?? {controls:ControllerOverlayMode.Auto, record_from_start:false});
+    emu = await ra.init(gisst_http_proto+"://"+gisst_root, config.environment, config.work, config.instance, config.start, config.saves, config.core_manifest, config.manifest, container, options ?? {controls:ControllerOverlayMode.Auto, record_from_start:false,record_video:true});
   }
   mute_a.classList.remove("gisst-embed-hidden");
   halt_a.classList.remove("gisst-embed-hidden");
@@ -141,7 +141,7 @@ function controller_mode_from(s:string|null) : ControllerOverlayMode {
 }
 
 class GISSTElement extends HTMLElement {
-  static observedAttributes = ["src", "controller", "width", "height"];
+  static observedAttributes = ["src", "controller", "width", "height", "record-video"];
 
   constructor() {
     super();
@@ -156,7 +156,7 @@ class GISSTElement extends HTMLElement {
     div.style.width = this.getAttribute("width") ?? "auto";
     div.style.height = this.getAttribute("height") ?? "auto";
     this.appendChild(div);
-    embed(src!, div, {controls:controller_mode_from(this.getAttribute("controller")),record_from_start:false});
+    embed(src!, div, {controls:controller_mode_from(this.getAttribute("controller")),record_from_start:false, record_video:this.getAttribute("record-video") != null});
   }
 }
 customElements.define("gisst-embed", GISSTElement);

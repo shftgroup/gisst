@@ -17,6 +17,7 @@
       <canvas class="gisst-embed-webplayer gisst-embed-hidden" tabindex="1" id="embed_canvas_0"></canvas>
       <div class="gisst-embed-webplayer-textmode gisst-embed-hidden"></div>
     </div>
+    <video id="video" controls></video>
     <!-- <script type="module" src="/src/main.ts"></script> -->
     <script src="/build/libv86.js"></script>
     <script type="module">
@@ -39,6 +40,8 @@
           bios_root:"/build",
           content_root:"/backend/examples/data/v86",
           container:document.querySelector("#app"),
+          use_graphical_text:true,
+          record_video:true,
           record_from_start:false,
           register_replay:(r) => {replay=r;},
           stop_replay:() => {},
@@ -52,7 +55,11 @@
           await v86.emulator.lock_mouse();
           await v86.record_replay();
         });
-        document.querySelector("#stopbutton").addEventListener("click", () => { v86.stop_replay(); });
+        document.querySelector("#stopbutton").addEventListener("click", async () => {
+          await v86.stop_replay();
+          const src = await v86.get_replay_video(0);
+          document.querySelector("#video").src = URL.createObjectURL(src);
+        });
         document.querySelector("#replaybutton").addEventListener("click", () => { v86.play_replay_slot(0); });
         document.querySelector("#savebutton").addEventListener("click", async () => {
           await v86.save_state();

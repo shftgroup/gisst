@@ -5,6 +5,7 @@ declare class V86 {
   mouse_set_status(bool): void;
   keyboard_set_status(bool): void;
   screen_adapter:ScreenAdapter;
+  speaker_adapter:SpeakerAdapter;
   screen_make_screenshot():Image;
   async save_state(): Promise<ArrayBuffer>;
   async restore_state(sbuf:ArrayBuffer): Promise<void>;
@@ -36,6 +37,12 @@ declare class ScreenAdapter {
   charmap:string[];
   cursor_col:number;
   cursor_row:number;
+}
+declare class SpeakerAdapter {
+  mixer: Mixer;
+}
+declare class Mixer {
+  node_merger: AudioNode;
 }
 interface V86Config {
   wasm_path:string,
