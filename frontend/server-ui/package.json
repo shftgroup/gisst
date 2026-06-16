@@ -21,6 +21,7 @@
     "@types/path-browserify": "^1.0.3",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
+    "esbuild": "^0.28.1",
     "eslint": "^9.22.0",
     "meilisearch": "^0.57.0",
     "rollup-plugin-sourcemaps": "0.6.3",
