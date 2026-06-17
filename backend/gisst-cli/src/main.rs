@@ -14,7 +14,7 @@ use clap::Parser;
 use gisst::{
     models::{
         Core, Creator, Duplicate, Environment, Instance, Object, ObjectLink, ObjectRole, Replay,
-        Save, Screenshot, State, Work, insert_file_object,
+        Save, Screenshot, State, Video, Work, insert_file_object,
     },
     storage::StorageHandler,
 };
@@ -973,6 +973,7 @@ async fn create_replay(
         file,
         creator_id,
         video_id,
+        video_file,
         replay_forked_from,
         replay_name,
         replay_description,
@@ -996,6 +997,7 @@ async fn create_replay(
                 .ok()
         })
         .map_or(chrono::Utc::now(), chrono::DateTime::<chrono::Utc>::from);
+    let creator_id = creator_id.unwrap_or_else(|| uuid!("00000000-0000-0000-0000-000000000000"));
     let mut conn = db.acquire().await?;
     let cwd = Path::new("");
     let hash = StorageHandler::get_file_hash(file)?;
@@ -1015,17 +1017,50 @@ async fn create_replay(
             &path,
             &source_path.to_string_lossy().to_string().replace("./", ""),
             created_on,
-            None,
+            Some(creator_id),
         )
         .await?
         .file_id
     };
     info!("File ID: {file_id}");
+    let video_id = if let Some(video_file) = video_file {
+        let path = Path::new(&video_file);
+        let file_name = path.file_name().unwrap().to_string_lossy().to_string();
+        let mut source_path = PathBuf::from(path.strip_prefix(cwd).unwrap_or(path));
+        source_path.pop();
+        let video_file_id = gisst::models::insert_new_file(
+            &mut conn,
+            &storage_path,
+            depth,
+            &file_name,
+            path,
+            &source_path.to_string_lossy().to_string().replace("./", ""),
+            created_on,
+            Some(creator_id),
+        )
+        .await?
+        .file_id;
+        let video_id = video_id.unwrap_or(Uuid::new_v4());
+        Video::insert(
+            &mut conn,
+            Video {
+                video_id,
+                file_id: video_file_id,
+                created_on,
+                creator_id,
+            },
+        )
+        .await
+        .map_err(GISSTCliError::NewModel)?;
+        Some(video_id)
+    } else {
+        video_id
+    };
     let replay = Replay {
         replay_id: force_uuid.unwrap_or_else(Uuid::new_v4),
         instance_id: link,
         video_id,
-        creator_id: creator_id.unwrap_or_else(|| uuid!("00000000-0000-0000-0000-000000000000")),
+        creator_id,
         replay_name: replay_name.unwrap_or_else(|| "a replay".to_string()),
         replay_description: replay_description
             .unwrap_or_else(|| "a replay description".to_string()),
