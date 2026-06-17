@@ -25,6 +25,7 @@ impl fmt::Display for Action {
 #[derive(Debug)]
 pub enum Table {
     Creator,
+    Video,
     Environment,
     File,
     Instance,
@@ -45,6 +46,7 @@ impl fmt::Display for Table {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
             Table::Creator => "creator",
+            Table::Video => "video",
             Table::Environment => "environment",
             Table::File => "file",
             Table::Instance => "instance",

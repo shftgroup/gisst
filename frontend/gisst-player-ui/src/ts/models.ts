@@ -1,4 +1,4 @@
-export type DBRecord = Environment | Work | Save | Replay | State | Instance | ScreenshotCreateData | Screenshot;
+export type DBRecord = Environment | Work | Save | Replay | State | Instance | ScreenshotCreateData | Screenshot | VideoCreateData | Video;
 export type DBFileRecord = Save | State | Replay;
 
 export type DBField = {
@@ -236,6 +236,17 @@ export interface Screenshot {
 
 export interface ScreenshotCreateData {
     screenshot_data: string
+}
+
+export interface Video {
+    video_id: string,
+    file_id: string,
+    creator_id: string,
+    created_on: string, // a date
+}
+
+export interface VideoCreateData {
+    file_id: string,
 }
 
 export interface FullInstance {

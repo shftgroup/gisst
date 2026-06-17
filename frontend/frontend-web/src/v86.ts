@@ -137,43 +137,45 @@ export async function init(ui:UI, embed:EmuControls) {
         return rep.map((cp) => cp.name);
       },
       "upload_file":(category:"state" | "save" | "replay", file_name:string, metadata:GISSTModels.Metadata) => {
-        return new Promise((resolve, reject) => {
-          v86.download_file(category, file_name).then(([blob, name]) => {
-            db.uploadFile(new File([blob], name), metadata.record.file_id,
-              (error:Error) => { reject(error.message)},
-              (_percentage:number) => {},
-              (uuid_string:string) => {
-                metadata.record.file_id = uuid_string;
-                if(category == "state"){
-                  db.uploadRecord({screenshot_data: metadata.screenshot.split(",")[1]}, "screenshot")
-                    .then((screenshot:GISSTModels.DBRecord) => {
-                      (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
-                      console.log(metadata);
-                      db.uploadRecord(metadata.record, "state")
-                        .then((state:GISSTModels.DBRecord) => {
-                          (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id
-                          resolve(metadata);
-                        })
-                        .catch(() => reject("State upload from v86 failed."))
-                    })
-                    .catch(() => reject("Screenshot upload from v86 failed."))
-                }else {
-                  db.uploadRecord(metadata.record, category)
-                    .then((record:GISSTModels.DBRecord) => {
-                      if (category === "replay") {
-                        (metadata.record as GISSTModels.Replay).replay_id = (record as GISSTModels.Replay).replay_id;
-                      } else {
-                        (metadata.record as GISSTModels.Save).save_id = (record as GISSTModels.Save).save_id;
-                      }
-                      resolve(metadata)
-                    })
-                    .catch(() => reject(category + " upload from v86 failed"))
-                }
-              }
-            )
-              .catch(() => reject("File upload from v86 failed."))
-          })
-        })
+        return (async () => {
+          if (category == "replay") {
+            const rec = metadata.record as GISSTModels.Replay;
+            const initial_replay_file = rec.file_id;
+            const replay_file_promise = initial_replay_file && initial_replay_file != GISSTModels.NEVER_UPLOADED_ID ? (
+              Promise.resolve(initial_replay_file)
+            ) : (
+              v86.download_file("replay",file_name)
+                .then((replay) => db.uploadFile(new File([replay[0]], replay[1]), initial_replay_file, (_pct:number) => {}))
+            );
+            const video_file_promise = rec.video_id && rec.video_id != GISSTModels.NEVER_UPLOADED_ID ? (
+              db.getRecordById("video", rec.video_id).then((video_rec) => (video_rec as GISSTModels.Video).file_id)
+            ) : (
+              v86.download_file("video",file_name)
+                .then((video) => db.uploadFile(new File([video[0]], video[1]), GISSTModels.NEVER_UPLOADED_ID, (_pct:number) => {}))
+            );
+            const [replay_file_id,video_file_id] = await Promise.all([replay_file_promise,video_file_promise]);
+            const video = await db.uploadRecord({file_id: video_file_id}, "video");
+            rec.file_id = replay_file_id;
+            rec.video_id = (video as GISSTModels.Video).video_id;
+            const replay = await db.uploadRecord(rec, "replay");
+            rec.replay_id = (replay as GISSTModels.Replay).replay_id;
+            return (metadata);
+          } else {
+            const [blob, name] = await v86.download_file(category, file_name);
+            const file_id = await db.uploadFile(new File([blob], name), metadata.record.file_id, (_percentage:number) => {});
+            metadata.record.file_id = file_id;
+            if(category == "state"){
+              const screenshot = await db.uploadRecord({screenshot_data: metadata.screenshot.split(",")[1]}, "screenshot");
+              (metadata.record as GISSTModels.State).screenshot_id = (screenshot as GISSTModels.Screenshot).screenshot_id;
+              const state = await db.uploadRecord(metadata.record, "state");
+              (metadata.record as GISSTModels.State).state_id = (state as GISSTModels.State).state_id
+            } else { // Save
+              const save = await db.uploadRecord(metadata.record, category);
+              (metadata.record as GISSTModels.Save).save_id = (save as GISSTModels.Save).save_id;
+            }
+            return (metadata);
+          }
+        })();
       }
     }
   );

@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM video WHERE video_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "video_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "video",
+            "name": "video_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "file_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "video",
+            "name": "file_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_on",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "video",
+            "name": "created_on"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "creator_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "video",
+            "name": "creator_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4af9b592c8d765c47079e1cc76cf7954ae8d43b32d419d0598778e1a7e3b2cdd"
+}

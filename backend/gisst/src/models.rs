@@ -28,6 +28,15 @@ where
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Video {
+    pub video_id: Uuid,
+    pub file_id: Uuid, // File
+    #[serde(default = "utc_datetime_now")]
+    pub created_on: DateTime<Utc>,
+    pub creator_id: Uuid, // Creator
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Creator {
     pub creator_id: Uuid,
     pub creator_username: String,
@@ -448,7 +457,37 @@ impl Creator {
         Ok(record)
     }
 }
-
+impl Video {
+    pub async fn get_by_id(conn: &mut PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
+        sqlx::query_as!(
+            Self,
+            r#"SELECT * FROM video WHERE video_id = $1
+            "#,
+            id
+        )
+        .fetch_optional(conn)
+        .await
+    }
+    pub async fn insert(conn: &mut PgConnection, model: Self) -> Result<Self, Insert> {
+        let record = sqlx::query_as!(
+            Self,
+            r#"INSERT INTO video VALUES($1, $2, $3, $4) RETURNING *
+            "#,
+            model.video_id,
+            model.file_id,
+            model.created_on,
+            model.creator_id
+        )
+        .fetch_one(conn.as_mut())
+        .await
+        .map_err(|e| RecordSQL {
+            table: Table::Video,
+            action: Action::Insert,
+            source: e,
+        })?;
+        Ok(record)
+    }
+}
 impl File {
     pub async fn get_by_hash(conn: &mut PgConnection, hash: &str) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(Self, r#"SELECT * FROM file WHERE file_hash = $1"#, hash)

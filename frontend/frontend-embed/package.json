@@ -12,6 +12,7 @@
       "import": "./dist/types.d.ts"
     }
   },
+  "types": "./dist/embed.d.ts",
   "scripts": {
     "dev": "shx mkdir -p ../../test-cert && node scripts/testdata.js && vite",
     "check": "tsc && eslint src",

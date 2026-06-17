@@ -48,53 +48,50 @@ export class GISSTDBConnector {
             return response.json() as Promise<DBRecord>
         })
     }
-
     async uploadFile(file:File, file_id:string,
-                     errorCallback: (error:Error) => void,
                      progressCallback: (percentage: number) => void,
-                     successCallback: (file_uuid:string) => void
-    ) {
-        if (file_id != NEVER_UPLOADED_ID) {
-          successCallback(file_id);
-          return;
-        }
+    ):Promise<string> {
+      if (file_id != NEVER_UPLOADED_ID) {
+        return file_id;
+      }
+      const hash = await computeChecksumMd5(file);
+      return new Promise((resolve, reject) => {
         const upload = new tus.Upload(file, {
-            endpoint: `${this.repo_url}/resources`,
-            retryDelays: [0, 3000, 5000, 10000, 20000],
-            chunkSize: 10485760,
-            metadata: {
-                filename: file.name,
-                hash: await computeChecksumMd5(file),
-            },
-            onError: function (error) {
-                console.log('TUS upload failed because: ' + error);
-                errorCallback(error);
-            },
-            onProgress: function (bytesUploaded, bytesTotal) {
-                const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2)
-                console.log(bytesUploaded, bytesTotal, percentage + '%')
-                progressCallback(parseFloat(percentage));
-            },
-            onSuccess: function () {
-              console.log('Upload %s to %s', file.name, upload.url)
-              const url_parts = upload.url!.split('/');
-              const uuid_string = url_parts[url_parts.length - 1];
-              successCallback(uuid_string);
-            },
-        })
-
+          endpoint: `${this.repo_url}/resources`,
+          retryDelays: [0, 3000, 5000, 10000, 20000],
+          chunkSize: 10485760,
+          metadata: {
+            filename: file.name,
+            hash,
+          },
+          onError: function (error) {
+            console.log('TUS upload failed because: ' + error);
+            reject(error);
+          },
+          onProgress: function (bytesUploaded, bytesTotal) {
+            const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2)
+            console.log(bytesUploaded, bytesTotal, percentage + '%')
+            progressCallback(parseFloat(percentage));
+          },
+          onSuccess: function () {
+            console.log('Upload %s to %s', file.name, upload.url)
+            const url_parts = upload.url!.split('/');
+            const uuid_string = url_parts[url_parts.length - 1];
+            resolve(uuid_string);
+          },
+        });
         // Check if there are any previous uploads to continue.
         upload.findPreviousUploads().then(function (previousUploads) {
-            // Found previous uploads so we select the first one.
-            if (previousUploads.length) {
-                upload.resumeFromPreviousUpload(previousUploads[0])
-            }
+          // Found previous uploads so we select the first one.
+          if (previousUploads.length) {
+            upload.resumeFromPreviousUpload(previousUploads[0])
+          }
 
-            // Start the upload
-            upload.start()
+          // Start the upload
+          upload.start()
         })
+      });
     }
-
 
 
 }
