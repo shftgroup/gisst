@@ -1263,7 +1263,7 @@ dependencies = [
 
 [[package]]
 name = "gisst"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-compression",
  "base16ct",
@@ -1292,7 +1292,7 @@ dependencies = [
 
 [[package]]
 name = "gisst-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1313,7 +1313,7 @@ dependencies = [
 
 [[package]]
 name = "gisst-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -1742,7 +1742,7 @@ dependencies = [
 
 [[package]]
 name = "ingest"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "base16ct",
@@ -2151,7 +2151,7 @@ dependencies = [
 
 [[package]]
 name = "mirror-rdb"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2746,7 +2746,7 @@ dependencies = [
 
 [[package]]
 name = "rdb-sys"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base16ct",
  "cc",
