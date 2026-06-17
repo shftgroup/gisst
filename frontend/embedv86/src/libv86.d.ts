@@ -2,6 +2,8 @@ declare class V86 {
   constructor(config:object);
   is_running(): bool;
   destroy():void;
+  async run():Promise<void>;
+  async stop():Promise<void>;
   mouse_set_status(bool): void;
   keyboard_set_status(bool): void;
   screen_adapter:ScreenAdapter;

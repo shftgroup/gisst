@@ -42,28 +42,19 @@ export class State {
 }
 
 export class EmbedV86 {
-  emulator:V86 | null;
+  emulator:V86 | null = null;
   config:EmbedV86Config;
-  states:State[];
-  replays:Replay[];
-  // TODO: use OPFS in the future instead of RAM
-  videos:Blob[][];
+  states:State[] = [];
+  replays:Replay[] = [];
+  active_replay:number|null = null;
   muted: boolean = false;
   audioDestination: MediaStreamAudioDestinationNode|null = null;
-  recorder: MediaRecorder|null = null;
-  active_replay:number|null;
   constructor(config:EmbedV86Config) {
-    this.active_replay = null;
     this.config = config;
-    this.states = [];
-    this.replays = [];
-    this.videos = [];
-    this.emulator = null;
   }
   clear() {
     this.states = [];
     this.replays = [];
-    this.videos = [];
     this.active_replay = null;
     this.muted = false;
     if(this.emulator) {
@@ -96,61 +87,30 @@ export class EmbedV86 {
       await this.stop_replay();
     }
     this.config.register_replay("replay"+this.replays.length.toString());
-    this.replays.push(await Replay.start_recording(this.emulator));
+    this.replays.push(await Replay.start_recording(this.emulator, this.config.record_video, this.audioDestination, this.config.container));
     this.active_replay = this.replays.length-1;
-    await this.start_video_recording();
     // console.log("add initial checkpoints");
     this.config.replay_checkpoints_changed(this.replays[this.replays.length-1].checkpoints,[]);
   }
   async stop_replay() {
     nonnull(this.emulator);
     if(this.active_replay != null) {
-      const replay = this.replays[this.active_replay];
-      const proms = [];
-      if (replay.mode == ReplayMode.Record) {
-        proms.push(this.stop_video_recording());
-      }
-      proms.push(replay.stop(this.emulator));
-      await Promise.all(proms);
+      const replay_num = this.active_replay;
+      const replay = this.replays[replay_num];
+      await replay.stop(this.emulator);
       this.config.stop_replay();
       this.active_replay = null;
     }
-  }
-  async start_video_recording():Promise<void> {
-    if (!this.config.record_video) { return; }
-    if (this.active_replay == null || this.replays[this.active_replay].mode != ReplayMode.Record || !this.audioDestination) {
-      throw "Can't start a video without a replay in record mode";
-    }
-    const replay_num = this.active_replay;
-    this.videos.push([]);
-    const canvas = this.config.container.getElementsByTagName("canvas")[0];
-    const canvas_stream = canvas.captureStream(30);
-    const audio_stream = this.audioDestination.stream;
-    const stream = new MediaStream(canvas_stream.getTracks().concat(audio_stream.getTracks()));
-    this.recorder = new MediaRecorder(stream, {mimeType:"video/webm"});
-    this.recorder.ondataavailable = (e) => {
-      this.videos[replay_num].push(e.data);
-    };
-    this.recorder.start();
-  }
-  async stop_video_recording():Promise<void> {
-    if (!this.config.record_video) { return; }
-    if (!this.recorder) {
-      throw "Can't finish a video without a replay in record mode";
-    }
-    const rec = this.recorder;
-    this.recorder = null;
-    return new Promise((resolve) => {
-      rec.onstop = (_e) => {resolve()};
-      rec.stop();
-    });
   }
   async load_state_slot(n:number) {
     nonnull(this.emulator);
     if(this.active_replay != null) {
       const replay = this.replays[this.active_replay];
-      const truncated_checkpoints = await replay.reset_to_checkpoint(n,replay.mode == ReplayMode.Finished ? ReplayMode.Playback : replay.mode,this.emulator);
-      this.config.replay_checkpoints_changed([], truncated_checkpoints);
+      if (replay.mode == ReplayMode.Record) {
+        throw "Can't seek during a replay record";
+      }
+      await replay.reset_to_checkpoint(n,replay.mode == ReplayMode.Finished ? ReplayMode.Playback : replay.mode,this.emulator);
+      // TODO: stop playback for now
     } else {
       this.emulator.restore_state(this.states[n].state);
     }
@@ -162,7 +122,7 @@ export class EmbedV86 {
       this.config.stop_replay();
     }
     console.log(this.replays[n].checkpoints);
-    await this.replays[n].start_playback(this.emulator);
+    await this.replays[n].start_playback(this.emulator, this.config.container);
     this.active_replay = n;
   }
   async download_file(category:"state" | "save" | "replay" | "video", file_name:string):Promise<[Blob,string]> {
@@ -211,8 +171,8 @@ export class EmbedV86 {
     if (rep.mode == ReplayMode.Record) {
       throw "Can't obtain video, recording not finished";
     }
-    // TODO: replace with opfs or temp file
-    const file = new File(this.videos[replay_num], `replay${replay_num}.webm`, {type:"video/webm"});
+    const file = await rep.get_video();
+    nonnull(file);
     return file;
   }
   replay_log(evt:Evt, val:number|object) {
@@ -222,26 +182,19 @@ export class EmbedV86 {
     }
   }
   replay_tick() {
-    nonnull(this.emulator);
-    if(this.active_replay != null) {
-      const replay = this.replays[this.active_replay];
-      const old_cp_count = replay.checkpoints.length;
-      // console.log("old count",old_cp_count);
-      replay.tick(this.emulator);
-      if (replay.mode == ReplayMode.Record && !this.config.use_graphical_text) {
-        const canvas = this.config.container.getElementsByTagName("canvas")[0]!;
-        if (canvas.style.display == "none") {
-          // hidden because we're in text mode, so we absolutely must make a screenshot!
-          const screen = this.emulator.screen_make_screenshot();
-          canvas.width = screen.width;
-          canvas.height = screen.height;
-          canvas.getContext("2d")!.drawImage(screen, 0, 0);
-        }
-      }
-      if(old_cp_count < replay.checkpoints.length) {
-        // console.log("new cp!",replay.checkpoints.length);
-        this.config.replay_checkpoints_changed(replay.checkpoints.slice(old_cp_count),[]);
-      }
+    if (window?.requestAnimationFrame) {
+      window.requestAnimationFrame(() => this.replay_tick());
+    } else {
+      setTimeout(() => this.replay_tick(), 0);
+    }
+    if (!this.emulator || this.active_replay === null) { return; }
+    const replay = this.replays[this.active_replay];
+    const old_cp_count = replay.checkpoints.length;
+    // console.log("old count",old_cp_count);
+    replay.tick(this.emulator);
+    if(old_cp_count < replay.checkpoints.length) {
+      // console.log("new cp!",replay.checkpoints.length);
+      this.config.replay_checkpoints_changed(replay.checkpoints.slice(old_cp_count),[]);
     }
   }
   async run(content:ConfigSettings|string, entryState:string|null, movie:string|null, video:string|null):Promise<void> {
@@ -315,13 +268,25 @@ export class EmbedV86 {
       config.vga_memory_size = content_json.vga_memory_size;
     }
     config.disable_jit = content_json.disable_jit ?? false;
+    let video_elt = this.config.container.getElementsByTagName("video")[0]!;
+    if (!video_elt) {
+      video_elt = document.createElement("video");
+      this.config.container.appendChild(video_elt);
+    }
+    video_elt.muted = false;
+    video_elt.style.zIndex = "65535";
+    video_elt.style.display = "none";
 
     this.emulator = new V86(config);
     this.emulator.emulator_bus.register("keyboard-code", (k:number) => this.replay_log(Evt.KeyCode,k));
     this.emulator.emulator_bus.register("mouse-click", (v:[boolean,boolean,boolean]) => this.replay_log(Evt.MouseClick,v));
     this.emulator.emulator_bus.register("mouse-delta", (delta:[number,number]) => this.replay_log(Evt.MouseDelta,delta));
     this.emulator.emulator_bus.register("mouse-wheel", (delta:[number,number]) => this.replay_log(Evt.MouseWheel, delta));
-    this.emulator.bus.register("emulator-ticked", () => this.replay_tick());
+    if (window?.requestAnimationFrame) {
+      window.requestAnimationFrame((_ts:number)=>this.replay_tick());
+    } else {
+      setTimeout(() => this.replay_tick(), 0);
+    }
     return new Promise(resolve => {
       // first time it runs, play_replay_slot 0 if movie is used or else start recording
       const start_initial_replay = () => {
@@ -365,6 +330,8 @@ export class EmbedV86 {
     nonnull(this.emulator);
     this.muted = muted;
     this.emulator.speaker_adapter.mixer.set_volume(muted ? 0 : 1);
+    const video = this.config.container.getElementsByTagName("video")[0]!;
+    video.muted = muted;
   }
 }
 function setup_image(img:"bios"|"vga_bios"|"fda"|"fdb"|"hda"|"hdb"|"cdrom", content_json:ConfigSettings, config:V86Config, content_folder:string) {
