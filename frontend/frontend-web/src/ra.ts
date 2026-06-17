@@ -159,7 +159,8 @@ export async function init(ui:UI, embed:EmuControls) {
   const movie = embed.start.type == "replay";
   if (movie) {
     const data = (embed.start as ReplayStart).data;
-    replay = data.replay!;
+    replay = RA.module.FS.readFile(`${state_dir}/${content_base}.replay1`);
+    nonnull(replay);
     const replayUUID = ra_util.replay_info(new Uint8Array(replay)).id;
     seen_replays[content_base+".replay1"] = replayUUID;
     ui_state.newReplay(content_base+".replay1", "init", data as GISSTModels.ReplayFileLink);
