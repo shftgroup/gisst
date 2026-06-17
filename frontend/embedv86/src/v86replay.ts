@@ -60,6 +60,7 @@ export class Replay {
   pending_deserialize:((data:{id:string,version:number,events:ReplayEvent[],checkpoints:Checkpoint[]}) => void) | null = null;
   pending_decode_number:number = 0;
   pending_decode:((ab:ArrayBuffer)=>void)|null = null;
+  video:File|null = null;
   static async create(id:string, mode:ReplayMode):Promise<Replay>{
     const ths = new Replay();
     ths.id = id;
@@ -304,7 +305,7 @@ export class Replay {
       this.worker.postMessage({type:"serialize", args:{events:this.events, checkpoints:this.checkpoints}});
     });
   }
-  static async deserialize(buf: ArrayBuffer): Promise<Replay> {
+  static async deserialize(buf: ArrayBuffer, video?:File): Promise<Replay> {
     const view = new DataView(buf);
     let x = 0;
     const magic = view.getUint32(x, true);
@@ -334,6 +335,7 @@ export class Replay {
         r.checkpoint_index = 0;
         r.last_time = 0;
         r.wraps = 0;
+        r.video = video ?? null;
         resolve(r);
       };
       r.worker.postMessage({type:"deserialize", args:{buffer:buf}},{transfer:[buf]});

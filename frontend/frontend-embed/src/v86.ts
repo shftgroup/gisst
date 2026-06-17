@@ -69,6 +69,7 @@ export async function init(gisst_root:string, environment:Environment, work:Work
     entry_state = "storage/"+data.file_dest_path;
   }
   let movie:string|null = null;
+  let video:string|null = null;
   if (start.type == "replay") {
     const data = (start as ReplayStart).data;
     // See Compatibility Note 1
@@ -76,6 +77,7 @@ export async function init(gisst_root:string, environment:Environment, work:Work
       use_graphical_text = false;
     }
     movie = "storage/"+data.file_dest_path;
+    video = data.video_file_dest_path ? `storage/${data.video_file_dest_path}` : null;
   }
 
   const v86 = new EmbedV86({
@@ -123,7 +125,7 @@ export async function init(gisst_root:string, environment:Environment, work:Work
       preview.classList.add("gisst-embed-hidden");
       canv.classList.remove("gisst-embed-hidden");
       container.getElementsByTagName("div")[0]!.classList.remove("gisst-embed-hidden");
-      await v86.run(environment.environment_config, entry_state, movie);
+      await v86.run(environment.environment_config, entry_state, movie, video);
       activate(v86);
       self.on_ready();
       return false;

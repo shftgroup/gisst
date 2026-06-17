@@ -242,7 +242,7 @@ export class EmbedV86 {
       }
     }
   }
-  async run(content:ConfigSettings|string, entryState:string|null, movie:string|null):Promise<void> {
+  async run(content:ConfigSettings|string, entryState:string|null, movie:string|null, video:string|null):Promise<void> {
     this.clear();
     const content_folder = this.config.content_root;
     const config:V86Config = {
@@ -256,6 +256,9 @@ export class EmbedV86 {
     if(entryState && movie) {
       throw "Can't specify both entry state and movie";
     }
+    if(!movie && video) {
+      throw "Can't provide video without replay movie";
+    }
     // TODO: avoid use of /, get explicit paths or a path joining function as arguments or config props
     if(entryState) {
       const state_resp = await fetch(content_folder+"/"+entryState);
@@ -267,13 +270,24 @@ export class EmbedV86 {
       this.config.states_changed([this.states[this.states.length-1]], []);
     }
     if(movie) {
+      const replay_name = "replay"+this.replays.length.toString();
       // do nothing for now
-      const replay_resp = await fetch(content_folder+"/"+movie);
+      const fetches = [fetch(content_folder+"/"+movie)];
+      if (video) { fetches.push(fetch(content_folder+"/"+video)); }
+      const results = await Promise.all(fetches);
+      let video_file;
+      if (video) {
+        const video_resp = results[1];
+        if(!video_resp.ok) { alert("Failed to load replay video"); return; }
+        const blob = await video_resp.blob();
+        video_file = new File([blob], replay_name!, {type:blob.type});
+      }
+      const replay_resp = results[0]!;
       if(!replay_resp.ok) { alert("Failed to load replay movie"); return; }
       const replay_data = await replay_resp.arrayBuffer();
-      const replay = await Replay.deserialize(replay_data);
+      const replay = await Replay.deserialize(replay_data, video_file);
       console.log(replay.id,replay.events.length,replay.checkpoints.length);
-      this.config.register_replay("replay"+this.replays.length.toString());
+      this.config.register_replay(replay_name);
       this.config.replay_checkpoints_changed(replay.checkpoints,[]);
       this.replays.push(replay);
     }

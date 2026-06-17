@@ -72,8 +72,9 @@
       });
         const init_state = null;//"win95.v86state";
         const init_replay = null;//"xcom144.v86replay";
+        const init_video = null;
         window.v86 = v86;
-        await v86.run({"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"freedos722.img","async":true,"fixed_chunk_size":44194304},"memory_size": 67108864, "vga_memory_size": 8388608}, init_state, init_replay);
+        await v86.run({"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"fda":{"url":"freedos722.img","async":true,"fixed_chunk_size":44194304},"memory_size": 67108864, "vga_memory_size": 8388608}, init_state, init_replay, init_video);
       }
       document.querySelector("#gobutton").addEventListener("click", go);
     </script>
