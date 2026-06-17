@@ -101,7 +101,7 @@ export async function init(gisst_root:string, environment:Environment, work:Work
     },
     toggle_mute: () => {
       is_muted = !is_muted;
-      v86.emulator.speaker_adapter.mixer.set_volume(is_muted ? 0 : 1, undefined)
+      v86.set_mute(is_muted);
     },
     gisst_root,
     environment,

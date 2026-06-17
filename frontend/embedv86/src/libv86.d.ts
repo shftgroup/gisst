@@ -43,6 +43,7 @@ declare class SpeakerAdapter {
 }
 declare class Mixer {
   node_merger: AudioNode;
+  set_volume(number);
 }
 interface V86Config {
   wasm_path:string,

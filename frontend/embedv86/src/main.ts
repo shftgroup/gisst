@@ -48,6 +48,7 @@ export class EmbedV86 {
   replays:Replay[];
   // TODO: use OPFS in the future instead of RAM
   videos:Blob[][];
+  muted: boolean = false;
   audioDestination: MediaStreamAudioDestinationNode|null = null;
   recorder: MediaRecorder|null = null;
   active_replay:number|null;
@@ -64,6 +65,7 @@ export class EmbedV86 {
     this.replays = [];
     this.videos = [];
     this.active_replay = null;
+    this.muted = false;
     if(this.emulator) {
       this.emulator.destroy();
       this.emulator = null;
@@ -358,6 +360,11 @@ export class EmbedV86 {
       const replay = this.replays[this.active_replay];
       this.config.replay_checkpoints_changed(replay.checkpoints,[]);
     }
+  }
+  public set_mute(muted:boolean) {
+    nonnull(this.emulator);
+    this.muted = muted;
+    this.emulator.speaker_adapter.mixer.set_volume(muted ? 0 : 1);
   }
 }
 function setup_image(img:"bios"|"vga_bios"|"fda"|"fdb"|"hda"|"hdb"|"cdrom", content_json:ConfigSettings, config:V86Config, content_folder:string) {
