@@ -2,7 +2,7 @@ import {LegacyReplay} from './v86legacyreplay';
 import {nonnull,bytes_to_uuid} from './utils';
 import {WorkerResponse} from './worker_protocol.d';
 import ReplayWorker from './replay_worker.ts?worker&inline';
-
+import {mux_videos} from './utils';
 export enum Evt {
   KeyCode = 0,
   MouseClick = 1,
@@ -61,8 +61,15 @@ export class Replay {
   pending_decode_number:number = 0;
   pending_decode:((ab:ArrayBuffer)=>void)|null = null;
   video:File|null = null;
-  recording_video:Blob[] = [];
+  // one per chunk/checkpoint
+  // on seek, drop segments
+  // on stop recording, set video to mux the chunk videos all together (demux them and then mux back into one)
+  recording_video:Blob[][] = [];
+  encode_proms:Promise<void>[] = [];
+  // will use many recorders, only one active at a time
   recorder: MediaRecorder|null = null;
+  // one stream for the whole recording, held in an instance variable for easy access
+  recording_stream: MediaStream|null = null;
   container: HTMLDivElement|null = null;
 
   static async create(id:string, mode:ReplayMode):Promise<Replay>{
@@ -125,16 +132,33 @@ export class Replay {
     });
   }
   async reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86):Promise<Checkpoint[]> {
-    if (mode == ReplayMode.Record) {
-      throw "Can't reset to checkpoint during recording for now";
-    }
     // for file: rewind or fast forward until checkpoint is found, can't just skip like this
     const checkpoint = this.checkpoints[n];
     const state = await this.restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
     await emulator.restore_state(state);
     this.seek_internal(n+1, checkpoint.event_index, checkpoint.when);
-    //    const dropped_checkpoints = mode == ReplayMode.Record ? this.checkpoints.slice(this.checkpoint_index) : [];
-    const dropped_checkpoints:Checkpoint[] = [];
+    const dropped_checkpoints = mode == ReplayMode.Record ? this.checkpoints.slice(this.checkpoint_index) : [];
+    // drop any video segments from the future
+    if (this.recording_stream) {
+      if (this.recorder) {
+        // discard future data chunks and stop recording
+        this.recorder.ondataavailable = (_e) => {};
+        this.recorder.onstop = (_e) => {};
+        this.recorder.stop();
+      }
+      const rec = new MediaRecorder(this.recording_stream, {mimeType:"video/webm"});
+      this.recording_video.length = n;
+      this.recording_video.push([]);
+      rec.ondataavailable = (e) => {
+        this.recording_video[n].push(e.data);
+      };
+      this.encode_proms.length = n;
+      this.encode_proms.push(new Promise((resolve) => {
+        rec.onstop = (_e) => {resolve()};
+      }));
+      this.recorder = rec;
+      this.recorder.start();
+    }
     this.resume(mode, emulator);
     if (dropped_checkpoints.length) {
       this.worker.postMessage({type:"drop_checkpoints", args:{when:checkpoint.when}});
@@ -213,8 +237,24 @@ export class Replay {
   public make_checkpoint(emulator:V86, state:Uint8Array) {
     const time = this.current_time();
     const screenshot = emulator.screen_make_screenshot();
-    const checkpoint = new Checkpoint(time, "replay"+this.id+"-state"+this.checkpoints.length.toString(), this.index, new Uint8Array(), [], [], new Uint32Array(), screenshot.src);
+    const which = this.checkpoints.length;
+    const checkpoint = new Checkpoint(time, "replay"+this.id+"-state"+which.toString(), this.index, new Uint8Array(), [], [], new Uint32Array(), screenshot.src);
     this.checkpoints.push(checkpoint);
+    if (this.recording_stream) {
+      if (this.recorder) {
+        this.recorder.stop();
+      }
+      const rec = new MediaRecorder(this.recording_stream, {mimeType:"video/webm"});
+      this.encode_proms.push(new Promise((resolve) => {
+        rec.onstop = (_e) => {resolve()};
+      }));
+      this.recording_video.push([]);
+      rec.ondataavailable = (e) => {
+        this.recording_video[which].push(e.data);
+      };
+      this.recorder = rec;
+      this.recorder.start();
+    }
     this.worker.postMessage({type:"encode", args:{time,state:state, which:this.checkpoint_index}}, {transfer:[state.buffer]});
     this.checkpoint_index += 1;
   }
@@ -298,7 +338,6 @@ export class Replay {
     const r = await Replay.create(generateUUID(),ReplayMode.Record);
     r.container = container;
     emulator.v86.cpu.instruction_counter[0] = 0;
-    r.make_checkpoint(emulator,new Uint8Array(await emulator.save_state()));
     if (record_video) {
       nonnull(audioDestination);
       nonnull(container);
@@ -306,12 +345,9 @@ export class Replay {
       const canvas_stream = canvas.captureStream(30);
       const audio_stream = audioDestination.stream;
       const stream = new MediaStream(canvas_stream.getTracks().concat(audio_stream.getTracks()));
-      r.recorder = new MediaRecorder(stream, {mimeType:"video/webm"});
-      r.recorder.ondataavailable = (e) => {
-        r.recording_video.push(e.data);
-      };
-      r.recorder.start();
+      r.recording_stream = stream;
     }
+    r.make_checkpoint(emulator,new Uint8Array(await emulator.save_state()));
     return r;
   }
   private async finish_playback(emulator:V86) {
@@ -328,16 +364,13 @@ export class Replay {
   }
   private async stop_video_recording():Promise<void> {
     if (!this.recorder) { return; }
-    const rec = this.recorder;
+    this.recorder.stop();
     this.recorder = null;
-    return new Promise((resolve) => {
-      rec.onstop = (_e) => {
-        this.video = new File(this.recording_video, `replay${this.id}.webm`, {type:"video/webm"});
-        this.recording_video = [];
-        resolve();
-      };
-      rec.stop();
-    });
+    await Promise.all(this.encode_proms);
+    const video_blob = await mux_videos(this.recording_video);
+    this.video = new File([video_blob], `replay${this.id}.webm`, {type:"video/webm"});
+    this.recording_video = [];
+    this.encode_proms = [];
   }
   public async get_video():Promise<File|null> {
     return this.video;

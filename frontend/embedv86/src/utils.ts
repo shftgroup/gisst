@@ -1,3 +1,5 @@
+import {Input,Output,BlobSource,WEBM,WebMOutputFormat,BufferTarget,EncodedPacketSink,EncodedAudioPacketSource,EncodedVideoPacketSource} from 'mediabunny';
+
 export function memcmp(a:Uint8Array, b:Uint8Array) : boolean {
   const sz = a.length;
   if (sz != b.length) {
@@ -72,4 +74,55 @@ export function uuid_to_bytes(s:string):Uint8Array {
   out[15] = parseInt(s.slice(34,36),16);
 
   return out;
+}
+
+export async function mux_videos(webms:Blob[][]) : Promise<Blob> {
+  const target = new BufferTarget();
+  const output = new Output({format:new WebMOutputFormat({}), target});
+  let out_video_src;
+  let out_audio_src;
+  let out_video_track;
+  let out_audio_track;
+  let atime = 0;
+  let vtime = 0;
+  for (const webm of webms) {
+    const file = new File(webm, "input.webm", {type:"video/webm"});
+    const input = new Input({source: new BlobSource(file),formats:[WEBM]});
+    const atrack = (await input.getPrimaryAudioTrack());
+    const vtrack = (await input.getPrimaryVideoTrack());
+    if (!vtrack || !atrack) { continue; }
+    const asink = new EncodedPacketSink(atrack);
+    const vsink = new EncodedPacketSink(vtrack);
+    if (!out_video_src || !out_audio_src || !out_video_track || !out_audio_track) {
+      out_video_src = new EncodedVideoPacketSource((await vtrack.getCodec())!);
+      out_video_track = output.addVideoTrack(out_video_src);
+      out_audio_src = new EncodedAudioPacketSource((await atrack.getCodec())!);
+      out_audio_track = output.addAudioTrack(out_audio_src);
+      await output.start();
+    }
+    const aiter = asink.packets();
+    const viter = vsink.packets();
+    let apacket = await aiter.next();
+    let vpacket = await viter.next();
+    while (!apacket.done && !vpacket.done) {
+      if (!vpacket.done && (apacket.done || vpacket.value.timestamp <= apacket.value.timestamp)) {
+        const vpack = vpacket.value.clone({
+          timestamp: vtime
+        });
+        out_video_src.add(vpack, vtime == 0 ? {decoderConfig:(await vtrack.getDecoderConfig())!} : undefined);
+        vtime += vpack.duration;
+        vpacket = await viter.next();
+      } else if (!apacket.done && (vpacket.done || apacket.value.timestamp <= vpacket.value.timestamp)) {
+        const apack = apacket.value.clone({
+          timestamp: atime
+        });
+        out_audio_src.add(apack, atime == 0 ? {decoderConfig:(await atrack.getDecoderConfig())!} : undefined);
+        atime += apack.duration;
+        apacket = await aiter.next();
+      }
+    }
+    input.dispose();
+  }
+  await output.finalize();
+  return new Blob([target.buffer!], {type:"video/webm"});
 }
