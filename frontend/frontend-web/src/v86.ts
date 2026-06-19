@@ -26,7 +26,6 @@ export async function init(ui:UI, embed:EmuControls) {
     entry_state = true;
   }
   const movie = embed.start.type == "replay";
-  const state_to_replay:Array<number|null> = [];
   const EvtNames:string[] = ["keyboard-code", "mouse-click", "mouse-delta", "mouse-absolute", "mouse-wheel"];
   let evtlog_idx = 0;
   function fill_evtlog(fromidx:number, toidx:number) {
@@ -86,18 +85,27 @@ export async function init(ui:UI, embed:EmuControls) {
       },
       "activate_save": (_savefile) => {},
       "create_save": () => {},
-      "load_state":(n:number) => {
+      "load_state":(name:string) => {
         (async () => {
-          // get the replay of state n
-          const replay = state_to_replay[n];
-          // if it's not the same as the active replay we have to do something
-          if(replay !== v86.active_replay) {
-            await v86.stop_replay();
-            if(replay != null) {
-              await v86.play_replay_slot(replay);
+          const replay_matches = name.match(/replay([0-9a-f-]+)-state([0-9]+)/);
+          if (replay_matches) {
+            const replay = v86.replays.findIndex((r) => r.id == replay_matches[1]);
+            const cp = parseInt(replay_matches[2]);
+            if(replay !== null && replay !== v86.active_replay) {
+              await v86.stop_replay();
+              if(replay != null) {
+                // TODO: don't play replay, just load CP!
+                await v86.play_replay_slot(replay);
+                await v86.load_state_slot(cp);
+                await v86.stop_replay();
+              }
+            } else if (replay !== null && replay == v86.active_replay) {
+              await v86.load_state_slot(cp);
             }
+          } else {
+            const state_matches = name.match(/state([0-9]+)/)!;
+            await v86.load_state_slot(parseInt(state_matches[1]));
           }
-          await v86.load_state_slot(n);
         })();
       },
       "save_state":() => {
@@ -114,9 +122,11 @@ export async function init(ui:UI, embed:EmuControls) {
       "stop_and_save_replay":() => {
         v86.stop_replay()
       },
-      "play_replay":(n:number) => {
+      "play_replay":(file:string) => {
+        const replay_matches = file.match(/replay([0-9a-f-]+)/)!;
+        const slot = v86.replays.findIndex((r) => r.id == replay_matches[1]);
         // clear evt log and fill and update playhead
-        v86.play_replay_slot(n).then(() => {
+        v86.play_replay_slot(slot).then(() => {
           ui_state.evtlog_clear();
           ui_state.evtlog_set_playhead(0);
           evtlog_idx = 0;
@@ -126,15 +136,10 @@ export async function init(ui:UI, embed:EmuControls) {
       "download_file":(category:"state" | "save" | "replay", file_name:string) => {
         v86.download_file(category, file_name).then(([blob,name]) => saveAs(blob,name));
       },
-      "checkpoints_of":(replay_slot:number) => {
-        const cps = v86.replays[replay_slot].checkpoints;
-        // don't provide the first and last checkpoint since those are
-        // made implicitly within the replay and never would have been
-        // added via replay_checkpoints_changed --- investigate this
-        // for later or only upload ones we've witnessed through
-        // replay_checkpoints_changed
-        const rep = cps.slice(1, cps.length-1);
-        return rep.map((cp) => cp.name);
+      "checkpoints_of":(replay_name:string) => {
+        const replay_matches = replay_name.match(/replay([0-9a-f-]+)/)!;
+        const cps = v86.replays.find((r) => r.id == replay_matches[1])!.checkpoints;
+        return cps.map((cp) => cp.name);
       },
       "upload_file":(category:"state" | "save" | "replay", file_name:string, metadata:GISSTModels.Metadata) => {
         return (async () => {
@@ -200,7 +205,6 @@ export async function init(ui:UI, embed:EmuControls) {
         si.thumbnail = entry_screenshot!;
         const data = (embed.start as StateStart).data;
         ui_state.newState(si.name, si.thumbnail, "init", data as GISSTModels.StateFileLink);
-        state_to_replay.push(null);
       } else {
         ui_state.newState(si.name,si. thumbnail, "no replay");
       }
@@ -215,9 +219,8 @@ export async function init(ui:UI, embed:EmuControls) {
       if (checkpoint_matches == null) {
         throw "added checkpoint with bad name format";
       }
-      const replay_idx = v86.replays.findIndex((elt) => elt.id == checkpoint_matches[1]);
-      ui_state.newState(si.name,si.thumbnail,"replay"+String(replay_idx));
-      state_to_replay.push(replay_idx);
+      const replay = v86.replays.find((elt) => elt.id == checkpoint_matches[1])!;
+      ui_state.newState(si.name,si.thumbnail,"replay"+replay.id);
     }
   });
   setInterval(() => {

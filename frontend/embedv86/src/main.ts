@@ -86,8 +86,9 @@ export class EmbedV86 {
     if(this.active_replay != null) {
       await this.stop_replay();
     }
-    this.config.register_replay("replay"+this.replays.length.toString());
-    this.replays.push(await Replay.start_recording(this.emulator, this.config.record_video, this.audioDestination, this.config.container));
+    const replay = await Replay.start_recording(this.emulator, this.config.record_video, this.audioDestination, this.config.container);
+    this.replays.push(replay);
+    this.config.register_replay("replay"+replay.id);
     this.active_replay = this.replays.length-1;
     // console.log("add initial checkpoints");
     this.config.replay_checkpoints_changed(this.replays[this.replays.length-1].checkpoints,[]);
@@ -97,7 +98,11 @@ export class EmbedV86 {
     if(this.active_replay != null) {
       const replay_num = this.active_replay;
       const replay = this.replays[replay_num];
+      const recording = replay.mode == ReplayMode.Record;
       await replay.stop(this.emulator);
+      if (recording) {
+        this.config.replay_checkpoints_changed([replay.checkpoints[replay.checkpoints.length-1]],[]);
+      }
       this.config.stop_replay();
       this.active_replay = null;
     }
@@ -106,22 +111,16 @@ export class EmbedV86 {
     nonnull(this.emulator);
     if(this.active_replay != null) {
       const replay = this.replays[this.active_replay];
-      if (replay.mode == ReplayMode.Record) {
-        throw "Can't seek during a replay record";
-      }
-      await replay.reset_to_checkpoint(n,replay.mode == ReplayMode.Finished ? ReplayMode.Playback : replay.mode,this.emulator);
-      // TODO: stop playback for now
+      this.config.replay_checkpoints_changed([], await replay.reset_to_checkpoint(n, replay.mode, this.emulator));
     } else {
       this.emulator.restore_state(this.states[n].state);
     }
   }
-  async play_replay_slot(n:number) {
+  async play_replay_slot(n:number):Promise<void> {
     nonnull(this.emulator);
-    if(this.active_replay != null) {
-      await this.replays[this.active_replay].stop(this.emulator);
-      this.config.stop_replay();
+    if(this.active_replay !== null) {
+      await this.stop_replay();
     }
-    console.log(this.replays[n].checkpoints);
     await this.replays[n].start_playback(this.emulator, this.config.container);
     this.active_replay = n;
   }
@@ -132,7 +131,7 @@ export class EmbedV86 {
         const replay_id = checkpoint_matches[1];
         const replay_idx = this.replays.findIndex((r) => r.id == replay_id);
         if (replay_idx < 0) {
-          console.log("Found replay for checkpoint is not present in context",file_name);
+          console.error("Found replay for checkpoint is not present in context",file_name);
         }
         const checkpoint_idx = parseInt(checkpoint_matches[2],10);
         const checkpoint = this.replays[replay_idx].checkpoints[checkpoint_idx];
@@ -190,6 +189,9 @@ export class EmbedV86 {
     if (!this.emulator || this.active_replay === null) { return; }
     const replay = this.replays[this.active_replay];
     const old_cp_count = replay.checkpoints.length;
+    if (replay.mode == ReplayMode.Finished) {
+      return;
+    }
     // console.log("old count",old_cp_count);
     replay.tick(this.emulator);
     if(old_cp_count < replay.checkpoints.length) {
@@ -225,7 +227,6 @@ export class EmbedV86 {
       this.config.states_changed([this.states[this.states.length-1]], []);
     }
     if(movie) {
-      const replay_name = "replay"+this.replays.length.toString();
       // do nothing for now
       const fetches = [fetch(content_folder+"/"+movie)];
       if (video) { fetches.push(fetch(content_folder+"/"+video)); }
@@ -235,12 +236,13 @@ export class EmbedV86 {
         const video_resp = results[1];
         if(!video_resp.ok) { alert("Failed to load replay video"); return; }
         const blob = await video_resp.blob();
-        video_file = new File([blob], replay_name!, {type:blob.type});
+        video_file = new File([blob], "", {type:blob.type});
       }
       const replay_resp = results[0]!;
       if(!replay_resp.ok) { alert("Failed to load replay movie"); return; }
       const replay_data = await replay_resp.arrayBuffer();
       const replay = await Replay.deserialize(replay_data, video_file);
+      const replay_name = "replay"+replay.id;
       console.log(replay.id,replay.events.length,replay.checkpoints.length);
       this.config.register_replay(replay_name);
       this.config.replay_checkpoints_changed(replay.checkpoints,[]);
@@ -297,11 +299,12 @@ export class EmbedV86 {
         }
         this.emulator!.remove_listener("emulator-started", start_initial_replay);
         if(movie) {
-          this.play_replay_slot(0);
+          this.play_replay_slot(0).then(resolve);
         } else if(this.config.record_from_start) {
-          this.record_replay();
+          this.record_replay().then(resolve);
+        } else {
+          resolve();
         }
-        resolve();
       };
       this.emulator!.add_listener("emulator-started", start_initial_replay);
     });

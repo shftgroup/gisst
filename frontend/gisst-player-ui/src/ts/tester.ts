@@ -19,7 +19,7 @@ addEventListener("load", () =>
       enter_fullscreen: () => console.log("FULLSCREEN"),
       activate_save: (save:string) => console.log("ACTIVATE",save),
       create_save: () => console.log("MAKE SAVE"),
-      load_state: (sn:number) => console.log("LOAD",sn),
+      load_state: (sn:string) => console.log("LOAD",sn),
       save_state: () => {
         ui_state.newState("state"+statenum.toString(), IMG_DATA);
         statenum += 1;
@@ -29,7 +29,7 @@ addEventListener("load", () =>
         replaynum +=1;
       },
       stop_and_save_replay: () => {},
-      play_replay: (sn:number) => console.log("PLAY",sn),
+      play_replay: (sn:string) => console.log("PLAY",sn),
       download_file: (category:"save"|"state"|"replay", file_name:string) => console.log("Save file",category,file_name),
       upload_file: (category:"save"|"state"|"replay", file_name:string, metadata:Metadata) => {
         console.log("Upload file", category, file_name, metadata);
@@ -38,7 +38,7 @@ addEventListener("load", () =>
           else { reject("metadata is null"); }
         });
       },
-      checkpoints_of: (_replay:number) => {return []},
+      checkpoints_of: (_replay:string) => {return []},
       evt_to_html: (evt:unknown) => {
         const elt = document.createElement("span");
         elt.innerText=evt as string;

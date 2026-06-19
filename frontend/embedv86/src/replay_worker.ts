@@ -453,6 +453,11 @@ function processCommand(data:WorkerCommand) {
       });
       break;
     }
+    case "fence": {
+      postMessage({type:"fence", args:data.args});
+      finishCommand();
+      break;
+    }
     default:
       throw "Unrecognized message";
   }
