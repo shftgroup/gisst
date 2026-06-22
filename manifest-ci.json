@@ -4,8 +4,8 @@
   "rust_version": "1.95.0",
   "emsdk_version": "4.0.17",
   "v86": {
-    "repo": "https://github.com/JoeOsborn/v86",
-    "version": "d26a829336e68ad88e3cffe9074172494b659249",
+    "repo": "https://github.com/copy/v86",
+    "version": "679ecd2e72e526aece064dfdb5efba0e56fe401b",
     "dependencies": {
       "seabios.bin": "v86bios/seabios_a74f33d58109877723201ef02d20b46b84c36974.bin",
       "bochs-bios.bin": "v86bios/bochs-bios_6b1400c2a76c82d9535456866cc4cd23c5c70311.bin",
@@ -16,7 +16,7 @@
   },
   "retroarch": {
     "repo": "https://github.com/libretro/retroarch",
-    "version": "ee96a134660b4dfdce2bef8457a7e76c29b4d021",
+    "version": "86cd6f05e356015ac344aab28ce8e1920e606f53",
     "build_args": [
       "HAVE_CHD=0",
       "HAVE_RWEBAUDIO=0",
@@ -38,12 +38,12 @@
     "cores": {
       "gambatte": {
         "repo": "https://github.com/libretro/gambatte-libretro",
-        "version": "6924c76ba03dadddc6e97fa3660f3d3bc08faa94",
+        "version": "4832d33cc3427ee0a1c1b9065339dd18ff57370d",
         "platforms": ["Nintendo Game Boy", "Nintendo Game Boy Color"]
       },
       "pcsx_rearmed": {
         "repo": "https://github.com/libretro/pcsx_rearmed",
-        "version": "81814bdc6b1f22c029210082c17c819fe047232f",
+        "version": "d26eaee5c8fb47c1832b8bf32c1358d625da8a02",
         "dependencies": {},
         "platforms": ["Sony Playstation"]
       },
