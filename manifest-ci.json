@@ -5,7 +5,7 @@
   "emsdk_version": "4.0.17",
   "v86": {
     "repo": "https://github.com/copy/v86",
-    "version": "679ecd2e72e526aece064dfdb5efba0e56fe401b",
+    "version": "f2c638ec8f91d449476619056d202fb6834d9358",
     "dependencies": {
       "seabios.bin": "v86bios/seabios_a74f33d58109877723201ef02d20b46b84c36974.bin",
       "bochs-bios.bin": "v86bios/bochs-bios_6b1400c2a76c82d9535456866cc4cd23c5c70311.bin",
@@ -16,7 +16,7 @@
   },
   "retroarch": {
     "repo": "https://github.com/libretro/retroarch",
-    "version": "86cd6f05e356015ac344aab28ce8e1920e606f53",
+    "version": "8a8cc448b9a2b29d659aee8825c0f0f352d3a824",
     "build_args": [
       "HAVE_CHD=0",
       "HAVE_RWEBAUDIO=0",
