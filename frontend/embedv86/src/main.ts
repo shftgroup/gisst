@@ -244,9 +244,9 @@ export class EmbedV86 {
       const replay = await Replay.deserialize(replay_data, video_file);
       const replay_name = "replay"+replay.id;
       console.log(replay.id,replay.events.length,replay.checkpoints.length);
+      this.replays.push(replay);
       this.config.register_replay(replay_name);
       this.config.replay_checkpoints_changed(replay.checkpoints,[]);
-      this.replays.push(replay);
     }
     let content_json;
     if (typeof content == "string") {
