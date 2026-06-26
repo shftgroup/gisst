@@ -113,7 +113,8 @@ export interface StateStart {
 export interface StartReplayData {
   /* gisst::models::ReplayLink */
   replay_id:string,
-  video_id:string,
+  video_id:string|null,
+  video_file_dest_path:string|null,
   file_dest_path:string,
   file_filename:string,
   file_source_path:string,

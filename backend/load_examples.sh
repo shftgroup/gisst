@@ -249,6 +249,9 @@ uuid_counter=$((uuid_counter+1));
 
 ./target/debug/gisst-cli state create --force-uuid "$work_uuid" --link "$work_uuid" --file ./examples/data/v86/snake_state0.v86state --name "Snake Test State" --screenshot-id "$uuid_0" --creator-id "$uuid_0"
 ./target/debug/gisst-cli replay create --force-uuid "$work_uuid" --link "$work_uuid" --file ./examples/data/v86/snake_replay0.v86replay --name "Snake Test Replay" --creator-id "$uuid_0"
+replay1_uuid=$(get_uuid_from_counter)
+uuid_counter=$((uuid_counter+1));
+./target/debug/gisst-cli replay create --force-uuid "$replay1_uuid" --link "$work_uuid" --file ./examples/data/v86/snake_replay1.v86replay --name "Snake Test Replay" --creator-id "$uuid_0" --video-file ./examples/data/v86/snake_replay1.webm
 
 # Clone the snake state
 ./target/debug/gisst-cli clone-v86 "$work_uuid" "$work_uuid"

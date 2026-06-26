@@ -104,6 +104,7 @@ export interface ReplayFileLink {
     replay_name: string,
     replay_description: string,
     video_id: string,
+    video_file_dest_path: string,
     instance_id: string,
     creator_id: string,
     replay_forked_from?: string,

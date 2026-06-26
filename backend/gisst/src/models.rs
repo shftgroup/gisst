@@ -1367,6 +1367,7 @@ pub struct ReplayLink {
     pub created_on: Option<chrono::DateTime<chrono::Utc>>,
     pub hidden: bool,
     pub video_id: Option<Uuid>,
+    pub video_file_dest_path: Option<String>,
     pub file_id: Uuid,
     pub file_hash: String,
     pub file_filename: String,
@@ -1377,11 +1378,11 @@ impl ReplayLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT replay.*,
+            r#"SELECT replay.*, video_file.file_dest_path as "video_file_dest_path",
                       file.file_hash, file.file_filename,
                       file.file_source_path, file.file_dest_path
                FROM replay
-               JOIN file USING(file_id)
+               JOIN file USING(file_id) LEFT OUTER JOIN video USING(video_id) LEFT OUTER JOIN file as video_file ON (video.file_id = video_file.file_id)
                WHERE replay_id = $1"#,
             id,
         )

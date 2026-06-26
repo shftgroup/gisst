@@ -60,6 +60,11 @@ export class Replay {
   pending_deserialize:((data:{id:string,version:number,events:ReplayEvent[],checkpoints:Checkpoint[]}) => void) | null = null;
   pending_decode_number:number = 0;
   pending_decode:((ab:ArrayBuffer)=>void)|null = null;
+  video:File|null = null;
+  recording_video:Blob[] = [];
+  recorder: MediaRecorder|null = null;
+  container: HTMLDivElement|null = null;
+
   static async create(id:string, mode:ReplayMode):Promise<Replay>{
     const ths = new Replay();
     ths.id = id;
@@ -68,7 +73,6 @@ export class Replay {
     return new Promise((resolve,_reject) => {
       ths.worker.addEventListener("message", (msg) => {
       const data = msg.data as WorkerResponse;
-        console.log("reply",data);
         switch (data.type) {
           case "initialized": {
             resolve(ths);
@@ -95,7 +99,6 @@ export class Replay {
             break;
           }
           case "decode_checkpoint": {
-            console.log("pdn",ths.pending_decode_number,"which",data.args.which,"fn",ths.pending_decode);
             if (ths.pending_decode_number == data.args.which) {
               nonnull(ths.pending_decode);
               ths.pending_decode(data.args.result);
@@ -122,20 +125,23 @@ export class Replay {
     });
   }
   async reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86):Promise<Checkpoint[]> {
+    if (mode == ReplayMode.Record) {
+      throw "Can't reset to checkpoint during recording for now";
+    }
     // for file: rewind or fast forward until checkpoint is found, can't just skip like this
     const checkpoint = this.checkpoints[n];
-    this.checkpoint_index = n+1;
     const state = await this.restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
     await emulator.restore_state(state);
-    this.seek_internal(checkpoint.event_index, checkpoint.when);
-    const dropped_checkpoints = mode == ReplayMode.Record ? this.checkpoints.slice(this.checkpoint_index) : [];
+    this.seek_internal(n+1, checkpoint.event_index, checkpoint.when);
+    //    const dropped_checkpoints = mode == ReplayMode.Record ? this.checkpoints.slice(this.checkpoint_index) : [];
+    const dropped_checkpoints:Checkpoint[] = [];
     this.resume(mode, emulator);
     if (dropped_checkpoints.length) {
       this.worker.postMessage({type:"drop_checkpoints", args:{when:checkpoint.when}});
     }
     return dropped_checkpoints;
   }
-  private seek_internal(event_index:number, t:number) {
+  private seek_internal(checkpoint_index:number, event_index:number, t:number) {
     // seek file, do reads
     if(event_index > this.events.length) { throw "Seek: event index out of bounds"; }
     const [wraps, time] = this.cpu_time(t);
@@ -146,13 +152,19 @@ export class Replay {
       }
     }
     this.index = event_index;
+    this.checkpoint_index = checkpoint_index;
+    if (this.video) {
+      const end_time = Math.max(this.events[this.events.length-1].when, this.checkpoints[this.checkpoints.length-1].when);
+      const ratio = t / end_time;
+      const video_elt = this.container!.querySelector("video")!;
+      video_elt.currentTime = ratio * video_elt.duration;
+    }
     this.wraps = wraps;
     this.last_time = time;
   }
   private resume(mode:ReplayMode, emulator:V86) {
     // ensure emulator time is current time
     this.mode = mode;
-    console.log("Resume",mode);
     emulator.v86.cpu.instruction_counter[0] = this.last_time;
     if (this.mode == ReplayMode.Record) {
       emulator.mouse_set_status(true);
@@ -169,7 +181,13 @@ export class Replay {
     }
   }
   current_time():number {
-    return this.replay_time(this.last_time);
+    if (this.video && this.mode == ReplayMode.Playback) {
+      const video_elt = this.container!.querySelector("video")!;
+      const replay_duration = Math.max(this.events[this.events.length-1].when, this.checkpoints[this.checkpoints.length-1].when);
+      return (video_elt.currentTime / video_elt.duration) * replay_duration;
+    } else {
+      return this.replay_time(this.last_time);
+    }
   }
   replay_time(insn_counter:number) : number {
     let wrap_amt = 2**32-1;
@@ -191,11 +209,10 @@ export class Replay {
       this.index += 1;
     }
   }
+  // TODO: Make it return a promise that resolves when the checkpoint is encoded 
   public make_checkpoint(emulator:V86, state:Uint8Array) {
-    const time = this.replay_time(emulator.get_instruction_counter());
-    const start_screen = performance.now();
+    const time = this.current_time();
     const screenshot = emulator.screen_make_screenshot();
-    console.log("make screen:",performance.now()-start_screen);
     const checkpoint = new Checkpoint(time, "replay"+this.id+"-state"+this.checkpoints.length.toString(), this.index, new Uint8Array(), [], [], new Uint32Array(), screenshot.src);
     this.checkpoints.push(checkpoint);
     this.worker.postMessage({type:"encode", args:{time,state:state, which:this.checkpoint_index}}, {transfer:[state.buffer]});
@@ -203,15 +220,27 @@ export class Replay {
   }
   async tick(emulator:V86) {
     // read from / write to file
-    const t = emulator.get_instruction_counter();
-    if (t < this.last_time) { // counter wrapped around, increase wraps
-      this.wraps += 1;
+    if (!(this.mode == ReplayMode.Playback && this.video)) {
+      const t = emulator.v86.cpu.instruction_counter[0];
+      if (t < this.last_time) { // counter wrapped around, increase wraps
+        this.wraps += 1;
+      }
+      this.last_time = t;
     }
-    this.last_time = t;
-    const real_t = this.replay_time(t);
+    const real_t = this.current_time();
     switch(this.mode) {
       case ReplayMode.Record: {
         let last_t = 0;
+        if (this.recorder) {
+          const canvas = this.container!.getElementsByTagName("canvas")[0]!;
+          if (canvas.style.display == "none") {
+            // hidden because we're in text mode, so we absolutely must make a screenshot to get that into the mediastream!
+            const screen = emulator.screen_make_screenshot();
+            canvas.width = screen.width;
+            canvas.height = screen.height;
+            canvas.getContext("2d")!.drawImage(screen, 0, 0);
+          }
+        }
         if(this.checkpoints.length != 0) {
           last_t = this.checkpoints[this.checkpoints.length-1].when;
         }
@@ -234,11 +263,11 @@ export class Replay {
             this.checkpoint_index += 1;
             const state = await this.restore_checkpoint(check.header_info, check.superblock_seq);
             await emulator.restore_state(state);
-            //console.log("Playback time check",this.replay_time(emulator.get_instruction_counter()),check.when);
           } else if(event_is_first) {
             const evt = this.events[this.index];
-            //console.log(real_t, EvtNames[evt.code], evt.value);
-            emulator.bus.send(EvtNames[evt.code], evt.value);
+            if (!this.video) {
+              emulator.bus.send(EvtNames[evt.code], evt.value);
+            }
             this.index += 1;
           } else {
             // neither checkpoint or event
@@ -246,10 +275,16 @@ export class Replay {
           }
         }
         if(this.index < this.events.length || this.checkpoint_index < this.checkpoints.length) {
+          if (this.video) {
+            const [wraps, time] = this.cpu_time(real_t);
+            this.wraps = wraps;
+            this.last_time = time;
+            this.container!.querySelector("canvas")!.style.display="none";
+            this.container!.querySelector("div")!.style.display="none";
+          }
           // playback continues
         } else {
-          // pause emu?
-          this.finish_playback(emulator);
+          await this.finish_playback(emulator);
         }
         break;
       }
@@ -259,20 +294,61 @@ export class Replay {
         break;
     }
   }
-  static async start_recording(emulator:V86):Promise<Replay> {
+  static async start_recording(emulator:V86, record_video:boolean, audioDestination:MediaStreamAudioDestinationNode|null, container:HTMLDivElement|null):Promise<Replay> {
     const r = await Replay.create(generateUUID(),ReplayMode.Record);
+    r.container = container;
     emulator.v86.cpu.instruction_counter[0] = 0;
     r.make_checkpoint(emulator,new Uint8Array(await emulator.save_state()));
+    if (record_video) {
+      nonnull(audioDestination);
+      nonnull(container);
+      const canvas = container.getElementsByTagName("canvas")[0]!;
+      const canvas_stream = canvas.captureStream(30);
+      const audio_stream = audioDestination.stream;
+      const stream = new MediaStream(canvas_stream.getTracks().concat(audio_stream.getTracks()));
+      r.recorder = new MediaRecorder(stream, {mimeType:"video/webm"});
+      r.recorder.ondataavailable = (e) => {
+        r.recording_video.push(e.data);
+      };
+      r.recorder.start();
+    }
     return r;
   }
-  private finish_playback(emulator:V86) {
+  private async finish_playback(emulator:V86) {
     emulator.mouse_set_status(true);
     emulator.keyboard_set_status(true);
     this.mode = ReplayMode.Finished;
+    if (this.video) {
+      await emulator.run();
+      const video = this.container!.getElementsByTagName("video")[0]!;
+      emulator.speaker_adapter.mixer.set_volume(video.muted ? 0 : 1);
+      video.style.display = "none";
+      video.pause();
+    }
+  }
+  private async stop_video_recording():Promise<void> {
+    if (!this.recorder) { return; }
+    const rec = this.recorder;
+    this.recorder = null;
+    return new Promise((resolve) => {
+      rec.onstop = (_e) => {
+        this.video = new File(this.recording_video, `replay${this.id}.webm`, {type:"video/webm"});
+        this.recording_video = [];
+        resolve();
+      };
+      rec.stop();
+    });
+  }
+  public async get_video():Promise<File|null> {
+    return this.video;
   }
   private async finish_recording(emulator:V86) {
     // close file
-    await this.make_checkpoint(emulator,new Uint8Array(await emulator.save_state()));
+    this.make_checkpoint(emulator,new Uint8Array(await emulator.save_state()));
+    // TODO: await checkpoint encoding?
+    if (this.recorder) {
+      await this.stop_video_recording();
+    }
     this.mode = ReplayMode.Finished;
   }
   async stop(emulator:V86) {
@@ -281,10 +357,11 @@ export class Replay {
     }
     // close file
     if(this.mode == ReplayMode.Playback) {
-      this.finish_playback(emulator);
+      await this.finish_playback(emulator);
     }
   }
-  async start_playback(emulator:V86) {
+  async start_playback(emulator:V86, container:HTMLDivElement) {
+    this.container = container;
     this.mode = ReplayMode.Playback;
     this.index = 0;
     this.checkpoint_index = 1;
@@ -293,9 +370,17 @@ export class Replay {
     emulator.v86.cpu.instruction_counter[0] = 0;
     emulator.mouse_set_status(false);
     emulator.keyboard_set_status(false);
-    const check = this.checkpoints[0];
-    const state = await this.restore_checkpoint(check.header_info, check.superblock_seq);
-    await emulator.restore_state(state);
+    if (this.video) {
+      const video = this.container.getElementsByTagName("video")[0]!;
+      video.src = URL.createObjectURL(this.video);
+      video.style.display = "block";
+      video.play();
+      emulator.stop();
+    } else {
+      const check = this.checkpoints[0];
+      const state = await this.restore_checkpoint(check.header_info, check.superblock_seq);
+      await emulator.restore_state(state);
+    }
   }
   async serialize():Promise<ArrayBuffer> {
     if (this.pending_serialize) { throw "please wait for previous serialize call to finish"; }
@@ -304,7 +389,7 @@ export class Replay {
       this.worker.postMessage({type:"serialize", args:{events:this.events, checkpoints:this.checkpoints}});
     });
   }
-  static async deserialize(buf: ArrayBuffer): Promise<Replay> {
+  static async deserialize(buf: ArrayBuffer, video?:File): Promise<Replay> {
     const view = new DataView(buf);
     let x = 0;
     const magic = view.getUint32(x, true);
@@ -334,6 +419,7 @@ export class Replay {
         r.checkpoint_index = 0;
         r.last_time = 0;
         r.wraps = 0;
+        r.video = video ?? null;
         resolve(r);
       };
       r.worker.postMessage({type:"deserialize", args:{buffer:buf}},{transfer:[buf]});
