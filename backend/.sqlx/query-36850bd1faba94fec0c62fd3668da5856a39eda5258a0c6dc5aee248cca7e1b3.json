@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE task\n               SET task_output=$2, task_updated_on=current_timestamp, task_state='done'\n               WHERE task_id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "36850bd1faba94fec0c62fd3668da5856a39eda5258a0c6dc5aee248cca7e1b3"
+}

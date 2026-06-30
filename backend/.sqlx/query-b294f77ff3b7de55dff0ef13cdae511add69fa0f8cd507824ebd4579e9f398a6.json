@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO task VALUES (gen_random_uuid(), current_timestamp - interval '00:10.00', 1, 'a', 'test2', current_timestamp - interval '00:01.00', current_timestamp - interval '00:01.00', 'active', '{}'::jsonb, '{\"example\":2}'::jsonb, '{}'::jsonb)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "b294f77ff3b7de55dff0ef13cdae511add69fa0f8cd507824ebd4579e9f398a6"
+}

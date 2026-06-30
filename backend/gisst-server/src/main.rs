@@ -5,6 +5,7 @@ mod routes;
 mod selective_serve_dir;
 mod server;
 mod serverconfig;
+mod task;
 mod tus;
 mod utils;
 

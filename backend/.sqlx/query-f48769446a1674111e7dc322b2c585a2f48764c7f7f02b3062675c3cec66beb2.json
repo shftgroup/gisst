@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO task VALUES ($1, current_timestamp, 10, 'a', 'runner1', null, current_timestamp,'error','{\"reason\":\"unknown\", \"progress\":0.5}'::jsonb, '{\"example\":0}'::jsonb, '{}'::jsonb)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f48769446a1674111e7dc322b2c585a2f48764c7f7f02b3062675c3cec66beb2"
+}
