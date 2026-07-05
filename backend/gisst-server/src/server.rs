@@ -6,7 +6,8 @@ use crate::{
     db,
     routes::{
         creator_router, environment_router, instance_router, lookup, object_router, players,
-        replay_router, save_router, screenshot_router, state_router, video_router, work_router,
+        replay_router, save_router, screenshot_router, state_router, task_router, video_router,
+        work_router,
     },
     serverconfig::ServerConfig,
     tus,
@@ -47,6 +48,7 @@ pub struct ServerState {
     pub templates: minijinja::Environment<'static>,
     pub indexer: gisst::search::MeiliIndexer,
     pub search: gisst::search::MeiliSearch,
+    pub task_worker_keys: Vec<String>,
 }
 impl ServerState {
     async fn with_config(config: &ServerConfig) -> Result<Self, ServerError> {
@@ -79,6 +81,7 @@ impl ServerState {
             templates: template_environment,
             indexer,
             search,
+            task_worker_keys: config.auth.task_worker_keys.clone(),
         })
     }
 }
@@ -171,6 +174,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
             // because BASE_URL was initialized earlier in this function.
             axum_login::login_required!(AuthBackend, login_url=&{format!("{}/login", BASE_URL.get().unwrap())})
         )
+        .nest("/tasks", task_router())
         .route("/data/{instance_id}", get(players::get_data))
         .route("/login", get(auth::login_handler))
         .route("/auth/google/callback", get(auth::oauth_callback_handler))

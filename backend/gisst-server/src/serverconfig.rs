@@ -73,6 +73,7 @@ pub struct AuthConfig {
     pub google_client_id: SecretString,
     pub google_client_secret: SecretString,
     pub user_whitelist: Vec<String>,
+    pub task_worker_keys: Vec<String>,
 }
 
 impl Default for AuthConfig {
@@ -83,6 +84,7 @@ impl Default for AuthConfig {
                 "PROVIDE GOOGLE CLIENT SECRET in local.toml".into(),
             ),
             user_whitelist: vec![],
+            task_worker_keys: vec![],
         }
     }
 }

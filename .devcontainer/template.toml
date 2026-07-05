@@ -16,3 +16,6 @@ meili_url = "http://meili:7700"
 meili_external_url = "https://localhost:3000/search"
 meili_api_key = "devcontainer_testkey"
 meili_search_key = "devcontainer_testkey"
+
+[auth]
+task_worker_keys = ["worker-4d2a15d51355f7c69247ef82b241a79f"]

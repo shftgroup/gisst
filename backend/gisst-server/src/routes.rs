@@ -8,6 +8,7 @@ mod replay;
 mod save;
 mod screenshot;
 mod state;
+mod task;
 mod video;
 mod work;
 
@@ -19,6 +20,7 @@ pub use replay::router as replay_router;
 pub use save::router as save_router;
 pub use screenshot::router as screenshot_router;
 pub use state::router as state_router;
+pub use task::router as task_router;
 pub use video::router as video_router;
 pub use work::router as work_router;
 
