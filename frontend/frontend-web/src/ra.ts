@@ -77,13 +77,21 @@ export async function init(ui:UI, embed:EmuControls) {
         zoom_fit = false;
         RA.send_message("FULLSCREEN_TOGGLE");
       },
-      "load_state": (num: number) => load_state_slot(num),
+      "load_state": (state:string) => {
+        const num_str = (state.match(/state([0-9]+)$/)?.[1]) ?? "0";
+        const save_num = parseInt(num_str,10);
+        load_state_slot(save_num);
+      },
       "save_state": () => save_state(),
-      "play_replay": (num: number) => play_replay_slot(num),
+      "play_replay": (rply: string) => {
+        const num_str = (rply.match(/replay([0-9]+)$/)?.[1]) ?? "0";
+        const replay_num = parseInt(num_str,10);
+        play_replay_slot(replay_num)
+      },
       "start_replay": () => record_replay(),
       "stop_and_save_replay": () => stop_replay(),
-      "checkpoints_of":(replay_slot:number) => {
-        const replay_file = state_dir+"/"+content_base+".replay"+replay_slot;
+      "checkpoints_of":(replay_name:string) => {
+        const replay_file = state_dir+"/"+replay_name;
         const replay = ra_util.replay_info(new Uint8Array(RA.module.FS.readFile(replay_file))).id;
         const checkpoints = [];
         for(const state of Object.keys(seen_states)) {

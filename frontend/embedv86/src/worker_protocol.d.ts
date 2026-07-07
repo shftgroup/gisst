@@ -32,7 +32,13 @@ interface WorkerResponseDeserialize {
     checkpoints:Checkpoint[]
   };
 };
-export type WorkerResponse = WorkerResponseInitialized | WorkerResponseCheckpoint | WorkerResponseDecodeCheckpoint | WorkerResponseSerialize | WorkerResponseDeserialize;
+
+interface WorkerResponseFence {
+  type:"fence";
+  args:{sequence:number}
+}
+
+export type WorkerResponse = WorkerResponseInitialized | WorkerResponseCheckpoint | WorkerResponseDecodeCheckpoint | WorkerResponseSerialize | WorkerResponseDeserialize | WorkerResponseFence;
 
 interface WorkerCommandInit {
   type: "init";
@@ -58,5 +64,9 @@ interface WorkerCommandDecode {
   type:"decode";
   args:{which:number, header_info:Uint8Array, superblock_seq:Uint32Array};
 }
+interface WorkerCommandFence {
+  type: "fence";
+  args: {sequence:number};
+}
 
-export type WorkerCommand = WorkerCommandInit | WorkerCommandDropCheckpoints | WorkerCommandSerialize | WorkerCommandDeserialize | WorkerCommandEncode | WorkerCommandDecode;
+export type WorkerCommand = WorkerCommandInit | WorkerCommandDropCheckpoints | WorkerCommandSerialize | WorkerCommandDeserialize | WorkerCommandEncode | WorkerCommandDecode | WorkerCommandFence;

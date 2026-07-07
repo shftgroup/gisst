@@ -41,19 +41,19 @@ interface UIController {
   toggle_mute: () => void;
   set_zoom: (level:ZoomLevel) => void;
   enter_fullscreen: () => void;
-  load_state: (state_num:number) => void;
+  load_state: (state:string) => void;
   save_state: () => void;
   // This should force the emulator to save and backup the current save, which may not be an "active" save in the list.
   // The newly backed up save should be added to the UI with newSave() one way or another.
   create_save: () => void;
   // This is called to load an existing save, but should also probably save and backup the current save as well.
   activate_save: (save_file:string) => void;
-  play_replay: (replay_num:number) => void;
+  play_replay: (replay_name:string) => void;
   start_replay:() => void;
   stop_and_save_replay:() => void;
   download_file:(category:"save"|"state"|"replay", file_name:string) => void;
   upload_file:(category:"save"|"state"|"replay", file_name:string, metadata: Metadata) => Promise<Metadata>;
-  checkpoints_of:(replay_num:number) => string[];
+  checkpoints_of:(replay_name:string) => string[];
   evt_to_html:(evt:unknown) => HTMLElement;
 }
 
@@ -97,16 +97,16 @@ export class UI {
       enter_fullscreen: () => {throw "not implemented";},
       activate_save: (_save:string) => {throw "not implemented";},
       create_save: () => {throw "not implemented";},
-      load_state: (_sn:number) => {throw "not implemented";},
+      load_state: (_sn:string) => {throw "not implemented";},
       save_state: () => {throw "not implemented";},
       start_replay: () => {throw "not implemented";},
       stop_and_save_replay: () => {throw "not implemented";},
-      play_replay: (_sn:number) => {throw "not implemented";},
+      play_replay: (_sn:string) => {throw "not implemented";},
       download_file: (_category:"save"|"state"|"replay", _file_name:string) => { throw "not implemented"; },
       upload_file: (_category:"save"|"state"|"replay", _file_name:string, _metadata:Metadata) => {
         throw "not implemented";
       },
-      checkpoints_of: (_replay:number) => {throw "not implemented";},
+      checkpoints_of: (_replay:string) => {throw "not implemented";},
       evt_to_html: (_evt:unknown) => {throw "not implemented";}
     };
     this.ui_root = ui_root;
@@ -285,11 +285,9 @@ export class UI {
     const img = <HTMLImageElement>new_state_list_object.querySelector("img");
     img.src = state_thumbnail.startsWith("data:image") ? state_thumbnail : "data:image/png;base64,"+state_thumbnail;
 
-    const num_str = (state_file.match(/state([0-9]+)$/)?.[1]) ?? "0";
-    const save_num = parseInt(num_str,10);
     img.addEventListener("click", () => {
-      console.log("Load",state_file,save_num);
-      this.control!["load_state"](save_num);
+      console.log("Load",state_file);
+      this.control!["load_state"](state_file);
     });
 
     const state_object_title = <HTMLHeadElement>new_state_list_object.querySelector("h5");
@@ -353,17 +351,14 @@ export class UI {
     this.metadata_by_name["st__"+state_file] = state_metadata;
   }
   newReplay(replay_file:string, group_key?:string, metadata?:ReplayFileLink) {
-    const num_str = (replay_file.match(/replay([0-9]+)$/)?.[1]) ?? "0";
-    const replay_num = parseInt(num_str,10);
-
     const li = <HTMLUListElement>elementFromTemplates("replay_list_item");
     li.querySelector(".replay-list-item")!.setAttribute("id", valid_for_css(replay_file));
     li.querySelector(".replay-list-item-replay-name")!.textContent = replay_file + (group_key !== undefined ? " - " + group_key : "");
     li.querySelector(".replay-list-item-replay-desc")!.textContent = replay_file;
 
     li.querySelector(".replay-list-item-play-button")!.addEventListener("click", () => {
-      console.log("Play", replay_file, replay_num);
-      this.control!.play_replay(replay_num);
+      console.log("Play", replay_file);
+      this.control!.play_replay(replay_file);
     });
 
     li.querySelector(".replay-list-item-download-button")!.addEventListener("click", () => {
@@ -380,7 +375,7 @@ export class UI {
       this.control!.upload_file("replay", replay_file, metadata)
         .then((md:Metadata) => {
         this.completeUpload("rp__"+replay_file, md);
-        for (const state_file of this.control!.checkpoints_of(replay_num)) {
+        for (const state_file of this.control!.checkpoints_of(replay_file)) {
           const smetadata = this.metadata_by_name["st__"+state_file];
           if (!smetadata) {
             console.warn("Missing checkpoint metadata for",state_file,"could it be an implicit checkpoint that should not have been returned from checkpoints_of?");

@@ -4,7 +4,7 @@ import mkcert from 'vite-plugin-mkcert';
 import fs from 'node:fs';
 import sirv from 'sirv';
 import mockApiPlugin from "vite-mock-api";
-
+import { defineConfig, esmExternalRequirePlugin } from 'vite';
 const ServerFilesPlugin = {
   name: 'serve-storage-files',
   configureServer(server) {
@@ -13,9 +13,12 @@ const ServerFilesPlugin = {
   }
 }
 
-export default {
+export default defineConfig ({
   base: "./",
   plugins: [
+    esmExternalRequirePlugin({
+      external: ['esbuild'],
+    }),
     // LoggerPlugin,
     mockApiPlugin(),
     mkcert({savePath: "../../test-cert/"}),
@@ -33,7 +36,7 @@ export default {
         entryFileNames: `assets/[name].js`,
         chunkFileNames: `assets/[name].js`,
         assetFileNames: `assets/[name].[ext]`
-      }
+      },
     }
   },
   server: {
@@ -47,4 +50,4 @@ export default {
       "Cross-Origin-Opener-Policy":"same-origin"
     }
   }
-}
+});
