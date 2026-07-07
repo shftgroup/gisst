@@ -195,6 +195,7 @@ export class UI {
         this.emulator_div.classList.add("emulator-playback");
       break;
       case ReplayMode.Finished:
+        this.emulator_div.classList.remove("emulator-recording");
         this.emulator_div.classList.remove("emulator-playback");
       break;
     }
