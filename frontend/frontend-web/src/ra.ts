@@ -278,7 +278,7 @@ async function update_replay_state() {
   await RA.send_message("GET_CONFIG_PARAM active_replay");
   const resp = await RA.read_response(true);
   nonnull(resp);
-  const matches = resp.match(/GET_CONFIG_PARAM active_replay ([0-9]+) ([0-9]+)$/);
+  const matches = resp.match(/GET_CONFIG_PARAM active_replay ([0-9]+) ([0-9]+) ([0-9]+)$/);
   const id = (matches?.[1]) ?? "0";
   const flags = parseInt((matches?.[2]) ?? "0",10);
   if(id == "0" || flags == 0) {
