@@ -16,7 +16,10 @@ frontend/frontend-elec/resources/content/
 frontend/frontend-elec/resources/ra-assets/
 frontend/frontend-tauri/src-tauri/ra-assets/
 frontend/frontend-web/mock-data/assets
+frontend/frontend-web/mock-api/index.cjs
 frontend/frontend-web/.index-xhr
+frontend/frontend-web/public/assets/assets_minimal.zip
+frontend/server-ui/mock-api/index.cjs
 frontend/node_modules
 frontend/frontend-embed/types
 frontend/gisst-player-ui/test-results
@@ -36,6 +39,8 @@ backend/web-dist
 backend/etc/ansible/group_vars
 backend/etc/ansible/inventory.yml
 backend/etc/ansible/ansible.cfg
+backend/etc/ansible/roles/geerlingguy.nodejs
+backend/etc/ansible/roles/joeosborn.meilisearch
 backend/embed-dist
 backend/examples/data/v86/local
 backend/examples/records/v86/local
@@ -54,3 +59,6 @@ playwright-report/
 .claude
 psxbios
 .devcontainer/certs
+/build.zip
+/cores.tgz
+/frontend/frontend-build.sh

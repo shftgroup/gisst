@@ -183,19 +183,20 @@ export class UI {
     // TODO do something different if this.headless
     switch (mode) {
       case ReplayMode.Inactive:
-      this.emulator_div.classList.remove("emulator-recording");
-      this.emulator_div.classList.remove("emulator-playback");
+        this.emulator_div.classList.remove("emulator-recording");
+        this.emulator_div.classList.remove("emulator-playback");
       break;
       case ReplayMode.Record:
-      this.emulator_div.classList.add("emulator-recording");
-      this.emulator_div.classList.remove("emulator-playback");
+        this.emulator_div.classList.add("emulator-recording");
+        this.emulator_div.classList.remove("emulator-playback");
       break;
       case ReplayMode.Playback:
-      this.emulator_div.classList.remove("emulator-recording");
-      this.emulator_div.classList.add("emulator-playback");
+        this.emulator_div.classList.remove("emulator-recording");
+        this.emulator_div.classList.add("emulator-playback");
       break;
       case ReplayMode.Finished:
-      // do nothing
+        this.emulator_div.classList.remove("emulator-recording");
+        this.emulator_div.classList.remove("emulator-playback");
       break;
     }
   }
