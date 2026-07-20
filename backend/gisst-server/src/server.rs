@@ -35,6 +35,8 @@ use tracing::info;
 use uuid::Uuid;
 
 pub static BASE_URL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+const TASK_STALE_DURATION:std::time::Duration = std::time::Duration::from_mins(30);
+const TASK_STALE_CHECK_INTERVAL:std::time::Duration = std::time::Duration::from_mins(1);
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -111,6 +113,7 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         .await
         .unwrap();
     let metrics_pool = user_pool.clone();
+    let task_pool = user_pool.clone();
     let user_store = auth::AuthBackend::new(
         user_pool,
         auth::build_oauth_client(
@@ -220,6 +223,23 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         IpAddr::V4(config.http.listen_address),
         config.http.listen_port,
     );
+
+    tokio::task::spawn(async move {
+        let task_pool = task_pool;
+        let mut interval = tokio::time::interval(TASK_STALE_CHECK_INTERVAL);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            tracing::info!("retire stale tasks");
+            let Ok(mut conn) = task_pool.acquire().await else { tracing::error!("Error during task stale timeout: can't connect to DB"); continue; };
+            match crate::task::Task::timeout_stale(conn.as_mut(), TASK_STALE_DURATION).await {
+                Ok(stale) => {info!("Stale tasks: {stale:?}");},
+                Err(e) => {
+                    tracing::error!("Error during task stale timeout {e}");
+                }
+            }
+        }
+    });
 
     if config.http.dev_ssl {
         use axum_server::tls_rustls::RustlsConfig;
