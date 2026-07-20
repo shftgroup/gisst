@@ -1,0 +1,173 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT task_id, task_created_on, task_retry_count, task_type,\n       task_claimant, task_claimed_on, task_updated_on,\n       task_state as \"task_state:_\", task_status,\n       task_last_status, task_input, task_output\nFROM task\nWHERE task_type = 'retroarch_replay_video'\n      AND task_state != 'done'\n      AND (task_input #>> '{start,data,replay_id}')::uuid = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "task_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "task_created_on",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_created_on"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "task_retry_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_retry_count"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "task_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_type"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "task_claimant",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_claimant"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "task_claimed_on",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_claimed_on"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "task_updated_on",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_updated_on"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "task_state:_",
+        "type_info": {
+          "Custom": {
+            "name": "task_state",
+            "kind": {
+              "Enum": [
+                "idle",
+                "active",
+                "error",
+                "cancel",
+                "done"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_state"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "task_status",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_status"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "task_last_status",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_last_status"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "task_input",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_input"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "task_output",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "task",
+            "name": "task_output"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "1f027b5937e198ac008981460dcff19cb6dc0a535c97c6cd4bf938ee935ed174"
+}

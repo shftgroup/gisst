@@ -48,6 +48,11 @@
         {% elif embed_data.start.type == "replay" %}
         <h2>{{ embed_data.start.data.replay_name}}</h2>
         <h3>{{ embed_data.start.data.replay_description}}</h3>
+          {% if pending_task %}
+          <p>(A video is currently being generated for this replay. Check back later to download it.)</p>
+          {% elif embed_data.start.data.video_id %}
+            <p><a href="{{base_url}}/storage/{{embed_data.start.data.video_file_dest_path}}">Download video</a></p>
+          {% endif %}
         {% endif %}
         <div class="card">
           <div class="card-header">
