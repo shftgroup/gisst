@@ -13,9 +13,59 @@ addEventListener("load", () =>
       <HTMLDivElement>document.getElementById("ui")!,
       false,
     );
+
+    ui_state.emulator_div.style.height = `360px`;
+    ui_state.emulator_div.style.backgroundColor = `black`;
+    ui_state.emulator_div.style.margin = `10px auto`;
+
     ui_state.setControl({
       toggle_mute: () => console.log("MUTE/UNMUTE"),
-      set_zoom: (lev:ui.ZoomLevel) => console.log("ZOOM",lev),
+      set_zoom: (lev:ui.ZoomLevel) => {
+        let w:number = 0;
+        let h:number = 0;
+        switch(lev){
+          case ui.ZoomLevel.X05:
+            w = 240;
+            h = 180;
+            break;
+          case ui.ZoomLevel.X1:
+            w = 480;
+            h = 360;
+            break;
+          case ui.ZoomLevel.X2:
+            w = 960;
+            h = 720;
+            break;
+          case ui.ZoomLevel.Fit: {
+            const bounds = document.getElementById("ui")?.getBoundingClientRect();
+            const computed_style:CSSStyleDeclaration = window.getComputedStyle(ui_state.emulator_div);
+            const w_inner:number = bounds?.width || window.innerWidth;
+            // Compute inner height minus header, emulator toolbar and emulator window top/bottom margin
+            const h_inner:number = window.innerHeight -
+                (document.getElementById("header")?.getBoundingClientRect()?.height || 0 ) -
+                (document.getElementById("emulator_control_bar_col")?.getBoundingClientRect()?.height || 0) -
+                parseInt(computed_style.marginTop) - parseInt(computed_style.marginBottom)
+                || 0;
+            console.log("Width: "+w_inner+" Height: "+h_inner);
+            if (h_inner > w_inner){
+              const round_width:number = Math.floor(w_inner / 10) * 10;
+              h = Math.round(round_width * 0.75);
+              w = round_width;
+            } else {
+              const round_height:number = Math.floor(h_inner / 10) * 10;
+              w = Math.floor(round_height * 1.3333);
+              h = round_height;
+            }
+          }
+            break;
+          default:
+            break;
+        }
+        console.log("Final Width: "+w+" Final Height: "+h);
+        ui_state.emulator_div.style.width = `${w}px`;
+        ui_state.emulator_div.style.height = `${h}px`;
+        console.log("ZOOM",lev)
+      },
       enter_fullscreen: () => console.log("FULLSCREEN"),
       activate_save: (save:string) => console.log("ACTIVATE",save),
       create_save: () => console.log("MAKE SAVE"),
@@ -46,6 +96,7 @@ addEventListener("load", () =>
       }
     });
     ui_state.setConfig(JSON.parse(document.getElementById("config")!.textContent!) as FrontendConfig);
+    ui_state.control.set_zoom(ui.ZoomLevel.X1);
 
     ui_state.evtlog_append([{t:0, evt:"a"}]);
     ui_state.evtlog_append([{t:3, evt:"b"}]);
