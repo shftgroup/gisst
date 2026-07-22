@@ -1,7 +1,7 @@
 {
   "name": "embedv86",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.4",
   "type": "module",
   "files": [
     "dist"
