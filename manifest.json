@@ -5,7 +5,7 @@
   "emsdk_version": "4.0.17",
   "v86": {
     "repo": "https://github.com/copy/v86",
-    "version": "f2c638ec8f91d449476619056d202fb6834d9358",
+    "version": "2f1346b0e7d88d4cbbbcc05fe15b4e369c3de23f",
     "dependencies": {
       "seabios.bin": "v86bios/seabios_a74f33d58109877723201ef02d20b46b84c36974.bin",
       "bochs-bios.bin": "v86bios/bochs-bios_6b1400c2a76c82d9535456866cc4cd23c5c70311.bin",
@@ -16,7 +16,7 @@
   },
   "retroarch": {
     "repo": "https://github.com/libretro/retroarch",
-    "version": "8a8cc448b9a2b29d659aee8825c0f0f352d3a824",
+    "version": "620bcd8c35115f6b82ac80c158109afa87777e45",
     "build_args": [
       "HAVE_CHD=0",
       "HAVE_RWEBAUDIO=0",
@@ -38,12 +38,12 @@
     "cores": {
       "fceumm": {
         "repo": "https://github.com/libretro/libretro-fceumm",
-        "version": "f87bc875bd68262211e2e01ffbaf3662626a3e4f",
+        "version": "38440e42415e1db959ea030a121f48736d96adc4",
         "platforms": ["Nintendo Entertainment System", "Nintendo Famicom"]
       },
       "gambatte": {
         "repo": "https://github.com/libretro/gambatte-libretro",
-        "version": "4832d33cc3427ee0a1c1b9065339dd18ff57370d",
+        "version": "9b3b5e3cc18ec92f460d37dd551eaf90c55bfcea",
         "platforms": ["Nintendo Game Boy", "Nintendo Game Boy Color"]
       },
       "hatari": {
@@ -61,7 +61,7 @@
       },
       "pcsx_rearmed": {
         "repo": "https://github.com/libretro/pcsx_rearmed",
-        "version": "d26eaee5c8fb47c1832b8bf32c1358d625da8a02",
+        "version": "050981b6eeb715f142854f57c68086f62921f027",
         "dependencies": {
           "scph5500.bin":"psxbios/scph5500_b05def971d8ec59f346f2d9ac21fb742e3eb6917.bin",
           "scph5501.bin":"psxbios/scph5501_0555c6fae8906f3f09baf5988f00e55f88e9f30b.bin",
@@ -71,7 +71,7 @@
       },
       "sameboy": {
         "repo": "https://github.com/LIJI32/SameBoy",
-        "version": "eb4c47ebf58cf93261620bfe138b650979f94049",
+        "version": "213a12ce93d66b105a113debd9396306066a7cfc",
         "rgbds_repo": "https://github.com/gbdev/rgbds.git",
         "rgbds_version": "d961c697d740728f05895a2faec0dd755351e28b",
         "platforms": ["Nintendo Game Boy", "Nintendo Game Boy Color"]
@@ -84,51 +84,51 @@
       "stella2014": {
         "skip": true,
         "repo": "https://github.com/libretro/stella2014-libretro",
-        "version": "eed47e154d1bbda3305e9ef2d486b6710c8973f4",
+        "version": "4a7da82595d27b8df7af1ecb467a64b642a41bc9",
         "platforms": ["Atari 2600"]
       },
       "vba_next": {
         "repo": "https://github.com/libretro/vba-next",
-        "version": "349b57c6442af56248433c114500a460ef9bfd8c",
+        "version": "2b96fd3a77025f3083daf61126b1852d5e0eace7",
         "platforms": ["Nintendo Game Boy Advance"]
       },
       "vice_x64": {
         "repo": "https://github.com/libretro/vice-libretro",
-        "version": "7946cfa0d3775e958616d4d107de867a4616ae6c",
+        "version": "fdda9d0cb32604519dbc7fb127058469cb9472be",
         "extra_build_args": ["EMUTYPE=x64"],
         "platforms": ["Commodore 64"]
       },
       "vice_x64dtv": {
         "repo": "https://github.com/libretro/vice-libretro",
-        "version": "7946cfa0d3775e958616d4d107de867a4616ae6c",
+        "version": "fdda9d0cb32604519dbc7fb127058469cb9472be",
         "extra_build_args": ["EMUTYPE=x64dtv"],
         "skip": true,
         "platforms": ["Commodore 64 DTV"]
       },
       "vice_x128": {
         "repo": "https://github.com/libretro/vice-libretro",
-        "version": "7946cfa0d3775e958616d4d107de867a4616ae6c",
+        "version": "fdda9d0cb32604519dbc7fb127058469cb9472be",
         "extra_build_args": ["EMUTYPE=x128"],
         "skip": true,
         "platforms": ["Commodore 128"]
       },
       "vice_xcbm2": {
         "repo": "https://github.com/libretro/vice-libretro",
-        "version": "7946cfa0d3775e958616d4d107de867a4616ae6c",
+        "version": "fdda9d0cb32604519dbc7fb127058469cb9472be",
         "extra_build_args": ["EMUTYPE=xcbm2"],
         "skip": true,
         "platforms": ["Commodore CBM-II"]
       },
       "vice_xpet": {
         "repo": "https://github.com/libretro/vice-libretro",
-        "version": "7946cfa0d3775e958616d4d107de867a4616ae6c",
+        "version": "fdda9d0cb32604519dbc7fb127058469cb9472be",
         "extra_build_args": ["EMUTYPE=xpet"],
         "skip": true,
         "platforms": ["Commodore PET"]
       },
       "vice_xvic": {
         "repo": "https://github.com/libretro/vice-libretro",
-        "version": "7946cfa0d3775e958616d4d107de867a4616ae6c",
+        "version": "fdda9d0cb32604519dbc7fb127058469cb9472be",
         "extra_build_args": ["EMUTYPE=xvic"],
         "platforms": ["Commodore VIC20"],
         "skip":true
