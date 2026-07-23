@@ -9,7 +9,7 @@ if [ -e $WORKDIR ]; then
     pushd $WORKDIR
     git pull origin main
 else
-    git clone --depth 1 ssh://forgejo@cafe.cs.pomona.edu:47147/shftgroup/gisst $WORKDIR
+    git clone ssh://forgejo@cafe.cs.pomona.edu:47147/shftgroup/gisst $WORKDIR
     pushd $WORKDIR
 fi
 cat $JOB_TOKEN | docker login cafe.cs.pomona.edu -u jcoa2018 --password-stdin
@@ -39,9 +39,9 @@ if [ "$OLD_VSN" != "$NEW_VSN" ]; then
   else
     ASSETS=1
   fi
-  docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -v gisst-build:/gisst-build -e GET_ASSETS=$ASSETS cafe.cs.pomona.edu/shftgroup/gisst-dist:latest
+  docker run --rm -v $(pwd)/build:/out:Z -v $(pwd)/manifest.json:/manifest.json:Z -v $(pwd)/v86bios:/files/v86bios:Z -v $(pwd)/psxbios:/files/psxbios:Z -v gisst-build:/gisst-build:Z -e GET_ASSETS=$ASSETS cafe.cs.pomona.edu/shftgroup/gisst-dist:latest
   tar czvf cores.tgz build
-  curl -u "jcoa2018:$JOB_TOKEN" --anyauth --request DELETE "https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz" || echo "no existing package to delete"
-  curl -u "jcoa2018:$JOB_TOKEN" --anyauth --upload-file cores.tgz "https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz"
+  curl -u "jcoa2018:$(cat $JOB_TOKEN)" --anyauth --request DELETE "https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz" || echo "no existing package to delete"
+  curl -u "jcoa2018:$(cat $JOB_TOKEN)" --anyauth --upload-file cores.tgz "https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz"
   echo $NEW_VSN > last_build
 fi
