@@ -298,10 +298,10 @@ impl Task {
     /// Create (if needed) or return the pending replay video task for this replay.
     pub async fn create_retroarch_replay_video(
         conn: &mut PgConnection,
-        embed_data: &crate::routes::players::EmbedDataInfo,
+        embed_data: &server_types::embed::EmbedDataInfo,
     ) -> Result<Self, CreateRetroArchReplayVideoError> {
-        use crate::routes::players::PlayerStartTemplateInfo;
         use serde_json::json;
+        use server_types::embed::PlayerStartTemplateInfo;
         let PlayerStartTemplateInfo::Replay(replay) = &embed_data.start else {
             return Err(CreateRetroArchReplayVideoError::NotReplay);
         };

@@ -9,7 +9,6 @@ use crate::{
         replay_router, save_router, screenshot_router, state_router, task_router, video_router,
         work_router,
     },
-    serverconfig::ServerConfig,
     tus,
 };
 use anyhow::Result;
@@ -20,6 +19,7 @@ use axum::{
     response::{Html, IntoResponse},
     routing::method_routing::{get, patch, post},
 };
+use server_types::config::Config;
 
 use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::context;
@@ -53,7 +53,7 @@ pub struct ServerState {
     pub task_worker_keys: Vec<String>,
 }
 impl ServerState {
-    async fn with_config(config: &ServerConfig) -> Result<Self, ServerError> {
+    async fn with_config(config: &Config) -> Result<Self, ServerError> {
         assert!(
             !config.http.base_url.ends_with('/'),
             "base_url must not end with slash"
@@ -90,7 +90,7 @@ impl ServerState {
 
 #[allow(clippy::too_many_lines)]
 #[tracing::instrument(name = "launch")]
-pub async fn launch(config: &ServerConfig) -> Result<()> {
+pub async fn launch(config: &Config) -> Result<()> {
     use crate::selective_serve_dir;
 
     let base_url = &config.http.base_url;

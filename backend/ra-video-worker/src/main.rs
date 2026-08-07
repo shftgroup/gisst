@@ -8,12 +8,12 @@
 //   update replay record with video file
 //   finish task
 mod args;
+use anyhow::Result;
 use args::WorkerArgs;
 use clap::Parser;
 use serde_json::json;
-use anyhow::{Context, Result};
 
-const CHECK_INTERVAL:u64 = 60;
+const CHECK_INTERVAL: u64 = 60;
 
 #[tokio::main]
 async fn main() {
@@ -26,26 +26,32 @@ async fn main() {
     let claim_url = format!("{}/tasks/claim", args.gisst_url);
     let auth_header = format!("Bearer {}", args.worker_key);
     loop {
-        tokio::time::sleep(std::duration::Duration::from_secs(CHECK_INTERVAL)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(CHECK_INTERVAL)).await;
         if let Err(e) = process_one_task(&client, &claim_url, &auth_header).await {
-            info::error!("Error processing task: {e:?}");
+            log::error!("Error processing task: {e:?}");
         }
     }
 }
 
-async fn process_one_task(client:&reqwest::Client, claim_url:&str, auth_header:&str) -> Result<()> {
+async fn process_one_task(
+    client: &reqwest::Client,
+    claim_url: &str,
+    auth_header: &str,
+) -> Result<()> {
     let resp = match client
-        .post(&claim_url)
-        .header("Authorization", &auth_header)
+        .post(claim_url)
+        .header("Authorization", auth_header)
         .header("Content-Encoding", "application/json")
         .json(&json!({"task_type":"retroarch_replay_video"}))
         .send()
-        .await {
-            Ok(resp) => resp,
-            Err(e) if matches!(e.status(), Some(reqwest::StatusCode::NOT_FOUND)) => return Ok(()),
-            Err(e) => return Err(e)
-        };
-    let task:serde_json::Value = resp.json().await;
-    
+        .await
+    {
+        Ok(resp) => resp,
+        Err(e) if matches!(e.status(), Some(reqwest::StatusCode::NOT_FOUND)) => return Ok(()),
+        Err(e) => return Err(e.into()),
+    };
+    let task: server_types::embed::EmbedDataInfo = resp.json().await?;
+
     dbg!(task);
+    todo!();
 }

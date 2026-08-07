@@ -1,4 +1,3 @@
-use super::LoggedInUserInfo;
 use crate::server::BASE_URL;
 use crate::{auth, error::ServerError, server::ServerState, utils::parse_header};
 use axum::{
@@ -27,11 +26,7 @@ async fn get_single_creator(
     if let Some(creator) = Creator::get_by_id(&mut conn, id).await? {
         let accept: Option<String> = parse_header(&headers, "Accept");
 
-        let user = auth
-            .user()
-            .await
-            .as_ref()
-            .map(LoggedInUserInfo::generate_from_user);
+        let user = auth.user().await.as_ref().map(crate::routes::user_from);
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {

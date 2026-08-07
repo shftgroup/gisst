@@ -1,12 +1,12 @@
 use std::net::Ipv4Addr;
 
-use config::{Config, ConfigError, Environment, File};
+use config::{Config as Cfg, ConfigError, Environment, File};
 use secrecy::SecretString;
 use serde::Deserialize;
 
 //Configuration file setup taken from https://github.com/shanesveller/axum-rest-example/blob/develop/src/config.rs
 #[derive(Debug, Default, Deserialize)]
-pub struct ServerConfig {
+pub struct Config {
     #[serde(default)]
     pub database: DatabaseConfig,
 
@@ -26,10 +26,10 @@ pub struct ServerConfig {
     pub search: SearchConfig,
 }
 
-impl ServerConfig {
+impl Config {
     pub fn new() -> Result<Self, ConfigError> {
         let env = std::env::var("GISST_ENV").unwrap_or_else(|_| "development".into());
-        let builder = Config::builder()
+        let builder = Cfg::builder()
             .add_source(File::with_name("config/default.toml"))
             .add_source(File::with_name(&format!("config/{env}.toml")).required(false))
             .add_source(File::with_name("config/local.toml").required(false))

@@ -1,0 +1,16 @@
+[package]
+name = "retro-rs"
+version = "0.6.0"
+authors = ["Joseph C. Osborn <joseph.osborn@pomona.edu>"]
+edition = "2024"
+description = "A Rust front-end for libretro cores."
+license = "Apache-2.0"
+repository = "https://github.com/JoeOsborn/retro-rs"
+
+[dependencies]
+libloading = "0.9"
+rust-libretro-sys.workspace = true
+libc.workspace = true
+
+[build-dependencies]
+cc.workspace = true

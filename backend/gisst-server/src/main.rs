@@ -4,13 +4,12 @@ mod error;
 mod routes;
 mod selective_serve_dir;
 mod server;
-mod serverconfig;
 mod task;
 mod tus;
 mod utils;
 
 use anyhow::Result;
-use serverconfig::ServerConfig;
+use server_types::config::Config;
 use tracing_subscriber::EnvFilter;
 
 // Tracing dependencies
@@ -47,7 +46,7 @@ fn resource() -> Resource {
         .build()
 }
 
-fn init_tracer(config: &ServerConfig) -> Result<SdkTracerProvider, anyhow::Error> {
+fn init_tracer(config: &Config) -> Result<SdkTracerProvider, anyhow::Error> {
     Ok(if config.env.jaeger_endpoint.is_empty() {
         SdkTracerProvider::builder()
             .with_batch_exporter(opentelemetry_stdout::SpanExporter::default())
@@ -66,7 +65,7 @@ fn init_tracer(config: &ServerConfig) -> Result<SdkTracerProvider, anyhow::Error
     })
 }
 
-fn init_metrics(config: &ServerConfig) -> Result<SdkMeterProvider, anyhow::Error> {
+fn init_metrics(config: &Config) -> Result<SdkMeterProvider, anyhow::Error> {
     Ok(if config.env.prometheus_endpoint.is_empty() {
         SdkMeterProvider::builder()
             .with_periodic_exporter(opentelemetry_stdout::MetricExporter::default())
@@ -99,7 +98,7 @@ async fn main() -> Result<()> {
         println!("gisst-server {}", VERSION.unwrap_or("unknown"));
         return Ok(());
     }
-    let config = serverconfig::ServerConfig::new()?;
+    let config = server_types::config::Config::new()?;
 
     // Setup the tracer and logging
     let tracer_provider = init_tracer(&config)?;

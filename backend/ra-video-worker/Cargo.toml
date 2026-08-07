@@ -2,17 +2,21 @@
 name = "ra-video-worker"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
-rply-codec = {git="https://github.com/JoeOsborn/rply-codec/",rev="8cab86a2ade9cead90446db615788a79e67f3093"}
-retro-rs = { version = "0.5.6", default-features=false }
-ffmpeg-next = "8.0.0"
+gisst.workspace = true
+server-types.workspace = true
+rply-codec = { git = "https://github.com/JoeOsborn/rply-codec", rev = "3c143acfd2b50efff47738fce57e2d1e86cd9344"}
+retro-rs = { workspace = true, default-features=false }
+rust-libretro-sys.workspace = true
+ffmpeg-next = "9.0.0"
 ringbuf = "0.5.2"
-reqwest = "0.13.4"
-tokio = { version = "1.53.1", features = ["full"] }
-clap = { version = "4.6.3", features = ["cargo", "default", "derive", "env"] }
-clap-verbosity-flag = "3.0.4"
-anyhow = "1.0.104"
-env_logger = "0.11.11"
-log = "0.4.33"
-serde_json = "1.0.151"
+reqwest.workspace = true
+tokio.workspace = true
+clap.workspace = true
+clap-verbosity-flag.workspace = true
+anyhow.workspace = true
+env_logger.workspace = true
+log.workspace = true
+serde_json.workspace = true
