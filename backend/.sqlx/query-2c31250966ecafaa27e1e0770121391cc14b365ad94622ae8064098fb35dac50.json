@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE task\n                   SET task_state='active', task_retry_count=$2,\n                       task_claimant=$3, task_claimed_on=$4, task_updated_on=$5\n                   WHERE task_id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Text",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2c31250966ecafaa27e1e0770121391cc14b365ad94622ae8064098fb35dac50"
+}
