@@ -1,8 +1,5 @@
-#![allow(unused, reason = "Initial implementation without API, just with tests")]
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::Connection;
 use sqlx::postgres::PgConnection;
 use std::{fmt, str::FromStr};
@@ -212,44 +209,6 @@ impl Task {
             Ok(None)
         }
     }
-    pub async fn create_conntest(conn: &mut PgConnection) -> sqlx::Result<Self> {
-        let task = Task {
-            task_id: Uuid::new_v4(),
-            task_created_on: Utc::now(),
-            task_retry_count: 0,
-            task_type: "conntest".to_string(),
-            task_claimant: None,
-            task_claimed_on: None,
-            task_updated_on: Utc::now(),
-            task_state: TaskState::Idle,
-            task_status: json!({}),
-            task_last_status: None,
-            task_input: json!({"example":0}),
-            task_output: json!({}),
-        };
-        sqlx::query_as!(
-            Self,
-            r#"INSERT INTO task
-               VALUES($1, $2, $3, $4, $5, $6, current_timestamp, $7, $8, $9, $10, $11)
-               RETURNING task_id, task_created_on, task_retry_count,
-                  task_type, task_claimant, task_claimed_on, task_updated_on,
-                  task_state as "task_state:_",
-                  task_status, task_last_status, task_input, task_output"#,
-            task.task_id,
-            task.task_created_on,
-            task.task_retry_count,
-            task.task_type,
-            task.task_claimant,
-            task.task_claimed_on,
-            task.task_state as _,
-            task.task_status,
-            task.task_last_status,
-            task.task_input,
-            task.task_output,
-        )
-        .fetch_one(conn)
-        .await
-    }
     pub async fn update_status(
         conn: &mut PgConnection,
         id: Uuid,
@@ -318,9 +277,52 @@ impl Task {
     }
 }
 #[cfg(test)]
+impl Task {
+    pub async fn create_conntest(conn: &mut PgConnection) -> sqlx::Result<Self> {
+        use serde_json::json;
+        let task = Task {
+            task_id: Uuid::new_v4(),
+            task_created_on: Utc::now(),
+            task_retry_count: 0,
+            task_type: "conntest".to_string(),
+            task_claimant: None,
+            task_claimed_on: None,
+            task_updated_on: Utc::now(),
+            task_state: TaskState::Idle,
+            task_status: json!({}),
+            task_last_status: None,
+            task_input: json!({"example":0}),
+            task_output: json!({}),
+        };
+        sqlx::query_as!(
+            Self,
+            r#"INSERT INTO task
+               VALUES($1, $2, $3, $4, $5, $6, current_timestamp, $7, $8, $9, $10, $11)
+               RETURNING task_id, task_created_on, task_retry_count,
+                  task_type, task_claimant, task_claimed_on, task_updated_on,
+                  task_state as "task_state:_",
+                  task_status, task_last_status, task_input, task_output"#,
+            task.task_id,
+            task.task_created_on,
+            task.task_retry_count,
+            task.task_type,
+            task.task_claimant,
+            task.task_claimed_on,
+            task.task_state as _,
+            task.task_status,
+            task.task_last_status,
+            task.task_input,
+            task.task_output,
+        )
+        .fetch_one(conn)
+        .await
+    }
+}
+#[cfg(test)]
 mod tests {
     use super::*;
     use sqlx::postgres::PgPool;
+    use serde_json::json;
     #[sqlx::test(migrations = "../migrations/")]
     async fn sorting_filtering(pool: PgPool) -> sqlx::Result<()> {
         let mut conn = pool.acquire().await?;
