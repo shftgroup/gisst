@@ -72,6 +72,8 @@ pub enum ServerError {
     UploadTooBig(std::num::TryFromIntError),
     #[error("Role index exceeds 65535, we don't support that many objects")]
     RoleIndexTooBig(std::num::TryFromIntError),
+    #[error("No task ready for work yet")]
+    NoTaskReady,
     #[allow(unused)]
     #[error("Route not yet implemented")]
     NotYetImplemented,
@@ -145,6 +147,7 @@ impl IntoResponse for ServerError {
             }
             ServerError::Join(_) => (StatusCode::INTERNAL_SERVER_ERROR, "tokio task error"),
             ServerError::FileNotFound => (StatusCode::NOT_FOUND, "file not found"),
+            ServerError::NoTaskReady => (StatusCode::NOT_FOUND, "no task ready for work yet"),
             ServerError::Reqwest(_) => (StatusCode::INTERNAL_SERVER_ERROR, "oauth reqwest error"),
             ServerError::AuthUserSerdeLogin(_) => (StatusCode::INTERNAL_SERVER_ERROR, "auth error"),
             ServerError::AuthUserNotAuthenticated => {
