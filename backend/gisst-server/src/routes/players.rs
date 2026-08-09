@@ -37,33 +37,33 @@ struct PlayerTemplateInfo {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-struct EmbedDataInfo {
-    gisst_root: String,
-    instance: Instance,
-    work: Work,
-    environment: Environment,
-    saves: Vec<SaveLink>,
-    start: PlayerStartTemplateInfo,
-    core_manifest: Vec<CoreFileLink>,
-    manifest: Vec<ObjectLink>,
-    host_url: String,
-    host_protocol: String,
-    citation_data: Option<CitationDataInfo>,
+pub struct EmbedDataInfo {
+    pub gisst_root: String,
+    pub instance: Instance,
+    pub work: Work,
+    pub environment: Environment,
+    pub saves: Vec<SaveLink>,
+    pub start: PlayerStartTemplateInfo,
+    pub core_manifest: Vec<CoreFileLink>,
+    pub manifest: Vec<ObjectLink>,
+    pub host_url: String,
+    pub host_protocol: String,
+    pub citation_data: Option<CitationDataInfo>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-struct CitationDataInfo {
-    website_title: String,
-    url: String,
-    gs_page_view_date: String,
-    mla_page_view_date: String,
-    bibtex_page_view_date: String,
-    site_published_year: String,
+pub struct CitationDataInfo {
+    pub website_title: String,
+    pub url: String,
+    pub gs_page_view_date: String,
+    pub mla_page_view_date: String,
+    pub bibtex_page_view_date: String,
+    pub site_published_year: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(tag = "type", content = "data", rename_all = "lowercase")]
-enum PlayerStartTemplateInfo {
+pub enum PlayerStartTemplateInfo {
     Cold,
     State(StateLink),
     Replay(ReplayLink),
@@ -174,7 +174,10 @@ pub async fn get_data(
         host_protocol: url_parts[0].to_string(),
         citation_data: Some(citation_data),
     };
-
+    let pending_task = if let PlayerStartTemplateInfo::Replay(replay) = &embed_data.start && replay.video_id.is_none() && embed_data.environment.environment_framework == gisst::model_enums::Framework::RetroArch {
+        tracing::info!("No video yet for {:?}, queuing task if not present",replay.replay_id);
+        Some(crate::task::Task::create_retroarch_replay_video(&mut conn, &embed_data).await.map_err(crate::task::CreateTaskError::CreateRetroArchReplayVideoError)?)
+    } else { None };
     let accept: Option<String> = parse_header(&headers, "Accept");
     Ok((if accept.is_none()
         || accept.as_ref().is_some_and(|hv| hv.contains("text/html"))
@@ -192,6 +195,7 @@ pub async fn get_data(
             ],
             Html(citation_page.render(context! {
                 base_url => BASE_URL.get(),
+                pending_task => pending_task,
                 embed_data => embed_data,
             })?),
         )

@@ -13,6 +13,26 @@ pub enum TimeoutTaskError {
     Sqlx(#[from] sqlx::Error),
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum CreateTaskError {
+    #[error("create retroarch replay error")]
+    CreateRetroArchReplayVideoError(#[from] CreateRetroArchReplayVideoError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CreateRetroArchReplayVideoError {
+    #[error("database error")]
+    Sqlx(#[from] sqlx::Error),
+    #[error("not a replay start")]
+    NotReplay,
+    #[error("not a retroarch replay")]
+    NotRetroArch,
+    #[error("Video exists already")]
+    AlreadyCreated,
+    #[error("couldn't serialize embeddata")]
+    Json(#[from] serde_json::Error)
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(rename_all = "lowercase", type_name = "task_state")]
 #[serde(rename_all = "lowercase")]
@@ -274,6 +294,70 @@ impl Task {
                   task_status, task_last_status, task_input, task_output"#,
             sqlx::postgres::types::PgInterval::try_from(interval).map_err(|_e| TimeoutTaskError::InvalidDuration(interval))?,
         ).fetch_all(conn).await.map_err(TimeoutTaskError::Sqlx)
+    }
+    /// Create (if needed) or return the pending replay video task for this replay.
+    pub async fn create_retroarch_replay_video(conn:&mut PgConnection, embed_data:&crate::routes::players::EmbedDataInfo) -> Result<Self,CreateRetroArchReplayVideoError> {
+        use serde_json::json;
+        use crate::routes::players::PlayerStartTemplateInfo;
+        let PlayerStartTemplateInfo::Replay(replay) = &embed_data.start else { return Err(CreateRetroArchReplayVideoError::NotReplay); };
+        if embed_data.environment.environment_framework != gisst::model_enums::Framework::RetroArch {
+            return Err(CreateRetroArchReplayVideoError::NotRetroArch);
+        }
+        if replay.video_id.is_some() {
+            return Err(CreateRetroArchReplayVideoError::AlreadyCreated);
+        }
+        if let Some(task) = sqlx::query_as!(
+            Self,
+            r#"
+SELECT task_id, task_created_on, task_retry_count, task_type,
+       task_claimant, task_claimed_on, task_updated_on,
+       task_state as "task_state:_", task_status,
+       task_last_status, task_input, task_output
+FROM task
+WHERE task_type = 'retroarch_replay_video'
+      AND task_state != 'done'
+      AND (task_input #>> '{start,data,replay_id}')::uuid = $1"#,
+            replay.replay_id,
+        ).fetch_optional(conn.as_mut()).await? {
+            return Ok(task);
+        }
+        let task = Task {
+            task_id: Uuid::new_v4(),
+            task_created_on: Utc::now(),
+            task_retry_count: 0,
+            task_type: "retroarch_replay_video".to_string(),
+            task_claimant: None,
+            task_claimed_on: None,
+            task_updated_on: Utc::now(),
+            task_state: TaskState::Idle,
+            task_status: json!({}),
+            task_last_status: None,
+            task_input: serde_json::to_value(embed_data)?,
+            task_output: json!({}),
+        };
+        let task = sqlx::query_as!(
+            Self,
+            r#"INSERT INTO task
+               VALUES($1, $2, $3, $4, $5, $6, current_timestamp, $7, $8, $9, $10, $11)
+               RETURNING task_id, task_created_on, task_retry_count,
+                  task_type, task_claimant, task_claimed_on, task_updated_on,
+                  task_state as "task_state:_",
+                  task_status, task_last_status, task_input, task_output"#,
+            task.task_id,
+            task.task_created_on,
+            task.task_retry_count,
+            task.task_type,
+            task.task_claimant,
+            task.task_claimed_on,
+            task.task_state as _,
+            task.task_status,
+            task.task_last_status,
+            task.task_input,
+            task.task_output,
+        )
+        .fetch_one(conn)
+            .await?;
+        Ok(task)
     }
 }
 #[cfg(test)]
