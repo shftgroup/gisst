@@ -59,6 +59,7 @@ playwright-report/
 .claude
 psxbios
 .devcontainer/certs
+.devcontainer/user
 /build.zip
 /cores.tgz
 /frontend/frontend-build.sh

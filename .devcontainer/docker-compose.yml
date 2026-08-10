@@ -3,12 +3,16 @@ services:
     image: cafe.cs.pomona.edu/shftgroup/gisst-dev:latest
     env_file:
       - ./devcontainer.env
+      - ../backend/.env
     environment:
       PODMAN_USERNS: keep-id
       SSH_AUTH_SOCK: "/run/ssh.sock"
     volumes:
       - ../:/workspace:cached,Z
       - ./certs:/certs:Z
+      - source: ./nginx.conf
+        target: /etc/nginx/sites-enabled/default
+        type: bind
       - source: "${SSH_AUTH_SOCK}"
         target: "/run/ssh.sock"
         type: bind
