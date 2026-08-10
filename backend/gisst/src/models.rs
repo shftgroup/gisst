@@ -1378,7 +1378,7 @@ impl ReplayLink {
     pub async fn get_by_id(conn: &mut sqlx::PgConnection, id: Uuid) -> sqlx::Result<Option<Self>> {
         sqlx::query_as!(
             Self,
-            r#"SELECT replay.*, video_file.file_dest_path as "video_file_dest_path",
+            r#"SELECT replay.*, video_file.file_dest_path as "video_file_dest_path?",
                       file.file_hash, file.file_filename,
                       file.file_source_path, file.file_dest_path
                FROM replay

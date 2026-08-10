@@ -113,7 +113,7 @@ async fn main() -> Result<()> {
         .parse(config.env.rust_log.clone())?; // Log levels taken from ../../config/default.toml
     let subscriber = tracing_subscriber::registry()
         .with(filter)
-        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::fmt::layer().with_file(true).with_line_number(true))
         .with(tracing_opentelemetry::layer().with_tracer(tracer_provider.tracer("gisst/server")))
         .with(tracing_opentelemetry::MetricsLayer::new(
             metrics_provider.clone(),

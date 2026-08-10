@@ -107,30 +107,31 @@ export async function init(gisst_root:string, environment:Environment, work:Work
           await resp.text();
           if (sz > 0 && sz <= 16*1024*1024) {
             const data = await (await fetch(content_url)).arrayBuffer();
-            module.FS.createPath("/",download_source_path, true, true);
-            module.FS.createDataFile(download_source_path, file.file_filename!, new Uint8Array(data), true, true, true);
+            create_file(module, download_source_path, file.file_filename!, new Uint8Array(data));
           } else {
             const content_url_encoded = encodeURI(file.file_dest_path);
             fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
           }
         }
         console.log("Place fetch manifest",fetch_manifest);
-        module.FS.createDataFile("/mem", "fetch.txt", enc.encode(fetch_manifest), true, true, true);
+        create_file(module, "/mem", "fetch.txt", enc.encode(fetch_manifest));
         module.FS.createPath("/", state_dir, true, true);
         module.FS.createPath("/", saves_dir, true, true);
         if (entryState) {
-          module.FS.createDataFile(state_dir, content_base + ".state1.entry", state_data, true, true, true);
-          module.FS.createDataFile(state_dir, content_base + ".state1", state_data, true, true, true);
+          nonnull(state_data);
+          create_file(module, state_dir, content_base + ".state1.entry", state_data);
+          create_file(module, state_dir, content_base + ".state1.", state_data);
         }
         if (movie) {
-          module.FS.createDataFile(state_dir, content_base + ".replay1", replay, true, true, true);
+          nonnull(replay);
+          create_file(module, state_dir, content_base + ".replay1", replay);
         }
         for (const [data, savefile] of save_data) {
           console.log(data, "/storage/"+data.file_dest_path,saves_dir + "/" + data.save_id + ".srm");
-          module.FS.createDataFile(saves_dir, data.save_id + ".srm", savefile, true, true, false);
+          create_file(module, saves_dir, data.save_id + ".srm", savefile);
         }
         if (save_data.length > 0) {
-          module.FS.createDataFile(saves_dir, content_base + ".srm", save_data[0][1], true, true, false);
+          create_file(module, saves_dir, content_base + ".srm", save_data[0][1]);
         }
         if (use_gamepad_overlay) {
           // gameboy, gba, nes, snes, retropad
@@ -152,10 +153,7 @@ export async function init(gisst_root:string, environment:Environment, work:Work
           const text = await (await fetch(config_url)).text();
           ra_cfg_text += "\n" + text + "\n";
         }
-        const lines_enc = enc.encode(ra_cfg_text);
-        module.FS.createDataFile("/mem", "retroarch.cfg", lines_enc, true, true, true);
-        // A workaround for an emscripten bug; this forces a filesystem sync before retroReady is called.
-        module.FS.readFile("/mem/retroarch.cfg");
+        create_file(module, "/mem", "retroarch.cfg", enc.encode(ra_cfg_text));
         const self = {
           toggle_mute:() => {
             send_message(module, "MUTE");
@@ -193,6 +191,12 @@ export async function init(gisst_root:string, environment:Environment, work:Work
         res(self)
       });
   });
+}
+
+function create_file(module:LibretroModule, parent:string, file:string, bytes:Uint8Array) {
+  module.FS.createDataFile(parent, file, bytes, true, true, false);
+  // A workaround for an emscripten bug; this forces a filesystem sync before retroReady is called.
+  module.FS.readFile(parent+"/"+file);
 }
 
 function sleep(ms:number) : Promise<void> {
@@ -252,3 +256,8 @@ function mobileAndTabletCheck() {
   return check;
 }
 
+function nonnull(obj:unknown):asserts obj {
+  if(obj == null) {
+    throw "Must be non-null";
+  }
+}

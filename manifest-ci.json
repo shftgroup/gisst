@@ -16,7 +16,7 @@
   },
   "retroarch": {
     "repo": "https://github.com/libretro/retroarch",
-    "version": "620bcd8c35115f6b82ac80c158109afa87777e45",
+    "version": "ec99ba9e761faff93c7c351acfc8c4512719f344",
     "build_args": [
       "HAVE_CHD=0",
       "HAVE_RWEBAUDIO=0",
@@ -38,12 +38,12 @@
     "cores": {
       "gambatte": {
         "repo": "https://github.com/libretro/gambatte-libretro",
-        "version": "9b3b5e3cc18ec92f460d37dd551eaf90c55bfcea",
+        "version": "96174369b3c30d9fc57c926fa3379c273dc6a9a5",
         "platforms": ["Nintendo Game Boy", "Nintendo Game Boy Color"]
       },
       "pcsx_rearmed": {
         "repo": "https://github.com/libretro/pcsx_rearmed",
-        "version": "050981b6eeb715f142854f57c68086f62921f027",
+        "version": "da2cb8ecd17fd0932ab6d94774c0522beebce6e3",
         "dependencies": {},
         "platforms": ["Sony Playstation"]
       },
