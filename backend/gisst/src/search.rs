@@ -8,6 +8,12 @@ use crate::{
 use meilisearch_sdk::client::Client as Meili;
 use meilisearch_sdk::task_info::TaskInfo;
 use sqlx::postgres::PgConnection;
+pub use meilisearch_sdk::search::{Selectors,SearchResults};
+
+mod meili_reqwest_client;
+use meili_reqwest_client::ReqwestClient;
+
+type Index = meilisearch_sdk::indexes::Index<ReqwestClient>;
 
 const CHUNK_SIZE: usize = 10000;
 
@@ -46,7 +52,7 @@ pub trait SearchIndexer {
 
 #[derive(Debug, Clone)]
 pub struct MeiliIndexer {
-    meili: Meili,
+    meili: Meili<ReqwestClient>,
 }
 
 impl MeiliIndexer {
@@ -54,7 +60,7 @@ impl MeiliIndexer {
     /// If the address is invalid, creating the client will fail
     pub fn new(url: &str, api_key: &str) -> Result<Self, crate::error::SearchIndex> {
         Ok(Self {
-            meili: Meili::new(url, Some(api_key))?,
+            meili: Meili::new_with_client(url, Some(api_key), meili_reqwest_client::ReqwestClient::new(Some(api_key))?),
         })
     }
     /// # Errors
@@ -63,7 +69,7 @@ impl MeiliIndexer {
         &self,
         idx: &str,
         key: &str,
-    ) -> Result<meilisearch_sdk::indexes::Index, crate::error::SearchIndex> {
+    ) -> Result<Index, crate::error::SearchIndex> {
         if let Ok(idx) = self.meili.get_index(idx).await {
             return Ok(idx);
         }
@@ -411,8 +417,9 @@ pub struct MeiliSearch {
     url: String,
     external_url: String,
     key: String,
-    meili: Meili<meilisearch_sdk::reqwest::ReqwestClient>,
+    meili: Meili<ReqwestClient>,
 }
+
 impl MeiliSearch {
     /// # Errors
     /// If the address is invalid, creating the client will fail
@@ -425,7 +432,7 @@ impl MeiliSearch {
             url: url.to_string(),
             external_url: external_url.to_string(),
             key: search_key.to_string(),
-            meili: Meili::new(url, Some(search_key))?,
+            meili: Meili::new_with_client(url, Some(search_key), meili_reqwest_client::ReqwestClient::new(Some(search_key))?),
         })
     }
     #[must_use]
@@ -433,23 +440,23 @@ impl MeiliSearch {
         (&self.external_url, &self.key)
     }
     #[must_use]
-    pub fn instances(&self) -> meilisearch_sdk::indexes::Index {
+    pub fn instances(&self) -> Index {
         self.meili.index("instance")
     }
     #[must_use]
-    pub fn saves(&self) -> meilisearch_sdk::indexes::Index {
+    pub fn saves(&self) -> Index {
         self.meili.index("save")
     }
     #[must_use]
-    pub fn states(&self) -> meilisearch_sdk::indexes::Index {
+    pub fn states(&self) -> Index {
         self.meili.index("state")
     }
     #[must_use]
-    pub fn replays(&self) -> meilisearch_sdk::indexes::Index {
+    pub fn replays(&self) -> Index {
         self.meili.index("replay")
     }
     #[must_use]
-    pub fn creators(&self) -> meilisearch_sdk::indexes::Index {
+    pub fn creators(&self) -> Index {
         self.meili.index("creator")
     }
 }

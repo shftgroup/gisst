@@ -2,13 +2,14 @@
 name                    = "gisst"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [features]
 default=[]
 fatfs_logging=["fatfs/log_level_trace"]
 
 [dependencies]
-sqlx = { version = "0.9", features = ["migrate", "runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "macros", "bigdecimal"], default-features=false }
+sqlx = { version = "0.9", features = ["migrate", "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json", "macros", "bigdecimal"], default-features=false }
 uuid                    = { version = "1.23", features = ["serde", "v4"] }
 serde                   = { version = "1.0.228", features = ["derive"] }
 thiserror               = "2.0.18"
@@ -18,16 +19,22 @@ md-5                    = "0.11"
 digest-io               = "0.1.0"
 base16ct                = {version="1.0.0",features=["alloc"]}
 bytes                   = { version = "1.11.1", features = ["serde"] }
-async-compression       = { version = "0.4", features = ["tokio", "gzip", "zstdmt"] }
+async-compression       = { version = "0.4", default-features=false, features = ["tokio", "gzip"] }
 chrono = {version = "0.4.44", features = ["serde"]}
 serde_with = { version = "3.20.0", features = ["base64"] }
 tracing = "0.1.44"
 tree_magic_mini = {version="3.2.2", features=["with-gpl-data"]}
 fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="c4b88477b22ca7e5131fbd8891f62a5deaa88e6e"}
-mbrman = "0.6.1"
+mbrman = {path="../vendor/mbrman"}
 fscommon = "0.1.1"
-zip = "8.6.0"
+zip = {version="8.6.0",default-features=false,features=["deflate"]}
 opentelemetry = "0.32"
 num-traits = "0.2.19"
-meilisearch-sdk = "0.33.0"
+meilisearch-sdk = {version="0.33.0",default-features=false,features=["jwt_aws_lc_rs"]}
+reqwest = {version="0.13.3", default-features=false, features=["stream","json","charset","rustls","http2","system-proxy"]}
 futures = "0.3.32"
+futures-core = "0.3.34"
+futures-io = "0.3.34"
+pin-project-lite = "0.2.17"
+yaup = "0.3.1"
+async-trait = "0.1.92"

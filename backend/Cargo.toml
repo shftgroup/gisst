@@ -1,10 +1,11 @@
 [workspace]
-members = ["gisst", "gisst-server", "gisst-cli", "ingest", "mirror-rdb", "rdb-sys"]
+members = ["gisst", "gisst-server", "gisst-cli", "ingest", "mirror-rdb", "rdb-sys", "vendor/bincode_derive", "vendor/bincode", "vendor/mbrman"]
 resolver = "2"
 
 [workspace.package]
 version = "0.2.4"
 edition = "2024"
+license = "AGPL-3.0-or-later"
 
 #[profile.dev]
 #debug = 0

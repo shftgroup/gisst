@@ -345,12 +345,16 @@ impl AuthBackend {
         &self,
         code: String,
     ) -> Result<(OpenIDUserInfo, oauth2::AccessToken), AuthError> {
+        use reqwest::Client as RClient;
+        use oauth2_reqwest::ReqwestClient as OAClient;
+        let client = RClient::new();
+        let http_client = OAClient::from(client.clone());
         let token = self
             .client
             .exchange_code(AuthorizationCode::new(code))
-            .request_async(&oauth2::reqwest::Client::new())
+            .request_async(&http_client)
             .await?;
-        let user_info = reqwest::Client::new()
+        let user_info = client
             .get("https://openidconnect.googleapis.com/v1/userinfo")
             .header(axum::http::header::USER_AGENT.as_str(), "gisst-login")
             .bearer_auth(token.access_token().secret().to_owned())

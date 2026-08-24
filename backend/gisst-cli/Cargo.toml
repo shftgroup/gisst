@@ -2,6 +2,7 @@
 name = "gisst-cli"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -11,7 +12,7 @@ config = {  version = "0.15.23", features = ["toml"], default-features = false }
 uuid = { version = "1.23", features = ["serde", "v4"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.149", features = ["raw_value"] }
-sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json"], default-features=false }
+sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json"], default-features=false }
 tokio = { version = "1.52.3", features = ["full"] }
 thiserror = "2.0.18"
 log = "0.4.29"
