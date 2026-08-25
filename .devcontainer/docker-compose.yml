@@ -5,12 +5,12 @@ services:
       - ./devcontainer.env
       - path: ../backend/.env
         required: false
+    userns_mode: keep-id
     environment:
-      PODMAN_USERNS: keep-id
       SSH_AUTH_SOCK: "/run/ssh.sock"
     volumes:
-      - ../:/workspace:cached,Z
-      - ./certs:/certs:Z
+      - ../:/workspace:cached,z
+      - ./certs:/certs:z
       - source: ./nginx.conf
         target: /etc/nginx/sites-enabled/default
         type: bind
@@ -29,10 +29,8 @@ services:
       - db
       - meili
       - meilitest
-    links:
-      - db
-      - meili
-      - meilitest
+    networks: 
+      - net
   db:
     image: postgres:16
     restart: unless-stopped
@@ -46,6 +44,8 @@ services:
       - "5432"
     ports:
       - "5432:5432"
+    networks:
+      - net
   meili:
     image: getmeili/meilisearch:latest
     restart: unless-stopped
@@ -57,6 +57,8 @@ services:
       - "7700"
     ports:
       - "7700:7700"
+    networks:
+      - net
   meilitest:
     image: getmeili/meilisearch:latest
     restart: unless-stopped
@@ -66,6 +68,10 @@ services:
       - "7701"
     ports:
       - "7701:7700"
+    networks:
+      - net
 volumes:
   postgres-data:
   meili-data:
+networks:
+  net:

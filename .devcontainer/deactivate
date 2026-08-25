@@ -1,0 +1,5 @@
+#!/bin/bash
+
+unset -f dcx
+unset -f dcdown
+unalias dcup

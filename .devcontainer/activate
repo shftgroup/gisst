@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ -x `which podman` ]; then
+DPATH=`which podman`
+CPATH=`which podman-compose`
+DOWN="stop-podman.sh"
+else
+DPATH=`which docker`
+CPATH=`which docker`
+DOWN="stop.sh"
+fi
+PROJ=$(git rev-parse --show-toplevel)
+alias dcup="devcontainer up --workspace-folder ${PROJ} --docker-path ${DPATH} --docker-compose-path ${CPATH}"
+function dcx () {
+WORKDIR=$(git rev-parse --show-prefix)
+devcontainer exec --workspace-folder "${PROJ}" \
+	--docker-path "${DPATH}" \
+	--docker-compose-path "${CPATH}" \
+	bash -ec 'cd "$1"; shift; exec -- "$@"' \
+	bash "/workspace/${WORKDIR}" "$@"
+}
+function dcdown () {
+  bash "${PROJ}/.devcontainer/${DOWN}"
+}
