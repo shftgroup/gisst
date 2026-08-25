@@ -5,5 +5,5 @@
   "vga_bios": {
     "url": "vgabios.bin"
   },
-  "fda":{"url":"freedos722.img","size":737280}
+  "fda": { "url": "freedos722.img", "size": 737280 }
 }

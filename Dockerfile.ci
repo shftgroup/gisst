@@ -2,7 +2,7 @@ FROM ubuntu:noble AS base
 
 ENV PLAYWRIGHT_VERSION=1.53.0
 ENV RUST_VERSION=1.95.0
-ENV NODE_VERSION=25.6.0
+ENV NODE_VERSION=26.8.1
 ENV EMSDK_VERSION=4.0.17
 
 RUN apt-get update && apt-get install -y \
@@ -19,7 +19,7 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER $USER
 ENV NVM_DIR=/home/$USER/.nvm
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
-RUN bash -c ". ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION}"
+RUN bash -c ". ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION} && nvm install-latest-npm"
 ENV PATH="/home/$USER/.nvm/versions/node/v${NODE_VERSION}/bin:${PATH}"
 
 ENV EMSDK_DIR=/home/$USER/.emsdk
@@ -36,8 +36,9 @@ ENV PATH="/home/$USER/.cargo/bin:${PATH}"
 ENV CARGO_HOME=/home/$USER/.cargo
 RUN rustup target add wasm32-unknown-unknown
 
-RUN cargo install sqlx-cli
-RUN cargo install cargo-chef
+RUN cargo install --locked cargo-binstall
+RUN cargo binstall -y sqlx-cli cargo-chef cargo-audit cargo-deny cargo-udeps cargo-vet
+RUN npm install -g depcheck
 USER root
 RUN <<EOF
     cd

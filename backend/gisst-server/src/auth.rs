@@ -345,8 +345,8 @@ impl AuthBackend {
         &self,
         code: String,
     ) -> Result<(OpenIDUserInfo, oauth2::AccessToken), AuthError> {
-        use reqwest::Client as RClient;
         use oauth2_reqwest::ReqwestClient as OAClient;
+        use reqwest::Client as RClient;
         let client = RClient::new();
         let http_client = OAClient::from(client.clone());
         let token = self

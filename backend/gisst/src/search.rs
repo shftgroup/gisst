@@ -6,9 +6,9 @@ use crate::{
     },
 };
 use meilisearch_sdk::client::Client as Meili;
+pub use meilisearch_sdk::search::{SearchResults, Selectors};
 use meilisearch_sdk::task_info::TaskInfo;
 use sqlx::postgres::PgConnection;
-pub use meilisearch_sdk::search::{Selectors,SearchResults};
 
 mod meili_reqwest_client;
 use meili_reqwest_client::ReqwestClient;
@@ -60,16 +60,16 @@ impl MeiliIndexer {
     /// If the address is invalid, creating the client will fail
     pub fn new(url: &str, api_key: &str) -> Result<Self, crate::error::SearchIndex> {
         Ok(Self {
-            meili: Meili::new_with_client(url, Some(api_key), meili_reqwest_client::ReqwestClient::new(Some(api_key))?),
+            meili: Meili::new_with_client(
+                url,
+                Some(api_key),
+                meili_reqwest_client::ReqwestClient::new(Some(api_key))?,
+            ),
         })
     }
     /// # Errors
     /// Fails if the API can't be accessed
-    async fn create_index(
-        &self,
-        idx: &str,
-        key: &str,
-    ) -> Result<Index, crate::error::SearchIndex> {
+    async fn create_index(&self, idx: &str, key: &str) -> Result<Index, crate::error::SearchIndex> {
         if let Ok(idx) = self.meili.get_index(idx).await {
             return Ok(idx);
         }
@@ -432,7 +432,11 @@ impl MeiliSearch {
             url: url.to_string(),
             external_url: external_url.to_string(),
             key: search_key.to_string(),
-            meili: Meili::new_with_client(url, Some(search_key), meili_reqwest_client::ReqwestClient::new(Some(search_key))?),
+            meili: Meili::new_with_client(
+                url,
+                Some(search_key),
+                meili_reqwest_client::ReqwestClient::new(Some(search_key))?,
+            ),
         })
     }
     #[must_use]

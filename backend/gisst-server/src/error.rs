@@ -176,7 +176,10 @@ impl IntoResponse for ServerError {
             ),
             ServerError::StateRequired => (StatusCode::BAD_REQUEST, "need a state to make a clone"),
             ServerError::V86Clone(_) => (StatusCode::INTERNAL_SERVER_ERROR, "v86 clone failed"),
-            ServerError::CreateTask(_) => (StatusCode::INTERNAL_SERVER_ERROR, "could not create worker task"),
+            ServerError::CreateTask(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "could not create worker task",
+            ),
             ServerError::Unreachable => (StatusCode::INTERNAL_SERVER_ERROR, "uh oh error"),
             ServerError::AuthSession(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "auth session error")

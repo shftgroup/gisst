@@ -2,7 +2,7 @@
 @use "~bootstrap/scss/bootstrap";
 // Import Keyboard CSS fanciness
 @use "~keyboard-css/dist/scss/main";
-#emulator_single_div{
+#emulator_single_div {
   background-color: white;
 }
 
@@ -40,23 +40,20 @@
 
 // state_list_object styles for save state listing
 .state-list-object {
-
 }
 
 .emulator-recording {
-    border: solid 4px red;
+  border: solid 4px red;
 }
 .emulator-recording::after {
-    color: red;
-    content: "RECORDING";
+  color: red;
+  content: "RECORDING";
 }
 .emulator-playback {
-    border: solid 4px green;
-
+  border: solid 4px green;
 }
 
 .replay-list-item {
-
 }
 .replay-list-item-buttons {
   //clear: both;
@@ -69,11 +66,10 @@
   width: 128px;
 }
 
-
 // Web player css styling
 
 .hidden {
-  display:none;
+  display: none;
 }
 
 /**
@@ -84,8 +80,8 @@
   background-color: black;
   line-height: 0;
   font-family: monospace;
-   //height: 600px;
-   //width: 800px;
+  //height: 600px;
+  //width: 800px;
 }
 
 /**
@@ -118,7 +114,7 @@ textarea {
   font-family: monospace;
   font-size: 0.7em;
   height: 95%;
-  width:  95%;
+  width: 95%;
   border-style: none;
   border-color: transparent;
   overflow: auto;
@@ -176,7 +172,7 @@ canvas.webplayer {
     opacity: 1;
   }
 }
-@keyframes loading{
+@keyframes loading {
   from {
     opacity: 0.2;
   }
@@ -184,7 +180,7 @@ canvas.webplayer {
     opacity: 0.35;
   }
 }
-@-moz-keyframes loading{
+@-moz-keyframes loading {
   from {
     opacity: 0.2;
   }
@@ -202,10 +198,10 @@ canvas.webplayer {
 }
 
 #gisst-play-log {
-    height:600px;
-    overflow:scroll;;
+  height: 600px;
+  overflow: scroll;
 }
 
 .playhead {
-    color: blue;
+  color: blue;
 }

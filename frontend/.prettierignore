@@ -1,0 +1,9 @@
+node_modules
+mock-data
+assets
+dist
+types
+*.min.js
+*.cjs
+test-results
+playwright-report

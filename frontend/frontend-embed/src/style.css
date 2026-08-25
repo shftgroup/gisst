@@ -4,20 +4,20 @@
 }
 
 .gisst-embed-hidden {
-    display:none !important;
+  display: none !important;
 }
 
 .gisst-embed-webplayer-preview {
-    margin: 0 auto;
-    cursor: wait;
-    opacity: 0.2;
-    transition: all 0.8s;
-    width: stretch;
-    height: stretch;
-    position: relative;
-    -webkit-animation: gisst-loading 0.8s ease-in-out infinite alternate;
-    -moz-animation: gisst-loading 0.8s ease-in-out infinite alternate;
-    animation: gisst-loading 0.8s ease-in-out infinite alternate;
+  margin: 0 auto;
+  cursor: wait;
+  opacity: 0.2;
+  transition: all 0.8s;
+  width: stretch;
+  height: stretch;
+  position: relative;
+  -webkit-animation: gisst-loading 0.8s ease-in-out infinite alternate;
+  -moz-animation: gisst-loading 0.8s ease-in-out infinite alternate;
+  animation: gisst-loading 0.8s ease-in-out infinite alternate;
 }
 
 .gisst-embed-webplayer-preview.gisst-embed-loaded {
@@ -52,7 +52,7 @@
     opacity: 1;
   }
 }
-@keyframes gisst-loading{
+@keyframes gisst-loading {
   from {
     opacity: 0.2;
   }
@@ -60,7 +60,7 @@
     opacity: 0.35;
   }
 }
-@-moz-keyframes gisst-loading{
+@-moz-keyframes gisst-loading {
   from {
     opacity: 0.2;
   }
@@ -77,9 +77,9 @@
   }
 }
 canvas.gisst-embed-webplayer {
-    border: none;
-    outline: none;
-    position:relative;
+  border: none;
+  outline: none;
+  position: relative;
 }
 .gisst-embed-webplayer-textmode {
   white-space: pre;
@@ -105,14 +105,12 @@ canvas.gisst-embed-webplayer {
   }
 }
 
-
 .gisst-embed-webplayer-button {
-  background-color: #CCCCCC33;
+  background-color: #cccccc33;
   width: 32px;
   height: 32px;
 }
 
-
 .gisst-embed-webplayer-button:hover {
-    background-color: #CCCCCCDD;
+  background-color: #ccccccdd;
 }

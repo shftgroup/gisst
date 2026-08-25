@@ -1,6 +1,25 @@
+* git hooks
+
+We use pre-commit, so if you want to work *outside* of the devcontainer you should have it installed.  Then run `pre-commit install` in the root of the repository.  Scripts expect to find cargo, npm (specifically, you should use NPM 12 or newer), depcheck (`npm install -g depcheck`), eslint (same), Trufflehog, and a few cargo addons (`cargo install cargo-binstall; cargo binstall -y cargo-udeps cargo-audit cargo-deny cargo-vet`).
+
+While these hooks won't use `cargo build`, we *strongly encourage* doing the following after installing cargo via rustup if you plan to do git operations outside the container:
+
+- `rustup component add rust-fmt`
+- `rustup component remove rust-std`
+
+* Security Posture
+
+Given the setup above, it is safe to run pre-commit hooks outside of the devcontainer.
+
+Any build or check operations on the backend, or any execution of frontend code (e.g. via `npm run dev` or possibly even `npm run build`), *must* run in the devcontainer.  In this way, compromised dependencies won't have the ability to steal credentials, user information, or other data.
+
+If you want to do git operations inside the devcontainer, *do not put ssh keys or the ssh agent socket in the container* unless the keys are password-protected or (ideally) hardware keys.  If you must, use a key specifically for that container so it can be easily revoked in the future.  Essentially, assume anything in the container is easily visible to an attacker who has compromised a dependency.  We try to limit the likelihood of acquiring an evil dependency using tools like `cargo deny`, but these tools are necessarily imperfect.
+
+Any commits that change Docker, `Cargo.toml`, or `package.json` files will undergo special additional review before automated tests are run.
+
 * Initial setup (devcontainer)
 
-You need Docker installed to proceed.
+You need Docker or Podman installed to proceed; if your editor has native devcontainer support, install that too.
 
 You need to run the following commands to have a working GISST installation.  If you're using a devcontainer, the postgres database and meilisearch fuzzy search endpoint will be run in separate containers.  All these commands should be run within the container from the directory containing this readme file.
 
@@ -15,7 +34,8 @@ Next, build the frontend:
 
 #+BEGIN_SRC sh
 cd frontend
-npm ci
+# Requires NPM 12; if this gives an error upgrade your NPM
+npm ci --strict-allow-scripts
 npm run build --workspaces --if-present
 npm run dist --workspaces --if-present
 #+END_SRC
@@ -23,20 +43,17 @@ npm run dist --workspaces --if-present
 To run frontend tests you also need:
 
 #+BEGIN_SRC sh
-cd frontend
-npx playwright install-deps
+cd frontend # skip if you're already in frontend
+npx playwright install-deps # may require sudo in the container
 npx playwright install
 npm run test --workspaces --if-present
 #+END_SRC
 
 For a build where you want to test cores and not just html generation, you'd want to build the cores next.  You need a =psxbios= folder with the SCPH bios files and a =v86bios= folder with e.g. =seabios_HASH.bin= and friends, or you should modify the =manifest.json= not to use those.
 
+This should be done *outside of the container*, using docker or podman directly.  If you don't want to hassle with building them, grab the nightly core build with `curl -OJ --anyauth --user YOUR_FORGEJO_USERNAME https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz`
+
 #+BEGIN_SRC sh
-# Unfortunately, we need the next three lines due to a bug in the docker-in-docker devcontainer feature.
-sudo update-alternatives --set iptables /usr/sbin/iptables-nft
-sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
-sudo dockerd &
-# If you had to run the above, you should probably run these in a fresh terminal to keep things tidy:
 sudo docker build -t gisst-dist -f Dockerfile.dist .
 sudo docker volume create gisst-build
 sudo docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -v gisst-build:/gisst-build gisst-dist

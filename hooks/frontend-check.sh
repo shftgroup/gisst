@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 cd frontend
-
-npm ci && npm run build --workspaces && npm run dist --if-present --workspaces && npm run check --workspaces --if-present
+npm audit --ws
+depcheck --ignore-bin-package

@@ -35,8 +35,8 @@ use tracing::info;
 use uuid::Uuid;
 
 pub static BASE_URL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-const TASK_STALE_DURATION:std::time::Duration = std::time::Duration::from_mins(30);
-const TASK_STALE_CHECK_INTERVAL:std::time::Duration = std::time::Duration::from_mins(1);
+const TASK_STALE_DURATION: std::time::Duration = std::time::Duration::from_mins(30);
+const TASK_STALE_CHECK_INTERVAL: std::time::Duration = std::time::Duration::from_mins(1);
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -231,9 +231,14 @@ pub async fn launch(config: &ServerConfig) -> Result<()> {
         loop {
             interval.tick().await;
             tracing::info!("retire stale tasks");
-            let Ok(mut conn) = task_pool.acquire().await else { tracing::error!("Error during task stale timeout: can't connect to DB"); continue; };
+            let Ok(mut conn) = task_pool.acquire().await else {
+                tracing::error!("Error during task stale timeout: can't connect to DB");
+                continue;
+            };
             match crate::task::Task::timeout_stale(conn.as_mut(), TASK_STALE_DURATION).await {
-                Ok(stale) => {info!("Stale tasks: {stale:?}");},
+                Ok(stale) => {
+                    info!("Stale tasks: {stale:?}");
+                }
                 Err(e) => {
                     tracing::error!("Error during task stale timeout {e}");
                 }

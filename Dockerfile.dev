@@ -2,14 +2,14 @@ FROM ubuntu:noble
 
 ENV PLAYWRIGHT_VERSION=1.53.0
 ENV RUST_VERSION=1.95.0
-ENV NODE_VERSION=25.6.0
+ENV NODE_VERSION=26.8.1
 
 RUN apt-get update && apt-get install -y \
   libssl-dev nginx build-essential make curl clang git \
   libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
   libxkbcommon0 libatspi2.0-0t64 libxcomposite1 \
   libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64 \
-  postgresql-client pkg-config sudo zsh ripgrep jq
+  postgresql-client pkg-config sudo zsh ripgrep jq pipx
 
 ENV USER=ubuntu
 
@@ -21,7 +21,7 @@ USER $USER
 
 ENV NVM_DIR=/home/$USER/.nvm
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
-RUN bash -c ". ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION}"
+RUN bash -c ". ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION} & nvm install-latest-npm"
 ENV PATH="/home/$USER/.nvm/versions/node/v${NODE_VERSION}/bin:${PATH}"
 RUN npm install -g playwright@${PLAYWRIGHT_VERSION}
 USER root
@@ -30,13 +30,15 @@ USER $USER
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y -c rust-analyzer,rust-src,rustfmt,clippy,rust-docs,cargo --default-toolchain=${RUST_VERSION}
 ENV PATH="/home/$USER/.cargo/bin:${PATH}"
-RUN cargo install sqlx-cli
+RUN cargo install --locked cargo-binstall
+RUN cargo binstall -y sqlx-cli cargo-udeps cargo-audit cargo-deny cargo-vet forgejo-cli
 COPY .devcontainer/nginx.conf /etc/nginx/sites-enabled/default
 
 RUN npm install -g typescript-language-server
-RUN cargo +nightly install cargo-udeps
-RUN cargo install --locked cargo-audit
+RUN npm install -g depcheck
+RUN pipx install pre-commit && pipx ensurepath
+
 USER root
 RUN curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
 USER $USER
-RUN cargo install --locked forgejo-cli
+

@@ -1,40 +1,43 @@
-import {Replay,ReplayMode,Evt} from './v86replay';
-import {nonnull} from './utils';
-export {ReplayEvent} from './v86replay'
+import { Replay, ReplayMode, Evt } from "./v86replay";
+import { nonnull } from "./utils";
+export { ReplayEvent } from "./v86replay";
 export interface StateInfo {
-  name:string;
-  thumbnail:string;
+  name: string;
+  thumbnail: string;
 }
 export interface EmbedV86Config {
-  wasm_file:string;
-  bios_root:string;
-  content_root:string;
-  container:HTMLDivElement;
-  use_graphical_text:boolean;
-  record_from_start:boolean;
-  record_video:boolean;
-  register_replay:(nom:string)=>void;
-  stop_replay:()=>void;
-  states_changed:(added:StateInfo[], removed:StateInfo[]) => void;
-  replay_checkpoints_changed:(added:StateInfo[], removed:StateInfo[]) => void;
+  wasm_file: string;
+  bios_root: string;
+  content_root: string;
+  container: HTMLDivElement;
+  use_graphical_text: boolean;
+  record_from_start: boolean;
+  record_video: boolean;
+  register_replay: (nom: string) => void;
+  stop_replay: () => void;
+  states_changed: (added: StateInfo[], removed: StateInfo[]) => void;
+  replay_checkpoints_changed: (
+    added: StateInfo[],
+    removed: StateInfo[],
+  ) => void;
 }
 export interface ConfigSettings {
-  bios?:V86Image;
-  vga_bios?:V86Image;
-  fda?:V86Image;
-  fdb?:V86Image;
-  hda?:V86Image;
-  hdb?:V86Image;
-  cdrom?:V86Image;
-  memory_size?:number;
-  vga_memory_size?:number;
+  bios?: V86Image;
+  vga_bios?: V86Image;
+  fda?: V86Image;
+  fdb?: V86Image;
+  hda?: V86Image;
+  hdb?: V86Image;
+  cdrom?: V86Image;
+  memory_size?: number;
+  vga_memory_size?: number;
 }
 
 export class State {
-  name:string;
-  state:ArrayBuffer;
-  thumbnail:string;
-  constructor(name:string, state:ArrayBuffer, thumbnail:string) {
+  name: string;
+  state: ArrayBuffer;
+  thumbnail: string;
+  constructor(name: string, state: ArrayBuffer, thumbnail: string) {
     this.name = name;
     this.thumbnail = thumbnail;
     this.state = state;
@@ -42,14 +45,14 @@ export class State {
 }
 
 export class EmbedV86 {
-  emulator:V86 | null = null;
-  config:EmbedV86Config;
-  states:State[] = [];
-  replays:Replay[] = [];
-  active_replay:number|null = null;
+  emulator: V86 | null = null;
+  config: EmbedV86Config;
+  states: State[] = [];
+  replays: Replay[] = [];
+  active_replay: number | null = null;
   muted: boolean = false;
-  audioDestination: MediaStreamAudioDestinationNode|null = null;
-  constructor(config:EmbedV86Config) {
+  audioDestination: MediaStreamAudioDestinationNode | null = null;
+  constructor(config: EmbedV86Config) {
     this.config = config;
   }
   clear() {
@@ -57,112 +60,152 @@ export class EmbedV86 {
     this.replays = [];
     this.active_replay = null;
     this.muted = false;
-    if(this.emulator) {
+    if (this.emulator) {
       this.emulator.destroy();
       this.emulator = null;
     }
   }
-  get_active_replay():Replay {
+  get_active_replay(): Replay {
     nonnull(this.active_replay);
     return this.replays[this.active_replay];
   }
   async save_state() {
     nonnull(this.emulator);
-    if(this.active_replay != null) {
+    if (this.active_replay != null) {
       // console.log("save replay checkpoint");
       const replay = this.replays[this.active_replay];
-      await replay.make_checkpoint(this.emulator,new Uint8Array(await this.emulator.save_state()));
-      this.config.replay_checkpoints_changed([replay.checkpoints[replay.checkpoints.length-1]], []);
+      await replay.make_checkpoint(
+        this.emulator,
+        new Uint8Array(await this.emulator.save_state()),
+      );
+      this.config.replay_checkpoints_changed(
+        [replay.checkpoints[replay.checkpoints.length - 1]],
+        [],
+      );
     } else {
       // console.log("save state");
       const screenshot = this.emulator.screen_make_screenshot();
       const state = await this.emulator.save_state();
-      this.states.push(new State("state"+this.states.length.toString(), state, screenshot.src));
-      this.config.states_changed([this.states[this.states.length-1]], []);
+      this.states.push(
+        new State(
+          "state" + this.states.length.toString(),
+          state,
+          screenshot.src,
+        ),
+      );
+      this.config.states_changed([this.states[this.states.length - 1]], []);
     }
   }
   async record_replay() {
     nonnull(this.emulator);
-    if(this.active_replay != null) {
+    if (this.active_replay != null) {
       await this.stop_replay();
     }
-    const replay = await Replay.start_recording(this.emulator, this.config.record_video, this.audioDestination, this.config.container);
+    const replay = await Replay.start_recording(
+      this.emulator,
+      this.config.record_video,
+      this.audioDestination,
+      this.config.container,
+    );
     this.replays.push(replay);
-    this.config.register_replay("replay"+replay.id);
-    this.active_replay = this.replays.length-1;
+    this.config.register_replay("replay" + replay.id);
+    this.active_replay = this.replays.length - 1;
     // console.log("add initial checkpoints");
-    this.config.replay_checkpoints_changed(this.replays[this.replays.length-1].checkpoints,[]);
+    this.config.replay_checkpoints_changed(
+      this.replays[this.replays.length - 1].checkpoints,
+      [],
+    );
   }
   async stop_replay() {
     nonnull(this.emulator);
-    if(this.active_replay != null) {
+    if (this.active_replay != null) {
       const replay_num = this.active_replay;
       const replay = this.replays[replay_num];
       const recording = replay.mode == ReplayMode.Record;
       await replay.stop(this.emulator);
       if (recording) {
-        this.config.replay_checkpoints_changed([replay.checkpoints[replay.checkpoints.length-1]],[]);
+        this.config.replay_checkpoints_changed(
+          [replay.checkpoints[replay.checkpoints.length - 1]],
+          [],
+        );
       }
       this.config.stop_replay();
       this.active_replay = null;
     }
   }
-  async load_state_slot(n:number) {
+  async load_state_slot(n: number) {
     nonnull(this.emulator);
-    if(this.active_replay != null) {
+    if (this.active_replay != null) {
       const replay = this.replays[this.active_replay];
-      this.config.replay_checkpoints_changed([], await replay.reset_to_checkpoint(n, replay.mode, this.emulator));
+      this.config.replay_checkpoints_changed(
+        [],
+        await replay.reset_to_checkpoint(n, replay.mode, this.emulator),
+      );
     } else {
       this.emulator.restore_state(this.states[n].state);
     }
   }
-  async play_replay_slot(n:number):Promise<void> {
+  async play_replay_slot(n: number): Promise<void> {
     nonnull(this.emulator);
-    if(this.active_replay !== null) {
+    if (this.active_replay !== null) {
       await this.stop_replay();
     }
     await this.replays[n].start_playback(this.emulator, this.config.container);
     this.active_replay = n;
   }
-  async download_file(category:"state" | "save" | "replay" | "video", file_name:string):Promise<[Blob,string]> {
-    if(category == "state") {
-      const checkpoint_matches = file_name.match(/replay([0-9a-f-]+)-state([0-9]+)/);
-      if(checkpoint_matches != null) {
+  async download_file(
+    category: "state" | "save" | "replay" | "video",
+    file_name: string,
+  ): Promise<[Blob, string]> {
+    if (category == "state") {
+      const checkpoint_matches = file_name.match(
+        /replay([0-9a-f-]+)-state([0-9]+)/,
+      );
+      if (checkpoint_matches != null) {
         const replay_id = checkpoint_matches[1];
         const replay_idx = this.replays.findIndex((r) => r.id == replay_id);
         if (replay_idx < 0) {
-          console.error("Found replay for checkpoint is not present in context",file_name);
+          console.error(
+            "Found replay for checkpoint is not present in context",
+            file_name,
+          );
         }
-        const checkpoint_idx = parseInt(checkpoint_matches[2],10);
+        const checkpoint_idx = parseInt(checkpoint_matches[2], 10);
         const checkpoint = this.replays[replay_idx].checkpoints[checkpoint_idx];
-        const state = await this.replays[replay_idx].restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
-        return [new Blob([state]), file_name.toString()+".v86state"];
+        const state = await this.replays[replay_idx].restore_checkpoint(
+          checkpoint.header_info,
+          checkpoint.superblock_seq,
+        );
+        return [new Blob([state]), file_name.toString() + ".v86state"];
       } else {
-        const num_str = (file_name.match(/state([0-9]+)$/)?.[1]) ?? "0";
-        const save_num = parseInt(num_str,10);
-        return [new Blob([this.states[save_num].state]), file_name.toString()+".v86state"];
+        const num_str = file_name.match(/state([0-9]+)$/)?.[1] ?? "0";
+        const save_num = parseInt(num_str, 10);
+        return [
+          new Blob([this.states[save_num].state]),
+          file_name.toString() + ".v86state",
+        ];
       }
-    } else if(category == "save") {
+    } else if (category == "save") {
       throw "Not yet implemented";
-    } else if(category == "replay") {
-      const num_str = (file_name.match(/replay([0-9]+)$/)?.[1]) ?? "0";
-      const replay_num = parseInt(num_str,10);
+    } else if (category == "replay") {
+      const num_str = file_name.match(/replay([0-9]+)$/)?.[1] ?? "0";
+      const replay_num = parseInt(num_str, 10);
       const rep = this.replays[replay_num];
       const ser_rep = await rep.serialize();
       const fixedBuffer = new ArrayBuffer(ser_rep.byteLength);
       const fixed_view = new Uint8Array(fixedBuffer);
       fixed_view.set(new Uint8Array(ser_rep));
-      return [new Blob([fixedBuffer]), file_name.toString()+".v86replay"];
-    } else if(category == "video") {
-      const num_str = (file_name.match(/replay([0-9]+)$/)?.[1]) ?? "0";
-      const replay_num = parseInt(num_str,10);
+      return [new Blob([fixedBuffer]), file_name.toString() + ".v86replay"];
+    } else if (category == "video") {
+      const num_str = file_name.match(/replay([0-9]+)$/)?.[1] ?? "0";
+      const replay_num = parseInt(num_str, 10);
       const file = await this.get_replay_video(replay_num);
       return [file, file.name];
     } else {
       throw "Invalid save category";
     }
   }
-  async get_replay_video(replay_num:number) : Promise<File> {
+  async get_replay_video(replay_num: number): Promise<File> {
     if (!this.config.record_video) {
       throw "Can't obtain video, recording not enabled in config";
     }
@@ -174,9 +217,9 @@ export class EmbedV86 {
     nonnull(file);
     return file;
   }
-  replay_log(evt:Evt, val:number|object) {
+  replay_log(evt: Evt, val: number | object) {
     nonnull(this.emulator);
-    if(this.active_replay != null) {
+    if (this.active_replay != null) {
       this.replays[this.active_replay].log_evt(this.emulator, evt, val);
     }
   }
@@ -186,7 +229,9 @@ export class EmbedV86 {
     } else {
       setTimeout(() => this.replay_tick(), 0);
     }
-    if (!this.emulator || this.active_replay === null) { return; }
+    if (!this.emulator || this.active_replay === null) {
+      return;
+    }
     const replay = this.replays[this.active_replay];
     const old_cp_count = replay.checkpoints.length;
     if (replay.mode == ReplayMode.Finished) {
@@ -194,64 +239,92 @@ export class EmbedV86 {
     }
     // console.log("old count",old_cp_count);
     replay.tick(this.emulator);
-    if(old_cp_count < replay.checkpoints.length) {
+    if (old_cp_count < replay.checkpoints.length) {
       // console.log("new cp!",replay.checkpoints.length);
-      this.config.replay_checkpoints_changed(replay.checkpoints.slice(old_cp_count),[]);
+      this.config.replay_checkpoints_changed(
+        replay.checkpoints.slice(old_cp_count),
+        [],
+      );
     }
   }
-  async run(content:ConfigSettings|string, entryState:string|null, movie:string|null, video:string|null):Promise<void> {
+  async run(
+    content: ConfigSettings | string,
+    entryState: string | null,
+    movie: string | null,
+    video: string | null,
+  ): Promise<void> {
     this.clear();
     const content_folder = this.config.content_root;
-    const config:V86Config = {
+    const config: V86Config = {
       wasm_path: this.config.wasm_file,
-      screen:{
+      screen: {
         container: this.config.container,
-        use_graphical_text: this.config.use_graphical_text
+        use_graphical_text: this.config.use_graphical_text,
       },
-      autostart: true
+      autostart: true,
     };
-    if(entryState && movie) {
+    if (entryState && movie) {
       throw "Can't specify both entry state and movie";
     }
-    if(!movie && video) {
+    if (!movie && video) {
       throw "Can't provide video without replay movie";
     }
     // TODO: avoid use of /, get explicit paths or a path joining function as arguments or config props
-    if(entryState) {
-      const state_resp = await fetch(content_folder+"/"+entryState);
-      if(!state_resp.ok) { alert("Failed to load entry state"); return; }
+    if (entryState) {
+      const state_resp = await fetch(content_folder + "/" + entryState);
+      if (!state_resp.ok) {
+        alert("Failed to load entry state");
+        return;
+      }
       const state_data = await state_resp.arrayBuffer();
-      config["initial_state"] = {buffer:state_data};
+      config["initial_state"] = { buffer: state_data };
       const screenshot = "";
-      this.states.push(new State("state"+this.states.length.toString(), state_data, screenshot));
-      this.config.states_changed([this.states[this.states.length-1]], []);
+      this.states.push(
+        new State(
+          "state" + this.states.length.toString(),
+          state_data,
+          screenshot,
+        ),
+      );
+      this.config.states_changed([this.states[this.states.length - 1]], []);
     }
-    if(movie) {
+    if (movie) {
       // do nothing for now
-      const fetches = [fetch(content_folder+"/"+movie)];
-      if (video) { fetches.push(fetch(content_folder+"/"+video)); }
+      const fetches = [fetch(content_folder + "/" + movie)];
+      if (video) {
+        fetches.push(fetch(content_folder + "/" + video));
+      }
       const results = await Promise.all(fetches);
       let video_file;
       if (video) {
         const video_resp = results[1];
-        if(!video_resp.ok) { alert("Failed to load replay video"); return; }
+        if (!video_resp.ok) {
+          alert("Failed to load replay video");
+          return;
+        }
         const blob = await video_resp.blob();
-        video_file = new File([blob], "", {type:blob.type});
+        video_file = new File([blob], "", { type: blob.type });
       }
       const replay_resp = results[0]!;
-      if(!replay_resp.ok) { alert("Failed to load replay movie"); return; }
+      if (!replay_resp.ok) {
+        alert("Failed to load replay movie");
+        return;
+      }
       const replay_data = await replay_resp.arrayBuffer();
       const replay = await Replay.deserialize(replay_data, video_file);
-      const replay_name = "replay"+replay.id;
-      console.log(replay.id,replay.events.length,replay.checkpoints.length);
+      const replay_name = "replay" + replay.id;
+      console.log(replay.id, replay.events.length, replay.checkpoints.length);
       this.replays.push(replay);
       this.config.register_replay(replay_name);
-      this.config.replay_checkpoints_changed(replay.checkpoints,[]);
+      this.config.replay_checkpoints_changed(replay.checkpoints, []);
     }
     let content_json;
     if (typeof content == "string") {
-      const content_resp = await fetch(content_folder+"/"+content);
-      if(!content_resp.ok) { alert("Failed to load content"); return; }
+      const content_resp = await fetch(content_folder + "/" + content);
+      if (!content_resp.ok) {
+        alert("Failed to load content");
+        return;
+      }
       content_json = await content_resp.json();
     } else {
       content_json = content;
@@ -263,10 +336,10 @@ export class EmbedV86 {
     setup_image("hda", content_json, config, content_folder);
     setup_image("hdb", content_json, config, content_folder);
     setup_image("cdrom", content_json, config, content_folder);
-    if(content_json.memory_size) {
+    if (content_json.memory_size) {
       config.memory_size = content_json.memory_size;
     }
-    if(content_json.vga_memory_size) {
+    if (content_json.vga_memory_size) {
       config.vga_memory_size = content_json.vga_memory_size;
     }
     config.disable_jit = content_json.disable_jit ?? false;
@@ -280,27 +353,43 @@ export class EmbedV86 {
     video_elt.style.display = "none";
 
     this.emulator = new V86(config);
-    this.emulator.emulator_bus.register("keyboard-code", (k:number) => this.replay_log(Evt.KeyCode,k));
-    this.emulator.emulator_bus.register("mouse-click", (v:[boolean,boolean,boolean]) => this.replay_log(Evt.MouseClick,v));
-    this.emulator.emulator_bus.register("mouse-delta", (delta:[number,number]) => this.replay_log(Evt.MouseDelta,delta));
-    this.emulator.emulator_bus.register("mouse-wheel", (delta:[number,number]) => this.replay_log(Evt.MouseWheel, delta));
+    this.emulator.emulator_bus.register("keyboard-code", (k: number) =>
+      this.replay_log(Evt.KeyCode, k),
+    );
+    this.emulator.emulator_bus.register(
+      "mouse-click",
+      (v: [boolean, boolean, boolean]) => this.replay_log(Evt.MouseClick, v),
+    );
+    this.emulator.emulator_bus.register(
+      "mouse-delta",
+      (delta: [number, number]) => this.replay_log(Evt.MouseDelta, delta),
+    );
+    this.emulator.emulator_bus.register(
+      "mouse-wheel",
+      (delta: [number, number]) => this.replay_log(Evt.MouseWheel, delta),
+    );
     if (window?.requestAnimationFrame) {
-      window.requestAnimationFrame((_ts:number)=>this.replay_tick());
+      window.requestAnimationFrame((_ts: number) => this.replay_tick());
     } else {
       setTimeout(() => this.replay_tick(), 0);
     }
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       // first time it runs, play_replay_slot 0 if movie is used or else start recording
       const start_initial_replay = () => {
         if (this.config.record_video) {
           const speaker = this.emulator!.speaker_adapter.mixer.node_merger;
-          this.audioDestination = (speaker.context as AudioContext).createMediaStreamDestination();
+          this.audioDestination = (
+            speaker.context as AudioContext
+          ).createMediaStreamDestination();
           speaker.connect(this.audioDestination!);
         }
-        this.emulator!.remove_listener("emulator-started", start_initial_replay);
-        if(movie) {
+        this.emulator!.remove_listener(
+          "emulator-started",
+          start_initial_replay,
+        );
+        if (movie) {
           this.play_replay_slot(0).then(resolve);
-        } else if(this.config.record_from_start) {
+        } else if (this.config.record_from_start) {
           this.record_replay().then(resolve);
         } else {
           resolve();
@@ -309,27 +398,31 @@ export class EmbedV86 {
       this.emulator!.add_listener("emulator-started", start_initial_replay);
     });
   }
-  public set_register_replay(cb:(nom:string)=>void) {
+  public set_register_replay(cb: (nom: string) => void) {
     this.config.register_replay = cb;
     for (let i = 0; i < this.replays.length; i++) {
       this.config.register_replay(`replay${i}`);
     }
   }
-  public set_stop_replay(cb:()=>void) {
+  public set_stop_replay(cb: () => void) {
     this.config.stop_replay = cb;
   }
-  public set_states_changed(cb:(added:StateInfo[], removed:StateInfo[]) => void) {
+  public set_states_changed(
+    cb: (added: StateInfo[], removed: StateInfo[]) => void,
+  ) {
     this.config.states_changed = cb;
-    this.config.states_changed(this.states,[]);
+    this.config.states_changed(this.states, []);
   }
-  public set_replay_checkpoints_changed(cb:(added:StateInfo[], removed:StateInfo[]) => void) {
+  public set_replay_checkpoints_changed(
+    cb: (added: StateInfo[], removed: StateInfo[]) => void,
+  ) {
     this.config.replay_checkpoints_changed = cb;
     if (this.active_replay !== null) {
       const replay = this.replays[this.active_replay];
-      this.config.replay_checkpoints_changed(replay.checkpoints,[]);
+      this.config.replay_checkpoints_changed(replay.checkpoints, []);
     }
   }
-  public set_mute(muted:boolean) {
+  public set_mute(muted: boolean) {
     nonnull(this.emulator);
     this.muted = muted;
     this.emulator.speaker_adapter.mixer.set_volume(muted ? 0 : 1);
@@ -337,12 +430,17 @@ export class EmbedV86 {
     video.muted = muted;
   }
 }
-function setup_image(img:"bios"|"vga_bios"|"fda"|"fdb"|"hda"|"hdb"|"cdrom", content_json:ConfigSettings, config:V86Config, content_folder:string) {
-  if(img in content_json) {
+function setup_image(
+  img: "bios" | "vga_bios" | "fda" | "fdb" | "hda" | "hdb" | "cdrom",
+  content_json: ConfigSettings,
+  config: V86Config,
+  content_folder: string,
+) {
+  if (img in content_json) {
     const cjimg = content_json[img]!;
-    if("url" in cjimg) {
-      cjimg["url"] = content_folder+"/"+cjimg["url"]!;
-      if("async" in cjimg) {
+    if ("url" in cjimg) {
+      cjimg["url"] = content_folder + "/" + cjimg["url"]!;
+      if ("async" in cjimg) {
         // nop
       } else {
         cjimg["async"] = false;

@@ -10,11 +10,11 @@ use bytes::{Bytes, BytesMut};
 use futures_core::Stream;
 use futures_io::AsyncRead;
 use pin_project_lite::pin_project;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use meilisearch_sdk::{
     errors::Error,
-    request::{parse_response, HttpClient, Method},
+    request::{HttpClient, Method, parse_response},
 };
 
 #[derive(Debug, Clone, Default)]
@@ -24,7 +24,7 @@ pub struct ReqwestClient {
 
 impl ReqwestClient {
     pub fn new(api_key: Option<&str>) -> Result<Self, Error> {
-        use reqwest::{header, ClientBuilder};
+        use reqwest::{ClientBuilder, header};
 
         let builder = ClientBuilder::new();
 
@@ -84,9 +84,16 @@ impl HttpClient for ReqwestClient {
             }
         }
 
-        let response = self.client.execute(request.build().map_err(|e| Error::Other(Box::new(e)))?).await.map_err(|e| Error::Other(Box::new(e)))?;
+        let response = self
+            .client
+            .execute(request.build().map_err(|e| Error::Other(Box::new(e)))?)
+            .await
+            .map_err(|e| Error::Other(Box::new(e)))?;
         let status = response.status().as_u16();
-        let mut body = response.text().await.map_err(|e| Error::Other(Box::new(e)))?;
+        let mut body = response
+            .text()
+            .await
+            .map_err(|e| Error::Other(Box::new(e)))?;
 
         if body.is_empty() {
             body = "null".to_string();

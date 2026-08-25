@@ -149,7 +149,8 @@ registries = [
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 # Lint level for when multiple versions of the same crate are detected
-multiple-versions = "warn"
+multiple-versions = "deny"
+multiple-versions-include-dev = true
 # Lint level for when a crate version requirement is `*`
 wildcards = "allow"
 # The graph highlighting used when creating dotgraphs for crates
@@ -209,18 +210,27 @@ deny = [
 #exact = true
 
 # Certain crates/versions that will be skipped when doing duplicate detection.
-skip = [
-    #"ansi_term@0.11.0",
-    #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason why it can't be updated/removed" },
-]
-# Similarly to `skip` allows you to skip certain crates during duplicate
-# detection. Unlike skip, it also includes the entire tree of transitive
-# dependencies starting at the specified crate, up to a certain depth, which is
-# by default infinite.
 skip-tree = [
+    { crate = "untrusted@0.7.1", reason = "aws-lc-rs@1.18.0" },
+    { crate = "thiserror@1.0.69", reason = "oauth2@5.0.0, yaup@0.3.1 (via meilisearch)" },
+    { crate = "syn@2.0.119", reason = "axum-macros@0.5.1, serde_with@3.22, reqwest@0.13.4, meilisearch-sdk, chd, opentelemetry, sqlx, oauth2@5.0.0, tracing@0.1.44" },
+    { crate = "sha2@0.10.9", reason = "oauth2, sqlx" },
+    { crate = "rand@0.8.7", reason = "oauth2, tower-sessions-core" },
+    { crate = "rand@0.9.5", reason = "opentelemetry" },
+    { crate = "hashbrown@0.15.5", reason = "petgraph via tree-magic-mini" },
+    { crate = "hashbrown@0.16.1", reason = "sqlx" },
+    { crate = "getrandom@0.2.17", reason = "meilisearch sdk, oauth2" },
+    { crate = "core-foundation@0.9.4", reason = "hyper-util via axum" }
+]
+skip = [
     #"ansi_term@0.11.0", # will be skipped along with _all_ of its direct and transitive dependencies
     #{ crate = "ansi_term@0.11.0", depth = 20 },
 ]
+
+#[bans.workspace-dependencies]
+#duplicates = 'deny'
+#include-path-dependencies = true
+#unused = 'deny'
 
 # This section is considered when running `cargo deny check sources`.
 # More documentation about the 'sources' section can be found here:

@@ -1,11 +1,17 @@
-import {BlockIndex} from './blockindex';
-import {bytes_to_uuid,blobToDataURL} from './utils';
-import {Evt,EvtNames,ReplayMode,Checkpoint,ReplayEvent} from './v86replay';
+import { BlockIndex } from "./blockindex";
+import { bytes_to_uuid, blobToDataURL } from "./utils";
+import {
+  Evt,
+  EvtNames,
+  ReplayMode,
+  Checkpoint,
+  ReplayEvent,
+} from "./v86replay";
 
 //const REPLAY_CHECKPOINT_INTERVAL:number = 100003*1000*4;
 /* Cycles per millisecond (appx) * milliseconds per second * number of seconds */
 
-const REPLAY_VERSION=1;
+const REPLAY_VERSION = 1;
 
 const BLOCK_SIZE = 256;
 const SUPERBLOCK_SIZE = 256;
@@ -13,33 +19,40 @@ const STATE_INDEX_INFO_LEN = 3;
 const STATE_INFO_BLOCK_START = 16;
 
 export class LegacyReplay {
-  events:ReplayEvent[]=[]; // replace with file
-  checkpoints:Checkpoint[]=[]; // replace with file
-  index:number=0;
-  checkpoint_index:number=0;
-  id:string="";
-  mode:ReplayMode=ReplayMode.Inactive;
-  last_time:number=0;
-  wraps:number=0; // store in file??
+  events: ReplayEvent[] = []; // replace with file
+  checkpoints: Checkpoint[] = []; // replace with file
+  index: number = 0;
+  checkpoint_index: number = 0;
+  id: string = "";
+  mode: ReplayMode = ReplayMode.Inactive;
+  last_time: number = 0;
+  wraps: number = 0; // store in file??
   superblock_index!: BlockIndex; // read from / write to file
   block_index!: BlockIndex; // read from / write to file
-  version:number=REPLAY_VERSION; // store in file header
-  public static async create(id:string, mode:ReplayMode) : Promise<LegacyReplay> {
+  version: number = REPLAY_VERSION; // store in file header
+  public static async create(
+    id: string,
+    mode: ReplayMode,
+  ): Promise<LegacyReplay> {
     const ths = new LegacyReplay();
     ths.id = id;
     ths.mode = mode;
     ths.block_index = await BlockIndex.create(BLOCK_SIZE); // measured in bytes
-    ths.superblock_index = await BlockIndex.create(SUPERBLOCK_SIZE*4); // blocks*sizeof(int)
+    ths.superblock_index = await BlockIndex.create(SUPERBLOCK_SIZE * 4); // blocks*sizeof(int)
     // create file
     return ths;
   }
 
-  public async restore_checkpoint(header_info:Uint8Array, superblock_seq:Uint32Array):Promise<ArrayBuffer> {
+  public async restore_checkpoint(
+    header_info: Uint8Array,
+    superblock_seq: Uint32Array,
+  ): Promise<ArrayBuffer> {
     const block_byte_size = this.block_index.object_size;
-    const superblock_byte_size = (this.superblock_index.object_size/4) * block_byte_size;
+    const superblock_byte_size =
+      (this.superblock_index.object_size / 4) * block_byte_size;
     /* TODO reuse this allocation across calls */
     const header_info_length = header_info.length;
-    const full_size = (new Uint32Array(header_info.buffer,0,4))[2];
+    const full_size = new Uint32Array(header_info.buffer, 0, 4)[2];
     const buffer = new ArrayBuffer(full_size);
     const state = new Uint8Array(buffer);
     // TODO: maybe use jsonpatch / micropatch to patch this info block from the previous one, but this means restores need to be sequential
@@ -47,17 +60,25 @@ export class LegacyReplay {
     for (let i = 0; i < superblock_seq.length; i++) {
       const superblock_idx = superblock_seq[i];
       const superblock_bytes = this.superblock_index.get(superblock_idx);
-      const superblock = new Uint32Array(superblock_bytes.buffer, superblock_bytes.byteOffset, superblock_bytes.byteLength / 4);
+      const superblock = new Uint32Array(
+        superblock_bytes.buffer,
+        superblock_bytes.byteOffset,
+        superblock_bytes.byteLength / 4,
+      );
       const superblock_sz = superblock.length;
       for (let j = 0; j < superblock_sz; j++) {
         const block_idx = superblock[j];
-        const byte_offset = header_info_length + i * superblock_byte_size + j * block_byte_size;
+        const byte_offset =
+          header_info_length + i * superblock_byte_size + j * block_byte_size;
         if (byte_offset >= state.byteLength) {
           break;
         }
         const block = this.block_index.get(block_idx);
         if (byte_offset + block_byte_size > state.byteLength) {
-          state.set(block.subarray(0, state.byteLength - byte_offset), byte_offset);
+          state.set(
+            block.subarray(0, state.byteLength - byte_offset),
+            byte_offset,
+          );
           break;
         } else {
           state.set(block, byte_offset);
@@ -66,27 +87,36 @@ export class LegacyReplay {
     }
     return buffer;
   }
-  async reset_to_checkpoint(_n:number, mode:ReplayMode, emulator:V86):Promise<Checkpoint[]> {
+  async reset_to_checkpoint(
+    _n: number,
+    mode: ReplayMode,
+    emulator: V86,
+  ): Promise<Checkpoint[]> {
     // for file: rewind or fast forward until checkpoint is found, can't just skip like this
     // note that old checkpoints might not be encoded correctly so we have to ignore the input checkpoint number n
     const checkpoint = this.checkpoints[0];
     this.checkpoint_index = 1;
-    const state = await this.restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
+    const state = await this.restore_checkpoint(
+      checkpoint.header_info,
+      checkpoint.superblock_seq,
+    );
     await emulator.restore_state(state);
     this.seek_internal(checkpoint.event_index, checkpoint.when);
     this.resume(mode, emulator);
     return [];
   }
-  log_evt(_emulator:V86, _code:Evt, _val:object|number) {
+  log_evt(_emulator: V86, _code: Evt, _val: object | number) {
     // no-op
   }
-  private seek_internal(event_index:number, t:number) {
+  private seek_internal(event_index: number, t: number) {
     // seek file, do reads
-    if(event_index > this.events.length) { throw "Seek: event index out of bounds"; }
+    if (event_index > this.events.length) {
+      throw "Seek: event index out of bounds";
+    }
     const [wraps, time] = this.cpu_time(t);
-    if(event_index < this.events.length) {
-      if(this.events[event_index].when < t) {
-        console.log("evt time check",this.events[event_index].when,t);
+    if (event_index < this.events.length) {
+      if (this.events[event_index].when < t) {
+        console.log("evt time check", this.events[event_index].when, t);
         throw "Seek: current event is before given t";
       }
     }
@@ -94,12 +124,12 @@ export class LegacyReplay {
     this.wraps = wraps;
     this.last_time = time;
   }
-  private resume(mode:ReplayMode, emulator:V86) {
+  private resume(mode: ReplayMode, emulator: V86) {
     // ensure emulator time is current time
     this.mode = mode;
-    console.log("Resume",mode);
+    console.log("Resume", mode);
     emulator.v86.cpu.instruction_counter[0] = this.last_time;
-    if(this.mode == ReplayMode.Playback) {
+    if (this.mode == ReplayMode.Playback) {
       emulator.mouse_set_status(false);
       emulator.keyboard_set_status(false);
       // don't truncate!
@@ -107,38 +137,50 @@ export class LegacyReplay {
       throw "Resume: invalid mode";
     }
   }
-  current_time():number {
+  current_time(): number {
     return this.replay_time(this.last_time);
   }
-  replay_time(insn_counter:number) : number {
-    let wrap_amt = 2**32-1;
+  replay_time(insn_counter: number): number {
+    let wrap_amt = 2 ** 32 - 1;
     // how many full wraparounds we have done
     wrap_amt *= this.wraps;
     // add in the amount of leftover time, which we get from insn_counter
     wrap_amt += insn_counter;
     return wrap_amt;
   }
-  cpu_time(t:number):[number,number] {
-    const wraps = Math.floor(t / (2**32-1));
-    const rem = t - (wraps * (2**32-1));
+  cpu_time(t: number): [number, number] {
+    const wraps = Math.floor(t / (2 ** 32 - 1));
+    const rem = t - wraps * (2 ** 32 - 1);
     return [wraps, rem];
   }
-  async encode_checkpoint(time:number, event_index:number, screenshot:string, state:Uint8Array) : Promise<Checkpoint> {
+  async encode_checkpoint(
+    time: number,
+    event_index: number,
+    screenshot: string,
+    state: Uint8Array,
+  ): Promise<Checkpoint> {
     // write to file
     const header_block = new Int32Array(state.buffer, state.byteOffset, 4);
     const info_block_len = header_block[STATE_INDEX_INFO_LEN];
     // TODO: maybe use jsondiff / microdiff to take a diff of this info block from the last one
-    const info_block_buffer = state.slice(0, STATE_INFO_BLOCK_START + info_block_len);
+    const info_block_buffer = state.slice(
+      0,
+      STATE_INFO_BLOCK_START + info_block_len,
+    );
     const orig_state = state;
     state = state.subarray(STATE_INFO_BLOCK_START + info_block_len);
     const state_size = state.length;
     const block_byte_size = this.block_index.object_size;
-    const superblock_block_count = this.superblock_index.object_size/4;
-    const superblock_byte_size = superblock_block_count*block_byte_size;
-    const superblock_count = Math.ceil(state_size / (this.block_index.object_size*superblock_block_count));
+    const superblock_block_count = this.superblock_index.object_size / 4;
+    const superblock_byte_size = superblock_block_count * block_byte_size;
+    const superblock_count = Math.ceil(
+      state_size / (this.block_index.object_size * superblock_block_count),
+    );
     /* TODO reuse these allocations across calls */
     const superblock_seq = new Uint32Array(superblock_count);
-    const superblock_buf = new Uint32Array(new ArrayBuffer(this.superblock_index.object_size));
+    const superblock_buf = new Uint32Array(
+      new ArrayBuffer(this.superblock_index.object_size),
+    );
     const block_buf = new Uint8Array(block_byte_size);
     const new_blocks = [];
     const new_superblocks = [];
@@ -151,12 +193,15 @@ export class LegacyReplay {
           superblock_buf[j] = 0;
         } else {
           let result;
-          if(block_start + block_byte_size > state_size) {
+          if (block_start + block_byte_size > state_size) {
             block_buf.subarray(state_size - block_start).fill(0);
             block_buf.set(state.subarray(block_start, block_end));
             result = await this.block_index.insert(block_buf, time);
           } else {
-            result = await this.block_index.insert(state.slice(block_start, block_end), time);
+            result = await this.block_index.insert(
+              state.slice(block_start, block_end),
+              time,
+            );
           }
           if (result.is_new) {
             // new block; output or add to a list
@@ -165,49 +210,79 @@ export class LegacyReplay {
           superblock_buf[j] = result.index;
         }
       }
-      const super_result = await this.superblock_index.insert(new Uint8Array(superblock_buf.buffer), time);
+      const super_result = await this.superblock_index.insert(
+        new Uint8Array(superblock_buf.buffer),
+        time,
+      );
       if (super_result.is_new) {
         // new superblock; output or add to a list
         new_superblocks.push(super_result.index);
       }
       superblock_seq[i] = super_result.index;
     }
-    const checkpoint = new Checkpoint(time, "replay"+this.id+"-state"+this.checkpoints.length.toString(), event_index, info_block_buffer, new_blocks, new_superblocks, superblock_seq, screenshot);
+    const checkpoint = new Checkpoint(
+      time,
+      "replay" + this.id + "-state" + this.checkpoints.length.toString(),
+      event_index,
+      info_block_buffer,
+      new_blocks,
+      new_superblocks,
+      superblock_seq,
+      screenshot,
+    );
     this.checkpoints.push(checkpoint);
     const DO_ROUNDTRIP = false;
     if (DO_ROUNDTRIP) {
-      const restore = await this.restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
+      const restore = await this.restore_checkpoint(
+        checkpoint.header_info,
+        checkpoint.superblock_seq,
+      );
       const roundtrip = new Uint8Array(restore);
       if (roundtrip.length != orig_state.length) {
-        console.error("Bad encode/decode len",orig_state.length,roundtrip.length);
+        console.error(
+          "Bad encode/decode len",
+          orig_state.length,
+          roundtrip.length,
+        );
         throw "ohno";
       }
       for (let i = 0; i < roundtrip.length; i++) {
         if (orig_state[i] != roundtrip[i]) {
-          console.error("encode differs from decode at",i,":",orig_state[i]," vs ",roundtrip[i]);
+          console.error(
+            "encode differs from decode at",
+            i,
+            ":",
+            orig_state[i],
+            " vs ",
+            roundtrip[i],
+          );
           throw "uhoh";
         }
       }
     }
     return checkpoint;
   }
-  async tick(emulator:V86) {
+  async tick(emulator: V86) {
     // read from / write to file
     const t = emulator.get_instruction_counter();
-    if (t < this.last_time) { // counter wrapped around, increase wraps
+    if (t < this.last_time) {
+      // counter wrapped around, increase wraps
       this.wraps += 1;
     }
     this.last_time = t;
     const real_t = this.replay_time(t);
-    switch(this.mode) {
+    switch (this.mode) {
       case ReplayMode.Playback: {
         emulator.keyboard_set_status(false);
         emulator.mouse_set_status(false);
         // What is earlier: next checkpoint or next event?
-        while(true) {
-          const event_t = (this.index < this.events.length) ? this.events[this.index].when : Number.MAX_SAFE_INTEGER;
+        while (true) {
+          const event_t =
+            this.index < this.events.length
+              ? this.events[this.index].when
+              : Number.MAX_SAFE_INTEGER;
           const event_coming = event_t <= real_t;
-          if(event_coming) {
+          if (event_coming) {
             const evt = this.events[this.index];
             emulator.bus.send(EvtNames[evt.code], evt.value);
             this.index += 1;
@@ -216,7 +291,7 @@ export class LegacyReplay {
             break;
           }
         }
-        if(this.index < this.events.length) {
+        if (this.index < this.events.length) {
           // playback continues
         } else {
           // pause emu?
@@ -230,17 +305,17 @@ export class LegacyReplay {
         break;
     }
   }
-  private finish_playback(emulator:V86) {
+  private finish_playback(emulator: V86) {
     emulator.mouse_set_status(true);
     emulator.keyboard_set_status(true);
     this.mode = ReplayMode.Finished;
   }
-  async stop(emulator:V86) {
-    if(this.mode == ReplayMode.Playback) {
+  async stop(emulator: V86) {
+    if (this.mode == ReplayMode.Playback) {
       this.finish_playback(emulator);
     }
   }
-  async start_playback(emulator:V86) {
+  async start_playback(emulator: V86) {
     this.mode = ReplayMode.Playback;
     this.index = 0;
     this.wraps = 0;
@@ -249,7 +324,10 @@ export class LegacyReplay {
     emulator.mouse_set_status(false);
     emulator.keyboard_set_status(false);
     const check = this.checkpoints[0];
-    const state = await this.restore_checkpoint(check.header_info, check.superblock_seq);
+    const state = await this.restore_checkpoint(
+      check.header_info,
+      check.superblock_seq,
+    );
     await emulator.restore_state(state);
   }
   /* TODO: this api should be in terms of a stream not a buffer, to account for very long/large replays */
@@ -260,7 +338,7 @@ export class LegacyReplay {
     let x = 0;
     const magic = view.getUint32(x, true);
     x += 4;
-    if (magic != 0x4C505256) {
+    if (magic != 0x4c505256) {
       throw "Invalid magic, not a v86replay file";
     }
     // metadata: 16 bytes UUID; reserve the rest for later.
@@ -347,12 +425,14 @@ export class LegacyReplay {
       }
       const event_index = view.getUint32(x, true);
       x += 4;
-      const name = "replay"+id+"-state" + i.toString();
+      const name = "replay" + id + "-state" + i.toString();
       const thumb_len = view.getUint32(x, true);
       x += 4;
       const thumb_bytes = new Uint8Array(thumb_len);
       thumb_bytes.set(new Uint8Array(buf, x, thumb_len));
-      const thumb = await blobToDataURL(new Blob([thumb_bytes], { type: "image/png" }));
+      const thumb = await blobToDataURL(
+        new Blob([thumb_bytes], { type: "image/png" }),
+      );
       x += thumb_len;
       if (version == 0) {
         const state_len = view.getUint32(x, true);
@@ -376,16 +456,28 @@ export class LegacyReplay {
         for (let i = 0; i < new_block_count; i++) {
           const block = new Uint8Array(buf, x, r.block_index.object_size);
           new_blocks.push(r.block_index.length());
-          r.block_index.insert_exact(block.slice(), r.block_index.length(), when);
+          r.block_index.insert_exact(
+            block.slice(),
+            r.block_index.length(),
+            when,
+          );
           x += r.block_index.object_size;
         }
         const new_superblocks = [];
         const new_superblock_count = view.getUint32(x, true);
         x += 4;
         for (let i = 0; i < new_superblock_count; i++) {
-          const superblock = new Uint8Array(buf, x, r.superblock_index.object_size);
+          const superblock = new Uint8Array(
+            buf,
+            x,
+            r.superblock_index.object_size,
+          );
           new_superblocks.push(r.superblock_index.length());
-          r.superblock_index.insert_exact(superblock.slice(), r.block_index.length(), when);
+          r.superblock_index.insert_exact(
+            superblock.slice(),
+            r.block_index.length(),
+            when,
+          );
           x += r.superblock_index.object_size;
         }
         const superblock_seq_len = view.getUint32(x, true);
@@ -395,7 +487,18 @@ export class LegacyReplay {
           superblock_seq[i] = view.getUint32(x, true);
           x += 4;
         }
-        r.checkpoints.push(new Checkpoint(when, name, event_index, info.slice(), new_blocks, new_superblocks, superblock_seq.slice(), thumb));
+        r.checkpoints.push(
+          new Checkpoint(
+            when,
+            name,
+            event_index,
+            info.slice(),
+            new_blocks,
+            new_superblocks,
+            superblock_seq.slice(),
+            thumb,
+          ),
+        );
       }
     }
     r.index = 0;

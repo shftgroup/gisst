@@ -209,7 +209,7 @@ pub trait Decoder: Sealed {
     /// #     fn with_capacity(cap: usize) -> Self {
     /// #         Self(Vec::with_capacity(cap))
     /// #     }
-    /// #     
+    /// #
     /// #     fn push(&mut self, t: T) {
     /// #         self.0.push(t);
     /// #     }

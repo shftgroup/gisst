@@ -23,60 +23,43 @@ repos:
     - id: forgejo-runner-validate
   - repo: local
     hooks:
-      - id: sqlx
-        name: sqlx
-        description: Check that sqlx prepare has been run
-        entry: hooks/backend-sqlx.sh
-        language: unsupported_script
-        files: ^backend/
-        types_or: [sql, rust]
-        pass_filenames: false
-      - id: rustfmt
-        name: rustfmt
-        description: Check if all files follow the rustfmt style
-        entry: hooks/backend-rustfmt.sh
-        language: unsupported_script
-        pass_filenames: false
-        files: ^backend/
-        types_or: [rust,toml]
-        stages: [pre-push]
-      - id: clippy
-        name: clippy
-        description: Run clippy
-        entry: hooks/backend-clippy.sh
-        language: unsupported_script
-        pass_filenames: false
-        files: ^backend/
-        types_or: [rust,toml]
-        stages: [pre-push]
-      - id: udeps
-        name: cargo udeps
-        description: Run cargo-udeps
-        entry: hooks/cargo-udeps.sh
-        language: unsupported_script
-        pass_filenames: false
-        files: ^backend/
-        types_or: [rust,toml]
-        stages: [pre-push]
-      - id: cargo-audit
-        name: cargo audit
-        description: Run cargo-audit
-        entry: hooks/cargo-audit.sh
-        language: unsupported_script
-        pass_filenames: false
-        files: ^backend/
-        types_or: [rust,toml]
-        stages: [pre-push]
-      - id: frontend-check
-        name: frontend check
-        description: Run frontend checks
-        language: unsupported_script
-        entry: hooks/frontend-check.sh
-        files: ^frontend/
-        stages: [pre-push]
       - id: trufflehog
         name: TruffleHog
         description: Detect secrets in your data.
         entry: bash -c 'trufflehog git --no-update --exclude-paths .trufflehogignore file://.'
         language: unsupported
         stages: ["pre-commit", "pre-push"]
+      - id: rustfmt
+        name: rustfmt
+        description: Ensure all Rust files follow the rustfmt style
+        entry: hooks/backend-rustfmt.sh
+        language: unsupported_script
+        pass_filenames: false
+        files: ^backend/
+        types_or: [rust,toml]
+        stages: [pre-commit, pre-push]
+      - id: prettier
+        name: prettier
+        description: Ensure all frontend files are nicely formatted
+        entry: hooks/frontend-prettier.sh
+        language: unsupported_script
+        pass_filenames: false
+        files: ^frontend/
+        types_or: [ts,json,css,html,javascript,scss]
+        stages: [pre-commit, pre-push]
+      - id: backend-check
+        name: backend checks
+        description: Run backend checks
+        entry: hooks/backend-check.sh
+        language: unsupported_script
+        pass_filenames: false
+        files: ^backend/
+        types_or: [rust,toml]
+        stages: [pre-commit, pre-push]
+      - id: frontend-check
+        name: frontend check
+        description: Run frontend checks
+        language: unsupported_script
+        entry: hooks/frontend-check.sh
+        files: ^frontend/
+        stages: [pre-commit, pre-push]

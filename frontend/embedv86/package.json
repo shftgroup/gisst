@@ -21,9 +21,6 @@
     "test": "tsc && eslint src && vitest --run"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.12.2",
-    "@typescript-eslint/parser": "^8.12.2",
-    "eslint": "^9.13.0",
     "serve-static": "^2.2.1",
     "shx": "^0.4.0",
     "typescript": "^5.8.2",
