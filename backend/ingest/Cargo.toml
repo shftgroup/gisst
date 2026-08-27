@@ -7,22 +7,22 @@ license.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-walkdir = "2.5.0"
-uuid = { version = "1.23", features = ["serde", "v4"] }
-thiserror = "2.0.18"
-log = "0.4.29"
-tokio = { version = "1.52.3", features = ["full"] }
-sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json"], default-features=false }
-env_logger = "0.11.10"
-clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
-clap-verbosity-flag = "3.0.4"
-anyhow = {version="1.0.102", features=["backtrace"]}
-gisst = { path = "../gisst" }
-rdb-sys = { path = "../rdb-sys" }
-chrono = { version = "0.4.44", features = ["clock"]}
-md-5                    = "0.11"
-digest-io               = "0.1.0"
-base16ct                = {version="1.0.0",features=["alloc"]}
-regex = "1.12.3"
-rayon = "1.12.0"
-chd = "0.3.4"
+walkdir.workspace = true
+uuid = { workspace = true, features = ["serde", "v4"] }
+thiserror.workspace = true
+log.workspace = true
+tokio = { workspace = true, features = ["full"] }
+sqlx = { workspace = true, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json"] }
+env_logger.workspace = true
+clap = { workspace = true, features = ["derive", "cargo", "env"] }
+clap-verbosity-flag.workspace = true
+anyhow = { workspace = true, features = ["backtrace"] }
+gisst.workspace = true
+rdb-sys.workspace = true
+chrono = { workspace = true, features = ["clock"] }
+md-5.workspace = true
+digest-io.workspace = true
+base16ct                = { workspace = true, features = ["alloc"] }
+regex.workspace = true
+rayon.workspace = true
+chd.workspace = true

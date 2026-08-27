@@ -46,5 +46,5 @@ name = "bincode_derive"
 path = "src/lib.rs"
 proc-macro = true
 
-[dependencies.virtue]
-version = "0.0.18"
+[dependencies]
+virtue.workspace = true

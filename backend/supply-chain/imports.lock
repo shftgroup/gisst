@@ -131,8 +131,8 @@ when = "2026-08-21"
 trusted-publisher = "github:rust-lang/cc-rs"
 
 [[publisher.chacha20]]
-version = "0.10.1"
-when = "2026-06-24"
+version = "0.10.2"
+when = "2026-08-27"
 trusted-publisher = "github:RustCrypto/stream-ciphers"
 
 [[publisher.chrono]]

@@ -7,6 +7,74 @@ version = "0.2.4"
 edition = "2024"
 license = "AGPL-3.0-or-later"
 
+[workspace.dependencies]
+anyhow = "1.0.102"
+async-compression = { version = "0.4", default-features = false }
+async-trait = "0.1.92"
+axum = "0.8.9"
+axum-extra = "0.12.6"
+axum-login = "0.18.0"
+axum-server = "0.8.0"
+base16ct = "1.0.0"
+base64 = "0.22.1"
+bincode = { path = "vendor/bincode" }
+bincode_derive = { version = "2.0.2", path = "vendor/bincode_derive" }
+bitvec = "1.0.1"
+bytes = "1.11.1"
+cc = "1.2"
+chd = "0.3.4"
+chrono = "0.4.44"
+clap = "4.6.1"
+clap-verbosity-flag = "3.0.4"
+config = { version = "0.15.23", default-features = false }
+digest-io = "0.1.0"
+env_logger = "0.11.10"
+fscommon = "0.1.1"
+futures = "0.3.32"
+futures-core = "0.3.34"
+futures-io = "0.3.34"
+gisst = { path = "gisst" }
+log = "0.4.29"
+mbrman = { path = "vendor/mbrman" }
+md-5 = "0.11"
+meilisearch-sdk = { version = "0.33.0", default-features = false }
+minijinja = "2.20.0"
+num-traits = "0.2.19"
+oauth2 = { version = "5.0.0", default-features = false }
+oauth2-reqwest = "0.1.0-alpha.3"
+opentelemetry = "0.32"
+opentelemetry-otlp = "0.32"
+opentelemetry-semantic-conventions = "0.32"
+opentelemetry-stdout = "0.32"
+opentelemetry_sdk = "0.32"
+pin-project-lite = "0.2.17"
+rayon = "1.12.0"
+rdb-sys = { path = "rdb-sys" }
+regex = "1.12.3"
+reqwest = { version = "0.13.3", default-features = false }
+rustls = "0.23.40"
+secrecy = "0.10.3"
+serde = { version = "1.0.228", default-features = false }
+serde-big-array = "0.5.1"
+serde_json = "1.0.149"
+serde_with = "3.20.0"
+sqlx = { version = "0.9", default-features = false }
+thiserror = "2.0.18"
+tokio = "1.52.3"
+tower = "0.5.3"
+tower-http = "0.6.11"
+tower-sessions = "0.14.0"
+tracing = "0.1.44"
+tracing-opentelemetry = "0.33.0"
+tracing-subscriber = "0.3.23"
+tree_magic_mini = "3.2.2"
+unty = "0.0.4"
+uuid = "1.23"
+virtue = "0.0.18"
+walkdir = "2.5.0"
+yaup = "0.3.1"
+zip = { version = "8.6.0", default-features = false }
+
 #[profile.dev]
 #debug = 0
 

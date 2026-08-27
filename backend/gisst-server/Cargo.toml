@@ -10,38 +10,38 @@ dummy_auth=[]
 fatfs_logging=["gisst/fatfs_logging"]
 
 [dependencies]
-anyhow = "1.0.102"
-axum = { version = "0.8.9", features = ["multipart", "macros"] }
-axum-server = { version = "0.8.0", features = ["tls-rustls"] }
-base64 = "0.22.1"
-rustls = "0.23.40"
-bytes = { version = "1.11.1", features = ["serde"] }
-config = {  version = "0.15.23", features = ["toml"], default-features = false }
-futures = "0.3.32"
-sqlx = { version = "0.9", features = ["migrate","runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json", "macros"], default-features=false }
-minijinja = {version= "2.20.0", features=["builtins", "macros", "json", "loader", "urlencode"]}
-secrecy = { version = "0.10.3", features = ["serde"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = { version = "1.0.149", features = ["raw_value"] }
-thiserror = "2.0.18"
-tokio = { version = "1.52.3", features = ["full"] }
-tower = {version="0.5.3",features=["util"]}
-tower-http = { version = "0.6.11", features = ["fs", "trace", "cors"] }
-tracing = {version = "0.1.44", features = ["attributes"]}
-tracing-subscriber = { version = "0.3.23", features = ["env-filter", "registry"]}
-uuid = { version = "1.23", features = ["serde", "v4"] }
-gisst = { path = "../gisst" }
-serde_with = {version = "3.20.0", features = ["base64"]}
-chrono = { version = "0.4.44", features = ["clock"]}
-axum-login = { version = "0.18.0" }
-tower-sessions = {version="0.14.0", features=["memory-store","axum-core"]}
-oauth2 = {version="5.0.0", default-features=false}
-oauth2-reqwest = "0.1.0-alpha.3"
-reqwest = {version="0.13.3", default-features=false, features=["json","charset","rustls","http2","system-proxy"]}
-opentelemetry = { version = "0.32" }
-opentelemetry_sdk = { version = "0.32" }
-opentelemetry-otlp = { version = "0.32", features = [ "grpc-tonic", "default" ] }
-opentelemetry-stdout = { version = "0.32" }
-opentelemetry-semantic-conventions = { version="0.32", features=["default", "semconv_experimental"] }
-tracing-opentelemetry = "0.33.0"
-axum-extra = { version = "0.12.6", features = ["query", "tracing"] }
+anyhow.workspace = true
+axum = { workspace = true, features = ["multipart", "macros"] }
+axum-server = { workspace = true, features = ["tls-rustls"] }
+base64.workspace = true
+rustls.workspace = true
+bytes = { workspace = true, features = ["serde"] }
+config = { workspace = true, features = ["toml"] }
+futures.workspace = true
+sqlx = { workspace = true, features = ["migrate", "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json", "macros"] }
+minijinja = { workspace = true, features = ["builtins", "macros", "json", "loader", "urlencode"] }
+secrecy = { workspace = true, features = ["serde"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value"] }
+thiserror.workspace = true
+tokio = { workspace = true, features = ["full"] }
+tower = { workspace = true, features = ["util"] }
+tower-http = { workspace = true, features = ["fs", "trace", "cors"] }
+tracing = { workspace = true, features = ["attributes"] }
+tracing-subscriber = { workspace = true, features = ["env-filter", "registry"] }
+uuid = { workspace = true, features = ["serde", "v4"] }
+gisst.workspace = true
+serde_with = { workspace = true, features = ["base64"] }
+chrono = { workspace = true, features = ["clock"] }
+axum-login.workspace = true
+tower-sessions = { workspace = true, features = ["memory-store", "axum-core"] }
+oauth2.workspace = true
+oauth2-reqwest.workspace = true
+reqwest = { workspace = true, features = ["json", "charset", "rustls", "http2", "system-proxy"] }
+opentelemetry.workspace = true
+opentelemetry_sdk.workspace = true
+opentelemetry-otlp = { workspace = true, features = ["grpc-tonic", "default"] }
+opentelemetry-stdout.workspace = true
+opentelemetry-semantic-conventions = { workspace = true, features = ["default", "semconv_experimental"] }
+tracing-opentelemetry.workspace = true
+axum-extra = { workspace = true, features = ["query", "tracing"] }

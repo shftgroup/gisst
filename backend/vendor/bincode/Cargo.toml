@@ -72,16 +72,8 @@ std = [
 name = "bincode"
 path = "src/lib.rs"
 
-[dependencies.bincode_derive]
-version = "2.0.2"
-optional = true
-path = "../bincode_derive"
-
-[dependencies.serde]
-version = "1.0"
-optional = true
-default-features = false
-
-[dependencies.unty]
-version = "0.0.4"
+[dependencies]
+bincode_derive= { workspace = true, optional = true }
+serde= { workspace = true, optional = true }
+unty.workspace = true
 

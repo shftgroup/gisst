@@ -9,32 +9,32 @@ default=[]
 fatfs_logging=["fatfs/log_level_trace"]
 
 [dependencies]
-sqlx = { version = "0.9", features = ["migrate", "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json", "macros", "bigdecimal"], default-features=false }
-uuid                    = { version = "1.23", features = ["serde", "v4"] }
-serde                   = { version = "1.0.228", features = ["derive"] }
-thiserror               = "2.0.18"
-log                     = "0.4.29"
-tokio                   = { version = "1.52.3", features = ["full"] }
-md-5                    = "0.11"
-digest-io               = "0.1.0"
-base16ct                = {version="1.0.0",features=["alloc"]}
-bytes                   = { version = "1.11.1", features = ["serde"] }
-async-compression       = { version = "0.4", default-features=false, features = ["tokio", "gzip"] }
-chrono = {version = "0.4.44", features = ["serde"]}
-serde_with = { version = "3.20.0", features = ["base64"] }
-tracing = "0.1.44"
-tree_magic_mini = {version="3.2.2", features=["with-gpl-data"]}
-fatfs = {git="https://github.com/rafalh/rust-fatfs/", rev="c4b88477b22ca7e5131fbd8891f62a5deaa88e6e"}
-mbrman = {path="../vendor/mbrman"}
-fscommon = "0.1.1"
-zip = {version="8.6.0",default-features=false,features=["deflate"]}
-opentelemetry = "0.32"
-num-traits = "0.2.19"
-meilisearch-sdk = {version="0.33.0",default-features=false,features=["jwt_aws_lc_rs"]}
-reqwest = {version="0.13.3", default-features=false, features=["stream","json","charset","rustls","http2","system-proxy"]}
-futures = "0.3.32"
-futures-core = "0.3.34"
-futures-io = "0.3.34"
-pin-project-lite = "0.2.17"
-yaup = "0.3.1"
-async-trait = "0.1.92"
+sqlx = { workspace = true, features = ["migrate", "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json", "macros", "bigdecimal"] }
+uuid                    = { workspace = true, features = ["serde", "v4"] }
+serde                   = { workspace = true, features = ["derive"] }
+thiserror.workspace = true
+log.workspace = true
+tokio                   = { workspace = true, features = ["full"] }
+md-5.workspace = true
+digest-io.workspace = true
+base16ct                = { workspace = true, features = ["alloc"] }
+bytes                   = { workspace = true, features = ["serde"] }
+async-compression       = { workspace = true, features = ["tokio", "gzip"] }
+chrono = { workspace = true, features = ["serde"] }
+serde_with = { workspace = true, features = ["base64"] }
+tracing.workspace = true
+tree_magic_mini = { workspace = true, features = ["with-gpl-data"] }
+fatfs = { git = "https://github.com/rafalh/rust-fatfs/", rev = "c4b88477b22ca7e5131fbd8891f62a5deaa88e6e" }
+mbrman.workspace = true
+fscommon.workspace = true
+zip = { workspace = true, features = ["deflate"] }
+opentelemetry.workspace = true
+num-traits.workspace = true
+meilisearch-sdk = { workspace = true, features = ["jwt_aws_lc_rs"] }
+reqwest = { workspace = true, features = ["stream", "json", "charset", "rustls", "http2", "system-proxy"] }
+futures.workspace = true
+futures-core.workspace = true
+futures-io.workspace = true
+pin-project-lite.workspace = true
+yaup.workspace = true
+async-trait.workspace = true
