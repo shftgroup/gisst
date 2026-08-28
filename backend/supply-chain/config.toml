@@ -79,10 +79,6 @@ criteria = "safe-to-deploy"
 version = "1.0.0"
 criteria = "safe-to-deploy"
 
-[[exemptions.bigdecimal]]
-version = "0.4.10"
-criteria = "safe-to-deploy"
-
 [[exemptions.bitflags]]
 version = "2.13.1"
 criteria = "safe-to-deploy"
@@ -106,6 +102,8 @@ criteria = "safe-to-deploy"
 [[exemptions.combine]]
 version = "4.6.7"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "Requires target or features we won't enable"
 
 [[exemptions.compression-codecs]]
 version = "0.4.38"
@@ -147,10 +145,6 @@ criteria = "safe-to-deploy"
 version = "1.5.1"
 criteria = "safe-to-deploy"
 
-[[exemptions.crypto-common]]
-version = "0.2.2"
-criteria = "safe-to-deploy"
-
 [[exemptions.darling]]
 version = "0.23.0"
 criteria = "safe-to-deploy"
@@ -167,20 +161,12 @@ criteria = "safe-to-deploy"
 version = "0.10.7"
 criteria = "safe-to-deploy"
 
-[[exemptions.digest]]
-version = "0.11.3"
-criteria = "safe-to-deploy"
-
 [[exemptions.dotenvy]]
 version = "0.15.7"
 criteria = "safe-to-deploy"
 
 [[exemptions.etcetera]]
 version = "0.11.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.fatfs]]
-version = "0.4.0@git:c4b88477b22ca7e5131fbd8891f62a5deaa88e6e"
 criteria = "safe-to-deploy"
 
 [[exemptions.fixedbitset]]
@@ -215,14 +201,6 @@ criteria = "safe-to-deploy"
 version = "0.3.4"
 criteria = "safe-to-deploy"
 
-[[exemptions.hkdf]]
-version = "0.13.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.hmac]]
-version = "0.13.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.http-range-header]]
 version = "0.4.2"
 criteria = "safe-to-deploy"
@@ -250,14 +228,20 @@ criteria = "safe-to-deploy"
 [[exemptions.jni-macros]]
 version = "0.22.4"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "We won't use jni and deny blocks it"
 
 [[exemptions.jni-sys]]
 version = "0.4.1"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "We won't use jni and deny blocks it"
 
 [[exemptions.jni-sys-macros]]
 version = "0.4.1"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "We won't use jni and deny blocks it"
 
 [[exemptions.jsonwebtoken]]
 version = "10.4.0"
@@ -266,6 +250,8 @@ criteria = "safe-to-deploy"
 [[exemptions.libsqlite3-sys]]
 version = "0.37.0"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "We won't use sqlite and deny blocks it"
 
 [[exemptions.log]]
 version = "0.4.34"
@@ -281,10 +267,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.mbrman]]
 version = "0.6.1"
-criteria = "safe-to-deploy"
-
-[[exemptions.md-5]]
-version = "0.11.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.meilisearch-index-setting-macro]]
@@ -311,10 +293,6 @@ criteria = "safe-to-deploy"
 version = "5.0.0"
 criteria = "safe-to-deploy"
 
-[[exemptions.once_cell]]
-version = "1.21.4"
-criteria = "safe-to-deploy"
-
 [[exemptions.opentelemetry]]
 version = "0.32.0"
 criteria = "safe-to-deploy"
@@ -339,16 +317,8 @@ criteria = "safe-to-deploy"
 version = "0.32.1"
 criteria = "safe-to-deploy"
 
-[[exemptions.pin-project-lite]]
-version = "0.2.17"
-criteria = "safe-to-deploy"
-
 [[exemptions.pkg-config]]
 version = "0.3.34"
-criteria = "safe-to-deploy"
-
-[[exemptions.portable-atomic-util]]
-version = "0.2.7"
 criteria = "safe-to-deploy"
 
 [[exemptions.ppv-lite86]]
@@ -382,7 +352,8 @@ criteria = "safe-to-deploy"
 [[exemptions.ring]]
 version = "0.17.14"
 criteria = "safe-to-deploy"
-notes = "Ring will not be included by any features used in the project"
+suggest = false
+notes = "Ring uses features we have not enabled and is denied by cargo deny"
 
 [[exemptions.rustc-hash]]
 version = "2.1.3"
@@ -428,14 +399,6 @@ criteria = "safe-to-deploy"
 version = "0.7.1"
 criteria = "safe-to-deploy"
 
-[[exemptions.sha1]]
-version = "0.11.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.sha2]]
-version = "0.11.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.shlex]]
 version = "2.0.1"
 criteria = "safe-to-deploy"
@@ -451,10 +414,14 @@ criteria = "safe-to-deploy"
 [[exemptions.simd_cesu8]]
 version = "1.2.0"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "A dependency of jni, which we have banned"
 
 [[exemptions.simdutf8]]
 version = "0.1.5"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "A dependency of jni, which we have banned"
 
 [[exemptions.sqlx]]
 version = "0.9.0"
@@ -475,6 +442,8 @@ criteria = "safe-to-deploy"
 [[exemptions.sqlx-mysql]]
 version = "0.9.0"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "We won't use mysql and deny blocks it"
 
 [[exemptions.sqlx-postgres]]
 version = "0.9.0"
@@ -483,6 +452,8 @@ criteria = "safe-to-deploy"
 [[exemptions.sqlx-sqlite]]
 version = "0.9.0"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "We won't use sqlite and deny blocks it"
 
 [[exemptions.stable_deref_trait]]
 version = "1.2.1"
@@ -583,11 +554,14 @@ criteria = "safe-to-deploy"
 [[exemptions.wasm-streams]]
 version = "0.5.0"
 criteria = "safe-to-deploy"
+suggest = false
 notes = "We won't be compiling for wasm so I don't need to certify this one"
 
 [[exemptions.web-time]]
 version = "1.1.0"
 criteria = "safe-to-deploy"
+suggest = false
+notes = "We won't be compiling for wasm so I don't need to certify this one"
 
 [[exemptions.webpki-root-certs]]
 version = "1.0.9"

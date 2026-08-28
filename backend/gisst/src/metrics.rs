@@ -46,7 +46,7 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
                         .await
                         .ok()
                         .flatten()
-                        .and_then(|num| u64::try_from(num).ok())
+                        .map(|num| num.to_u64().unwrap_or(0))
                     {
                         obs.observe(count, &[]);
                     }
@@ -64,11 +64,12 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
             .with_callback(move |obs| {
                 handle.block_on(async {
                     if let Ok(mut conn) = pool.acquire().await
-                        && let Some(size) = sqlx::query_scalar!("SELECT SUM(file_size) FROM file")
-                            .fetch_one(conn.as_mut())
-                            .await
-                            .ok()
-                            .flatten()
+                        && let Some(size) =
+                            sqlx::query_scalar!(r#"SELECT SUM(file_size)::bigint FROM file"#)
+                                .fetch_one(conn.as_mut())
+                                .await
+                                .ok()
+                                .flatten()
                     {
                         obs.observe(size.to_u64().unwrap_or(0), &[]);
                     }
@@ -85,12 +86,13 @@ pub async fn start_reporting(pool: sqlx::PgPool) {
             .with_callback(move |obs| {
                 handle.block_on(async {
                     if let Ok(mut conn) = pool.acquire().await
-                        && let Some(size) =
-                            sqlx::query_scalar!("SELECT SUM(file_compressed_size) FROM file")
-                                .fetch_one(conn.as_mut())
-                                .await
-                                .ok()
-                                .flatten()
+                        && let Some(size) = sqlx::query_scalar!(
+                            "SELECT SUM(file_compressed_size)::bigint FROM file"
+                        )
+                        .fetch_one(conn.as_mut())
+                        .await
+                        .ok()
+                        .flatten()
                     {
                         obs.observe(size.to_u64().unwrap_or(0), &[]);
                     }

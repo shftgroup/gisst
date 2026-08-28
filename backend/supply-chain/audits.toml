@@ -13,6 +13,19 @@ criteria = "safe-to-deploy"
 version = "2.0.2"
 notes = "Local vendored copy of bincode_derive"
 
+[[audits.fatfs]]
+who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
+criteria = "safe-to-deploy"
+version = "0.3.6"
+notes = "No dangerous capabilities, limited use of unsafe in byteorder transformations."
+
+[[audits.fatfs]]
+who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
+criteria = "safe-to-deploy"
+delta = "0.3.6 -> 0.4.0@git:c4b88477b22ca7e5131fbd8891f62a5deaa88e6e"
+importable = false
+notes = "Changes are consistent with readme/changelog."
+
 [[audits.jni]]
 who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
 criteria = "safe-to-deploy"
@@ -307,6 +320,12 @@ user-id = 33035 # Taiki Endo (taiki-e)
 start = "2020-10-12"
 end = "2027-08-24"
 
+[[trusted.crypto-common]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:RustCrypto/traits"
+start = "2026-02-04"
+end = "2027-08-28"
+
 [[trusted.ctutils]]
 criteria = "safe-to-deploy"
 trusted-publisher = "github:RustCrypto/utils"
@@ -330,6 +349,12 @@ criteria = "safe-to-deploy"
 user-id = 16374 # Lukas Wirth (Veykril)
 start = "2025-04-01"
 end = "2027-08-24"
+
+[[trusted.digest]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:RustCrypto/traits"
+start = "2026-02-12"
+end = "2027-08-28"
 
 [[trusted.digest-io]]
 criteria = "safe-to-deploy"
@@ -504,6 +529,18 @@ criteria = "safe-to-deploy"
 user-id = 4556 # Dirkjan Ochtman (djc)
 start = "2025-10-26"
 end = "2027-08-24"
+
+[[trusted.hkdf]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:RustCrypto/KDFs"
+start = "2026-03-30"
+end = "2027-08-28"
+
+[[trusted.hmac]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:RustCrypto/MACs"
+start = "2026-03-20"
+end = "2027-08-28"
 
 [[trusted.http]]
 criteria = "safe-to-deploy"
@@ -763,6 +800,12 @@ user-id = 5298 # Benjamin Saunders (Ralith)
 start = "2024-05-31"
 end = "2027-08-24"
 
+[[trusted.md-5]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:RustCrypto/hashes"
+start = "2026-03-27"
+end = "2027-08-28"
+
 [[trusted.memchr]]
 criteria = "safe-to-deploy"
 user-id = 189 # Andrew Gallant (BurntSushi)
@@ -810,6 +853,12 @@ criteria = "safe-to-deploy"
 user-id = 539 # Josh Stone (cuviper)
 start = "2019-05-20"
 end = "2027-08-24"
+
+[[trusted.once_cell]]
+criteria = "safe-to-deploy"
+user-id = 2699 # Alex Kladov (matklad)
+start = "2019-05-07"
+end = "2027-08-28"
 
 [[trusted.once_cell_polyfill]]
 criteria = "safe-to-deploy"
@@ -883,6 +932,12 @@ user-id = 33035 # Taiki Endo (taiki-e)
 start = "2019-10-22"
 end = "2027-08-24"
 
+[[trusted.pin-project-lite]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:taiki-e/pin-project-lite"
+start = "2026-02-27"
+end = "2027-08-28"
+
 [[trusted.portable-atomic]]
 criteria = "safe-to-deploy"
 user-id = 33035 # Taiki Endo (taiki-e)
@@ -900,6 +955,12 @@ criteria = "safe-to-deploy"
 user-id = 33035 # Taiki Endo (taiki-e)
 start = "2023-01-15"
 end = "2027-08-24"
+
+[[trusted.portable-atomic-util]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:taiki-e/portable-atomic-util"
+start = "2026-03-14"
+end = "2027-08-28"
 
 [[trusted.potential_utf]]
 criteria = "safe-to-deploy"
@@ -1140,6 +1201,18 @@ criteria = "safe-to-deploy"
 user-id = 39 # Armin Ronacher (mitsuhiko)
 start = "2022-01-16"
 end = "2027-08-24"
+
+[[trusted.sha1]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:RustCrypto/hashes"
+start = "2026-03-27"
+end = "2027-08-28"
+
+[[trusted.sha2]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:RustCrypto/hashes"
+start = "2026-03-25"
+end = "2027-08-28"
 
 [[trusted.slab]]
 criteria = "safe-to-deploy"

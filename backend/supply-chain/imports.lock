@@ -214,20 +214,6 @@ version = "0.3.0"
 when = "2026-02-05"
 trusted-publisher = "github:RustCrypto/utils"
 
-[[publisher.crossbeam-deque]]
-version = "0.8.7"
-when = "2026-07-06"
-user-id = 33035
-user-login = "taiki-e"
-user-name = "Taiki Endo"
-
-[[publisher.crossbeam-epoch]]
-version = "0.9.20"
-when = "2026-07-06"
-user-id = 33035
-user-login = "taiki-e"
-user-name = "Taiki Endo"
-
 [[publisher.crossbeam-queue]]
 version = "0.3.13"
 when = "2026-07-06"
@@ -241,6 +227,11 @@ when = "2026-07-06"
 user-id = 33035
 user-login = "taiki-e"
 user-name = "Taiki Endo"
+
+[[publisher.crypto-common]]
+version = "0.2.2"
+when = "2026-05-19"
+trusted-publisher = "github:RustCrypto/traits"
 
 [[publisher.ctutils]]
 version = "0.4.2"
@@ -266,6 +257,11 @@ when = "2025-04-01"
 user-id = 16374
 user-login = "Veykril"
 user-name = "Lukas Wirth"
+
+[[publisher.digest]]
+version = "0.11.3"
+when = "2026-05-03"
+trusted-publisher = "github:RustCrypto/traits"
 
 [[publisher.digest-io]]
 version = "0.1.0"
@@ -446,6 +442,16 @@ when = "2026-06-05"
 user-id = 4556
 user-login = "djc"
 user-name = "Dirkjan Ochtman"
+
+[[publisher.hkdf]]
+version = "0.13.0"
+when = "2026-03-30"
+trusted-publisher = "github:RustCrypto/KDFs"
+
+[[publisher.hmac]]
+version = "0.13.0"
+when = "2026-03-29"
+trusted-publisher = "github:RustCrypto/MACs"
 
 [[publisher.http]]
 version = "1.5.0"
@@ -630,12 +636,6 @@ when = "2026-07-21"
 user-id = 55123
 user-login = "rust-lang-owner"
 
-[[publisher.libm]]
-version = "0.2.16"
-when = "2026-01-24"
-user-id = 55123
-user-login = "rust-lang-owner"
-
 [[publisher.litemap]]
 version = "0.8.3"
 when = "2026-08-13"
@@ -656,6 +656,11 @@ when = "2025-04-19"
 user-id = 5298
 user-login = "Ralith"
 user-name = "Benjamin Saunders"
+
+[[publisher.md-5]]
+version = "0.11.0"
+when = "2026-03-27"
+trusted-publisher = "github:RustCrypto/hashes"
 
 [[publisher.memchr]]
 version = "2.8.3"
@@ -692,19 +697,12 @@ user-id = 6025
 user-login = "Thomasdezeeuw"
 user-name = "Thomas de Zeeuw"
 
-[[publisher.num-bigint]]
-version = "0.4.8"
-when = "2026-07-05"
-user-id = 539
-user-login = "cuviper"
-user-name = "Josh Stone"
-
-[[publisher.num-integer]]
-version = "0.1.47"
-when = "2026-08-12"
-user-id = 539
-user-login = "cuviper"
-user-name = "Josh Stone"
+[[publisher.once_cell]]
+version = "1.21.4"
+when = "2026-03-12"
+user-id = 2699
+user-login = "matklad"
+user-name = "Alex Kladov"
 
 [[publisher.once_cell_polyfill]]
 version = "1.70.2"
@@ -758,10 +756,20 @@ version = "1.1.13"
 when = "2026-05-13"
 trusted-publisher = "github:taiki-e/pin-project"
 
+[[publisher.pin-project-lite]]
+version = "0.2.17"
+when = "2026-02-27"
+trusted-publisher = "github:taiki-e/pin-project-lite"
+
 [[publisher.portable-atomic]]
 version = "1.15.0"
 when = "2026-08-09"
 trusted-publisher = "github:taiki-e/portable-atomic"
+
+[[publisher.portable-atomic-util]]
+version = "0.2.7"
+when = "2026-04-16"
+trusted-publisher = "github:taiki-e/portable-atomic-util"
 
 [[publisher.potential_utf]]
 version = "0.1.6"
@@ -824,13 +832,6 @@ trusted-publisher = "github:rust-random/rand"
 version = "0.10.1"
 when = "2026-04-13"
 trusted-publisher = "github:rust-random/rand_core"
-
-[[publisher.rayon]]
-version = "1.12.0"
-when = "2026-04-14"
-user-id = 539
-user-login = "cuviper"
-user-name = "Josh Stone"
 
 [[publisher.ref-cast]]
 version = "1.0.27"
@@ -981,6 +982,16 @@ trusted-publisher = "github:jonasbb/serde_with"
 version = "3.22.0"
 when = "2026-08-09"
 trusted-publisher = "github:jonasbb/serde_with"
+
+[[publisher.sha1]]
+version = "0.11.0"
+when = "2026-03-27"
+trusted-publisher = "github:RustCrypto/hashes"
+
+[[publisher.sha2]]
+version = "0.11.0"
+when = "2026-03-25"
+trusted-publisher = "github:RustCrypto/hashes"
 
 [[publisher.slab]]
 version = "0.4.12"
@@ -2145,16 +2156,6 @@ delta = "0.6.4 -> 0.9.3"
 who = "J.C. Jones <jc@divviup.org>"
 criteria = "safe-to-deploy"
 delta = "0.9.3 -> 0.9.5"
-
-[[audits.isrg.audits.rayon-core]]
-who = "Ameer Ghani <inahga@divviup.org>"
-criteria = "safe-to-deploy"
-version = "1.12.1"
-
-[[audits.isrg.audits.rayon-core]]
-who = "David Cook <dcook@divviup.org>"
-criteria = "safe-to-deploy"
-delta = "1.12.1 -> 1.13.0"
 
 [[audits.isrg.audits.sha2]]
 who = "David Cook <dcook@divviup.org>"

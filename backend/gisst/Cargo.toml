@@ -9,7 +9,7 @@ default=[]
 fatfs_logging=["fatfs/log_level_trace"]
 
 [dependencies]
-sqlx = { workspace = true, features = ["migrate", "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json", "macros", "bigdecimal"] }
+sqlx = { workspace = true, features = ["migrate", "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json", "macros"] }
 uuid                    = { workspace = true, features = ["serde", "v4"] }
 serde                   = { workspace = true, features = ["derive"] }
 thiserror.workspace = true

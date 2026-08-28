@@ -24,5 +24,4 @@ md-5.workspace = true
 digest-io.workspace = true
 base16ct                = { workspace = true, features = ["alloc"] }
 regex.workspace = true
-rayon.workspace = true
 chd.workspace = true

@@ -48,11 +48,11 @@ opentelemetry-semantic-conventions = "0.32"
 opentelemetry-stdout = "0.32"
 opentelemetry_sdk = "0.32"
 pin-project-lite = "0.2.17"
-rayon = "1.12.0"
 rdb-sys = { path = "rdb-sys" }
 regex = "1.12.3"
 reqwest = { version = "0.13.3", default-features = false }
 rustls = "0.23.40"
+rustls-platform-verifier = { version="0.7.0",default-features=false}
 secrecy = "0.10.3"
 serde = { version = "1.0.228", default-features = false }
 serde-big-array = "0.5.1"

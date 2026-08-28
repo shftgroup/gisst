@@ -100,7 +100,6 @@ pub enum IngestError {
 #[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<(), IngestError> {
-    use rayon::prelude::*;
     let Args {
         rdb,
         dir: roms,
@@ -171,7 +170,7 @@ async fn main() -> Result<(), IngestError> {
 
     let handle = tokio::runtime::Handle::current();
     let result: Result<_, _> = files
-        .par_iter()
+        .iter()
         .map(|entry| {
             if !entry.file_type().is_file() {
                 return Ok(());
