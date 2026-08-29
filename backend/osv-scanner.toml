@@ -1,0 +1,3 @@
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0141"
+reason = "We use a vendored copy we commit to maintaining"

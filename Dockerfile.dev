@@ -1,5 +1,6 @@
 FROM ubuntu:noble
 
+ENV OSV_VERSION=v2.5.1
 ENV PLAYWRIGHT_VERSION=1.53.0
 ENV RUST_VERSION=1.95.0
 ENV NODE_VERSION=26.8.1
@@ -16,6 +17,8 @@ ENV USER=ubuntu
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 RUN mkdir -p /home/$USER/.vscode-server && \
     chown -R $USER:$USER /home/$USER
+
+RUN curl -L https://github.com/google/osv-scanner/releases/download/${OSV_VERSION}/osv-scanner_linux_${TARGET_ARCH} -o /usr/local/bin/osv-scanner
 
 USER $USER
 
