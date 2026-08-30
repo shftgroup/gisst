@@ -1,8 +1,10 @@
 FROM ubuntu:noble
 
+ARG TARGETARCH
+
 ENV OSV_VERSION=v2.5.1
-ENV PLAYWRIGHT_VERSION=1.53.0
-ENV RUST_VERSION=1.95.0
+ENV PLAYWRIGHT_VERSION=1.60.0
+ENV RUST_VERSION=1.98.0
 ENV NODE_VERSION=26.8.1
 
 RUN apt-get update && apt-get install -y \
@@ -18,13 +20,13 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 RUN mkdir -p /home/$USER/.vscode-server && \
     chown -R $USER:$USER /home/$USER
 
-RUN curl -L https://github.com/google/osv-scanner/releases/download/${OSV_VERSION}/osv-scanner_linux_${TARGET_ARCH} -o /usr/local/bin/osv-scanner
+RUN curl -L "https://github.com/google/osv-scanner/releases/download/${OSV_VERSION}/osv-scanner_linux_${TARGETARCH}" -o /usr/local/bin/osv-scanner && chmod ugo+x /usr/local/bin/osv-scanner
 
 USER $USER
 
 ENV NVM_DIR=/home/$USER/.nvm
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
-RUN bash -c ". ${NVM_DIR}/nvm.sh && nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION} & nvm install-latest-npm"
+RUN . ${NVM_DIR}/nvm.sh ; nvm install ${NODE_VERSION} && nvm alias default ${NODE_VERSION} && nvm use ${NODE_VERSION} & nvm install-latest-npm
 ENV PATH="/home/$USER/.nvm/versions/node/v${NODE_VERSION}/bin:${PATH}"
 RUN npm install -g playwright@${PLAYWRIGHT_VERSION}
 USER root

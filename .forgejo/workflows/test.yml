@@ -2,6 +2,11 @@ name: Run Tests
 
 on:
   pull_request:
+    types:
+      - labeled
+      - edited
+      - opened
+      - synchronize
 
 concurrency:
   group: test-${{ forgejo.ref }}
@@ -21,8 +26,63 @@ env:
   STOP_ON_ERR: "true"
   SQLX_OFFLINE: 1
 
+  # TODO: if dockerfile, cargo.toml, cargo.lock, package.json, or package-lock.json are changed,
+  # require that this PR have the testing-approved label before proceeding past LINT
+  #
+  # TODO: add a LINT test that does the same type of stuff as hooks
+  #
+  # TODO: be sure sqlx --check and clippy -- -Dclippy::pedantic happen in here, since they can't happen as part of pre-commit hooks
+
+
 jobs:
+  safety:
+    runs-on: ubuntu-24.04
+    container:
+      image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
+      credentials:
+        username: jcoa2018
+        password: ${{ secrets.CI_PULL_IMAGE }}
+    # do not run without approval if npmrc, .cargo, deny.toml, supply-chain, dockerfiles, package/cargo lock, or this workflow have changed
+    steps:
+    - uses: actions/checkout@v6
+    - uses: https://github.com/dorny/paths-filter@v4
+      id: changes
+      name: Check for changes to risky paths
+      with:
+        filters: |
+          safety:
+            - '**/.npmrc'
+            - '**/.cargo/*'
+            - '**/deny.toml'
+            - '**/supply-chain'
+            - 'hooks/*'
+            - '.forgeo/'
+            - 'Dockerfile.*'
+            - '**/package.json'
+            - '**/package-lock.json'
+            - '**/Cargo.toml'
+            - '**/Cargo.lock'
+    - name: Fail workflow if dangerous and not approved
+      if: "steps.changes.outputs.safety == 'true' && !contains(toJSON(forgejo.event.pull_request.labels), 'Audited')"
+      run: |
+        echo "@ekaltman or @jcoa2018 must approve this PR due to risky changes"
+        exit 1
+    - name: Restore cached node modules
+      run: |
+        mv /tmp/frontend/node_modules frontend/
+        cd frontend
+        npm ci
+    - name: Frontend safety checks
+      run: bash hooks/frontend-check.sh
+    - name: Backend safety checks
+      run: bash hooks/backend-check.sh
+    - if: failure()
+      uses: https://github.com/actions-ecosystem/action-remove-labels@2ce5d41b4b6aa8503e285553f75ed56e0a40bae0 # v1.3.0
+      with:
+        labels: Audited
   cores:
+    needs:
+      - safety
     runs-on: ubuntu-24.04
     container:
       image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
@@ -32,6 +92,11 @@ jobs:
     outputs:
       core-hash: ${{ steps.hash-manifest.outputs.hash }}
     steps:
+    - name: Check approval status
+      if: "!contains(toJSON(github.event.pull_request.labels), 'Audited')"
+      run: |
+        echo "Test runs must be manually approved"
+        exit 1
     - uses: actions/checkout@v6
     # TODO: move ci cores and examples into a generic shftgroup
     # package produced by a private repository (and generate example
@@ -66,7 +131,13 @@ jobs:
       with:
         path: ./build
         key: "cache-${{ steps.hash-manifest.outputs.hash }}"
+    - if: failure()
+      uses: https://github.com/actions-ecosystem/action-remove-labels@2ce5d41b4b6aa8503e285553f75ed56e0a40bae0 # v1.3.0
+      with:
+        labels: Audited
   frontend:
+    needs:
+      - safety
     runs-on: ubuntu-24.04
     container:
       image: cafe.cs.pomona.edu/shftgroup/gisst-ci:latest
@@ -79,6 +150,11 @@ jobs:
       MEILI_MASTER_KEY: test-api-key
       MEILI_API_KEY: test-api-key
     steps:
+    - name: Check approval status
+      if: "!contains(toJSON(github.event.pull_request.labels), 'Audited')"
+      run: |
+        echo "Test runs must be manually approved"
+        exit 1
     - uses: actions/checkout@v6
     - name: Pull cached backend dependencies
       run: mv /tmp/backend/target backend/
@@ -86,7 +162,7 @@ jobs:
       run: |
         mv /tmp/frontend/node_modules frontend/
         cd frontend
-        npm i
+        npm ci
     - name: build
       run: npm run build --workspaces --if-present
       working-directory: frontend
@@ -126,8 +202,13 @@ jobs:
         name: playwright-report
         path: frontend/playwright-report/
         retention-days: 15
+    - if: failure()
+      uses: https://github.com/actions-ecosystem/action-remove-labels@2ce5d41b4b6aa8503e285553f75ed56e0a40bae0 # v1.3.0
+      with:
+        labels: Audited
   backend:
     needs:
+      - safety
       - cores
     runs-on: ubuntu-24.04
     container:
@@ -136,6 +217,11 @@ jobs:
         username: jcoa2018
         password: ${{ secrets.CI_PULL_IMAGE }}
     steps:
+    - name: Check approval status
+      if: "!contains(toJSON(github.event.pull_request.labels), 'Audited')"
+      run: |
+        echo "Test runs must be manually approved"
+        exit 1
     - uses: actions/checkout@v6
     - name: Get cached cores
       uses: actions/cache/restore@v5
@@ -178,3 +264,17 @@ jobs:
       run: |
         cargo test --workspace --all-targets
         cargo test --workspace --all-features --all-targets
+    - if: failure()
+      uses: https://github.com/actions-ecosystem/action-remove-labels@2ce5d41b4b6aa8503e285553f75ed56e0a40bae0 # v1.3.0
+      with:
+        labels: Audited
+  cleanup:
+    runs-on: ubuntu-24.04
+    needs:
+      - frontend
+      - backend
+    steps:
+    - name: Clear Audited label
+      uses: https://github.com/actions-ecosystem/action-remove-labels@2ce5d41b4b6aa8503e285553f75ed56e0a40bae0 # v1.3.0
+      with:
+        labels: Audited
