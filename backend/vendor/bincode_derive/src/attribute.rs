@@ -25,9 +25,8 @@ impl Default for ContainerAttributes {
 
 impl FromAttribute for ContainerAttributes {
     fn parse(group: &Group) -> Result<Option<Self>> {
-        let attributes = match parse_tagged_attribute(group, "bincode")? {
-            Some(body) => body,
-            None => return Ok(None),
+        let Some(attributes) = parse_tagged_attribute(group, "bincode")? else {
+            return Ok(None);
         };
         let mut result = Self::default();
         for attribute in attributes {
@@ -107,9 +106,8 @@ pub struct FieldAttributes {
 
 impl FromAttribute for FieldAttributes {
     fn parse(group: &Group) -> Result<Option<Self>> {
-        let attributes = match parse_tagged_attribute(group, "bincode")? {
-            Some(body) => body,
-            None => return Ok(None),
+        let Some(attributes) = parse_tagged_attribute(group, "bincode")? else {
+            return Ok(None);
         };
         let mut result = Self::default();
         for attribute in attributes {

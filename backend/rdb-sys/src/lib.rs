@@ -160,7 +160,7 @@ impl std::fmt::Display for RVal {
                 let map = unsafe { &self.value.map };
                 for idx in 0..map.len {
                     let pair = unsafe { ManuallyDrop::new(map.buf.add(idx as usize).read()) };
-                    write!(f, "{}: {}, ", &*pair.key, &*pair.val)?;
+                    write!(f, "{}: {}, ", *pair.key, *pair.val)?;
                 }
                 write!(f, "}}")
             }
@@ -169,7 +169,7 @@ impl std::fmt::Display for RVal {
                 let arr = unsafe { &self.value.arr };
                 for idx in 0..arr.len {
                     let val = unsafe { ManuallyDrop::new(arr.buf.add(idx as usize).read()) };
-                    write!(f, "{}, ", &*val)?;
+                    write!(f, "{}, ", *val)?;
                 }
                 write!(f, "]")
             }

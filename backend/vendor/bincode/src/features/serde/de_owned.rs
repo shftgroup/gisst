@@ -4,7 +4,10 @@ use crate::{
     de::{read::Reader, Decode, Decoder, DecoderImpl},
     error::DecodeError,
 };
-use serde::de::*;
+use serde::de::{
+    DeserializeOwned, DeserializeSeed, Deserializer, EnumAccess, IntoDeserializer, MapAccess,
+    SeqAccess, VariantAccess, Visitor,
+};
 
 #[cfg(feature = "std")]
 use crate::features::IoReader;
@@ -52,7 +55,7 @@ impl<C: Config, R: Reader> OwnedSerdeDecoder<DecoderImpl<R, C, ()>> {
 
 /// Attempt to decode a given type `D` from the given slice. Returns the decoded output and the amount of bytes read.
 ///
-/// Note that this does not work with borrowed types like `&str` or `&[u8]`. For that use [borrow_decode_from_slice].
+/// Note that this does not work with borrowed types like `&str` or `&[u8]`. For that use [`borrow_decode_from_slice`].
 ///
 /// See the [config] module for more information on configurations.
 ///

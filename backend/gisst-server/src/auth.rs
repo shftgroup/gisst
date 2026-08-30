@@ -375,7 +375,7 @@ impl AuthBackend {
         Ok((profile, token.access_token().clone()))
     }
     #[cfg(feature = "dummy_auth")]
-    #[allow(clippy::unused_async)]
+    #[expect(clippy::unused_async, clippy::unused_async_trait_impl)]
     async fn do_login(
         &self,
         code: String,

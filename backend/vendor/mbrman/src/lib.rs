@@ -1,3 +1,9 @@
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::doc_markdown,
+    clippy::missing_panics_doc,
+    clippy::items_after_statements
+)]
 //! A library that allows managing MBR partition tables.
 //!
 //! ## Features
@@ -165,7 +171,7 @@ use serde::ser::SerializeTuple;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_big_array::BigArray;
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::iter::{once, repeat};
+use std::iter::once;
 use std::ops::{Index, IndexMut};
 use thiserror::Error;
 
@@ -322,6 +328,7 @@ impl MBR {
     ///
     ///  -  The partitions start at index 1
     ///  -  The first 4 partitions always exist
+    #[must_use]
     pub fn get(&self, i: usize) -> Option<&MBRPartitionEntry> {
         match i {
             0 => None,
@@ -358,11 +365,13 @@ impl MBR {
     /// # Remark
     ///
     /// The primary partitions are always counted even if they are empty.
+    #[must_use]
     pub fn len(&self) -> usize {
         4 + self.logical_partitions.len()
     }
 
     /// Always false: primary partitions are always counted even if they are empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         false
     }
@@ -427,8 +436,8 @@ impl MBR {
             let mut ebr_first_chs = extended.first_chs;
             let mut ebr_last_chs = None;
             loop {
-                let offset =
-                    (extended.starting_lba as u64 + relative_ebr_lba as u64) * sector_size as u64;
+                let offset = (u64::from(extended.starting_lba) + u64::from(relative_ebr_lba))
+                    * u64::from(sector_size);
                 reader.seek(SeekFrom::Start(offset))?;
                 let (partition, next, bootstrap_code) = match EBRHeader::read_from(&mut reader) {
                     Ok(ebr) => ebr.unwrap(),
@@ -437,9 +446,8 @@ impl MBR {
                             // NOTE: if the extended partition is empty, it is not required that an
                             //       EBR exists
                             break;
-                        } else {
-                            return Err(err);
                         }
+                        return Err(err);
                     }
                 };
                 let absolute_ebr_lba = extended.starting_lba + relative_ebr_lba;
@@ -529,6 +537,7 @@ impl MBR {
     /// The cylinders cannot exceed 1023.
     ///
     /// The sectors cannot exceed 63.
+    #[must_use]
     pub fn check_geometry(&self) -> bool {
         self.cylinders > 0
             && self.cylinders <= 1023
@@ -568,7 +577,7 @@ impl MBR {
             }
 
             if self.check_geometry() {
-                for l in self.logical_partitions.iter_mut() {
+                for l in &mut self.logical_partitions {
                     l.update_chs(self.cylinders, self.heads, self.sectors)?;
                 }
             }
@@ -623,12 +632,14 @@ impl MBR {
 
     /// Get a cylinder size in sectors. This function is useful if you want to
     /// align your partitions to the cylinder.
+    #[must_use]
     pub fn get_cylinder_size(&self) -> u32 {
         u32::from(self.heads) * u32::from(self.sectors)
     }
 
     /// Finds the primary partition (ignoring extended partitions) or logical
     /// partition where the given sector resides.
+    #[must_use]
     pub fn find_at_sector(&self, sector: u32) -> Option<usize> {
         let between = |sector, start, len| sector >= start && sector < start + len;
 
@@ -706,6 +717,7 @@ impl MBR {
     ///     vec![(1, 5), (mbr.disk_size - 5, 5)]
     /// );
     /// ```
+    #[must_use]
     pub fn find_free_sectors(&self) -> Vec<(u32, u32)> {
         assert!(self.align > 0, "align must be greater than 0");
 
@@ -777,6 +789,7 @@ impl MBR {
     ///
     /// assert_eq!(mbr.find_first_place(5), Some(1));
     /// ```
+    #[must_use]
     pub fn find_first_place(&self, size: u32) -> Option<u32> {
         self.find_free_sectors()
             .iter()
@@ -812,11 +825,11 @@ impl MBR {
     ///
     /// assert_eq!(mbr.find_last_place(5), Some(mbr.disk_size - 5));
     /// ```
+    #[must_use]
     pub fn find_last_place(&self, size: u32) -> Option<u32> {
         self.find_free_sectors()
             .iter()
-            .filter(|(_, l)| *l >= size)
-            .last()
+            .rfind(|(_, l)| *l >= size)
             .map(|(i, l)| (i + l - size) / self.align * self.align)
     }
 
@@ -850,13 +863,14 @@ impl MBR {
     /// //       insert a bigger partition later
     /// assert_eq!(mbr.find_optimal_place(5), Some(mbr.disk_size - 5));
     /// ```
+    #[must_use]
     pub fn find_optimal_place(&self, size: u32) -> Option<u32> {
         let mut slots = self
             .find_free_sectors()
             .into_iter()
             .filter(|(_, l)| *l >= size)
             .collect::<Vec<_>>();
-        slots.sort_by(|(_, l1), (_, l2)| l1.cmp(l2));
+        slots.sort_by_key(|(_, l1)| *l1);
         slots.first().map(|&(i, _)| i)
     }
 
@@ -927,8 +941,7 @@ impl MBR {
         let free_sectors = spots
             .into_iter()
             .find(|(i, _)| *i == p.starting_lba + p.sectors)
-            .map(|(_, l)| l)
-            .unwrap_or(0);
+            .map_or(0, |(_, l)| l);
         Ok(p.sectors + free_sectors)
     }
 
@@ -1058,6 +1071,7 @@ pub struct MBRHeader {
 
 impl MBRHeader {
     /// Check if the partition table is copy-protected
+    #[must_use]
     pub fn is_copy_protected(&self) -> Option<bool> {
         match self.copy_protected {
             [0x00, 0x00] => Some(false),
@@ -1073,6 +1087,7 @@ impl MBRHeader {
     ///  -  The partitions start at index 1
     ///  -  The first 4 partitions always exist
     ///  -  This function does not return logical partitions
+    #[must_use]
     pub fn get(&self, i: usize) -> Option<&MBRPartitionEntry> {
         match i {
             1 => Some(&self.partition_1),
@@ -1145,6 +1160,7 @@ impl MBRHeader {
     }
 
     /// Make a new MBR header
+    #[must_use]
     pub fn new(disk_signature: [u8; 4]) -> MBRHeader {
         MBRHeader {
             bootstrap_code: [0; 440],
@@ -1265,6 +1281,7 @@ impl MBRPartitionEntry {
     /// // NOTE: an empty partition entry is considered as not allocated
     /// assert!(mbr[1].is_unused());
     /// ```
+    #[must_use]
     pub fn empty() -> MBRPartitionEntry {
         MBRPartitionEntry {
             boot: BOOT_INACTIVE,
@@ -1277,16 +1294,19 @@ impl MBRPartitionEntry {
     }
 
     /// Returns `true` if the partition entry is used (type (sys) != 0)
+    #[must_use]
     pub fn is_used(&self) -> bool {
         self.sys > 0
     }
 
     /// Returns `true` if the partition entry is not used (type (sys) == 0)
+    #[must_use]
     pub fn is_unused(&self) -> bool {
         !self.is_used()
     }
 
     /// Returns `true` if the partition is an extended type partition
+    #[must_use]
     pub fn is_extended(&self) -> bool {
         self.sys == 0x05
             || self.sys == 0x0f
@@ -1296,6 +1316,7 @@ impl MBRPartitionEntry {
     }
 
     /// Returns `true` if the partition is marked active (bootable)
+    #[must_use]
     pub fn is_active(&self) -> bool {
         self.boot == BOOT_ACTIVE
     }
@@ -1383,6 +1404,7 @@ impl CHS {
     /// # Remark
     ///
     /// The values entered in input are not checked.
+    #[must_use]
     pub fn new(cylinder: u16, head: u8, sector: u8) -> CHS {
         CHS {
             cylinder,
@@ -1396,6 +1418,7 @@ impl CHS {
     /// # Remark
     ///
     /// This is what you need on recent hardware because CHS is never used.
+    #[must_use]
     pub fn empty() -> CHS {
         CHS {
             cylinder: 0,
@@ -1470,6 +1493,7 @@ impl CHS {
     }
 
     /// Convert a CHS address to LBA
+    #[must_use]
     pub fn to_lba(self, heads: u8, sectors: u8) -> u32 {
         let heads = u32::from(heads);
         let sectors = u32::from(sectors);
@@ -1488,12 +1512,14 @@ impl CHS {
     ///
     /// This function does not check if the CHS address is withing range of
     /// possible values for a provided hard disk.
+    #[must_use]
     pub fn is_empty(self) -> bool {
         self.cylinder == 0 && self.head == 0 && self.sector == 0
     }
 
     /// Check if the CHS address is valid and within range of the possible
     /// values for the hard disk geometry provided in argument.
+    #[must_use]
     pub fn is_valid(self, cylinders: u16, heads: u8, sectors: u8) -> bool {
         // NOTE: In CHS addressing the sector numbers always start at 1, there is no sector 0
         //       https://en.wikipedia.org/wiki/Cylinder-head-sector
@@ -1517,7 +1543,7 @@ impl<'de> Visitor<'de> for CHSVisitor {
         let head = BitVec::<u8, Msb0>::from_vec(vec![seq.next_element::<u8>()?.unwrap()]);
         let mut bv = BitVec::<u8, Msb0>::from_vec(vec![seq.next_element::<u8>()?.unwrap()]);
         let mut cylinder = BitVec::<u16, Msb0>::with_capacity(10);
-        cylinder.extend(repeat(false).take(6));
+        cylinder.extend(std::iter::repeat_n(false, 6));
         cylinder.extend(bv.drain(..2));
         cylinder.extend(BitVec::<u8, Msb0>::from_vec(vec![seq
             .next_element::<u8>()?

@@ -99,7 +99,7 @@ impl HttpClient for ReqwestClient {
             body = "null".to_string();
         }
 
-        parse_response(status, expected_status_code, &body, url.to_string())
+        parse_response(status, expected_status_code, &body, url.clone())
     }
 
     fn is_tokio(&self) -> bool {

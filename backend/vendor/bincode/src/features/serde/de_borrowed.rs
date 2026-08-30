@@ -5,7 +5,10 @@ use crate::{
     error::DecodeError,
 };
 use core::marker::PhantomData;
-use serde::de::*;
+use serde::de::{
+    Deserialize, DeserializeSeed, Deserializer, EnumAccess, IntoDeserializer, MapAccess, SeqAccess,
+    VariantAccess, Visitor,
+};
 
 /// Serde decoder encapsulating a borrowed reader.
 pub struct BorrowedSerdeDecoder<'de, DE: BorrowDecoder<'de>> {

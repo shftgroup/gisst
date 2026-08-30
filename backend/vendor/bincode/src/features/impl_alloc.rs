@@ -11,7 +11,7 @@ use crate::{
 use alloc::{
     borrow::{Cow, ToOwned},
     boxed::Box,
-    collections::*,
+    collections::{BTreeMap, BTreeSet, BinaryHeap, VecDeque},
     rc::Rc,
     string::String,
     vec::Vec,
@@ -89,7 +89,7 @@ where
     fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
         // BLOCKEDTODO(https://github.com/rust-lang/rust/issues/83659): we can u8 optimize this with `.as_slice()`
         crate::enc::encode_slice_len(encoder, self.len())?;
-        for val in self.iter() {
+        for val in self {
             val.encode(encoder)?;
         }
         Ok(())
@@ -148,7 +148,7 @@ where
 {
     fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
         crate::enc::encode_slice_len(encoder, self.len())?;
-        for (key, val) in self.iter() {
+        for (key, val) in self {
             key.encode(encoder)?;
             val.encode(encoder)?;
         }
@@ -203,7 +203,7 @@ where
 {
     fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
         crate::enc::encode_slice_len(encoder, self.len())?;
-        for item in self.iter() {
+        for item in self {
             item.encode(encoder)?;
         }
         Ok(())
@@ -248,7 +248,7 @@ where
             encoder.writer().write(slices.0)?;
             encoder.writer().write(slices.1)?;
         } else {
-            for item in self.iter() {
+            for item in self {
                 item.encode(encoder)?;
             }
         }
@@ -328,7 +328,7 @@ where
             encoder.writer().write(slice)?;
             Ok(())
         } else {
-            for item in self.iter() {
+            for item in self {
                 item.encode(encoder)?;
             }
             Ok(())

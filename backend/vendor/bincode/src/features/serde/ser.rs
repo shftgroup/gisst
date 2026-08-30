@@ -6,7 +6,10 @@ use crate::{
 };
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use serde::ser::*;
+use serde::ser::{
+    Serialize, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
+    SerializeTupleStruct, SerializeTupleVariant, Serializer,
+};
 
 /// Encode the given value into a `Vec<u8>` with the given `Config`. See the [config] module for more information.
 ///

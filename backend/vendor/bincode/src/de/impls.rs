@@ -481,7 +481,7 @@ where
         if unty::type_equal::<T, u8>() {
             let mut buf = [0u8; N];
             decoder.reader().read(&mut buf)?;
-            let ptr = &mut buf as *mut _ as *mut [T; N];
+            let ptr = (&raw mut buf).cast::<[T; N]>();
 
             // Safety: we know that T is a u8, so it is perfectly safe to
             // translate an array of u8 into an array of T
@@ -513,7 +513,7 @@ where
         if unty::type_equal::<T, u8>() {
             let mut buf = [0u8; N];
             decoder.reader().read(&mut buf)?;
-            let ptr = &mut buf as *mut _ as *mut [T; N];
+            let ptr = (&raw mut buf).cast::<[T; N]>();
 
             // Safety: we know that T is a u8, so it is perfectly safe to
             // translate an array of u8 into an array of T
@@ -553,7 +553,7 @@ where
 {
     fn decode<D: Decoder<Context = Context>>(decoder: &mut D) -> Result<Self, DecodeError> {
         match super::decode_option_variant(decoder, core::any::type_name::<Option<T>>())? {
-            Some(_) => {
+            Some(()) => {
                 let val = T::decode(decoder)?;
                 Ok(Some(val))
             }
@@ -570,7 +570,7 @@ where
         decoder: &mut D,
     ) -> Result<Self, DecodeError> {
         match super::decode_option_variant(decoder, core::any::type_name::<Option<T>>())? {
-            Some(_) => {
+            Some(()) => {
                 let val = T::borrow_decode(decoder)?;
                 Ok(Some(val))
             }

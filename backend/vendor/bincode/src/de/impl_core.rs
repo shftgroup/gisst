@@ -105,7 +105,7 @@ where
 pub unsafe fn slice_assume_init_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
     // SAFETY: similar to safety notes for `slice_get_ref`, but we have a
     // mutable reference which is also guaranteed to be valid for writes.
-    unsafe { &mut *(slice as *mut [MaybeUninit<T>] as *mut [T]) }
+    unsafe { &mut *(core::ptr::from_mut::<[MaybeUninit<T>]>(slice) as *mut [T]) }
 }
 
 /// Create a new array of `MaybeUninit<T>` items, in an uninitialized state.
@@ -181,6 +181,6 @@ pub unsafe fn array_assume_init<T, const N: usize>(array: [MaybeUninit<T>; N]) -
     // And thus the conversion is safe
     unsafe {
         // intrinsics::assert_inhabited::<[T; N]>();
-        (&array as *const _ as *const [T; N]).read()
+        (&raw const array).cast::<[T; N]>().read()
     }
 }

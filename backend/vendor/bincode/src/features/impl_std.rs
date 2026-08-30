@@ -438,7 +438,7 @@ where
 {
     fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
         crate::enc::encode_slice_len(encoder, self.len())?;
-        for (k, v) in self.iter() {
+        for (k, v) in self {
             Encode::encode(k, encoder)?;
             Encode::encode(v, encoder)?;
         }
@@ -546,7 +546,7 @@ where
 {
     fn encode<E: Encoder>(&self, encoder: &mut E) -> Result<(), EncodeError> {
         crate::enc::encode_slice_len(encoder, self.len())?;
-        for item in self.iter() {
+        for item in self {
             item.encode(encoder)?;
         }
         Ok(())

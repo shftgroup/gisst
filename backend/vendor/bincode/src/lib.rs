@@ -1,6 +1,18 @@
 #![no_std]
-#![warn(missing_docs, unused_lifetimes)]
+#![warn(unused_lifetimes)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::inline_always,
+    clippy::ref_option,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::transmute_ptr_to_ptr,
+    clippy::items_after_statements,
+    clippy::needless_pass_by_value,
+    clippy::similar_names
+)]
 
 //! Bincode is a crate for encoding and decoding using a tiny binary
 //! serialization strategy.  Using it, you can easily go from having
@@ -140,7 +152,7 @@ pub fn encode_into_writer<E: enc::Encode, W: Writer, C: Config>(
 
 /// Attempt to decode a given type `D` from the given slice. Returns the decoded output and the amount of bytes read.
 ///
-/// Note that this does not work with borrowed types like `&str` or `&[u8]`. For that use [borrow_decode_from_slice].
+/// Note that this does not work with borrowed types like `&str` or `&[u8]`. For that use [`borrow_decode_from_slice`].
 ///
 /// See the [config] module for more information on configurations.
 ///
@@ -154,7 +166,7 @@ pub fn decode_from_slice<D: de::Decode<()>, C: Config>(
 
 /// Attempt to decode a given type `D` from the given slice with `Context`. Returns the decoded output and the amount of bytes read.
 ///
-/// Note that this does not work with borrowed types like `&str` or `&[u8]`. For that use [borrow_decode_from_slice].
+/// Note that this does not work with borrowed types like `&str` or `&[u8]`. For that use [`borrow_decode_from_slice`].
 ///
 /// See the [config] module for more information on configurations.
 ///

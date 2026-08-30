@@ -365,7 +365,7 @@ where
                 unsafe { core::slice::from_raw_parts(self.as_ptr().cast(), N) };
             encoder.writer().write(array_slice)
         } else {
-            for item in self.iter() {
+            for item in self {
                 item.encode(encoder)?;
             }
             Ok(())
