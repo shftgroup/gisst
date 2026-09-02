@@ -15,7 +15,7 @@ Next, build the frontend:
 
 #+BEGIN_SRC sh
 cd frontend
-npm i
+npm ci
 npm run build --workspaces --if-present
 npm run dist --workspaces --if-present
 #+END_SRC
