@@ -3,7 +3,8 @@ services:
     image: cafe.cs.pomona.edu/shftgroup/gisst-dev:latest
     env_file:
       - ./devcontainer.env
-      - ../backend/.env
+      - path: ../backend/.env
+        required: false
     environment:
       PODMAN_USERNS: keep-id
       SSH_AUTH_SOCK: "/run/ssh.sock"

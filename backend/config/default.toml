@@ -33,3 +33,9 @@ meili_url = "http://localhost:7700"
 meili_external_url = "https://localhost/search"
 meili_api_key = ""
 meili_search_key = ""
+
+[auth]
+google_client_id = ""
+google_client_secret = ""
+user_whitelist = []
+task_worker_keys = []
