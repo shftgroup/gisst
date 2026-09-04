@@ -9,8 +9,6 @@
   "initializeCommand": "./.devcontainer/initialize.sh",
   "postStartCommand": "./.devcontainer/post-start.sh",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {"moby":false},
-    "ghcr.io/devcontainers-extra/features/pre-commit:2": {}
   },
   "customizations": {
     "jetbrains": {
