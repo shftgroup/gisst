@@ -1,0 +1,59 @@
+name: Rust
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        rust:
+          - stable
+          - msrv
+        include:
+          - os: ubuntu-latest
+            rust: msrv
+            lint: 1
+          - rust: msrv
+            rust-args: --all-features
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Install toolchain
+        shell: bash
+        run: |
+          ver="${{ matrix.rust }}"
+          if [ "$ver" = msrv ]; then
+              ver=$(cargo metadata --format-version 1 --no-deps | \
+                  jq -r 'first(.packages[] | select(.rust_version != null).rust_version)')
+              extra=(-c rustfmt -c clippy)
+          fi
+          rustup toolchain install "$ver" --profile minimal --no-self-update "${extra[@]}"
+          rustup default "$ver"
+          echo "Installed:"
+          cargo --version
+          rustc --version --verbose
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo test --workspace ${{ matrix.rust-args }}
+
+      - run: cargo fmt --all -- --check
+        if: github.event_name == 'pull_request' && matrix.lint
+
+      - run: cargo clippy --all --tests --all-features -- -D warnings
+        if: github.event_name == 'pull_request' && matrix.lint

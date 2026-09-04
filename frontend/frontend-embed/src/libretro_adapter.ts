@@ -1,55 +1,75 @@
 export interface LibretroModule extends EmscriptenModule, LibretroModuleDef {
-  canvas:HTMLCanvasElement;
-  callMain(args:string[]): void;
+  canvas: HTMLCanvasElement;
+  callMain(args: string[]): void;
   // resumeMainLoop(): void;
-  EmscriptenSendCommand(msg:string):void;
-  EmscriptenReceiveCommandReply():string;
+  EmscriptenSendCommand(msg: string): void;
+  EmscriptenReceiveCommandReply(): string;
   cwrap: typeof cwrap;
 }
 interface LibretroModuleDef {
-  startRetroArch(canvas:HTMLCanvasElement, args:string[], initialized_cb:() => void):void;
-  locateFile(path:string,prefix:string):string;
-  retroArchSend(msg:string):void;
-  retroArchRecv():string|undefined;
-  ENV:Environment,
+  startRetroArch(
+    canvas: HTMLCanvasElement,
+    args: string[],
+    initialized_cb: () => void,
+  ): void;
+  locateFile(path: string, prefix: string): string;
+  retroArchSend(msg: string): void;
+  retroArchRecv(): string | undefined;
+  ENV: Environment;
   mainScriptUrlOrBlob: Blob | string;
   noInitialRun: boolean;
   noImageDecoding: boolean;
   noAudioDecoding: boolean;
-  preRun: Array<{ (mod:object|undefined): void }>;
-  postRun: Array<{ (mod:object|undefined): void }>;
+  preRun: Array<{ (mod: object | undefined): void }>;
+  postRun: Array<{ (mod: object | undefined): void }>;
   onRuntimeInitialized(): void;
-  printErr(str:string):void;
+  printErr(str: string): void;
 }
 
-const cores:Record<string,(mod:LibretroModuleDef) => Promise<LibretroModule>> = {};
+const cores: Record<
+  string,
+  (mod: LibretroModuleDef) => Promise<LibretroModule>
+> = {};
 
-async function downloadScript(src:string) : Promise<string> {
+async function downloadScript(src: string): Promise<string> {
   const resp = await fetch(src);
   const blob = await resp.blob();
   return URL.createObjectURL(blob);
 }
 
-let setupWorker:Worker|null = null;
-let filesystem_ready:boolean = false;
+let setupWorker: Worker | null = null;
+let filesystem_ready: boolean = false;
 export interface SetupResponse {
-  command:string,
-  time:string
+  command: string;
+  time: string;
 }
 
-
-export function loadRetroArch(gisst_root:string, core:string, dependencies:{[id:string]:string}, env:Environment, download_asset_bundle:boolean, loaded_cb:(mod:LibretroModule) => void) {
-  if(download_asset_bundle) {
-    if('OPFS_MOUNT' in env) {
-      if(!setupWorker) {
-        setupWorker = new Worker(new URL('./libretro.worker.ts', import.meta.url), {type:"module"});
-        setupWorker.onmessage = (msg:MessageEvent<SetupResponse>) => {
-          if(msg.data.command == "loaded_bundle") {
+export function loadRetroArch(
+  gisst_root: string,
+  core: string,
+  dependencies: { [id: string]: string },
+  env: Environment,
+  download_asset_bundle: boolean,
+  loaded_cb: (mod: LibretroModule) => void,
+) {
+  if (download_asset_bundle) {
+    if ("OPFS_MOUNT" in env) {
+      if (!setupWorker) {
+        setupWorker = new Worker(
+          new URL("./libretro.worker.ts", import.meta.url),
+          { type: "module" },
+        );
+        setupWorker.onmessage = (msg: MessageEvent<SetupResponse>) => {
+          if (msg.data.command == "loaded_bundle") {
             filesystem_ready = true;
             localStorage.setItem("asset_time", msg.data.time);
           }
-        }
-        setupWorker.postMessage({command:"load_bundle",gisst_root,time:localStorage.getItem("asset_time") ?? ""});
+        };
+        setupWorker.postMessage({
+          command: "load_bundle",
+          gisst_root,
+          time: localStorage.getItem("asset_time") ?? "",
+        });
       }
     } else {
       throw "Asset downloads currently require OPFS env variable set to /home/web_user/retroarch/";
@@ -59,7 +79,7 @@ export function loadRetroArch(gisst_root:string, core:string, dependencies:{[id:
   /**
    * Attempt to disable some default browser keys.
    */
-  const keys:Record<number, string> = {
+  const keys: Record<number, string> = {
     9: "tab",
     13: "enter",
     16: "shift",
@@ -84,35 +104,41 @@ export function loadRetroArch(gisst_root:string, core:string, dependencies:{[id:
     120: "F9",
     121: "F10",
     122: "F11",
-    123: "F12"
+    123: "F12",
   };
-  window.addEventListener('keydown', function (e:KeyboardEvent) {
+  window.addEventListener("keydown", function (e: KeyboardEvent) {
     if (keys[e.which]) {
       e.preventDefault();
     }
   });
-  const fsready:Promise<void> = new Promise((resolve) => {
+  const fsready: Promise<void> = new Promise((resolve) => {
     const check = () => {
       if (filesystem_ready || !download_asset_bundle) {
         resolve();
       } else {
         setTimeout(check, 500);
       }
-    }
+    };
     check();
   });
-  let promise:Promise<string>;
+  let promise: Promise<string>;
   if (gisst_root.startsWith("https://")) {
-    promise = downloadScript(gisst_root+'/'+core);
+    promise = downloadScript(gisst_root + "/" + core);
   } else {
-    promise = new Promise((resolve) => resolve(gisst_root+'/'+core));
+    promise = new Promise((resolve) => resolve(gisst_root + "/" + core));
   }
-  Promise.all([promise,fsready]).then(([scriptUrlOrBlob,_]) => {
-    let initial_mod:LibretroModule | undefined;
-    const module:LibretroModuleDef = {
-      startRetroArch: function(canvas:HTMLCanvasElement, retro_args:string[], initialized_cb:() => void) {
+  Promise.all([promise, fsready]).then(([scriptUrlOrBlob, _]) => {
+    let initial_mod: LibretroModule | undefined;
+    const module: LibretroModuleDef = {
+      startRetroArch: function (
+        canvas: HTMLCanvasElement,
+        retro_args: string[],
+        initialized_cb: () => void,
+      ) {
         const me = <LibretroModule>this;
-        if(!canvas.tabIndex) { canvas.tabIndex = 1; }
+        if (!canvas.tabIndex) {
+          canvas.tabIndex = 1;
+        }
         canvas.addEventListener("click", () => canvas.focus());
         me.canvas = canvas;
         me.ENV = env;
@@ -120,11 +146,11 @@ export function loadRetroArch(gisst_root:string, core:string, dependencies:{[id:
         initialized_cb();
         canvas.focus();
       },
-      retroArchSend: function(msg:string) {
+      retroArchSend: function (msg: string) {
         const me = <LibretroModule>this;
         me.EmscriptenSendCommand(msg);
       },
-      retroArchRecv: function() {
+      retroArchRecv: function () {
         const me = <LibretroModule>this;
         return me.EmscriptenReceiveCommandReply();
       },
@@ -133,33 +159,39 @@ export function loadRetroArch(gisst_root:string, core:string, dependencies:{[id:
       noImageDecoding: true,
       noAudioDecoding: true,
       preRun: [
-        function(init_mod:object|undefined) {
-          const module = <LibretroModule>(init_mod!);
-          for (const [k,v] of Object.entries(env)) {
+        function (init_mod: object | undefined) {
+          const module = <LibretroModule>init_mod!;
+          for (const [k, v] of Object.entries(env)) {
             module.ENV[k] = v;
           }
         },
-        function(init_mod:object|undefined) {
-          if(init_mod === undefined) { throw "Must use modularized emscripten"; }
-          initial_mod = <LibretroModule>(init_mod!);
+        function (init_mod: object | undefined) {
+          if (init_mod === undefined) {
+            throw "Must use modularized emscripten";
+          }
+          initial_mod = <LibretroModule>init_mod!;
         },
       ],
-      postRun:[],
-      onRuntimeInitialized: function() {
-        if(initial_mod === undefined) { throw "Must use modularized emscripten libretro"; }
-        const module = <LibretroModule>(initial_mod!);
+      postRun: [],
+      onRuntimeInitialized: function () {
+        if (initial_mod === undefined) {
+          throw "Must use modularized emscripten libretro";
+        }
+        const module = <LibretroModule>initial_mod!;
         loaded_cb(module);
       },
-      locateFile: function(path, _prefix) {
-        return gisst_root+'/'+dependencies[path];
+      locateFile: function (path, _prefix) {
+        return gisst_root + "/" + dependencies[path];
       },
-      printErr: function(text:string) {
+      printErr: function (text: string) {
         console.log(text);
       },
-      mainScriptUrlOrBlob: scriptUrlOrBlob
+      mainScriptUrlOrBlob: scriptUrlOrBlob,
     };
-    function instantiate(core_factory:(mod:LibretroModuleDef) => Promise<LibretroModule>) {
-      core_factory(module).catch(err => {
+    function instantiate(
+      core_factory: (mod: LibretroModuleDef) => Promise<LibretroModule>,
+    ) {
+      core_factory(module).catch((err) => {
         console.error("Couldn't instantiate module", err);
         throw err;
       });
@@ -167,11 +199,18 @@ export function loadRetroArch(gisst_root:string, core:string, dependencies:{[id:
     if (core in cores) {
       instantiate(cores[core]);
     } else {
-      const importPromise = import(/* @vite-ignore */ (new URL(scriptUrlOrBlob, import.meta.url)).toString());
-      importPromise.then(fac => {
-        cores[core] = fac.default;
-        instantiate(cores[core]);
-      }).catch(err => { console.error("Couldn't instantiate module", err); throw err; });
+      const importPromise = import(
+        /* @vite-ignore */ new URL(scriptUrlOrBlob, import.meta.url).toString()
+      );
+      importPromise
+        .then((fac) => {
+          cores[core] = fac.default;
+          instantiate(cores[core]);
+        })
+        .catch((err) => {
+          console.error("Couldn't instantiate module", err);
+          throw err;
+        });
     }
   });
 }

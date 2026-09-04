@@ -1,33 +1,31 @@
-import checker from 'vite-plugin-checker';
-import sourcemaps from 'rollup-plugin-sourcemaps';
-import mkcert from 'vite-plugin-mkcert';
-import fs from 'node:fs';
-import sirv from 'sirv';
-import mockApiPlugin from "vite-mock-api";
-import { defineConfig, esmExternalRequirePlugin } from 'vite';
+import checker from "vite-plugin-checker";
+import mkcert from "vite-plugin-mkcert";
+import fs from "node:fs";
+import sirv from "sirv";
+import mockApiPlugin from "@gisst/vite-mock-api";
+import { defineConfig, esmExternalRequirePlugin } from "vite";
 const ServerFilesPlugin = {
-  name: 'serve-storage-files',
+  name: "serve-storage-files",
   configureServer(server) {
-    const serverStatic = sirv('mock-data', {})
+    const serverStatic = sirv("mock-data", {});
     server.middlewares.use(serverStatic);
-  }
-}
+  },
+};
 
-export default defineConfig ({
+export default defineConfig({
   base: "./",
   plugins: [
     esmExternalRequirePlugin({
-      external: ['esbuild'],
+      external: ["esbuild"],
     }),
     // LoggerPlugin,
     mockApiPlugin(),
-    mkcert({savePath: "../../test-cert/"}),
+    mkcert({ savePath: "../../test-cert/" }),
     checker({
       // e.g. use TypeScript check
       typescript: true,
     }),
-    sourcemaps(),
-    ServerFilesPlugin
+    ServerFilesPlugin,
   ],
   build: {
     sourcemap: true,
@@ -35,19 +33,19 @@ export default defineConfig ({
       output: {
         entryFileNames: `assets/[name].js`,
         chunkFileNames: `assets/[name].js`,
-        assetFileNames: `assets/[name].[ext]`
+        assetFileNames: `assets/[name].[ext]`,
       },
-    }
+    },
   },
   server: {
     port: 5180,
     strictPort: true,
     https: true,
     proxy: {},
-    headers:{
-      "Cross-Origin-Embedder-Policy":"require-corp",
-      "Cross-Origin-Resource-Policy":"cross-origin",
-      "Cross-Origin-Opener-Policy":"same-origin"
-    }
-  }
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Resource-Policy": "cross-origin",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
+  },
 });

@@ -1,6 +1,6 @@
-import { resolve } from 'path'
-import { defineConfig } from 'vite'
-import dts from 'vite-plugin-dts'
+import { resolve } from "path";
+import { defineConfig } from "vite";
+import dts from "vite-plugin-dts";
 
 const htmlImport = {
   name: "htmlImport",
@@ -13,46 +13,52 @@ const htmlImport = {
    */
   transform(code, id) {
     if (/^.*\.html$/g.test(id)) {
-      code = `export default \`${code}\``
+      code = `export default \`${code}\``;
     }
-    return { code, map:null }
-  }
-}
+    return { code, map: null };
+  },
+};
 export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        quietDeps: true
-      }
-    }
+        quietDeps: true,
+      },
+    },
   },
   build: {
     lib: {
       // Could also be a dictionary or array of multiple entry points
-      entry: resolve(__dirname, 'src/ts/main.ts'),
-      name: 'GisstPlayer',
-      formats: ['es'],
+      entry: resolve(__dirname, "src/ts/main.ts"),
+      name: "GisstPlayer",
+      formats: ["es"],
       // the proper extensions will be added
-      fileName: 'gisst-player',
+      fileName: "gisst-player",
     },
-    sourcemap:true,
-    outDir:"dist"
+    sourcemap: true,
+    outDir: "dist",
   },
   plugins: [
-      dts({skipDiagnostics:false,logDiagnostics:true,insertTypesEntry:true,copyDtsFiles:true,outputDir: ['dist', 'types'],}),
-      htmlImport
+    dts({
+      skipDiagnostics: false,
+      logDiagnostics: true,
+      insertTypesEntry: true,
+      copyDtsFiles: true,
+      outputDir: ["dist", "types"],
+    }),
+    htmlImport,
   ],
   resolve: {
     alias: {
-      '~bootstrap': resolve(__dirname, '../node_modules/bootstrap'),
-      '~keyboard-css': resolve(__dirname, '../node_modules/keyboard-css'),
-    }
+      "~bootstrap": resolve(__dirname, "../node_modules/bootstrap"),
+      "~keyboard-css": resolve(__dirname, "../node_modules/keyboard-css"),
+    },
   },
   // root: resolve(__dirname, 'src'),
   rollupOptions: {
     // make sure to externalize deps that shouldn't be bundled
     // into your library
     external: [],
-    output: {globals:{}},
+    output: { globals: {} },
   },
-})
+});

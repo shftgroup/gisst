@@ -1,7 +1,7 @@
 {
   "format_version": "1",
   "script_version": "1.0.0",
-  "rust_version": "1.95.0",
+  "rust_version": "1.98.1",
   "emsdk_version": "4.0.17",
   "v86": {
     "repo": "https://github.com/copy/v86",

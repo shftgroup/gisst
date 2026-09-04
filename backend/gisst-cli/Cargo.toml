@@ -2,22 +2,23 @@
 name = "gisst-cli"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-walkdir = "2.5.0"
-config = {  version = "0.15.23", features = ["toml"], default-features = false }
-uuid = { version = "1.23", features = ["serde", "v4"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = { version = "1.0.149", features = ["raw_value"] }
-sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json"], default-features=false }
-tokio = { version = "1.52.3", features = ["full"] }
-thiserror = "2.0.18"
-log = "0.4.29"
-env_logger = "0.11.10"
-clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
-clap-verbosity-flag = "3.0.4"
-anyhow = "1.0.102"
-gisst = { path = "../gisst" }
-chrono = { version = "0.4.44", features = ["clock"]}
+walkdir.workspace = true
+config = { workspace = true, features = ["toml"] }
+uuid = { workspace = true, features = ["serde", "v4"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value"] }
+sqlx = { workspace = true, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json"] }
+tokio = { workspace = true, features = ["full"] }
+thiserror.workspace = true
+log.workspace = true
+env_logger.workspace = true
+clap = { workspace = true, features = ["derive", "cargo", "env"] }
+clap-verbosity-flag.workspace = true
+anyhow.workspace = true
+gisst.workspace = true
+chrono = { workspace = true, features = ["clock"] }

@@ -63,3 +63,10 @@ psxbios
 /build.zip
 /cores.tgz
 /frontend/frontend-build.sh
+PETSCOP.*
+incri.*
+.devcontainer/devcontainer-lock.json
+**/mock-data/assets
+backend/local
+vault_pw
+.fdignore

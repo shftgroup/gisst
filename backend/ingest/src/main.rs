@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_debug_formatting)]
-use std::sync::Arc;
+use std::rc::Rc;
 
 use anyhow::Result;
 use clap::Parser;
@@ -100,7 +100,6 @@ pub enum IngestError {
 #[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<(), IngestError> {
-    use rayon::prelude::*;
     let Args {
         rdb,
         dir: roms,
@@ -121,10 +120,10 @@ async fn main() -> Result<(), IngestError> {
         .filter_level(verbose.log_level_filter())
         .init();
     info!("Connecting to database: {gisst_cli_db_url}");
-    let pool: Arc<PgPool> = Arc::new(get_db_by_url(gisst_cli_db_url.clone()).await?);
+    let pool: Rc<PgPool> = Rc::new(get_db_by_url(gisst_cli_db_url.clone()).await?);
     info!("DB connection successful.");
     let storage_root = gisst_storage_root_path.clone();
-    info!("Storage root is set to: {}", &storage_root);
+    info!("Storage root is set to: {storage_root}");
     let mut base_conn = pool.begin().await?;
     let ra_cfg_object_id = insert_file_object(
         &mut base_conn,
@@ -162,117 +161,63 @@ async fn main() -> Result<(), IngestError> {
 
     base_conn.commit().await?;
 
-    let db = Arc::new(RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?);
-    let roms = Arc::new(std::path::PathBuf::from(roms));
+    let db = Rc::new(RDB::open(std::path::Path::new(&rdb)).map_err(|_| IngestError::RDB())?);
+    let roms = Rc::new(std::path::PathBuf::from(roms));
     let files: Vec<_> = walkdir::WalkDir::new(&*roms)
         .into_iter()
         .map(|e| e.unwrap())
         .collect();
 
     let handle = tokio::runtime::Handle::current();
-    let result: Result<_, _> = files
-        .par_iter()
-        .map(|entry| {
-            if !entry.file_type().is_file() {
-                return Ok(());
-            }
-            let path = entry.path().to_owned();
-            let file_name = entry.file_name().to_string_lossy().to_string();
-            let ext = path
-                .extension()
-                .map(std::ffi::OsStr::to_string_lossy)
-                .unwrap_or_default()
-                .into_owned();
-            let stem = path
-                .file_stem()
-                .map(std::ffi::OsStr::to_string_lossy)
-                .unwrap_or_default()
-                .into_owned();
-            if matches!(
-                ext.as_str(),
-                "chd" | "cue" | "bin" | "iso" | "srm" | "7z" | "zip"
-            ) {
-                // Skip this one
-                return Ok(());
-            }
+    files.iter().try_for_each(|entry| {
+        if !entry.file_type().is_file() {
+            return Ok(());
+        }
+        let path = entry.path().to_owned();
+        let file_name = entry.file_name().to_string_lossy().to_string();
+        let ext = path
+            .extension()
+            .map(std::ffi::OsStr::to_string_lossy)
+            .unwrap_or_default()
+            .into_owned();
+        let stem = path
+            .file_stem()
+            .map(std::ffi::OsStr::to_string_lossy)
+            .unwrap_or_default()
+            .into_owned();
+        if matches!(
+            ext.as_str(),
+            "chd" | "cue" | "bin" | "iso" | "srm" | "7z" | "zip"
+        ) {
+            // Skip this one
+            return Ok(());
+        }
 
-            let dep_ids = dep_ids.clone();
-            let db = Arc::clone(&db);
-            let roms = Arc::clone(&roms);
-            let platform = platform.clone();
-            let core_name = core_name.clone();
-            let core_version = core_version.clone();
-            let storage_root = storage_root.clone();
-            let pool = Arc::clone(&pool);
-            let indexer = indexer.clone();
-            handle.block_on(async move {
-                let mut tx = pool.begin().await?;
+        let dep_ids = dep_ids.clone();
+        let db = Rc::clone(&db);
+        let roms = Rc::clone(&roms);
+        let platform = platform.clone();
+        let core_name = core_name.clone();
+        let core_version = core_version.clone();
+        let storage_root = storage_root.clone();
+        let pool = Rc::clone(&pool);
+        let indexer = indexer.clone();
+        handle.block_on(async move {
+            let mut tx = pool.begin().await?;
 
-                // acquire a connection pool -- start transaction here
-                // multi disc rom
-                if ext.eq_ignore_ascii_case("m3u") {
-                    let mut found = false;
-                    info!("playlist file {path:?}");
-                    for file in files_of_playlist(&roms, &path)? {
-                        // match find_entry(&mut conn, &db, &file).await? {
-                        match find_entry(&mut tx, &db, &file).await? {
-                            FindResult::AlreadyHave => {
-                                found = true;
-                                break;
-                            }
-                            FindResult::NotInRDB => {}
-                            FindResult::InRDB(rval) => {
-                                let instance_id = create_metadata_records_from_rval(
-                                    &mut tx,
-                                    &file_name,
-                                    &rval,
-                                    &platform,
-                                    &core_name,
-                                    &core_version,
-                                    &indexer,
-                                )
-                                .await?;
-                                link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
-                                create_playlist_instance_objects(
-                                    &mut tx,
-                                    &storage_root,
-                                    &roms,
-                                    instance_id,
-                                    &path,
-                                    rval.map_get("description"),
-                                )
-                                .await?;
-                                found = true;
-                                break;
-                            }
+            // acquire a connection pool -- start transaction here
+            // multi disc rom
+            if ext.eq_ignore_ascii_case("m3u") {
+                let mut found = false;
+                info!("playlist file {path:?}");
+                for file in files_of_playlist(&roms, &path)? {
+                    // match find_entry(&mut conn, &db, &file).await? {
+                    match find_entry(&mut tx, &db, &file).await? {
+                        FindResult::AlreadyHave => {
+                            found = true;
+                            break;
                         }
-                    }
-                    if !found && force {
-                        let instance_id = create_metadata_records(
-                            &mut tx,
-                            &file_name,
-                            &stem,
-                            &file_name,
-                            &platform,
-                            &core_name,
-                            &core_version,
-                            &indexer,
-                        )
-                        .await?;
-                        link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
-                        create_playlist_instance_objects(
-                            &mut tx,
-                            &storage_root,
-                            &roms,
-                            instance_id,
-                            &path,
-                            Some(stem.clone()),
-                        )
-                        .await?;
-                    }
-                } else {
-                    // normal rom
-                    match find_entry(&mut tx, &db, &path).await? {
+                        FindResult::NotInRDB => {}
                         FindResult::InRDB(rval) => {
                             let instance_id = create_metadata_records_from_rval(
                                 &mut tx,
@@ -285,7 +230,7 @@ async fn main() -> Result<(), IngestError> {
                             )
                             .await?;
                             link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
-                            create_single_file_instance_objects(
+                            create_playlist_instance_objects(
                                 &mut tx,
                                 &storage_root,
                                 &roms,
@@ -293,46 +238,100 @@ async fn main() -> Result<(), IngestError> {
                                 &path,
                                 rval.map_get("description"),
                             )
-                            .await
-                            .expect("Create_single_file_instance_objects failed for record found in RDB");
-                        }
-                        FindResult::NotInRDB | FindResult::AlreadyHave if force => {
-                            let instance_id = create_metadata_records(
-                                &mut tx,
-                                &file_name,
-                                &stem,
-                                &file_name,
-                                &platform,
-                                &core_name,
-                                &core_version,
-                                &indexer,
-                            )
                             .await?;
-                            link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
-                            create_single_file_instance_objects(
-                                &mut tx,
-                                &storage_root,
-                                &roms,
-                                instance_id,
-                                &path,
-                                Some(stem),
-                            )
-                            .await
-                            .expect("Create_single_file_instance_objects failed for force-added record");
-                            // ?? unwraps Result<(), Ingest Error>
+                            found = true;
+                            break;
                         }
-                        // _ => Ok(()),
-                        _ => {}
                     }
                 }
-                // commit transaction + ok
-                tx.commit().await.map_err(IngestError::Sql)?;
-                // TODO: index instance here
-                Ok(())
-            })
+                if !found && force {
+                    let instance_id = create_metadata_records(
+                        &mut tx,
+                        &file_name,
+                        &stem,
+                        &file_name,
+                        &platform,
+                        &core_name,
+                        &core_version,
+                        &indexer,
+                    )
+                    .await?;
+                    link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                    create_playlist_instance_objects(
+                        &mut tx,
+                        &storage_root,
+                        &roms,
+                        instance_id,
+                        &path,
+                        Some(stem.clone()),
+                    )
+                    .await?;
+                }
+            } else {
+                // normal rom
+                match find_entry(&mut tx, &db, &path).await? {
+                    FindResult::InRDB(rval) => {
+                        let instance_id = create_metadata_records_from_rval(
+                            &mut tx,
+                            &file_name,
+                            &rval,
+                            &platform,
+                            &core_name,
+                            &core_version,
+                            &indexer,
+                        )
+                        .await?;
+                        link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                        create_single_file_instance_objects(
+                            &mut tx,
+                            &storage_root,
+                            &roms,
+                            instance_id,
+                            &path,
+                            rval.map_get("description"),
+                        )
+                        .await
+                        .expect(
+                            "Create_single_file_instance_objects failed for record found in RDB",
+                        );
+                    }
+                    FindResult::NotInRDB | FindResult::AlreadyHave if force => {
+                        let instance_id = create_metadata_records(
+                            &mut tx,
+                            &file_name,
+                            &stem,
+                            &file_name,
+                            &platform,
+                            &core_name,
+                            &core_version,
+                            &indexer,
+                        )
+                        .await?;
+                        link_deps(&mut tx, ra_cfg_object_id, &dep_ids, instance_id).await?;
+                        create_single_file_instance_objects(
+                            &mut tx,
+                            &storage_root,
+                            &roms,
+                            instance_id,
+                            &path,
+                            Some(stem),
+                        )
+                        .await
+                        .expect(
+                            "Create_single_file_instance_objects failed for force-added record",
+                        );
+                        // ?? unwraps Result<(), Ingest Error>
+                    }
+                    // _ => Ok(()),
+                    _ => {}
+                }
+            }
+            // commit transaction + ok
+            tx.commit().await.map_err(IngestError::Sql)?;
+            // TODO: index instance here
+            Ok(())
         })
-        .collect();
-    result
+    })
 }
 
 async fn get_db_by_url(db_url: String) -> sqlx::Result<PgPool> {

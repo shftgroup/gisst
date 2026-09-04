@@ -1,20 +1,32 @@
 import * as zip from "@zip.js/zip.js";
-import {LibretroModule} from './libretro_adapter';
+import { LibretroModule } from "./libretro_adapter";
 
-type FileContents = null|Index;
+type FileContents = null | Index;
 
 export interface Index {
   [loc: string]: FileContents;
 }
 
-export async function fetchZip(module:LibretroModule, zipfile:string, mount:string) {
-  const zipReader = new zip.ZipReader(new zip.HttpReader(zipfile), {useWebWorkers:false});
+export async function fetchZip(
+  module: LibretroModule,
+  zipfile: string,
+  mount: string,
+) {
+  const zipReader = new zip.ZipReader(new zip.HttpReader(zipfile), {
+    useWebWorkers: false,
+  });
   const entries = await zipReader.getEntries();
-  for(const file of entries) {
+  for (const file of entries) {
     if (!file.directory) {
       const writer = new zip.Uint8ArrayWriter();
-      const data:Uint8Array = await file.getData(writer);
-      module.FS.createPreloadedFile(mount+file.filename, undefined, data, true, true);
+      const data: Uint8Array = await file.getData(writer);
+      module.FS.createPreloadedFile(
+        mount + file.filename,
+        undefined,
+        data,
+        true,
+        true,
+      );
     } else {
       module.FS.createPath(mount, file.filename, true, true);
     }

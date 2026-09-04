@@ -2,13 +2,14 @@
 name = "rdb-sys"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base16ct                = {version="1.0.0",features=["alloc"]}
+base16ct                = { workspace = true, features = ["alloc"] }
 
 
 
 [build-dependencies]
-cc = "1.2"
+cc.workspace = true

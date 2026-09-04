@@ -1,22 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Embedulator</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Embedulator</title>
   </head>
   <body>
     <script type="module" src="/src/main.ts"></script>
-    <div id="container1" style="width: 300px">
-    </div>
-    <gisst-embed id="container2" width="800px" src="gisst://00000000000000000000000000001001"></gisst-embed>
-    <div id="container3" style="width: 500px">
-    </div>
-    <gisst-embed id="container4" width="600px" src="gisst://00000000000000000000000000012100"></gisst-embed>
+    <div id="container1" style="width: 300px"></div>
+    <gisst-embed
+      id="container2"
+      width="800px"
+      src="gisst://00000000000000000000000000001001"
+    ></gisst-embed>
+    <div id="container3" style="width: 500px"></div>
+    <gisst-embed
+      id="container4"
+      width="600px"
+      src="gisst://00000000000000000000000000012100"
+    ></gisst-embed>
     <script type="module">
-        import {embed} from './src/main';
-        embed("gisst://00000000000000000000000000001001", document.getElementById("container1"));
-      embed("gisst://00000000000000000000000000012100", document.getElementById("container3"));
+      import { embed } from "./src/main";
+      embed(
+        "gisst://00000000000000000000000000001001",
+        document.getElementById("container1"),
+      );
+      embed(
+        "gisst://00000000000000000000000000012100",
+        document.getElementById("container3"),
+      );
     </script>
   </body>
 </html>

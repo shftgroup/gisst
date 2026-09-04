@@ -174,10 +174,22 @@ pub async fn get_data(
         host_protocol: url_parts[0].to_string(),
         citation_data: Some(citation_data),
     };
-    let pending_task = if let PlayerStartTemplateInfo::Replay(replay) = &embed_data.start && replay.video_id.is_none() && embed_data.environment.environment_framework == gisst::model_enums::Framework::RetroArch {
-        tracing::info!("No video yet for {:?}, queuing task if not present",replay.replay_id);
-        Some(crate::task::Task::create_retroarch_replay_video(&mut conn, &embed_data).await.map_err(crate::task::CreateTaskError::CreateRetroArchReplayVideoError)?)
-    } else { None };
+    let pending_task = if let PlayerStartTemplateInfo::Replay(replay) = &embed_data.start
+        && replay.video_id.is_none()
+        && embed_data.environment.environment_framework == gisst::model_enums::Framework::RetroArch
+    {
+        tracing::info!(
+            "No video yet for {:?}, queuing task if not present",
+            replay.replay_id
+        );
+        Some(
+            crate::task::Task::create_retroarch_replay_video(&mut conn, &embed_data)
+                .await
+                .map_err(crate::task::CreateTaskError::CreateRetroArchReplayVideoError)?,
+        )
+    } else {
+        None
+    };
     let accept: Option<String> = parse_header(&headers, "Accept");
     Ok((if accept.is_none()
         || accept.as_ref().is_some_and(|hv| hv.contains("text/html"))

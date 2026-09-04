@@ -63,9 +63,9 @@ async fn get_instances(
             let page_num = params.page_num.unwrap_or(1);
             let limit = params.limit.unwrap_or(100).min(100);
             let search = app_state.search.instances();
-            let results: meilisearch_sdk::search::SearchResults<InstanceWork> = search
+            let results: gisst::search::SearchResults<InstanceWork> = search
                 .search()
-                .with_facets(meilisearch_sdk::search::Selectors::Some(&["work_platform"]))
+                .with_facets(gisst::search::Selectors::Some(&["work_platform"]))
                 .with_hits_per_page(limit as usize)
                 .with_page(page_num as usize)
                 .with_filter(

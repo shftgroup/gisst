@@ -1,39 +1,54 @@
-import {LegacyReplay} from './v86legacyreplay';
-import {nonnull,bytes_to_uuid} from './utils';
-import {WorkerResponse} from './worker_protocol.d';
-import ReplayWorker from './replay_worker.ts?worker&inline';
-import {mux_videos} from './utils';
+import { LegacyReplay } from "./v86legacyreplay";
+import { nonnull, bytes_to_uuid } from "./utils";
+import { WorkerResponse } from "./worker_protocol.d";
+import ReplayWorker from "./replay_worker.ts?worker&inline";
+import { mux_videos } from "./utils";
 export enum Evt {
   KeyCode = 0,
   MouseClick = 1,
   MouseDelta = 2,
   MouseAbsolute = 3,
-  MouseWheel = 4
-};
-export const EvtNames:string[] = ["keyboard-code", "mouse-click", "mouse-delta", "mouse-absolute", "mouse-wheel"];
-const REPLAY_CHECKPOINT_INTERVAL:number = 100003*1000*12;
+  MouseWheel = 4,
+}
+export const EvtNames: string[] = [
+  "keyboard-code",
+  "mouse-click",
+  "mouse-delta",
+  "mouse-absolute",
+  "mouse-wheel",
+];
+const REPLAY_CHECKPOINT_INTERVAL: number = 100003 * 1000 * 12;
 /* Cycles per millisecond (appx) * milliseconds per second * number of seconds */
 
 const REPLAY_VERSION = 1;
 const REPLAY_LEGACY_VERSION = 0;
 
 export enum ReplayMode {
-  Inactive=0,
+  Inactive = 0,
   Record,
   Playback,
   Finished,
 }
 
 export class Checkpoint {
-  header_info:Uint8Array;
-  superblock_seq:Uint32Array;
-  name:string;
-  thumbnail:string;
-  when:number;
-  event_index:number;
-  new_blocks:number[];
-  new_superblocks:number[];
-  constructor(when:number, name:string, event_index:number, header_info:Uint8Array, new_blocks:number[], new_superblocks:number[], superblock_seq:Uint32Array, thumbnail:string) {
+  header_info: Uint8Array;
+  superblock_seq: Uint32Array;
+  name: string;
+  thumbnail: string;
+  when: number;
+  event_index: number;
+  new_blocks: number[];
+  new_superblocks: number[];
+  constructor(
+    when: number,
+    name: string,
+    event_index: number,
+    header_info: Uint8Array,
+    new_blocks: number[],
+    new_superblocks: number[],
+    superblock_seq: Uint32Array,
+    thumbnail: string,
+  ) {
     this.when = when;
     this.name = name;
     this.event_index = event_index;
@@ -46,42 +61,49 @@ export class Checkpoint {
 }
 
 export class Replay {
-  events:ReplayEvent[]=[]; // replace with file
-  checkpoints:Checkpoint[]=[]; // replace with file
-  index:number=0;
-  checkpoint_index:number=0;
-  id:string="";
-  mode:ReplayMode=ReplayMode.Inactive;
-  last_time:number=0;
-  worker!:Worker;
-  wraps:number=0;
-  version:number=REPLAY_VERSION;
-  pending_serialize:((ab:ArrayBuffer)=>void)|null = null;
-  pending_deserialize:((data:{id:string,version:number,events:ReplayEvent[],checkpoints:Checkpoint[]}) => void) | null = null;
-  pending_decode_number:number = 0;
-  pending_decode:((ab:ArrayBuffer)=>void)|null = null;
-  pending_fences:((seq:number)=>void)[] = [];
-  last_fence:number = 0;
-  video:File|null = null;
+  events: ReplayEvent[] = []; // replace with file
+  checkpoints: Checkpoint[] = []; // replace with file
+  index: number = 0;
+  checkpoint_index: number = 0;
+  id: string = "";
+  mode: ReplayMode = ReplayMode.Inactive;
+  last_time: number = 0;
+  worker!: Worker;
+  wraps: number = 0;
+  version: number = REPLAY_VERSION;
+  pending_serialize: ((ab: ArrayBuffer) => void) | null = null;
+  pending_deserialize:
+    | ((data: {
+        id: string;
+        version: number;
+        events: ReplayEvent[];
+        checkpoints: Checkpoint[];
+      }) => void)
+    | null = null;
+  pending_decode_number: number = 0;
+  pending_decode: ((ab: ArrayBuffer) => void) | null = null;
+  pending_fences: ((seq: number) => void)[] = [];
+  last_fence: number = 0;
+  video: File | null = null;
   // one per chunk/checkpoint
   // on seek, drop segments
   // on stop recording, set video to mux the chunk videos all together (demux them and then mux back into one)
-  recording_video:Blob[][] = [];
-  encode_proms:Promise<void>[] = [];
+  recording_video: Blob[][] = [];
+  encode_proms: Promise<void>[] = [];
   // will use many recorders, only one active at a time
-  recorder: MediaRecorder|null = null;
+  recorder: MediaRecorder | null = null;
   // one stream for the whole recording, held in an instance variable for easy access
-  recording_stream: MediaStream|null = null;
-  container: HTMLDivElement|null = null;
+  recording_stream: MediaStream | null = null;
+  container: HTMLDivElement | null = null;
 
-  static async create(id:string, mode:ReplayMode):Promise<Replay>{
+  static async create(id: string, mode: ReplayMode): Promise<Replay> {
     const ths = new Replay();
     ths.id = id;
     ths.mode = mode;
     ths.worker = new ReplayWorker();
-    return new Promise((resolve,_reject) => {
+    return new Promise((resolve, _reject) => {
       ths.worker.addEventListener("message", (msg) => {
-      const data = msg.data as WorkerResponse;
+        const data = msg.data as WorkerResponse;
         switch (data.type) {
           case "initialized": {
             resolve(ths);
@@ -95,7 +117,7 @@ export class Replay {
             cp.new_superblocks = data.args.new_superblocks;
             break;
           }
-          case "serialize":{
+          case "serialize": {
             nonnull(ths.pending_serialize);
             ths.pending_serialize(data.args.result);
             ths.pending_serialize = null;
@@ -127,27 +149,48 @@ export class Replay {
             break;
         }
       });
-      ths.worker.postMessage({type:"init", args:{id:ths.id,version:ths.version}});
+      ths.worker.postMessage({
+        type: "init",
+        args: { id: ths.id, version: ths.version },
+      });
     });
   }
-  public async restore_checkpoint(header_info:Uint8Array, superblock_seq:Uint32Array):Promise<ArrayBuffer> {
-    return new Promise((resolve,_reject) => {
+  public async restore_checkpoint(
+    header_info: Uint8Array,
+    superblock_seq: Uint32Array,
+  ): Promise<ArrayBuffer> {
+    return new Promise((resolve, _reject) => {
       if (this.pending_decode) {
-        console.warn("Checkpoint restore asked for while in progress; original restore will be ignored");
+        console.warn(
+          "Checkpoint restore asked for while in progress; original restore will be ignored",
+        );
       }
       this.pending_decode_number++;
       const which = this.pending_decode_number;
       this.pending_decode = resolve;
-      this.worker.postMessage({type:"decode", args:{which, header_info, superblock_seq}});
+      this.worker.postMessage({
+        type: "decode",
+        args: { which, header_info, superblock_seq },
+      });
     });
   }
-  async reset_to_checkpoint(n:number, mode:ReplayMode, emulator:V86):Promise<Checkpoint[]> {
+  async reset_to_checkpoint(
+    n: number,
+    mode: ReplayMode,
+    emulator: V86,
+  ): Promise<Checkpoint[]> {
     // for file: rewind or fast forward until checkpoint is found, can't just skip like this
     const checkpoint = this.checkpoints[n];
-    const state = await this.restore_checkpoint(checkpoint.header_info, checkpoint.superblock_seq);
+    const state = await this.restore_checkpoint(
+      checkpoint.header_info,
+      checkpoint.superblock_seq,
+    );
     await emulator.restore_state(state);
-    this.seek_internal(n+1, checkpoint.event_index, checkpoint.when);
-    const dropped_checkpoints = mode == ReplayMode.Record ? this.checkpoints.slice(this.checkpoint_index) : [];
+    this.seek_internal(n + 1, checkpoint.event_index, checkpoint.when);
+    const dropped_checkpoints =
+      mode == ReplayMode.Record
+        ? this.checkpoints.slice(this.checkpoint_index)
+        : [];
     // drop any video segments from the future
     if (mode == ReplayMode.Record && this.recording_stream) {
       if (this.recorder) {
@@ -156,16 +199,22 @@ export class Replay {
         this.recorder.onstop = (_e) => {};
         this.recorder.stop();
       }
-      const rec = new MediaRecorder(this.recording_stream, {mimeType:"video/webm"});
+      const rec = new MediaRecorder(this.recording_stream, {
+        mimeType: "video/webm",
+      });
       this.recording_video.length = n;
       this.recording_video.push([]);
       rec.ondataavailable = (e) => {
         this.recording_video[n].push(e.data);
       };
       this.encode_proms.length = n;
-      this.encode_proms.push(new Promise((resolve) => {
-        rec.onstop = (_e) => {resolve()};
-      }));
+      this.encode_proms.push(
+        new Promise((resolve) => {
+          rec.onstop = (_e) => {
+            resolve();
+          };
+        }),
+      );
       this.recorder = rec;
       this.recorder.start();
     }
@@ -173,24 +222,36 @@ export class Replay {
       this.resume(mode, emulator);
     }
     if (dropped_checkpoints.length) {
-      this.worker.postMessage({type:"drop_checkpoints", args:{when:checkpoint.when}});
+      this.worker.postMessage({
+        type: "drop_checkpoints",
+        args: { when: checkpoint.when },
+      });
     }
     return dropped_checkpoints;
   }
-  private seek_internal(checkpoint_index:number, event_index:number, t:number) {
+  private seek_internal(
+    checkpoint_index: number,
+    event_index: number,
+    t: number,
+  ) {
     // seek file, do reads
-    if(event_index > this.events.length) { throw "Seek: event index out of bounds"; }
+    if (event_index > this.events.length) {
+      throw "Seek: event index out of bounds";
+    }
     const [wraps, time] = this.cpu_time(t);
-    if(event_index < this.events.length) {
-      if(this.events[event_index].when < t) {
-        console.log("evt time check",this.events[event_index].when,t);
+    if (event_index < this.events.length) {
+      if (this.events[event_index].when < t) {
+        console.log("evt time check", this.events[event_index].when, t);
         throw "Seek: current event is before given t";
       }
     }
     this.index = event_index;
     this.checkpoint_index = checkpoint_index;
     if (this.video) {
-      const end_time = Math.max(this.events[this.events.length-1]?.when ?? 0, this.checkpoints[this.checkpoints.length-1].when);
+      const end_time = Math.max(
+        this.events[this.events.length - 1]?.when ?? 0,
+        this.checkpoints[this.checkpoints.length - 1].when,
+      );
       const ratio = t / end_time;
       const video_elt = this.container!.querySelector("video")!;
       video_elt.currentTime = ratio * video_elt.duration;
@@ -198,7 +259,7 @@ export class Replay {
     this.wraps = wraps;
     this.last_time = time;
   }
-  private resume(mode:ReplayMode, emulator:V86) {
+  private resume(mode: ReplayMode, emulator: V86) {
     // ensure emulator time is current time
     this.mode = mode;
     emulator.v86.cpu.instruction_counter[0] = this.last_time;
@@ -208,7 +269,7 @@ export class Replay {
       // truncate if necessary
       this.events.length = this.index;
       this.checkpoints.length = this.checkpoint_index;
-    } else if(this.mode == ReplayMode.Playback) {
+    } else if (this.mode == ReplayMode.Playback) {
       emulator.mouse_set_status(false);
       emulator.keyboard_set_status(false);
       // don't truncate!
@@ -216,49 +277,76 @@ export class Replay {
       throw "Resume: invalid mode";
     }
   }
-  current_time():number {
+  current_time(): number {
     if (this.video && this.mode == ReplayMode.Playback) {
       const video_elt = this.container!.querySelector("video")!;
-      const replay_duration = Math.max(this.events[this.events.length-1]?.when ?? 0, this.checkpoints[this.checkpoints.length-1].when);
+      const replay_duration = Math.max(
+        this.events[this.events.length - 1]?.when ?? 0,
+        this.checkpoints[this.checkpoints.length - 1].when,
+      );
       return (video_elt.currentTime / video_elt.duration) * replay_duration;
     } else {
       return this.replay_time(this.last_time);
     }
   }
-  replay_time(insn_counter:number) : number {
-    let wrap_amt = 2**32-1;
+  replay_time(insn_counter: number): number {
+    let wrap_amt = 2 ** 32 - 1;
     // how many full wraparounds we have done
     wrap_amt *= this.wraps;
     // add in the amount of leftover time, which we get from insn_counter
     wrap_amt += insn_counter;
     return wrap_amt;
   }
-  cpu_time(t:number):[number,number] {
-    const wraps = Math.floor(t / (2**32-1));
-    const rem = t - (wraps * (2**32-1));
+  cpu_time(t: number): [number, number] {
+    const wraps = Math.floor(t / (2 ** 32 - 1));
+    const rem = t - wraps * (2 ** 32 - 1);
     return [wraps, rem];
   }
-  log_evt(emulator:V86, code:Evt, val:object|number) {
+  log_evt(emulator: V86, code: Evt, val: object | number) {
     // write to file
-    if(this.mode == ReplayMode.Record) {
-      this.events.push(new ReplayEvent(this.replay_time(emulator.get_instruction_counter()), code, val));
+    if (this.mode == ReplayMode.Record) {
+      this.events.push(
+        new ReplayEvent(
+          this.replay_time(emulator.get_instruction_counter()),
+          code,
+          val,
+        ),
+      );
       this.index += 1;
     }
   }
-  public async make_checkpoint(emulator:V86, state:Uint8Array):Promise<void> {
+  public async make_checkpoint(
+    emulator: V86,
+    state: Uint8Array,
+  ): Promise<void> {
     const time = this.current_time();
     const screenshot = emulator.screen_make_screenshot();
     const which = this.checkpoints.length;
-    const checkpoint = new Checkpoint(time, "replay"+this.id+"-state"+which.toString(), this.index, new Uint8Array(), [], [], new Uint32Array(), screenshot.src);
+    const checkpoint = new Checkpoint(
+      time,
+      "replay" + this.id + "-state" + which.toString(),
+      this.index,
+      new Uint8Array(),
+      [],
+      [],
+      new Uint32Array(),
+      screenshot.src,
+    );
     this.checkpoints.push(checkpoint);
     if (this.recording_stream) {
       if (this.recorder) {
         this.recorder.stop();
       }
-      const rec = new MediaRecorder(this.recording_stream, {mimeType:"video/webm"});
-      this.encode_proms.push(new Promise((resolve) => {
-        rec.onstop = (_e) => {resolve()};
-      }));
+      const rec = new MediaRecorder(this.recording_stream, {
+        mimeType: "video/webm",
+      });
+      this.encode_proms.push(
+        new Promise((resolve) => {
+          rec.onstop = (_e) => {
+            resolve();
+          };
+        }),
+      );
       this.recording_video.push([]);
       rec.ondataavailable = (e) => {
         this.recording_video[which].push(e.data);
@@ -266,21 +354,28 @@ export class Replay {
       this.recorder = rec;
       this.recorder.start();
     }
-    this.worker.postMessage({type:"encode", args:{time,state:state, which:this.checkpoint_index}}, {transfer:[state.buffer]});
+    this.worker.postMessage(
+      {
+        type: "encode",
+        args: { time, state: state, which: this.checkpoint_index },
+      },
+      { transfer: [state.buffer] },
+    );
     this.checkpoint_index += 1;
     await this.worker_fence();
   }
-  async tick(emulator:V86) {
+  async tick(emulator: V86) {
     // read from / write to file
     if (!(this.mode == ReplayMode.Playback && this.video)) {
       const t = emulator.v86.cpu.instruction_counter[0];
-      if (t < this.last_time) { // counter wrapped around, increase wraps
+      if (t < this.last_time) {
+        // counter wrapped around, increase wraps
         this.wraps += 1;
       }
       this.last_time = t;
     }
     const real_t = this.current_time();
-    switch(this.mode) {
+    switch (this.mode) {
       case ReplayMode.Record: {
         let last_t = 0;
         if (this.recorder) {
@@ -293,12 +388,15 @@ export class Replay {
             canvas.getContext("2d")!.drawImage(screen, 0, 0);
           }
         }
-        if(this.checkpoints.length != 0) {
-          last_t = this.checkpoints[this.checkpoints.length-1].when;
+        if (this.checkpoints.length != 0) {
+          last_t = this.checkpoints[this.checkpoints.length - 1].when;
         }
-        if(real_t - last_t > REPLAY_CHECKPOINT_INTERVAL) {
+        if (real_t - last_t > REPLAY_CHECKPOINT_INTERVAL) {
           // do not await, could take some time
-          this.make_checkpoint(emulator,new Uint8Array(await emulator.save_state()));
+          this.make_checkpoint(
+            emulator,
+            new Uint8Array(await emulator.save_state()),
+          );
         }
         break;
       }
@@ -306,19 +404,29 @@ export class Replay {
         // What is earlier: next checkpoint or next event?
         emulator.keyboard_set_status(false);
         emulator.mouse_set_status(false);
-        while(true) {
-          const event_t = (this.index < this.events.length) ? this.events[this.index].when : Number.MAX_SAFE_INTEGER;
-          const checkpoint_t = (this.checkpoint_index < this.checkpoints.length) ? this.checkpoints[this.checkpoint_index].when : Number.MAX_SAFE_INTEGER;
-          const event_is_first = (event_t < checkpoint_t) && event_t <= real_t;
-          const checkpoint_is_first = (checkpoint_t <= event_t) && checkpoint_t <= real_t;
-          if(checkpoint_is_first) {
+        while (true) {
+          const event_t =
+            this.index < this.events.length
+              ? this.events[this.index].when
+              : Number.MAX_SAFE_INTEGER;
+          const checkpoint_t =
+            this.checkpoint_index < this.checkpoints.length
+              ? this.checkpoints[this.checkpoint_index].when
+              : Number.MAX_SAFE_INTEGER;
+          const event_is_first = event_t < checkpoint_t && event_t <= real_t;
+          const checkpoint_is_first =
+            checkpoint_t <= event_t && checkpoint_t <= real_t;
+          if (checkpoint_is_first) {
             const check = this.checkpoints[this.checkpoint_index];
             this.checkpoint_index += 1;
             if (!this.video) {
-              const state = await this.restore_checkpoint(check.header_info, check.superblock_seq);
+              const state = await this.restore_checkpoint(
+                check.header_info,
+                check.superblock_seq,
+              );
               await emulator.restore_state(state);
             }
-          } else if(event_is_first) {
+          } else if (event_is_first) {
             const evt = this.events[this.index];
             if (!this.video) {
               emulator.bus.send(EvtNames[evt.code], evt.value);
@@ -329,13 +437,16 @@ export class Replay {
             break;
           }
         }
-        if(this.index < this.events.length || this.checkpoint_index < this.checkpoints.length) {
+        if (
+          this.index < this.events.length ||
+          this.checkpoint_index < this.checkpoints.length
+        ) {
           if (this.video) {
             const [wraps, time] = this.cpu_time(real_t);
             this.wraps = wraps;
             this.last_time = time;
-            this.container!.querySelector("canvas")!.style.display="none";
-            this.container!.querySelector("div")!.style.display="none";
+            this.container!.querySelector("canvas")!.style.display = "none";
+            this.container!.querySelector("div")!.style.display = "none";
           }
           // playback continues
         } else {
@@ -349,8 +460,13 @@ export class Replay {
         break;
     }
   }
-  static async start_recording(emulator:V86, record_video:boolean, audioDestination:MediaStreamAudioDestinationNode|null, container:HTMLDivElement|null):Promise<Replay> {
-    const r = await Replay.create(generateUUID(),ReplayMode.Record);
+  static async start_recording(
+    emulator: V86,
+    record_video: boolean,
+    audioDestination: MediaStreamAudioDestinationNode | null,
+    container: HTMLDivElement | null,
+  ): Promise<Replay> {
+    const r = await Replay.create(generateUUID(), ReplayMode.Record);
     r.container = container;
     emulator.v86.cpu.instruction_counter[0] = 0;
     if (record_video) {
@@ -359,17 +475,23 @@ export class Replay {
       const canvas = container.getElementsByTagName("canvas")[0]!;
       const canvas_stream = canvas.captureStream(30);
       const audio_stream = audioDestination.stream;
-      const stream = new MediaStream(canvas_stream.getTracks().concat(audio_stream.getTracks()));
+      const stream = new MediaStream(
+        canvas_stream.getTracks().concat(audio_stream.getTracks()),
+      );
       r.recording_stream = stream;
     }
     // do not await, could take some time
-    r.make_checkpoint(emulator,new Uint8Array(await emulator.save_state()));
+    r.make_checkpoint(emulator, new Uint8Array(await emulator.save_state()));
     return r;
   }
-  private async finish_playback(emulator:V86) {
+  private async finish_playback(emulator: V86) {
     this.mode = ReplayMode.Finished;
     if (this.video) {
-      await this.reset_to_checkpoint(this.checkpoint_index-1, this.mode, emulator);
+      await this.reset_to_checkpoint(
+        this.checkpoint_index - 1,
+        this.mode,
+        emulator,
+      );
       await emulator.run();
       const video = this.container!.getElementsByTagName("video")[0]!;
       emulator.speaker_adapter.mixer.set_volume(video.muted ? 0 : 1);
@@ -379,49 +501,63 @@ export class Replay {
     emulator.mouse_set_status(true);
     emulator.keyboard_set_status(true);
   }
-  private async stop_video_recording():Promise<void> {
-    if (!this.recorder) { return; }
+  private async stop_video_recording(): Promise<void> {
+    if (!this.recorder) {
+      return;
+    }
     this.recorder.stop();
     this.recorder = null;
     await Promise.all(this.encode_proms);
     const video_blob = await mux_videos(this.recording_video);
-    this.video = new File([video_blob], `replay${this.id}.webm`, {type:"video/webm"});
+    this.video = new File([video_blob], `replay${this.id}.webm`, {
+      type: "video/webm",
+    });
     this.recording_video = [];
     this.encode_proms = [];
   }
-  public async get_video():Promise<File|null> {
+  public async get_video(): Promise<File | null> {
     return this.video;
   }
-  private async finish_recording(emulator:V86) {
-    const proms = [this.make_checkpoint(emulator,new Uint8Array(await emulator.save_state()))];
+  private async finish_recording(emulator: V86) {
+    const proms = [
+      this.make_checkpoint(
+        emulator,
+        new Uint8Array(await emulator.save_state()),
+      ),
+    ];
     if (this.recorder) {
       proms.push(this.stop_video_recording());
     }
     this.mode = ReplayMode.Finished;
     Promise.all(proms);
   }
-  private async worker_fence():Promise<void> {
+  private async worker_fence(): Promise<void> {
     const fence = this.last_fence;
     this.last_fence++;
     return new Promise((resolve) => {
       this.pending_fences.push((num) => {
-        if (num != fence) { throw "wrong fence"; }
+        if (num != fence) {
+          throw "wrong fence";
+        }
         resolve();
       });
-      this.worker.postMessage({type:"fence", args:{sequence:fence}});
+      this.worker.postMessage({ type: "fence", args: { sequence: fence } });
     });
   }
-  async stop(emulator:V86) {
-    if(this.mode == ReplayMode.Record) {
+  async stop(emulator: V86) {
+    if (this.mode == ReplayMode.Record) {
       await this.finish_recording(emulator);
     }
-    if(this.mode == ReplayMode.Playback) {
+    if (this.mode == ReplayMode.Playback) {
       await this.finish_playback(emulator);
     }
     // be sure worker has completed the tasks so far
     await this.worker_fence();
   }
-  async start_playback(emulator:V86, container:HTMLDivElement):Promise<void> {
+  async start_playback(
+    emulator: V86,
+    container: HTMLDivElement,
+  ): Promise<void> {
     this.container = container;
     this.mode = ReplayMode.Playback;
     this.index = 0;
@@ -445,23 +581,31 @@ export class Replay {
       });
     } else {
       const check = this.checkpoints[0];
-      const state = await this.restore_checkpoint(check.header_info, check.superblock_seq);
+      const state = await this.restore_checkpoint(
+        check.header_info,
+        check.superblock_seq,
+      );
       await emulator.restore_state(state);
     }
   }
-  async serialize():Promise<ArrayBuffer> {
-    if (this.pending_serialize) { throw "please wait for previous serialize call to finish"; }
-    return new Promise((resolve,_reject) => {
+  async serialize(): Promise<ArrayBuffer> {
+    if (this.pending_serialize) {
+      throw "please wait for previous serialize call to finish";
+    }
+    return new Promise((resolve, _reject) => {
       this.pending_serialize = resolve;
-      this.worker.postMessage({type:"serialize", args:{events:this.events, checkpoints:this.checkpoints}});
+      this.worker.postMessage({
+        type: "serialize",
+        args: { events: this.events, checkpoints: this.checkpoints },
+      });
     });
   }
-  static async deserialize(buf: ArrayBuffer, video?:File): Promise<Replay> {
+  static async deserialize(buf: ArrayBuffer, video?: File): Promise<Replay> {
     const view = new DataView(buf);
     let x = 0;
     const magic = view.getUint32(x, true);
     x += 4;
-    if (magic != 0x4C505256) {
+    if (magic != 0x4c505256) {
       throw "Invalid magic, not a v86replay file";
     }
     // metadata: 16 bytes UUID; reserve the rest for later.
@@ -469,7 +613,7 @@ export class Replay {
     x += 16;
     // version
     const version = view.getUint8(x);
-    x += 1;
+    // x += 1 would move us past that version field;
     if (version > REPLAY_VERSION) {
       throw "Unrecognized replay version";
     }
@@ -477,7 +621,7 @@ export class Replay {
       return (await LegacyReplay.deserialize(buf)) as unknown as Replay;
     }
     const r = await Replay.create(id, ReplayMode.Inactive);
-    return new Promise((resolve,_reject) => {
+    return new Promise((resolve, _reject) => {
       r.pending_deserialize = (data) => {
         r.version = data.version;
         r.events = data.events;
@@ -489,33 +633,43 @@ export class Replay {
         r.video = video ?? null;
         resolve(r);
       };
-      r.worker.postMessage({type:"deserialize", args:{buffer:buf}},{transfer:[buf]});
+      r.worker.postMessage(
+        { type: "deserialize", args: { buffer: buf } },
+        { transfer: [buf] },
+      );
     });
   }
 }
 export class ReplayEvent {
-  when:number;
-  code:Evt;
-  value:object|number;
-  constructor(when:number, code:Evt, value:object|number) {
+  when: number;
+  code: Evt;
+  value: object | number;
+  constructor(when: number, code: Evt, value: object | number) {
     this.when = when;
     this.code = code;
     this.value = value;
   }
 }
 
-function generateUUID():string { // Public Domain/MIT
-  let d = new Date().getTime();//Timestamp
-  let d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    let r = Math.random() * 16;//random number between 0 and 16
-    if(d > 0){//Use timestamp until depleted
-      r = (d + r)%16 | 0;
-      d = Math.floor(d/16);
-    } else {//Use microseconds since page-load if supported
-      r = (d2 + r)%16 | 0;
-      d2 = Math.floor(d2/16);
+function generateUUID(): string {
+  // Public Domain/MIT
+  let d = new Date().getTime(); //Timestamp
+  let d2 =
+    (typeof performance !== "undefined" &&
+      performance.now &&
+      performance.now() * 1000) ||
+    0; //Time in microseconds since page-load or 0 if unsupported
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    let r = Math.random() * 16; //random number between 0 and 16
+    if (d > 0) {
+      //Use timestamp until depleted
+      r = ((d + r) % 16) | 0;
+      d = Math.floor(d / 16);
+    } else {
+      //Use microseconds since page-load if supported
+      r = ((d2 + r) % 16) | 0;
+      d2 = Math.floor(d2 / 16);
     }
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
   });
 }

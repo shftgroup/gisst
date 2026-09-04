@@ -1,0 +1,4 @@
+[registry]
+global-min-publish-age = "14 days"
+[registries.crates-io]
+min-publish-age = "14 days"

@@ -1,6 +1,16 @@
-import {Input,Output,BlobSource,WEBM,WebMOutputFormat,BufferTarget,EncodedPacketSink,EncodedAudioPacketSource,EncodedVideoPacketSource} from 'mediabunny';
+import {
+  Input,
+  Output,
+  BlobSource,
+  WEBM,
+  WebMOutputFormat,
+  BufferTarget,
+  EncodedPacketSink,
+  EncodedAudioPacketSource,
+  EncodedVideoPacketSource,
+} from "mediabunny";
 
-export function memcmp(a:Uint8Array, b:Uint8Array) : boolean {
+export function memcmp(a: Uint8Array, b: Uint8Array): boolean {
   const sz = a.length;
   if (sz != b.length) {
     return false;
@@ -12,32 +22,37 @@ export function memcmp(a:Uint8Array, b:Uint8Array) : boolean {
   }
   return true;
 }
-export function bytes_to_uuid(buf:Uint8Array):string {
+export function bytes_to_uuid(buf: Uint8Array): string {
   // https://stackoverflow.com/a/50767210
-  function bufferToHex (buffer:Uint8Array) {
-    return [...buffer]
-      .map (b => b.toString (16).padStart (2, "0"))
-      .join ("");
+  function bufferToHex(buffer: Uint8Array) {
+    return [...buffer].map((b) => b.toString(16).padStart(2, "0")).join("");
   }
   // format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
   const s = bufferToHex(buf);
-  return [s.slice(0,8),s.slice(8,12),s.slice(12,16),s.slice(16,20),s.slice(20,32)].join("-");
+  return [
+    s.slice(0, 8),
+    s.slice(8, 12),
+    s.slice(12, 16),
+    s.slice(16, 20),
+    s.slice(20, 32),
+  ].join("-");
 }
-export function nonnull(obj:unknown):asserts obj {
-  if(obj == null) {
+export function nonnull(obj: unknown): asserts obj {
+  if (obj == null) {
     throw "Must be non-null";
   }
 }
 //https://stackoverflow.com/a/30407959
-export function dataURLToBlob(dataurl:string) {
-  const arr = dataurl.split(','), mime = arr[0]!.match(/:(.*?);/)![1],
+export function dataURLToBlob(dataurl: string) {
+  const arr = dataurl.split(","),
+    mime = arr[0]!.match(/:(.*?);/)![1],
     bstr = atob(arr[1]!);
   let n = bstr.length;
   const u8arr = new Uint8Array(n);
-  while(n--){
+  while (n--) {
     u8arr[n] = bstr.charCodeAt(n);
   }
-  return new Blob([u8arr], {type:mime});
+  return new Blob([u8arr], { type: mime });
 }
 //https://stackoverflow.com/a/67551175
 export function blobToDataURL(blob: Blob): Promise<string> {
@@ -49,36 +64,36 @@ export function blobToDataURL(blob: Blob): Promise<string> {
     reader.readAsDataURL(blob);
   });
 }
-export function uuid_to_bytes(s:string):Uint8Array {
+export function uuid_to_bytes(s: string): Uint8Array {
   // format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
   const out = new Uint8Array(16);
-  out[0] = parseInt(s.slice(0,2),16);
-  out[1] = parseInt(s.slice(2,4),16);
-  out[2] = parseInt(s.slice(4,6),16);
-  out[3] = parseInt(s.slice(6,8),16);
+  out[0] = parseInt(s.slice(0, 2), 16);
+  out[1] = parseInt(s.slice(2, 4), 16);
+  out[2] = parseInt(s.slice(4, 6), 16);
+  out[3] = parseInt(s.slice(6, 8), 16);
 
-  out[4] = parseInt(s.slice(9,11),16);
-  out[5] = parseInt(s.slice(11,13),16);
+  out[4] = parseInt(s.slice(9, 11), 16);
+  out[5] = parseInt(s.slice(11, 13), 16);
 
-  out[6] = parseInt(s.slice(14,16),16);
-  out[7] = parseInt(s.slice(16,18),16);
+  out[6] = parseInt(s.slice(14, 16), 16);
+  out[7] = parseInt(s.slice(16, 18), 16);
 
-  out[8] = parseInt(s.slice(19,21),16);
-  out[9] = parseInt(s.slice(21,23),16);
+  out[8] = parseInt(s.slice(19, 21), 16);
+  out[9] = parseInt(s.slice(21, 23), 16);
 
-  out[10] = parseInt(s.slice(24,26),16);
-  out[11] = parseInt(s.slice(26,28),16);
-  out[12] = parseInt(s.slice(28,30),16);
-  out[13] = parseInt(s.slice(30,32),16);
-  out[14] = parseInt(s.slice(32,34),16);
-  out[15] = parseInt(s.slice(34,36),16);
+  out[10] = parseInt(s.slice(24, 26), 16);
+  out[11] = parseInt(s.slice(26, 28), 16);
+  out[12] = parseInt(s.slice(28, 30), 16);
+  out[13] = parseInt(s.slice(30, 32), 16);
+  out[14] = parseInt(s.slice(32, 34), 16);
+  out[15] = parseInt(s.slice(34, 36), 16);
 
   return out;
 }
 
-export async function mux_videos(webms:Blob[][]) : Promise<Blob> {
+export async function mux_videos(webms: Blob[][]): Promise<Blob> {
   const target = new BufferTarget();
-  const output = new Output({format:new WebMOutputFormat({}), target});
+  const output = new Output({ format: new WebMOutputFormat({}), target });
   let out_video_src;
   let out_audio_src;
   let out_video_track;
@@ -86,14 +101,21 @@ export async function mux_videos(webms:Blob[][]) : Promise<Blob> {
   let atime = 0;
   let vtime = 0;
   for (const webm of webms) {
-    const file = new File(webm, "input.webm", {type:"video/webm"});
-    const input = new Input({source: new BlobSource(file),formats:[WEBM]});
-    const atrack = (await input.getPrimaryAudioTrack());
-    const vtrack = (await input.getPrimaryVideoTrack());
-    if (!vtrack || !atrack) { continue; }
+    const file = new File(webm, "input.webm", { type: "video/webm" });
+    const input = new Input({ source: new BlobSource(file), formats: [WEBM] });
+    const atrack = await input.getPrimaryAudioTrack();
+    const vtrack = await input.getPrimaryVideoTrack();
+    if (!vtrack || !atrack) {
+      continue;
+    }
     const asink = new EncodedPacketSink(atrack);
     const vsink = new EncodedPacketSink(vtrack);
-    if (!out_video_src || !out_audio_src || !out_video_track || !out_audio_track) {
+    if (
+      !out_video_src ||
+      !out_audio_src ||
+      !out_video_track ||
+      !out_audio_track
+    ) {
       out_video_src = new EncodedVideoPacketSource((await vtrack.getCodec())!);
       out_video_track = output.addVideoTrack(out_video_src);
       out_audio_src = new EncodedAudioPacketSource((await atrack.getCodec())!);
@@ -105,18 +127,34 @@ export async function mux_videos(webms:Blob[][]) : Promise<Blob> {
     let apacket = await aiter.next();
     let vpacket = await viter.next();
     while (!apacket.done && !vpacket.done) {
-      if (!vpacket.done && (apacket.done || vpacket.value.timestamp <= apacket.value.timestamp)) {
+      if (
+        !vpacket.done &&
+        (apacket.done || vpacket.value.timestamp <= apacket.value.timestamp)
+      ) {
         const vpack = vpacket.value.clone({
-          timestamp: vtime
+          timestamp: vtime,
         });
-        out_video_src.add(vpack, vtime == 0 ? {decoderConfig:(await vtrack.getDecoderConfig())!} : undefined);
+        out_video_src.add(
+          vpack,
+          vtime == 0
+            ? { decoderConfig: (await vtrack.getDecoderConfig())! }
+            : undefined,
+        );
         vtime += vpack.duration;
         vpacket = await viter.next();
-      } else if (!apacket.done && (vpacket.done || apacket.value.timestamp <= vpacket.value.timestamp)) {
+      } else if (
+        !apacket.done &&
+        (vpacket.done || apacket.value.timestamp <= vpacket.value.timestamp)
+      ) {
         const apack = apacket.value.clone({
-          timestamp: atime
+          timestamp: atime,
         });
-        out_audio_src.add(apack, atime == 0 ? {decoderConfig:(await atrack.getDecoderConfig())!} : undefined);
+        out_audio_src.add(
+          apack,
+          atime == 0
+            ? { decoderConfig: (await atrack.getDecoderConfig())! }
+            : undefined,
+        );
         atime += apack.duration;
         apacket = await aiter.next();
       }
@@ -124,5 +162,5 @@ export async function mux_videos(webms:Blob[][]) : Promise<Blob> {
     input.dispose();
   }
   await output.finalize();
-  return new Blob([target.buffer!], {type:"video/webm"});
+  return new Blob([target.buffer!], { type: "video/webm" });
 }

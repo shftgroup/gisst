@@ -30,7 +30,7 @@ pub enum CreateRetroArchReplayVideoError {
     #[error("Video exists already")]
     AlreadyCreated,
     #[error("couldn't serialize embeddata")]
-    Json(#[from] serde_json::Error)
+    Json(#[from] serde_json::Error),
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
@@ -296,11 +296,17 @@ impl Task {
         ).fetch_all(conn).await.map_err(TimeoutTaskError::Sqlx)
     }
     /// Create (if needed) or return the pending replay video task for this replay.
-    pub async fn create_retroarch_replay_video(conn:&mut PgConnection, embed_data:&crate::routes::players::EmbedDataInfo) -> Result<Self,CreateRetroArchReplayVideoError> {
-        use serde_json::json;
+    pub async fn create_retroarch_replay_video(
+        conn: &mut PgConnection,
+        embed_data: &crate::routes::players::EmbedDataInfo,
+    ) -> Result<Self, CreateRetroArchReplayVideoError> {
         use crate::routes::players::PlayerStartTemplateInfo;
-        let PlayerStartTemplateInfo::Replay(replay) = &embed_data.start else { return Err(CreateRetroArchReplayVideoError::NotReplay); };
-        if embed_data.environment.environment_framework != gisst::model_enums::Framework::RetroArch {
+        use serde_json::json;
+        let PlayerStartTemplateInfo::Replay(replay) = &embed_data.start else {
+            return Err(CreateRetroArchReplayVideoError::NotReplay);
+        };
+        if embed_data.environment.environment_framework != gisst::model_enums::Framework::RetroArch
+        {
             return Err(CreateRetroArchReplayVideoError::NotRetroArch);
         }
         if replay.video_id.is_some() {
@@ -318,7 +324,10 @@ WHERE task_type = 'retroarch_replay_video'
       AND task_state != 'done'
       AND (task_input #>> '{start,data,replay_id}')::uuid = $1"#,
             replay.replay_id,
-        ).fetch_optional(conn.as_mut()).await? {
+        )
+        .fetch_optional(conn.as_mut())
+        .await?
+        {
             return Ok(task);
         }
         let task = Task {
@@ -356,7 +365,7 @@ WHERE task_type = 'retroarch_replay_video'
             task.task_output,
         )
         .fetch_one(conn)
-            .await?;
+        .await?;
         Ok(task)
     }
 }
@@ -405,8 +414,8 @@ impl Task {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::postgres::PgPool;
     use serde_json::json;
+    use sqlx::postgres::PgPool;
     #[sqlx::test(migrations = "../migrations/")]
     async fn sorting_filtering(pool: PgPool) -> sqlx::Result<()> {
         let mut conn = pool.acquire().await?;

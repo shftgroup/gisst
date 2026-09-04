@@ -9,102 +9,106 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare namespace Emscripten {
-    type FileSystemType = object;
-    type EnvironmentType = 'WEB' | 'NODE' | 'SHELL' | 'WORKER';
+  type FileSystemType = object;
+  type EnvironmentType = "WEB" | "NODE" | "SHELL" | "WORKER";
 
-    type JSType = 'number' | 'string' | 'array' | 'boolean';
-    type TypeCompatibleWithC = number | string | any[] | boolean;
+  type JSType = "number" | "string" | "array" | "boolean";
+  type TypeCompatibleWithC = number | string | any[] | boolean;
 
-    type CIntType = 'i8' | 'i16' | 'i32' | 'i64';
-    type CFloatType = 'float' | 'double';
-    type CPointerType = 'i8*' | 'i16*' | 'i32*' | 'i64*' | 'float*' | 'double*' | '*';
-    type CType = CIntType | CFloatType | CPointerType;
+  type CIntType = "i8" | "i16" | "i32" | "i64";
+  type CFloatType = "float" | "double";
+  type CPointerType =
+    "i8*" | "i16*" | "i32*" | "i64*" | "float*" | "double*" | "*";
+  type CType = CIntType | CFloatType | CPointerType;
 
-    type WebAssemblyImports = Array<{
-        name: string;
-        kind: string;
-    }>;
+  type WebAssemblyImports = Array<{
+    name: string;
+    kind: string;
+  }>;
 
-    type WebAssemblyExports = Array<{
-        module: string;
-        name: string;
-        kind: string;
-    }>;
+  type WebAssemblyExports = Array<{
+    module: string;
+    name: string;
+    kind: string;
+  }>;
 
-    interface CCallOpts {
-        async?: boolean | undefined;
-    }
+  interface CCallOpts {
+    async?: boolean | undefined;
+  }
 }
 
 interface Environment {
-  [key:string]: string
+  [key: string]: string;
 }
 
 interface EmscriptenModule {
-    print(str: string): void;
-    printErr(str: string): void;
-    arguments: string[];
-    environment: Emscripten.EnvironmentType;
-    ENV:Environment,
-    preInit: Array<{ (): void }>;
-    preRun: Array<{ (mod:object|undefined): void }>;
-    postRun: Array<{ (mod:object|undefined): void }>;
-    onAbort: { (what: any): void };
-    preinitializedWebGLContext: WebGLRenderingContext;
-    noInitialRun: boolean;
-    noExitRuntime: boolean;
-    logReadFiles: boolean;
-    filePackagePrefixURL: string;
-    wasmBinary: ArrayBuffer;
-    mainScriptUrlOrBlob: Blob | string;
+  print(str: string): void;
+  printErr(str: string): void;
+  arguments: string[];
+  environment: Emscripten.EnvironmentType;
+  ENV: Environment;
+  preInit: Array<{ (): void }>;
+  preRun: Array<{ (mod: object | undefined): void }>;
+  postRun: Array<{ (mod: object | undefined): void }>;
+  onAbort: { (what: any): void };
+  preinitializedWebGLContext: WebGLRenderingContext;
+  noInitialRun: boolean;
+  noExitRuntime: boolean;
+  logReadFiles: boolean;
+  filePackagePrefixURL: string;
+  wasmBinary: ArrayBuffer;
+  mainScriptUrlOrBlob: Blob | string;
 
-    destroy(object: object): void;
-    getPreloadedPackage(remotePackageName: string, remotePackageSize: number): ArrayBuffer;
-    instantiateWasm(
-        imports: Emscripten.WebAssemblyImports,
-        successCallback: (module: WebAssembly.Module) => void,
-    ): Emscripten.WebAssemblyExports;
-    locateFile(url: string, scriptDirectory: string): string;
-    onCustomMessage(event: MessageEvent): void;
+  destroy(object: object): void;
+  getPreloadedPackage(
+    remotePackageName: string,
+    remotePackageSize: number,
+  ): ArrayBuffer;
+  instantiateWasm(
+    imports: Emscripten.WebAssemblyImports,
+    successCallback: (module: WebAssembly.Module) => void,
+  ): Emscripten.WebAssemblyExports;
+  locateFile(url: string, scriptDirectory: string): string;
+  onCustomMessage(event: MessageEvent): void;
 
-    // USE_TYPED_ARRAYS == 1
-    HEAP: Int32Array;
-    IHEAP: Int32Array;
-    FHEAP: Float64Array;
+  // USE_TYPED_ARRAYS == 1
+  HEAP: Int32Array;
+  IHEAP: Int32Array;
+  FHEAP: Float64Array;
 
-    // USE_TYPED_ARRAYS == 2
-    HEAP8: Int8Array;
-    HEAP16: Int16Array;
-    HEAP32: Int32Array;
-    HEAPU8: Uint8Array;
-    HEAPU16: Uint16Array;
-    HEAPU32: Uint32Array;
-    HEAPF32: Float32Array;
-    HEAPF64: Float64Array;
+  // USE_TYPED_ARRAYS == 2
+  HEAP8: Int8Array;
+  HEAP16: Int16Array;
+  HEAP32: Int32Array;
+  HEAPU8: Uint8Array;
+  HEAPU16: Uint16Array;
+  HEAPU32: Uint32Array;
+  HEAPF32: Float32Array;
+  HEAPF64: Float64Array;
 
-    TOTAL_STACK: number;
-    TOTAL_MEMORY: number;
-    FAST_MEMORY: number;
+  TOTAL_STACK: number;
+  TOTAL_MEMORY: number;
+  FAST_MEMORY: number;
 
-    FETCHFS:WASMFSBackend;
-    OPFS:WASMFSBackend;
+  FETCHFS: WASMFSBackend;
+  OPFS: WASMFSBackend;
 
-    addOnPreRun(cb: () => any): void;
-    addOnInit(cb: () => any): void;
-    addOnPreMain(cb: () => any): void;
-    addOnExit(cb: () => any): void;
-    addOnPostRun(cb: () => any): void;
+  addOnPreRun(cb: () => any): void;
+  addOnInit(cb: () => any): void;
+  addOnPreMain(cb: () => any): void;
+  addOnExit(cb: () => any): void;
+  addOnPostRun(cb: () => any): void;
 
-    preloadedImages: any;
-    preloadedAudios: any;
+  preloadedImages: any;
+  preloadedAudios: any;
 
-    _malloc(size: number): number;
-    _free(ptr: number): void;
-    FS:FS;
+  _malloc(size: number): number;
+  _free(ptr: number): void;
+  FS: FS;
 }
 
 interface WASMFSBackend {
-  createBackend(opts:object) : number;
+  createBackend(opts: object): number;
 }
 
 /**
@@ -121,7 +125,7 @@ interface WASMFSBackend {
  * @param moduleOverrides Default properties for the initialized module.
  */
 type EmscriptenModuleFactory<T extends EmscriptenModule = EmscriptenModule> = (
-    moduleOverrides?: Partial<T>,
+  moduleOverrides?: Partial<T>,
 ) => Promise<T>;
 
 interface Lookup {
@@ -134,152 +138,174 @@ type FSNode = object;
 type ErrnoError = object;
 
 interface Analyze {
-  isRoot: boolean,
-  exists: boolean,
-  error: Error,
-  name: string,
-  path: string,
-  object: FS.FSNode,
-  parentExists: boolean,
-  parentPath: string,
-  parentObject: FS.FSNode
+  isRoot: boolean;
+  exists: boolean;
+  error: Error;
+  name: string;
+  path: string;
+  object: FS.FSNode;
+  parentExists: boolean;
+  parentPath: string;
+  parentObject: FS.FSNode;
 }
 
 declare interface FS {
-    ignorePermissions: boolean;
-    trackingDelegate: any;
-    tracking: any;
-    genericErrors: any;
+  ignorePermissions: boolean;
+  trackingDelegate: any;
+  tracking: any;
+  genericErrors: any;
 
-    //
-    // paths
-    //
-    lookupPath(path: string, opts: any): Lookup;
-    getPath(node: FSNode): string;
-    analyzePath(path:string,dontResolveLastLink?:boolean) : Analyze;
+  //
+  // paths
+  //
+  lookupPath(path: string, opts: any): Lookup;
+  getPath(node: FSNode): string;
+  analyzePath(path: string, dontResolveLastLink?: boolean): Analyze;
 
-    //
-    // nodes
-    //
-    isFile(mode: number): boolean;
-    isDir(mode: number): boolean;
-    isLink(mode: number): boolean;
-    isChrdev(mode: number): boolean;
-    isBlkdev(mode: number): boolean;
-    isFIFO(mode: number): boolean;
-    isSocket(mode: number): boolean;
+  //
+  // nodes
+  //
+  isFile(mode: number): boolean;
+  isDir(mode: number): boolean;
+  isLink(mode: number): boolean;
+  isChrdev(mode: number): boolean;
+  isBlkdev(mode: number): boolean;
+  isFIFO(mode: number): boolean;
+  isSocket(mode: number): boolean;
 
-    //
-    // devices
-    //
-    major(dev: number): number;
-    minor(dev: number): number;
-    makedev(ma: number, mi: number): number;
-    registerDevice(dev: number, ops: any): void;
+  //
+  // devices
+  //
+  major(dev: number): number;
+  minor(dev: number): number;
+  makedev(ma: number, mi: number): number;
+  registerDevice(dev: number, ops: any): void;
 
-    //
-    // core
-    //
-    syncfs(populate: boolean, callback: (e: any) => any): void;
-    syncfs(callback: (e: any) => any, populate?: boolean): void;
-    mount(type: Emscripten.FileSystemType, opts: any, mountpoint: string): any;
-    unmount(mountpoint: string): void;
-    create(path:string, mode?: number): any;
-    createFile(parent:string, path:string, mode?: number, backend?: number): any;
-    mkdir(path: string, mode?: number): any;
-    mkdirTree(path: string): any;
-    mkdev(path: string, mode?: number, dev?: number): any;
-    symlink(oldpath: string, newpath: string): any;
-    rename(old_path: string, new_path: string): void;
-    rmdir(path: string): void;
-    readdir(path: string): any;
-    unlink(path: string): void;
-    readlink(path: string): string;
-    stat(path: string, dontFollow?: boolean): any;
-    lstat(path: string): any;
-    chmod(path: string, mode: number, dontFollow?: boolean): void;
-    lchmod(path: string, mode: number): void;
-    fchmod(fd: number, mode: number): void;
-    chown(path: string, uid: number, gid: number, dontFollow?: boolean): void;
-    lchown(path: string, uid: number, gid: number): void;
-    fchown(fd: number, uid: number, gid: number): void;
-    truncate(path: string, len: number): void;
-    ftruncate(fd: number, len: number): void;
-    utime(path: string, atime: number, mtime: number): void;
-    open(path: string, flags: string, mode?: number, fd_start?: number, fd_end?: number): FSStream;
-    close(stream: FSStream): void;
-    llseek(stream: FSStream, offset: number, whence: number): any;
-    read(stream: FSStream, buffer: ArrayBufferView, offset: number, length: number, position?: number): number;
-    write(
-        stream: FSStream,
-        buffer: ArrayBufferView,
-        offset: number,
-        length: number,
-        position?: number,
-        canOwn?: boolean,
-    ): number;
-    allocate(stream: FSStream, offset: number, length: number): void;
-    mmap(
-        stream: FSStream,
-        buffer: ArrayBufferView,
-        offset: number,
-        length: number,
-        position: number,
-        prot: number,
-        flags: number,
-    ): any;
-    ioctl(stream: FSStream, cmd: any, arg: any): any;
-    readFile(path: string, opts: { encoding: 'binary'; flags?: string | undefined }): Uint8Array;
-    readFile(path: string, opts: { encoding: 'utf8'; flags?: string | undefined }): string;
-    readFile(path: string, opts?: { flags?: string | undefined }): Uint8Array;
-    writeFile(path: string, data: string | ArrayBufferView, opts?: { flags?: string | undefined }): void;
+  //
+  // core
+  //
+  syncfs(populate: boolean, callback: (e: any) => any): void;
+  syncfs(callback: (e: any) => any, populate?: boolean): void;
+  mount(type: Emscripten.FileSystemType, opts: any, mountpoint: string): any;
+  unmount(mountpoint: string): void;
+  create(path: string, mode?: number): any;
+  createFile(
+    parent: string,
+    path: string,
+    mode?: number,
+    backend?: number,
+  ): any;
+  mkdir(path: string, mode?: number): any;
+  mkdirTree(path: string): any;
+  mkdev(path: string, mode?: number, dev?: number): any;
+  symlink(oldpath: string, newpath: string): any;
+  rename(old_path: string, new_path: string): void;
+  rmdir(path: string): void;
+  readdir(path: string): any;
+  unlink(path: string): void;
+  readlink(path: string): string;
+  stat(path: string, dontFollow?: boolean): any;
+  lstat(path: string): any;
+  chmod(path: string, mode: number, dontFollow?: boolean): void;
+  lchmod(path: string, mode: number): void;
+  fchmod(fd: number, mode: number): void;
+  chown(path: string, uid: number, gid: number, dontFollow?: boolean): void;
+  lchown(path: string, uid: number, gid: number): void;
+  fchown(fd: number, uid: number, gid: number): void;
+  truncate(path: string, len: number): void;
+  ftruncate(fd: number, len: number): void;
+  utime(path: string, atime: number, mtime: number): void;
+  open(
+    path: string,
+    flags: string,
+    mode?: number,
+    fd_start?: number,
+    fd_end?: number,
+  ): FSStream;
+  close(stream: FSStream): void;
+  llseek(stream: FSStream, offset: number, whence: number): any;
+  read(
+    stream: FSStream,
+    buffer: ArrayBufferView,
+    offset: number,
+    length: number,
+    position?: number,
+  ): number;
+  write(
+    stream: FSStream,
+    buffer: ArrayBufferView,
+    offset: number,
+    length: number,
+    position?: number,
+    canOwn?: boolean,
+  ): number;
+  allocate(stream: FSStream, offset: number, length: number): void;
+  mmap(
+    stream: FSStream,
+    buffer: ArrayBufferView,
+    offset: number,
+    length: number,
+    position: number,
+    prot: number,
+    flags: number,
+  ): any;
+  ioctl(stream: FSStream, cmd: any, arg: any): any;
+  readFile(
+    path: string,
+    opts: { encoding: "binary"; flags?: string | undefined },
+  ): Uint8Array;
+  readFile(
+    path: string,
+    opts: { encoding: "utf8"; flags?: string | undefined },
+  ): string;
+  readFile(path: string, opts?: { flags?: string | undefined }): Uint8Array;
+  writeFile(
+    path: string,
+    data: string | ArrayBufferView,
+    opts?: { flags?: string | undefined },
+  ): void;
 
-    //
-    // module-level FS code
-    //
-    cwd(): string;
-    chdir(path: string): void;
-    init(
-        input: null | (() => number | null),
-        output: null | ((c: number) => any),
-        error: null | ((c: number) => any),
-    ): void;
+  //
+  // module-level FS code
+  //
+  cwd(): string;
+  chdir(path: string): void;
+  init(
+    input: null | (() => number | null),
+    output: null | ((c: number) => any),
+    error: null | ((c: number) => any),
+  ): void;
 
-    createPath(
-      parent: string,
-      path: string,
-      canRead: boolean,
-      canWrite: boolean
-    );
-    createLazyFile(
-        parent: string | FSNode,
-        name: string,
-        url: string,
-        canRead: boolean,
-        canWrite: boolean,
-    ): FSNode;
-    createPreloadedFile(
-        parent: string | FSNode,
-        name?: string,
-        url: string | TypedArray,
-        canRead: boolean,
-        canWrite: boolean,
-        onload?: () => void,
-        onerror?: () => void,
-        dontCreateFile?: boolean,
-        canOwn?: boolean,
-    ): void;
-    createDataFile(
-        parent: string | FSNode,
-        name?: string,
-        data: TypedArray,
-        canRead: boolean,
-        canWrite: boolean,
-        canOwn: boolean,
-    ): FSNode;
+  createPath(parent: string, path: string, canRead: boolean, canWrite: boolean);
+  createLazyFile(
+    parent: string | FSNode,
+    name: string,
+    url: string,
+    canRead: boolean,
+    canWrite: boolean,
+  ): FSNode;
+  createPreloadedFile(
+    parent: string | FSNode,
+    name?: string,
+    url: string | TypedArray,
+    canRead: boolean,
+    canWrite: boolean,
+    onload?: () => void,
+    onerror?: () => void,
+    dontCreateFile?: boolean,
+    canOwn?: boolean,
+  ): void;
+  createDataFile(
+    parent: string | FSNode,
+    name?: string,
+    data: TypedArray,
+    canRead: boolean,
+    canWrite: boolean,
+    canOwn: boolean,
+  ): FSNode;
 
-    // Etc
-    handleError(code:int):object;
+  // Etc
+  handleError(code: int): object;
 }
 
 declare let MEMFS: Emscripten.FileSystemType;
@@ -325,33 +351,42 @@ type ReturnToType<R extends Emscripten.JSType | null> = R extends null
 
 declare function cwrap<
   I extends Array<Emscripten.JSType | null> | [],
-  R extends Emscripten.JSType | null
+  R extends Emscripten.JSType | null,
 >(
   ident: string,
   returnType: R,
   argTypes: I,
-  opts?: Emscripten.CCallOpts
+  opts?: Emscripten.CCallOpts,
 ): (...arg: ArgsToType<I>) => ReturnToType<R>;
 
 declare function ccall<
   I extends Array<Emscripten.JSType | null> | [],
-  R extends Emscripten.JSType | null
+  R extends Emscripten.JSType | null,
 >(
   ident: string,
   returnType: R,
   argTypes: I,
   args: ArgsToType<I>,
-  opts?: Emscripten.CCallOpts
+  opts?: Emscripten.CCallOpts,
 ): ReturnToType<R>;
 
-declare function setValue(ptr: number, value: any, type: Emscripten.CType, noSafe?: boolean): void;
-declare function getValue(ptr: number, type: Emscripten.CType, noSafe?: boolean): number;
+declare function setValue(
+  ptr: number,
+  value: any,
+  type: Emscripten.CType,
+  noSafe?: boolean,
+): void;
+declare function getValue(
+  ptr: number,
+  type: Emscripten.CType,
+  noSafe?: boolean,
+): number;
 
 declare function allocate(
-    slab: number[] | ArrayBufferView | number,
-    types: Emscripten.CType | Emscripten.CType[],
-    allocator: number,
-    ptr?: number,
+  slab: number[] | ArrayBufferView | number,
+  types: Emscripten.CType | Emscripten.CType[],
+  allocator: number,
+  ptr?: number,
 ): number;
 
 declare function stackAlloc(size: number): number;
@@ -359,24 +394,51 @@ declare function stackSave(): number;
 declare function stackRestore(ptr: number): void;
 
 declare function UTF8ToString(ptr: number, maxBytesToRead?: number): string;
-declare function stringToUTF8(str: string, outPtr: number, maxBytesToRead?: number): void;
+declare function stringToUTF8(
+  str: string,
+  outPtr: number,
+  maxBytesToRead?: number,
+): void;
 declare function lengthBytesUTF8(str: string): number;
 declare function allocateUTF8(str: string): number;
 declare function allocateUTF8OnStack(str: string): number;
 declare function UTF16ToString(ptr: number): string;
-declare function stringToUTF16(str: string, outPtr: number, maxBytesToRead?: number): void;
+declare function stringToUTF16(
+  str: string,
+  outPtr: number,
+  maxBytesToRead?: number,
+): void;
 declare function lengthBytesUTF16(str: string): number;
 declare function UTF32ToString(ptr: number): string;
-declare function stringToUTF32(str: string, outPtr: number, maxBytesToRead?: number): void;
+declare function stringToUTF32(
+  str: string,
+  outPtr: number,
+  maxBytesToRead?: number,
+): void;
 declare function lengthBytesUTF32(str: string): number;
 
-declare function intArrayFromString(stringy: string, dontAddNull?: boolean, length?: number): number[];
+declare function intArrayFromString(
+  stringy: string,
+  dontAddNull?: boolean,
+  length?: number,
+): number[];
 declare function intArrayToString(array: number[]): string;
-declare function writeStringToMemory(str: string, buffer: number, dontAddNull: boolean): void;
+declare function writeStringToMemory(
+  str: string,
+  buffer: number,
+  dontAddNull: boolean,
+): void;
 declare function writeArrayToMemory(array: number[], buffer: number): void;
-declare function writeAsciiToMemory(str: string, buffer: number, dontAddNull: boolean): void;
+declare function writeAsciiToMemory(
+  str: string,
+  buffer: number,
+  dontAddNull: boolean,
+): void;
 
-declare function addFunction(func: (...args: any[]) => any, signature?: string): number;
+declare function addFunction(
+  func: (...args: any[]) => any,
+  signature?: string,
+): number;
 declare function removeFunction(funcPtr: number): void;
 
 declare let ALLOC_NORMAL: number;

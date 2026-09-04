@@ -176,7 +176,10 @@ impl IntoResponse for ServerError {
             ),
             ServerError::StateRequired => (StatusCode::BAD_REQUEST, "need a state to make a clone"),
             ServerError::V86Clone(_) => (StatusCode::INTERNAL_SERVER_ERROR, "v86 clone failed"),
-            ServerError::CreateTask(_) => (StatusCode::INTERNAL_SERVER_ERROR, "could not create worker task"),
+            ServerError::CreateTask(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "could not create worker task",
+            ),
             ServerError::Unreachable => (StatusCode::INTERNAL_SERVER_ERROR, "uh oh error"),
             ServerError::AuthSession(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "auth session error")
@@ -237,7 +240,7 @@ pub enum AuthError {
     TokenRequest(
         #[from]
         oauth2::RequestTokenError<
-            oauth2::HttpClientError<oauth2::reqwest::Error>,
+            oauth2::HttpClientError<reqwest::Error>,
             oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>,
         >,
     ),
