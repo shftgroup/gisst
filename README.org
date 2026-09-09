@@ -30,6 +30,31 @@ cp .devcontainer/devcontainer.env backend/.env
 cp .devcontainer/template.toml backend/config/local.toml
 #+END_SRC
 
+For a build where you want to test cores and not just html generation, you'd want to build the cores next.  If you don't want to hassle with building them, grab the nightly core build with =curl -OJ --anyauth --user YOUR_FORGEJO_USERNAME https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz=.
+
+** Building Cores (Optional)
+
+You need a =psxbios= folder with the SCPH bios files and a =v86bios= folder with e.g. =seabios_HASH.bin= and friends, or you should modify the =manifest.json= not to use those.
+
+This should be done *outside of the container*, using docker or podman directly.
+
+#+BEGIN_SRC sh
+sudo docker build -t gisst-dist -f Dockerfile.dist .
+sudo docker volume create gisst-build
+sudo docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -v gisst-build:/gisst-build gisst-dist
+#+END_SRC
+
+On subsequent builds pass =-e GET_ASSETS=0= to skip downloading the large asset bundle.
+
+** Building the Frontend
+
+Whether you downloaded the cores tarball or built cores yourself, you need to copy a bundle of emulator resources to the frontend directory.
+
+#+BEGIN_src sh
+mkdir -p frontend/frontend-web/public/assets/frontend
+cp build/assets_minimal.zip frontend/frontend-web/public/assets/frontend/
+#+END_src
+
 Next, build the frontend:
 
 #+BEGIN_SRC sh
@@ -49,17 +74,8 @@ npx playwright install
 npm run test --workspaces --if-present
 #+END_SRC
 
-For a build where you want to test cores and not just html generation, you'd want to build the cores next.  You need a =psxbios= folder with the SCPH bios files and a =v86bios= folder with e.g. =seabios_HASH.bin= and friends, or you should modify the =manifest.json= not to use those.
 
-This should be done *outside of the container*, using docker or podman directly.  If you don't want to hassle with building them, grab the nightly core build with `curl -OJ --anyauth --user YOUR_FORGEJO_USERNAME https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz`
-
-#+BEGIN_SRC sh
-sudo docker build -t gisst-dist -f Dockerfile.dist .
-sudo docker volume create gisst-build
-sudo docker run --rm -v $(pwd)/build:/out -v $(pwd)/manifest.json:/manifest.json -v $(pwd)/v86bios:/files/v86bios -v $(pwd)/psxbios:/files/psxbios -v gisst-build:/gisst-build gisst-dist
-#+END_SRC
-
-On subsequent builds pass =-e GET_ASSETS=0= to skip downloading the large asset bundle.
+** Running the Server
 
 After that, you can set up the initial testing database and run the gisst server:
 
@@ -67,8 +83,10 @@ After that, you can set up the initial testing database and run the gisst server
 cd backend
 source .env
 cargo sqlx migrate run
-./load_examples.sh
+./load_examples.sh # just run the first time you get set up, or if you clear the DB
 cargo run --bin gisst-server --features dummy_auth
 #+END_SRC
 
 The =dummy_auth= feature is necessary since we don't want to hit google auth in our local testing server.
+
+Load up https://localhost:3000 and you should be good to go---note that because of the self-signed certificate, you may need to use the address bar's security widget to add an exception for =localhost:3000= in order for things to work properly.
