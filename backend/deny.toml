@@ -266,7 +266,7 @@ allow-build-scripts = [
   "proc-macro2@1.0.107",
   "quote@1.0.47",
   "radium@0.7.0",
-  "rustls@0.23.43",
+  "rustls@0.23.45",
   "rustversion@1.0.23",
   "serde@1.0.229",
   "serde_core@1.0.229",
