@@ -875,6 +875,13 @@ user-id = 359
 user-login = "seanmonstar"
 user-name = "Sean McArthur"
 
+[[publisher.rustls]]
+version = "0.23.37"
+when = "2026-02-24"
+user-id = 209038
+user-login = "cpu"
+user-name = "Daniel McCarney"
+
 [[publisher.rustls-native-certs]]
 version = "0.8.4"
 when = "2026-06-01"
@@ -1443,14 +1450,14 @@ version = "0.8.56"
 when = "2026-08-06"
 user-id = 7178
 user-login = "joshlf"
-user-name = "Joshua Liebow-Feeser"
+user-name = "Josh Liebow-Feeser"
 
 [[publisher.zerocopy-derive]]
 version = "0.8.56"
 when = "2026-08-06"
 user-id = 7178
 user-login = "joshlf"
-user-name = "Joshua Liebow-Feeser"
+user-name = "Josh Liebow-Feeser"
 
 [[publisher.zerofrom]]
 version = "0.1.8"
@@ -1704,6 +1711,16 @@ notes = """
 This crate is a single-file crate that does what it says on the tin. There are
 a few `unsafe` blocks related to utf-8 validation which are locally verifiable
 as correct and otherwise this crate is good to go.
+"""
+
+[[audits.bytecode-alliance.audits.rustls]]
+who = "Alex Crichton <alex@alexcrichton.com>"
+criteria = "safe-to-deploy"
+delta = "0.23.37 -> 0.23.45"
+notes = """
+A relatively large update, but no new `unsafe` and nothing awry here. Lots of
+protocol/etc updates which I'm not personally an expert within but the rustls
+maintainers are relatively well trusted as well.
 """
 
 [[audits.bytecode-alliance.audits.semver]]
@@ -2202,8 +2219,8 @@ who = "Henri Sivonen <hsivonen@hsivonen.fi>"
 criteria = "safe-to-deploy"
 user-id = 4484 # Henri Sivonen (hsivonen)
 start = "2019-02-26"
-end = "2025-10-23"
-notes = "I, Henri Sivonen, wrote encoding_rs for Gecko and have reviewed contributions by others. There are two caveats to the certification: 1) The crate does things that are documented to be UB but that do not appear to actually be UB due to integer types differing from the general rule; https://github.com/hsivonen/encoding_rs/issues/79 . 2) It would be prudent to re-review the code that reinterprets buffers of integers as SIMD vectors; see https://github.com/hsivonen/encoding_rs/issues/87 ."
+end = "2027-09-07"
+notes = "I, Henri Sivonen, wrote encoding_rs for Gecko and have reviewed contributions by others."
 aggregated-from = "https://hg.mozilla.org/mozilla-central/raw-file/tip/supply-chain/audits.toml"
 
 [[audits.mozilla.wildcard-audits.unicode-normalization]]
