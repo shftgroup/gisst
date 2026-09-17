@@ -77,7 +77,10 @@ addEventListener("load", () => {
     },
     enter_fullscreen: () => console.log("FULLSCREEN"),
     activate_save: (save: string) => console.log("ACTIVATE", save),
-    create_save: () => console.log("MAKE SAVE"),
+    create_save: () => {
+      ui_state.newSave("save" + savenum.toString());
+      savenum += 1;
+    },
     load_state: (sn: string) => console.log("LOAD", sn),
     save_state: () => {
       ui_state.newState("state" + statenum.toString(), IMG_DATA);
