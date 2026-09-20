@@ -43,7 +43,9 @@ test("Create Savefile button", async ({ page }) => {
   await page.goto("/");
 
   const gisstSaveList = page.locator("#gisst-saves");
-  const initialCount = await gisstSaveList.locator("div.card-list-object").count();
+  const initialCount = await gisstSaveList
+    .locator("div.card-list-object")
+    .count();
 
   await page.getByRole("button", { name: "Create Savefile" }).click();
 
