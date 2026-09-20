@@ -41,7 +41,8 @@
   "dependencies": {
     "@types/bootstrap": "^5.2.6",
     "bootstrap": "^5.3.3",
-    "keyboard-css": "^1.2.4"
+    "keyboard-css": "^1.2.4",
+    "gisst-style": "file:../gisst-style"
   },
   "optionalDependencies": {
     "@esbuild/darwin-arm64": "^0.25.1"

@@ -38,6 +38,7 @@
   "dependencies": {
     "@zip.js/zip.js": "^2.7.53",
     "embedv86": "file:../embedv86",
-    "path-browserify": "^1.0.1"
+    "path-browserify": "^1.0.1",
+    "gisst-style": "file:../gisst-style"
   }
 }

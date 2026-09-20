@@ -10,6 +10,7 @@ import { default as instantsearch, InstantSearch } from "instantsearch.js";
 import { autocomplete } from "@algolia/autocomplete-js";
 import { default as SparkMD5 } from "spark-md5";
 import "instantsearch.css/themes/reset.css";
+import "gisst-style/base.css";
 import "../css/server-ui-main.css";
 import "../css/server-ui-new-instance.css";
 import "../css/server-ui-search.css";

@@ -1,0 +1,21 @@
+{
+  "name": "gisst-style",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./base.css": "./src/base.css"
+  },
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "dist": "npm run build && shx mkdir -p ../../backend/gisst-style-dist && shx cp dist/assets/*.css ../../backend/gisst-style-dist/"
+  },
+  "devDependencies": {
+    "vite": "^8.0.16",
+    "shx": "^0.4.0"
+  }
+}

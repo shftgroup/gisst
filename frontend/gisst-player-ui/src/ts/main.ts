@@ -18,6 +18,7 @@ import {
 
 import "../scss/styles.scss";
 import * as bootstrap from "bootstrap";
+import "gisst-style/base.css";
 // import * as uuid from 'uuid'
 
 import templates from "../html/templates.html?raw";

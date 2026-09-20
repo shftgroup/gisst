@@ -1,42 +1,5 @@
 /* Main Theme, Utility, and Component Defaults */
 
-/* Site wide theme colors */
-:root {
-  color-scheme: light dark;
-  /* Light theme */
-  --gisst-light-theme-primary: #4f46e5;
-  --gisst-light-theme-primary-dark: #4338ca;
-  --gisst-light-theme-secondary: #059669;
-  --gisst-light-theme-secondary-dark: #047857;
-  --gisst-light-theme-dark: #1e1b4b;
-  --gisst-light-theme-light: #f8fafc;
-  --gisst-light-theme-accent: #e11d48;
-  --gisst-light-theme-bg: #f0f5ff;
-  --gisst-light-theme-card-bg: #ffffff;
-  --gisst-light-theme-text-main: #334155;
-  --gisst-light-theme-text-light: #64748b;
-  --gisst-light-theme-particle-rgb-a: 79, 70, 229;
-  --gisst-light-theme-particle-rgb-b: 5, 150, 105;
-  --gisst-light-theme-particle-rgb-c: 225, 29, 72;
-  --gisst-light-theme-input-bg: 240, 245, 255;
-  --gisst-light-theme-border: 203, 213, 225;
-  /* Dark theme */
-  --gisst-dark-theme-primary: #6366f1;
-  --gisst-dark-theme-primary-dark: #4f46e5;
-  --gisst-dark-theme-secondary: #10b981;
-  --gisst-dark-theme-secondary-dark: #0ea5e9;
-  --gisst-dark-theme-dark: #1e293b;
-  --gisst-dark-theme-light: #f8fafc;
-  --gisst-dark-theme-accent: #f43f5e;
-  --gisst-dark-theme-bg: #0f172a;
-  --gisst-dark-theme-card-bg: 30, 41, 59;
-  --gisst-dark-theme-particle-rgb-a: 99, 102, 241;
-  --gisst-dark-theme-particle-rgb-b: 16, 185, 129;
-  --gisst-dark-theme-particle-rgb-c: 244, 63, 94;
-  --gisst-dark-theme-input-bg: 248, 250, 252;
-  --gisst-dark-theme-border: 51, 65, 85;
-}
-
 /* Reset CSS for page */
 * {
   margin: 0;
