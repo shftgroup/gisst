@@ -3,6 +3,7 @@
   "workspaces": [
     "ra-util",
     "embedv86",
+    "gisst-style",
     "frontend-embed",
     "gisst-player-ui",
     "frontend-web",

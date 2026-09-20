@@ -23,6 +23,7 @@ frontend/server-ui/mock-api/index.cjs
 frontend/node_modules
 frontend/frontend-embed/types
 frontend/gisst-player-ui/test-results
+frontend/gisst-style/node_modules
 vite.config.js.timestamp*
 .DS_Store
 target
@@ -36,6 +37,7 @@ backend/test
 backend/rdb-sys/libretro-util
 backend/rdb
 backend/web-dist
+backend/gisst-style-dist
 backend/etc/ansible/group_vars
 backend/etc/ansible/inventory.yml
 backend/etc/ansible/ansible.cfg
