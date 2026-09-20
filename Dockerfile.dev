@@ -41,6 +41,7 @@ COPY .devcontainer/nginx.conf /etc/nginx/sites-enabled/default
 
 RUN npm install -g typescript-language-server
 RUN npm install -g depcheck
+RUN npm install -g prettier
 RUN pipx install pre-commit && pipx ensurepath
 
 USER root
