@@ -54,3 +54,20 @@ test("Create Savefile button", async ({ page }) => {
     initialCount + 1,
   );
 });
+
+  test("Save State timestamp", async ({ page }) => {
+    await page.goto("/");
+
+    const gisstStatesList = page.locator("#gisst-states-list");
+    
+    const currentTimestampMil = Date.now();
+    await page.getByRole("button", { name: "Save State" }).click();
+
+    const latestState = gisstStatesList.locator("div[id*=state]").last();
+    const stateCreatedString = await latestState.getByText("Created").innerText();
+    const stateTimestamp = stateCreatedString.replace("Created", "").trim();
+    const stateTimestampMil = stateTimestamp ? new Date(stateTimestamp).getTime() : 0;
+
+    const timeDifference = Math.abs(currentTimestampMil - stateTimestampMil);
+    expect(timeDifference).toBeLessThan(2000);
+  })
