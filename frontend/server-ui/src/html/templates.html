@@ -1,0 +1,63 @@
+<template id="add-work-header">
+  <div>
+    <h1>Add Work</h1>
+    <p>You can find bibliographic data by attempting to match your content file against a community-developed database (Method 1), or you can search for a similar existing work already in the GISST system (Method 2). Using either method will populate the fields below, or you can skip both methods and create a new work by hand.</p>
+  </div>
+</template>
+
+
+<template id="add-work-method-one">
+  <div>
+    <label for="match_core_chooser">Method 1: What platform is this work for?</label>
+    <select name="match_core_chooser" class="core_chooser">
+      <option value="(init)">Select core...</option>
+    </select>
+    <label for="content_match_upload">Method 1: Search using the given main content file:</label>
+    <input type="file" class="content-match-upload"></input>
+    <p class="content_match_result"></p>
+  </div>
+</template>
+
+
+<template id="add-work-method-two">
+  <div class="gisst-Search-container">
+    <p>Method 2: Search for an existing instance (you can change the work details or content files later).</p>
+    <div id="add-work-search-box"></div>
+    <div id="add-work-results-box"></div>
+  </div>
+</template>
+
+
+<template id="add-work-details-form">
+  <form id="work-info">
+    <label for="work_core_chooser">Work platform:</label>
+    <select name="work_core_chooser" class="core_chooser"></select>
+
+    <label for="work_name">Work name:</label>
+    <input name="work_name" required></input>
+
+    <label for="work_version">Version:</label>
+    <input name="work_version"></input>
+
+    <label for="env_config">Environment config:</label>
+    <textarea name="env_config"></textarea>
+
+    <label for="instance_dep_upload">Instance dependencies:</label>
+    <input type="file" name="instance_dep_upload" class="instance-file-upload" data-target="dependency"></input>
+    <ol></ol>
+    <label for="instance_config_upload">Instance config files:</label>
+    <input type="file" name="instance_config_upload" class="instance-file-upload" data-target="config"></input>
+    <ol></ol>
+    <label for="instance_content_upload">Instance content files:</label>
+    <input type="file" name="instance_content_upload" class="instance-file-upload" data-target="content"></input>
+    <ol></ol>
+  </form>
+</template>
+
+
+<template id="add-work-submit">
+  <div>
+    <button class="submit" type="button">Create Instance</button>
+    <p class="submit-status"></p>
+  </div>
+</template>
