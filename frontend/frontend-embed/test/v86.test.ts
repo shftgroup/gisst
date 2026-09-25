@@ -51,4 +51,109 @@ describe("nested_replace", () => {
       partial: "PLACEHOLDER-plus-extra",
     });
   });
+
+  it("replaces the placeholder up to four levels down", () => {
+    // The other tests only go one level down. This one has the
+    // placeholder one, two, and three, and four levels down.
+    const config = {
+      one: { url: "PLACEHOLDER" },
+      two: {
+        inner: { url: "PLACEHOLDER" },
+      },
+      three: {
+        mid: {
+          inner: { url: "PLACEHOLDER" },
+        },
+      },
+
+      four: {
+        inner: {
+          inner: { url: "PLACEHOLDER" },
+        },
+      },
+    };
+
+    nested_replace(config, "PLACEHOLDER", "REPLACED");
+
+    expect(config).toEqual({
+      one: { url: "REPLACED" },
+      two: { 
+        inner: { url: "REPLACED" }
+       },
+      three: {
+        mid: {
+          inner: { url: "REPLACED" },
+        },
+      },
+      four: {
+        inner: {
+          inner: { url: "REPLACED" },
+        },
+      },
+    });
+  });
+
+  it("leaves an empty object alone", () => {
+    // There is nothing to walk inside "disk", and "bios" does not match.
+    const config = {
+      disk: {},
+      bios: { url: "keep-this" },
+    };
+
+    nested_replace(config, "PLACEHOLDER", "REPLACED");
+
+    expect(config).toEqual({
+      disk: {},
+      bios: { url: "keep-this" },
+    });
+  });
+
+  it("does not replace keys, only values", () => {
+    // The key is named PLACEHOLDER, but the function only looks at values.
+    const config = {
+      PLACEHOLDER: "keep-this",
+      disk: { url: "PLACEHOLDER" },
+    };
+
+    nested_replace(config, "PLACEHOLDER", "REPLACED");
+
+    expect(config).toEqual({
+      PLACEHOLDER: "keep-this",
+      disk: { url: "REPLACED" },
+    });
+  });
+
+
+  it("does not replace a different case or extra space", () => {
+    // The match has to be the whole string, with the same letters and
+    // no extra characters.
+    const config = {
+      lower: "placeholder",
+      spaced: "PLACEHOLDER ",
+      exact: "PLACEHOLDER",
+    };
+
+    nested_replace(config, "PLACEHOLDER", "REPLACED");
+
+    expect(config).toEqual({
+      lower: "placeholder",
+      spaced: "PLACEHOLDER ",
+      exact: "REPLACED",
+    });
+  });
+
+  it("replaces an empty string only when that is the target", () => {
+    // "" is a real value. It is replaced only when we search for "".
+    const config = {
+      blank: "",
+      disk: { url: "PLACEHOLDER" },
+    };
+
+    nested_replace(config, "", "REPLACED");
+
+    expect(config).toEqual({
+      blank: "REPLACED",
+      disk: { url: "PLACEHOLDER" },
+    });
+  });
 });
