@@ -1286,12 +1286,12 @@ class GISSTNewInstance extends HTMLElement {
     this.base_url = base_url;
 
     // Initialize templates
-    this.content_matcher = elementFromTemplates("add-work-method-one").firstElementChild as HTMLDivElement;
-    const search_method_div = elementFromTemplates("add-work-method-two").firstElementChild as HTMLDivElement;
+    this.content_matcher = elementFromTemplates("add-work-method-two").firstElementChild as HTMLDivElement;
+    const search_method_div = elementFromTemplates("add-work-method-one").firstElementChild as HTMLDivElement;
     const metadata_form = elementFromTemplates("add-work-details-form").firstElementChild as HTMLFormElement;
     const submit_div = elementFromTemplates("add-work-submit").firstElementChild as HTMLDivElement;
 
-    // Setup method 2
+    // Setup method 1 search
     const search_box = search_method_div.querySelector("#add-work-search-box") as HTMLElement;
     const results_box = search_method_div.querySelector("#add-work-results-box") as HTMLElement;
 
@@ -1349,7 +1349,7 @@ class GISSTNewInstance extends HTMLElement {
       },
     });
 
-
+    // Setup method 2
     this.init_core_chooser(
       this.content_matcher.getElementsByClassName(
         "core_chooser",
@@ -1368,7 +1368,7 @@ class GISSTNewInstance extends HTMLElement {
       ".core_chooser",
     )! as HTMLSelectElement;
 
-    // Method 1 Event Listeners
+    // Method 2 Event Listeners
     match_core_chooser.onchange = (event) => {
       content_match_upload.disabled = false;
       const first_option =
@@ -1391,7 +1391,6 @@ class GISSTNewInstance extends HTMLElement {
           });
       }
     };
-
 
     const core_chooser = metadata_form.getElementsByClassName(
       "core_chooser",
@@ -1444,7 +1443,7 @@ class GISSTNewInstance extends HTMLElement {
     for (const input of metadata_form.querySelectorAll(
       ".instance-file-upload",
     ) as unknown as HTMLInputElement[]) {
-      const lst = input.nextElementSibling;
+      const lst = input.parentElement?.nextElementSibling;
       const group = input.getAttribute("data-target")!;
       input.onchange = (event) => {
         console.log(event, lst);
@@ -1594,8 +1593,8 @@ class GISSTNewInstance extends HTMLElement {
     const contents = document.createElement("div");
     contents.className = "gisst-new-instance-container"
     contents.appendChild(elementFromTemplates("add-work-header"));
-    contents.appendChild(this.content_matcher);
     contents.appendChild(search_method_div);
+    contents.appendChild(this.content_matcher);
     contents.appendChild(metadata_form);
     contents.appendChild(submit_div);
     this.appendChild(contents);
@@ -1786,7 +1785,7 @@ class GISSTNewInstance extends HTMLElement {
   ) {
     const is_existing = "existing" in source;
     const lst = document.querySelector(
-      `#work-info input[data-target=${role}] + ol`,
+      `#work-info p:has(input[data-target=${role}]) + ol`,
     )! as HTMLOListElement;
     const line_item = document.createElement("li");
     const file_record = {

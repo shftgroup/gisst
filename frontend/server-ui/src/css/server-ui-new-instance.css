@@ -2,6 +2,10 @@ li[aria-selected="true"] .gisst-new-instance-selector {
   border: 2px red solid;
 }
 
+select, input, textarea {
+  margin-left: 0.8rem;
+}
+
 .gisst-new-instance-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -29,3 +33,22 @@ li[aria-selected="true"] .gisst-new-instance-selector {
 .gisst-new-instance-description-list {
   list-style-position: inside;
 }
+
+.aa-Form {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  gap: 0.5rem;
+}
+
+.add-work-details-container {
+  display: flex;
+  flex-direction: row;
+  gap: 4rem;
+}
+
+.add-work-details-col > * {
+  margin: 1rem auto;
+}
+
+

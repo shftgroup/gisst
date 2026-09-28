@@ -15,52 +15,77 @@
   </div>
 </template>
 
-
 <template id="add-work-method-one">
-  <div>
-    <label for="match_core_chooser">Method 1: What platform is this work for?</label>
-    <select name="match_core_chooser" class="core_chooser">
-      <option value="(init)">Select core...</option>
-    </select>
-    <label for="content_match_upload">Method 1: Search using the given main content file:</label>
-    <input type="file" class="content-match-upload"></input>
-    <p class="content_match_result"></p>
-  </div>
-</template>
-
-
-<template id="add-work-method-two">
-  <div class="gisst-Search-container">
-    <p>Method 2: Search for an existing instance (you can change the work details or content files later).</p>
+  <div class="add-work-search-container">
+    <p>Method 1: Search for an existing instance (you can change the work details or content files later).</p>
     <div id="add-work-search-box"></div>
     <div id="add-work-results-box"></div>
   </div>
 </template>
 
+<template id="add-work-method-two">
+  <div class="add-work-method-two-container">
+    <p>Method 2:</p>
+    <div>
+      <label for="match_core_chooser">What platform is this work for?</label>
+      <select name="match_core_chooser" class="core_chooser">
+        <option value="(init)">Select core...</option>
+      </select>
+    </div>
+    <div>
+      <label for="content_match_upload">Search using the given main content file:</label>
+      <input type="file" class="content-match-upload"></input>
+      <p class="content_match_result"></p>
+    </div>
+  </div>
+</template>
+
 
 <template id="add-work-details-form">
-  <form id="work-info">
-    <label for="work_core_chooser">Work platform:</label>
-    <select name="work_core_chooser" class="core_chooser"></select>
+  <form id="work-info" class="add-work-details-container">
+    <div class="add-work-details-col">
+      <div>
+        <p>Work details:</p>
+        <p>
+          <label for="work_core_chooser">Platform:</label>
+          <select name="work_core_chooser" class="core_chooser"></select>
+        </p>
+        <p>
+          <label for="work_name">Name:</label>
+          <input name="work_name" required></input>
+        </p>
+        <p>
+          <label for="work_version">Version:</label>
+          <input name="work_version"></input>
+        </p>
+      </div>
 
-    <label for="work_name">Work name:</label>
-    <input name="work_name" required></input>
+      <div>
+        <p>Select files:</p>
+        <p>
+          <label for="instance_dep_upload">Instance dependencies:</label>
+          <input type="file" name="instance_dep_upload" class="instance-file-upload" data-target="dependency"></input>
+        </p>
+        <ol></ol>
+        <p>
+          <label for="instance_config_upload">Instance config files:</label>
+          <input type="file" name="instance_config_upload" class="instance-file-upload" data-target="config"></input>
+        </p>
+        <ol></ol>
+        <p>
+          <label for="instance_content_upload">Instance content files:</label>
+          <input type="file" name="instance_content_upload" class="instance-file-upload" data-target="content"></input>
+        </p>
+        <ol></ol>
+      </div>
+    </div>
 
-    <label for="work_version">Version:</label>
-    <input name="work_version"></input>
-
-    <label for="env_config">Environment config:</label>
-    <textarea name="env_config"></textarea>
-
-    <label for="instance_dep_upload">Instance dependencies:</label>
-    <input type="file" name="instance_dep_upload" class="instance-file-upload" data-target="dependency"></input>
-    <ol></ol>
-    <label for="instance_config_upload">Instance config files:</label>
-    <input type="file" name="instance_config_upload" class="instance-file-upload" data-target="config"></input>
-    <ol></ol>
-    <label for="instance_content_upload">Instance content files:</label>
-    <input type="file" name="instance_content_upload" class="instance-file-upload" data-target="content"></input>
-    <ol></ol>
+    <div class="add-work-details-col">
+      <div>
+        <label for="env_config">Environment config:</label>
+        <textarea name="env_config"></textarea>
+      </div>
+    </div>
   </form>
 </template>
 
