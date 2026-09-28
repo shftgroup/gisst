@@ -1592,6 +1592,7 @@ class GISSTNewInstance extends HTMLElement {
     };
 
     const contents = document.createElement("div");
+    contents.className = "gisst-new-instance-container"
     contents.appendChild(elementFromTemplates("add-work-header"));
     contents.appendChild(this.content_matcher);
     contents.appendChild(search_method_div);
