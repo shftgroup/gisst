@@ -71,3 +71,24 @@ test("Create Savefile button", async ({ page }) => {
     const timeDifference = Math.abs(currentTimestampMil - stateTimestampMil);
     expect(timeDifference).toBeLessThan(2000);
   })
+
+const zoomButtons = [
+  { name: "0.5x", width: 240, height: 180 },
+  { name: "1x", width: 480, height: 360 },
+  { name: "2x", width: 960, height: 720 }
+];
+
+test.describe('Zoom Buttons', () => {
+  for (const button of zoomButtons) {
+    test(`${button.name} button`, async ({ page }) => {
+      await page.goto('/');
+
+      await page.getByRole("button", { name : button.name }).click();
+      const emulatorDiv = page.locator("#canvas_div");
+
+      await expect(emulatorDiv!).toHaveCSS('width', `${button.width}px`);
+      await expect(emulatorDiv!).toHaveCSS('height', `${button.height}px`);
+    });
+  }
+});
+
