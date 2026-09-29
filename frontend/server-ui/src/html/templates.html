@@ -26,16 +26,18 @@
 <template id="add-work-method-two">
   <div class="add-work-method-two-container">
     <p>Method 2:</p>
-    <div>
-      <label for="match_core_chooser">What platform is this work for?</label>
-      <select name="match_core_chooser" class="core_chooser">
-        <option value="(init)">Select core...</option>
-      </select>
-    </div>
-    <div>
-      <label for="content_match_upload">Search using the given main content file:</label>
-      <input type="file" class="content-match-upload"></input>
-      <p class="content_match_result"></p>
+    <div class="add-work-method-two-contents">
+      <div>
+        <label for="match_core_chooser">What platform is this work for?</label>
+        <select name="match_core_chooser" class="core_chooser">
+          <option value="(init)">Select core...</option>
+        </select>
+      </div>
+      <div>
+        <label>Search using the given main content file:</label>
+        <input type="file" id="content-match-upload" class="content-match-upload"></input>
+        <p class="content_match_result"></p>
+      </div>
     </div>
   </div>
 </template>
@@ -63,27 +65,27 @@
       <div>
         <p>Select files:</p>
         <p>
-          <label for="instance_dep_upload">Instance dependencies:</label>
-          <input type="file" name="instance_dep_upload" class="instance-file-upload" data-target="dependency"></input>
+          <label for="instance-dep-upload" class="gisst-Instance-btn gisst-Search-btn-primary">Add instance dependency</label>
+          <input type="file" id="instance-dep-upload" name="instance_dep_upload" class="instance-file-upload" data-target="dependency" hidden></input>
         </p>
         <ol></ol>
         <p>
-          <label for="instance_config_upload">Instance config files:</label>
-          <input type="file" name="instance_config_upload" class="instance-file-upload" data-target="config"></input>
+          <label for="instance-config-upload" class="gisst-Instance-btn gisst-Search-btn-primary">Add instance config files</label>
+          <input type="file" id="instance-config-upload" name="instance_config_upload" class="instance-file-upload" data-target="config" hidden></input>
         </p>
         <ol></ol>
         <p>
-          <label for="instance_content_upload">Instance content files:</label>
-          <input type="file" name="instance_content_upload" class="instance-file-upload" data-target="content"></input>
+          <label for="instance-content-upload" class="gisst-Instance-btn gisst-Search-btn-primary">Add instance content files</label>
+          <input type="file" id="instance-content-upload" name="instance_content_upload" class="instance-file-upload" data-target="content" hidden></input>
         </p>
         <ol></ol>
       </div>
     </div>
 
-    <div class="add-work-details-col">
-      <div>
-        <label for="env_config">Environment config:</label>
-        <textarea name="env_config"></textarea>
+    <div class="add-work-details-col add-work-environment-container">
+      <div class="add-work-environment">
+        <label for="env-config">Environment config:</label>
+        <textarea id="env-config" name="env_config"></textarea>
       </div>
     </div>
   </form>

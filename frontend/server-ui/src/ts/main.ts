@@ -1347,6 +1347,12 @@ class GISSTNewInstance extends HTMLElement {
           },
         ];
       },
+      classNames: {
+        input: "ais-SearchBox-input",
+        form: "ais-SearchBox-form",
+        submitButton: "ais-SearchBox-submit",
+        clearButton: "ais-SearchBox-reset"
+      }
     });
 
     // Setup method 2
