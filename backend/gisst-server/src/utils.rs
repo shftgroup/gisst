@@ -65,3 +65,54 @@ where
         Err(err) => Err(err),
     }
 }
+
+// adapted from https://github.com/s3rius/rustus/blob/master/src/utils/headers.rs
+#[cfg(test)]
+mod tests {
+    use super::parse_header;
+    use super::check_header;
+    use axum::http::header::HeaderMap;
+    use axum::http::HeaderValue;
+
+    #[test]
+    fn test_check_header_unknown_header(){
+        let headers = HeaderMap::new();
+        let check = check_header(&headers, "unknown", |value| value == "1");
+        assert!(!check)
+    }
+
+    #[test]
+    fn test_check_header(){
+        let mut headers = HeaderMap::new();
+        headers.insert("test_header", HeaderValue::from_static("1"));
+        let check = check_header(&headers, "test_header", |value| value == "1");
+        assert!(check);
+        let check = check_header(&headers, "test_header", |value| value == "2");
+        assert!(!check);
+    }
+
+    // test_parse_header_wrong_type (unreadable type)
+    #[test]
+    fn test_parse_header_wrong_type(){
+        let mut headers = HeaderMap::new();
+        headers.insert("test_header", HeaderValue::from_bytes(b"\xFF\xFE").unwrap());
+        let header = parse_header::<i32>(&headers, "test_header");
+        assert!(header.is_none())
+    }
+    // test_parse_unknown_header (empty)
+    #[test]
+    fn test_parse_unknown_header(){
+        let headers = HeaderMap::new();
+        let header = parse_header::<String>(&headers, "unknown");
+        assert!(header.is_none());
+    }
+    // test_parse_header (correct path) 
+    #[test]
+    fn test_parse_header(){
+        let mut headers = HeaderMap::new();
+        headers.insert("test_header", HeaderValue::from_static("MyHeader"));
+        let header = parse_header::<String>(&headers, "test_header");
+        assert_eq!(header.unwrap(), "MyHeader");
+    }
+
+}   
