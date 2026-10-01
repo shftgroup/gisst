@@ -27,6 +27,8 @@ pub struct Config {
 }
 
 impl Config {
+    /// # Errors
+    /// - Configuration failed to parse correctly
     pub fn new() -> Result<Self, ConfigError> {
         let env = std::env::var("GISST_ENV").unwrap_or_else(|_| "development".into());
         let builder = Cfg::builder()

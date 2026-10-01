@@ -248,7 +248,6 @@ allow-build-scripts = [
   "aws-lc-rs@1.19.0",
   "aws-lc-sys@0.47.0",
   "bindgen@0.72.1",
-  "bindgen@0.73.2",
   "clang-sys@1.9.1",
   "cookie@0.18.2",
   "crc32fast@1.5.3",

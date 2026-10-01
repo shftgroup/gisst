@@ -40,7 +40,7 @@ fn libretro_h() -> bindgen::Builder {
                 | "retro_savestate_context"
                 | "retro_message_target"
                 | "retro_message_type" => vec!["TryFromPrimitive".to_owned()],
-                _ => Vec::with_capacity(0),
+                _ => Vec::new(),
             }
         }
     }
@@ -81,7 +81,7 @@ fn libretro_vulkan_h() -> bindgen::Builder {
             match info.name {
                 // Other structs get these #[derive]s, but retro_hw_render_interface_vulkan doesn't for some reason
                 "retro_hw_render_interface_vulkan" => vec!["Clone".to_owned()],
-                _ => Vec::with_capacity(0),
+                _ => Vec::new(),
             }
         }
     }
@@ -107,7 +107,7 @@ fn libretro_vulkan_h() -> bindgen::Builder {
         .use_core()
 }
 
-fn save_bindings(bindings: Bindings, name: &str) {
+fn save_bindings(bindings: &Bindings, name: &str) {
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     bindings
         .write_to_file(out_path.join(name))
@@ -118,10 +118,10 @@ fn main() {
     let bindings = libretro_h()
         .generate()
         .expect("Unable to generate libretro.h bindings");
-    save_bindings(bindings, "bindings_libretro.rs");
+    save_bindings(&bindings, "bindings_libretro.rs");
 
     let bindings = libretro_vulkan_h()
         .generate()
         .expect("Unable to generate libretro_vulkan.h bindings");
-    save_bindings(bindings, "bindings_libretro_vulkan.rs");
+    save_bindings(&bindings, "bindings_libretro_vulkan.rs");
 }

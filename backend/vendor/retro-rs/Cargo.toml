@@ -11,6 +11,18 @@ repository = "https://github.com/JoeOsborn/retro-rs"
 libloading = "0.9"
 rust-libretro-sys.workspace = true
 libc.workspace = true
+euclid = {version="0.22", optional=true}
+gl = {version="0.14", optional=true}
+
+[target.'cfg( target_os = "linux" )'.dependencies]
+surfman = {version="0.10.0",optional=true,features=["sm-x11"]}
+
+[target.'cfg( not(target_os = "linux") )'.dependencies]
+surfman = {version="0.10.0",optional=true}
 
 [build-dependencies]
 cc.workspace = true
+
+[features]
+default = []
+use_gl = ["surfman", "euclid", "gl"]

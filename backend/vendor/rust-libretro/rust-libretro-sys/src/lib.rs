@@ -2,6 +2,14 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
+#![expect(
+    clippy::doc_markdown,
+    reason = "underscores appear all over the generated C code and its generated doc strings"
+)]
+#![expect(
+    clippy::unreadable_literal,
+    reason = "C integer literals of many digits appear in libretro.h"
+)]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/max-m/rust-libretro/master/media/logo.png",
     html_favicon_url = "https://raw.githubusercontent.com/max-m/rust-libretro/master/media/favicon.png"

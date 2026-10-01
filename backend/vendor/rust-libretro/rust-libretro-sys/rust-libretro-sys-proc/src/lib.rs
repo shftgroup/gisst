@@ -6,30 +6,28 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-use syn::{DataEnum, DeriveInput, Meta, Meta::List, MetaList, NestedMeta};
+use syn::{DataEnum, DeriveInput};
 
 fn filter_primitive_type_attr(attr: &syn::Attribute) -> Option<(String, Span)> {
-    if let Ok(List(MetaList {
-        path,
-        paren_token: _,
-        nested,
-    })) = attr.parse_meta()
-    {
-        if let Some(ident) = path.get_ident() {
-            if ident == "repr" {
-                if let Some(NestedMeta::Meta(Meta::Path(path))) = nested.first() {
-                    if let Some(ident) = path.get_ident() {
-                        return Some((ident.to_string(), ident.span()));
-                    }
-                }
-            }
+    let mut result = None;
+    attr.parse_nested_meta(|pnm| {
+        if pnm.path.is_ident("repr") {
+            let value = pnm.value()?;
+            result = Some((value.to_string(), value.span()));
+            Ok(())
+        } else {
+            Err(pnm.error("Unsupported attribute"))
         }
-    }
-
-    None
+    })
+    .ok();
+    result
 }
 
 /// This macro is based on [enum-tryfrom](https://github.com/kwohlfahrt/enum-tryfrom) (MIT).
+///
+/// # Panics
+/// - If the token stream can't be parsed successfully.
+/// - If used on something that is not an enum with data-free variants
 ///
 /// Original license:
 /// > MIT License
@@ -65,19 +63,17 @@ pub fn from_primitive(input: TokenStream) -> TokenStream {
         .filter_map(filter_primitive_type_attr)
         .map(|(ident, span)| syn::Ident::new(&ident, span));
 
-    let variants = if let syn::Data::Enum(DataEnum { ref variants, .. }) = input.data {
-        variants
-    } else {
+    let syn::Data::Enum(DataEnum { ref variants, .. }) = input.data else {
         panic!("`TryFromPrimitive` is only supported on Enums")
     };
 
     let impls = types.map(|ty| {
         let blocks = variants.iter().map(|var| {
             let ident = &var.ident;
-            if !matches!(var.fields, syn::Fields::Unit) {
-                panic!("Enum variant may not store data!")
-            }
-
+            assert!(
+                matches!(var.fields, syn::Fields::Unit),
+                "Enum variant may not store data!"
+            );
             quote! {
                 x if x == #name::#ident as #ty => Ok(#name::#ident)
             }

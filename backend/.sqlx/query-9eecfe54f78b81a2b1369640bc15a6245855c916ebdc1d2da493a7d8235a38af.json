@@ -35,7 +35,8 @@
               "Enum": [
                 "entrypoint",
                 "dependency",
-                "config"
+                "config",
+                "native"
               ]
             }
           }
