@@ -15,7 +15,7 @@
     "@gisst/vite-mock-api": "^4.0.1",
     "@types/path-browserify": "^1.0.3",
     "esbuild": "^0.28.1",
-    "shx": "^0.4.0",
+    "shx": "^0.3.4",
     "sirv": "^3.0.2",
     "typescript": "^5.8.2",
     "vite": "^8.0.16",

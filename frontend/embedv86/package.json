@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "serve-static": "^2.2.1",
-    "shx": "^0.4.0",
+    "shx": "^0.3.4",
     "typescript": "^5.8.2",
     "vite": "^8.0.16",
     "vite-plugin-dts": "^4.5.3",

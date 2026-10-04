@@ -30,7 +30,7 @@
     "@types/spark-md5": "^3.0.2",
     "@types/uuid": "^9.0.2",
     "sass": "^1.60.0",
-    "shx": "^0.4.0",
+    "shx": "^0.3.4",
     "spark-md5": "^3.0.2",
     "tus-js-client": "^4.3.1",
     "typescript": "^5.8.2",
@@ -41,8 +41,8 @@
   "dependencies": {
     "@types/bootstrap": "^5.2.6",
     "bootstrap": "^5.3.3",
-    "keyboard-css": "^1.2.4",
-    "gisst-style": "file:../gisst-style"
+    "gisst-style": "file:../gisst-style",
+    "keyboard-css": "^1.2.4"
   },
   "optionalDependencies": {
     "@esbuild/darwin-arm64": "^0.25.1"

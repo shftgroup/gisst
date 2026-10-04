@@ -26,7 +26,7 @@
     "@types/path-browserify": "^1.0.3",
     "@vitest/ui": "^4.1.11",
     "happy-dom": "^20.10.1",
-    "shx": "^0.4.0",
+    "shx": "^0.3.4",
     "sirv": "^3.0.2",
     "typescript": "^5.8.2",
     "vite": "^8.0.16",
@@ -38,7 +38,7 @@
   "dependencies": {
     "@zip.js/zip.js": "^2.7.53",
     "embedv86": "file:../embedv86",
-    "path-browserify": "^1.0.1",
-    "gisst-style": "file:../gisst-style"
+    "gisst-style": "file:../gisst-style",
+    "path-browserify": "^1.0.1"
   }
 }
