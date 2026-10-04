@@ -1807,9 +1807,58 @@ class GISSTNewInstance extends HTMLElement {
           },
       list_item: line_item,
     };
-    line_item.innerHTML = `
-${filename} <button type="button" class="move-up">^</button> <button type="button" class="move-down">v</button> <button type="button" class="remove">X</button>
-`;
+
+    line_item.innerHTML = `<div class="line-item-top">${filename} <button type="button" class="remove line-item-buttons">X</button></div>`;
+
+    const line_item_bottom_div = document.createElement("div");
+    line_item_bottom_div.classList.add("line-item-bottom");
+    line_item.appendChild(line_item_bottom_div);
+
+    const line_item_upload_div = document.createElement("div");
+    line_item_bottom_div.appendChild(line_item_upload_div);
+
+    const line_item_move_div = document.createElement("div");
+    line_item_bottom_div.appendChild(line_item_move_div);
+
+    if (is_existing) {
+      const exist_note = document.createElement("span");
+      exist_note.classList.add("exists-note");
+      exist_note.textContent = "E";
+      line_item_upload_div.appendChild(exist_note);
+    } else {
+      const upload_status = document.createElement("button");
+      upload_status.classList.add("upload");
+      upload_status.classList.add("line-item-buttons");
+      const progress = document.createElement("progress");
+      progress.max = 0;
+      progress.value = 0;
+      upload_status.textContent = "U";
+      upload_status.onclick = (_evt) => {
+        const idx = this.file_lists[role].findIndex(
+          (fr) => fr.ui_id == file_record.ui_id,
+        );
+        this.upload_file(role, idx, upload_status, progress);
+      };
+      line_item_upload_div.appendChild(upload_status);
+      line_item_upload_div.appendChild(progress);
+    }
+    lst.appendChild(line_item);
+    this.file_lists[role].push(file_record);
+
+    const move_up_btn = document.createElement("button");
+    move_up_btn.type = "button";
+    move_up_btn.classList.add("move-up");
+    move_up_btn.classList.add("line-item-buttons");
+    move_up_btn.textContent = "↑";
+    line_item_move_div.appendChild(move_up_btn);
+
+    const move_down_btn = document.createElement("button");
+    move_down_btn.type = "button";
+    move_down_btn.classList.add("move-down");
+    move_down_btn.classList.add("line-item-buttons");
+    move_down_btn.textContent = "↓";
+    line_item_move_div.appendChild(move_down_btn);
+
     (line_item.querySelector("button.move-up")! as HTMLButtonElement).onclick =
       (_evt) => {
         const idx = this.file_lists[role].findIndex(
@@ -1847,29 +1896,7 @@ ${filename} <button type="button" class="move-up">^</button> <button type="butto
       this.file_lists[role].splice(idx, 1);
       lst.removeChild(line_item);
     };
-    if (is_existing) {
-      const exist_note = document.createElement("span");
-      exist_note.classList.add("exists-note");
-      exist_note.textContent = "E";
-      line_item.appendChild(exist_note);
-    } else {
-      const upload_status = document.createElement("button");
-      upload_status.classList.add("upload");
-      const progress = document.createElement("progress");
-      progress.max = 0;
-      progress.value = 0;
-      upload_status.textContent = "U";
-      upload_status.onclick = (_evt) => {
-        const idx = this.file_lists[role].findIndex(
-          (fr) => fr.ui_id == file_record.ui_id,
-        );
-        this.upload_file(role, idx, upload_status, progress);
-      };
-      line_item.appendChild(upload_status);
-      line_item.appendChild(progress);
-    }
-    lst.appendChild(line_item);
-    this.file_lists[role].push(file_record);
+    
   }
   async update_work_instanceenv_info(instance_id: string) {
     const env_config = document.querySelector(
