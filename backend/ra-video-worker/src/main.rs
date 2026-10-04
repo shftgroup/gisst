@@ -51,7 +51,10 @@ async fn process_one_task(
         Err(e) => return Err(e.into()),
     };
     let task: server_types::embed::EmbedDataInfo = resp.json().await?;
-
+    // 1. use the task's core manifest to find the appropriate native core for this OS/arch
+    // 2. download that native core, and the dependencies and configs (not entrypoint) for the core
+    // 3. proceed as in the rply-codec genvideo example -- for now just 2D games
+    // 4. upload the video via TUS to gisst-server (should the task include a file object UUID/WIP tus upload to upload to?)
     dbg!(task);
     todo!();
 }

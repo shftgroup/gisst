@@ -4,7 +4,7 @@ SCRIPT_VERSION="1.0.0"
 
 set -o pipefail
 set -e
-set -v
+set -x
 
 MANIFEST_FILE="${MANIFEST_FILE:-/manifest.json}"
 OUT_DIR="${OUT_DIR:-/out/}"
@@ -89,6 +89,7 @@ popd
 fi
 
 if [ ${FETCH_CORES:-1} -eq 1 ] ; then
+
 mkdir -p ra-build
 pushd ra-build
 
@@ -191,6 +192,51 @@ for f in $CORENAMES v86; do
     cat "$OUT_DIR"/cores/${f}_libretro.json
     cat "$OUT_DIR"/cores/${f}_libretro.hash
     popd
+    popd
+done
+popd
+fi
+
+if [ ${BUILD_NATIVE_CORES:-0} -eq 1 ]; then
+
+mkdir "${OUT_DIR}/native_cores"
+
+pushd ra-build
+RETROARCH_VERSION=$(jq -r '.retroarch.version' "$MANIFEST_FILE")
+
+arch=$(uname -m)
+
+for f in $CORENAMES; do
+    EXTRA_ARGS=$(jq -re ".retroarch.cores.$f.extra_build_args // [] | join(\" \")" "$MANIFEST_FILE")
+    echo $f
+    pushd $f
+    if [ $f = "sameboy" ]
+    then
+        rgbds_repo=$(jq -r '.retroarch.cores.sameboy.rgbds_repo' "$MANIFEST_FILE")
+        rgbds_version=$(jq -r '.retroarch.cores.sameboy.rgbds_version' "$MANIFEST_FILE")
+        git clone $rgbds_repo rgbds && pushd rgbds && git checkout $rgbds_version && popd
+        make -C rgbds -j || die "Could not build rgbds"
+        PATH="./rgbds:${PATH}" make clean
+        PATH="./rgbds:${PATH}" make -j CONF=release bootroms || die "could not build sameboy bootroms"
+        PATH="./rgbds:${PATH}" make CONF=release $EXTRA_ARGS -j libretro || die "could not build core ${f}"
+        cp build/bin/${f}_libretro.so "$OUT_DIR"/native_cores/${f}_libretro.${arch}.so
+    elif [ -f Makefile.libretro ]
+    then
+        make -f Makefile.libretro clean || make clean || echo "Could not clean ${f}"
+        make -f Makefile.libretro $EXTRA_ARGS -j || die "could not build core ${f}"
+        cp ${f}_libretro.so "$OUT_DIR"/native_cores/${f}_libretro.${arch}.so
+    elif [ -d libretro ] && [ -f libretro/Makefile ]
+    then
+        pushd libretro
+        make clean || echo "Could not clean ${f}"
+        make $EXTRA_ARGS -j || die "could not build core ${f}"
+        cp ${f}_libretro.so "$OUT_DIR"/native_cores/${f}_libretro.${arch}.so
+        popd
+    else
+        make clean || echo "Could not clean ${f}"
+        make $EXTRA_ARGS -j || die "could not build core ${f}"
+        cp ${f}_libretro.so "$OUT_DIR"/native_cores/${f}_libretro.${arch}.so
+    fi
     popd
 done
 popd

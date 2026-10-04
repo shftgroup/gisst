@@ -147,8 +147,9 @@ pub struct AddNativeCoreArgs {
         clippy::doc_markdown,
         reason = "lint is confused by file names with underscores"
     )]
-    /// The compiled core library, e.g. "libretro_snes9x.x64.so", "libretro_snes9x.arm64.dylib", "libretro_snes9x.arm64.so", etc.
-    /// The .arch.libraryformat suffix lets clients determine which to use from the list of available native cores
+    /// The compiled core library, e.g. "libretro_snes9x.x86_64.so", "libretro_snes9x.arm64.dylib", "libretro_snes9x.aarch64.so", etc.
+    /// The .arch.libraryformat suffix lets clients determine which to use from the list of available native cores.
+    /// Note that Apple uses arm64 while Linux uses aarch64 even though the architecture is the same.
     pub core_lib: String,
     /// Storage dir depth
     #[arg(default_value_t = 4)]
