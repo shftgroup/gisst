@@ -18,8 +18,18 @@
 <template id="add-work-method-one">
   <div class="add-work-search-container">
     <p>Method 1: Search for an existing instance (you can change the work details or content files later).</p>
+
     <div id="add-work-search-box"></div>
-    <div id="add-work-results-box"></div>
+
+    <div class="gisst-Search-results-header gisst-Add-work-search-header">
+      <div class="gisst-Search-header-cell gisst-New-instance-search-header-description">Description</div>
+      <div class="gisst-Search-header-cell gisst-New-instance-search-header-platform">Platform</div>
+      <div class="gisst-Search-header-cell gisst-New-instance-search-header-version">Version</div>
+    </div>
+
+    <div class="gisst-Search-table-view">
+      <div id="add-work-results-box" class="gisst-Search-results-body"></div>
+    </div>
   </div>
 </template>
 

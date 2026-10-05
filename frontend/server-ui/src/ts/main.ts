@@ -2,12 +2,7 @@ import {
   instantMeiliSearch,
   InstantMeiliSearchOptions,
 } from "@meilisearch/instant-meilisearch";
-import {
-  meilisearchAutocompleteClient,
-  getMeilisearchResults,
-} from "@meilisearch/autocomplete-client";
 import { default as instantsearch, InstantSearch } from "instantsearch.js";
-import { autocomplete } from "@algolia/autocomplete-js";
 import { default as SparkMD5 } from "spark-md5";
 import "instantsearch.css/themes/reset.css";
 import "gisst-style/base.css";
@@ -21,6 +16,7 @@ import * as widgets from "instantsearch.js/es/widgets";
 export * as widgets from "instantsearch.js/es/widgets";
 import * as tus from "tus-js-client";
 import templates from '../html/templates.html?raw';
+import connectStats from "instantsearch.js/es/connectors/stats/connectStats";
 
 // Import all templates from templates.html
 const TEMPLATES = document.createElement("template");
@@ -1294,66 +1290,79 @@ class GISSTNewInstance extends HTMLElement {
     // Setup method 1 search
     const search_box = search_method_div.querySelector("#add-work-search-box") as HTMLElement;
     const results_box = search_method_div.querySelector("#add-work-results-box") as HTMLElement;
+    const results_header = search_method_div.querySelector(".gisst-Add-work-search-header") as HTMLElement;
+    const results_header_display = results_header.style.display;
 
-    const search_client = meilisearchAutocompleteClient({
-      url: search_url,
-      apiKey: search_key,
-    });
+    const search = search_instances(search_url, search_key, {});
 
-    autocomplete({
-      container: search_box,
-      panelContainer: results_box,
-      detachedMediaQuery: "none",
-      placeholder: "Search",
-      // @ts-expect-error autocomplete-js types are bad vis-a-vis meilisearch-autocomplete
-      getSources({ query }) {
-        return [
-          {
-            sourceId: "instance",
-            getItemInputValue: ({ item }) => item.work_name as string,
-            getItems() {
-              return getMeilisearchResults({
-                searchClient: search_client,
-                queries: [
-                  {
-                    indexName: "instance",
-                    query,
-                  },
-                ],
-              });
-            },
-            templates: {
-              item({ item, html }) {
-                return html` <div class="gisst-new-instance-selector">
-                  <div>${item.work_name}</div>
-                  <div>${item.work_version}</div>
-                  <div>${item.work_platform}</div>
-                </div>`;
-              },
-            },
-            onSelect({ item, setStatus, refresh, setIsOpen, ...others }) {
-              console.log("selected ", item, others);
-              self.update_work_bibinfo(item as object as InstanceWork);
-              self.update_work_instanceenv_info(
-                (item as object as InstanceWork).instance_id,
-              );
-              setStatus("idle");
-              setIsOpen(false);
-              refresh();
-              if (document.activeElement) {
-                (document.activeElement as HTMLElement)!.blur();
-              }
-            },
-          },
-        ];
-      },
-      classNames: {
-        input: "ais-SearchBox-input",
-        form: "ais-SearchBox-form",
-        submitButton: "ais-SearchBox-submit",
-        clearButton: "ais-SearchBox-reset"
+    // Custom handler for hiding and showing table header
+    const custom_stats = connectStats((renderOptions) => {
+      if (renderOptions.nbHits <= 0 || !renderOptions.query) {
+        results_header.style.display = "none";
+      } else {
+        results_header.style.display = results_header_display;
       }
     });
+
+    search.addWidgets([
+      widgets.searchBox({
+        container: search_box,
+      }),
+      widgets.hits({
+        container: results_box,
+        transformItems(items, { results }) {
+          // Don't show any results for empty query
+          if (!results?.query) return [];
+          return items;
+        },
+        templates: {
+          item(hit, { html, components }) {
+            return html`
+              <button class="gisst-Add-work-search-item-button gisst-Search-results-row" onClick="${() => {
+                console.log("selected ", hit);
+
+                const work = hit as object as InstanceWork;
+                self.update_work_bibinfo(work);
+                self.update_work_instanceenv_info(
+                  work.instance_id,
+                );
+
+                // Set the search bar to the name of the work without showing any results
+                search.helper!.setQuery("").search();
+                search.helper!.setQuery(work.work_name);
+
+                if (document.activeElement) {
+                  (document.activeElement as HTMLElement)!.blur();
+                }
+              }}">
+                <div
+                  class="gisst-Search-cell gisst-New-instance-search-work-name"
+                >
+                  ${components.Highlight({ hit, attribute: "work_name" })}</span
+                </div>
+                <div
+                  class="gisst-Search-cell gisst-New-instance-search-platform-info"
+                >
+                  ${components.Highlight({ hit, attribute: "work_platform" })}
+                </div>
+                <div
+                  class="gisst-Search-cell gisst-New-instance-search-version-info"
+                >
+                  ${hit.work_version}
+                </div>
+              </button>
+            `;
+          },
+          empty() {
+            return null;
+          },
+        },
+      }),
+      widgets.configure({ hitsPerPage: 10 }),
+      custom_stats({}),
+    ]);
+
+    search.start();
 
     // Setup method 2
     this.init_core_chooser(
@@ -1896,7 +1905,7 @@ class GISSTNewInstance extends HTMLElement {
       this.file_lists[role].splice(idx, 1);
       lst.removeChild(line_item);
     };
-    
+
   }
   async update_work_instanceenv_info(instance_id: string) {
     const env_config = document.querySelector(
