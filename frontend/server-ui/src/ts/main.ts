@@ -1282,15 +1282,15 @@ class GISSTNewInstance extends HTMLElement {
     this.base_url = base_url;
 
     // Initialize templates
-    this.content_matcher = elementFromTemplates("add-work-method-two").firstElementChild as HTMLDivElement;
-    const search_method_div = elementFromTemplates("add-work-method-one").firstElementChild as HTMLDivElement;
-    const metadata_form = elementFromTemplates("add-work-details-form").firstElementChild as HTMLFormElement;
-    const submit_div = elementFromTemplates("add-work-submit").firstElementChild as HTMLDivElement;
+    this.content_matcher = elementFromTemplates("new-instance-method-two").firstElementChild as HTMLDivElement;
+    const search_method_div = elementFromTemplates("new-instance-method-one").firstElementChild as HTMLDivElement;
+    const metadata_form = elementFromTemplates("new-instance-details-form").firstElementChild as HTMLFormElement;
+    const submit_div = elementFromTemplates("new-instance-submit").firstElementChild as HTMLDivElement;
 
     // Setup method 1 search
-    const search_box = search_method_div.querySelector("#add-work-search-box") as HTMLElement;
-    const results_box = search_method_div.querySelector("#add-work-results-box") as HTMLElement;
-    const results_header = search_method_div.querySelector(".gisst-Add-work-search-header") as HTMLElement;
+    const search_box = search_method_div.querySelector("#new-instance-search-box") as HTMLElement;
+    const results_box = search_method_div.querySelector("#new-instance-results-box") as HTMLElement;
+    const results_header = search_method_div.querySelector(".gisst-New-instance-search-header") as HTMLElement;
     const results_header_display = results_header.style.display;
 
     const search = search_instances(search_url, search_key, {});
@@ -1318,7 +1318,7 @@ class GISSTNewInstance extends HTMLElement {
         templates: {
           item(hit, { html, components }) {
             return html`
-              <button class="gisst-Add-work-search-item-button gisst-Search-results-row" onClick="${() => {
+              <button class="gisst-New-instance-search-item-button gisst-Search-results-row" onClick="${() => {
                 console.log("selected ", hit);
 
                 const work = hit as object as InstanceWork;
@@ -1610,8 +1610,8 @@ class GISSTNewInstance extends HTMLElement {
     };
 
     const contents = document.createElement("div");
-    contents.className = "gisst-new-instance-container"
-    contents.appendChild(elementFromTemplates("add-work-header"));
+    contents.className = "gisst-New-instance-container"
+    contents.appendChild(elementFromTemplates("new-instance-header"));
     contents.appendChild(search_method_div);
     contents.appendChild(this.content_matcher);
     contents.appendChild(metadata_form);
@@ -1821,10 +1821,12 @@ class GISSTNewInstance extends HTMLElement {
       list_item: line_item,
     };
 
-    line_item.innerHTML = `<div class="line-item-top">${filename} <button type="button" class="remove line-item-buttons" title="Remove">X</button></div>`;
+    line_item.innerHTML = `
+      <div class="gisst-New-instance-line-item-top">${filename} <button type="button" class="remove gisst-New-instance-line-item-buttons" title="Remove">X</button></div>
+    `;
 
     const line_item_bottom_div = document.createElement("div");
-    line_item_bottom_div.classList.add("line-item-bottom");
+    line_item_bottom_div.classList.add("gisst-New-instance-line-item-bottom");
     line_item.appendChild(line_item_bottom_div);
 
     const line_item_upload_div = document.createElement("div");
@@ -1841,7 +1843,7 @@ class GISSTNewInstance extends HTMLElement {
     } else {
       const upload_status = document.createElement("button");
       upload_status.classList.add("upload");
-      upload_status.classList.add("line-item-buttons");
+      upload_status.classList.add("gisst-New-instance-line-item-buttons");
       upload_status.title = "Upload"
       const progress = document.createElement("progress");
       progress.max = 0;
@@ -1861,21 +1863,21 @@ class GISSTNewInstance extends HTMLElement {
 
     const move_up_btn = document.createElement("button");
     move_up_btn.type = "button";
-    move_up_btn.classList.add("move-up");
-    move_up_btn.classList.add("line-item-buttons");
+    move_up_btn.classList.add("gisst-New-instance-move-up");
+    move_up_btn.classList.add("gisst-New-instance-line-item-buttons");
     move_up_btn.textContent = "↑";
     move_up_btn.title = "Move up"
     line_item_move_div.appendChild(move_up_btn);
 
     const move_down_btn = document.createElement("button");
     move_down_btn.type = "button";
-    move_down_btn.classList.add("move-down");
-    move_down_btn.classList.add("line-item-buttons");
+    move_down_btn.classList.add("gisst-New-instance-move-down");
+    move_down_btn.classList.add("gisst-New-instance-line-item-buttons");
     move_down_btn.textContent = "↓";
     move_down_btn.title = "Move down"
     line_item_move_div.appendChild(move_down_btn);
 
-    (line_item.querySelector("button.move-up")! as HTMLButtonElement).onclick =
+    (line_item.querySelector("button.gisst-New-instance-move-up")! as HTMLButtonElement).onclick =
       (_evt) => {
         const idx = this.file_lists[role].findIndex(
           (fr) => fr.ui_id == file_record.ui_id,
@@ -1889,7 +1891,7 @@ class GISSTNewInstance extends HTMLElement {
         }
       };
     (
-      line_item.querySelector("button.move-down")! as HTMLButtonElement
+      line_item.querySelector("button.gisst-New-instance-move-down")! as HTMLButtonElement
     ).onclick = (_evt) => {
       const idx = this.file_lists[role].findIndex(
         (fr) => fr.ui_id == file_record.ui_id,
