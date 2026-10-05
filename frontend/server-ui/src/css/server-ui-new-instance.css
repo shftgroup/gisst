@@ -34,65 +34,27 @@ select, input, textarea {
   list-style-position: inside;
 }
 
-.content-match-upload::file-selector-button {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  border: none;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  text-align: center;
-  transition: all 0.3s ease;
-  font-size: 0.875rem;
-  position: relative;
+/* hide default file input */
+.visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
   overflow: hidden;
-  gap: 0.5rem;
-
-  color: gray;
-}
-
-.content-match-upload:enabled::file-selector-button {
-  cursor: pointer;
-
-  background-color: light-dark(
-    var(--gisst-light-theme-primary),
-    var(--gisst-dark-theme-primary)
-  );
-  color: white;
-}
-
-.content-match-upload:enabled::file-selector-button:hover {
-  background-color: light-dark(
-    var(--gisst-light-theme-primary-dark),
-    var(--gisst-dark-theme-primary-dark)
-  );
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px
-    light-dark(
-      rgba(var(--gisst-light-theme-particle-rgb-a), 0.3),
-      rgba(var(--gisst-dark-theme-particle-rgb-a), 0.3)
-    );
-}
-
-.content-match-upload::file-selector-button::before {
-  content: "";
   position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: -100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  transition: 0.5s;
+  white-space: nowrap;
+  width: 1px;
 }
 
-.content-match-upload:enabled::file-selector-button:hover::before {
-  left: 100%;
+input:disabled + label {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.content-search-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .add-work-search-container > * {
@@ -115,12 +77,12 @@ select, input, textarea {
 }
 
 .gisst-Select-file-lists {
-  margin: 0.25rem 0;
+  margin: 0.25rem 0 0.5rem;
   /* list-style-position: inside; */
 }
 
 .gisst-Select-file-lists > li {
-  border: 0.2rem solid light-dark(
+  border: 0.1rem solid light-dark(
     var(--gisst-light-theme-primary),
     var(--gisst-dark-theme-primary)
   );

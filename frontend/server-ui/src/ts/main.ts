@@ -1394,6 +1394,7 @@ class GISSTNewInstance extends HTMLElement {
       match_platform = (event.target! as HTMLInputElement).value!;
     };
 
+    const content_file_name = this.content_matcher.querySelector(".content-file-name");
     content_match_upload.onchange = (event) => {
       const files = (event.target! as HTMLInputElement).files ?? [];
       if (files.length == 1 && match_platform != null) {
@@ -1404,6 +1405,9 @@ class GISSTNewInstance extends HTMLElement {
           .catch((err) => {
             self.content_check_show_error(err);
           });
+        if (content_file_name != null) {
+          content_file_name.innerHTML = file.name;
+        }
       }
     };
 
@@ -1817,7 +1821,7 @@ class GISSTNewInstance extends HTMLElement {
       list_item: line_item,
     };
 
-    line_item.innerHTML = `<div class="line-item-top">${filename} <button type="button" class="remove line-item-buttons">X</button></div>`;
+    line_item.innerHTML = `<div class="line-item-top">${filename} <button type="button" class="remove line-item-buttons" title="Remove">X</button></div>`;
 
     const line_item_bottom_div = document.createElement("div");
     line_item_bottom_div.classList.add("line-item-bottom");
@@ -1838,6 +1842,7 @@ class GISSTNewInstance extends HTMLElement {
       const upload_status = document.createElement("button");
       upload_status.classList.add("upload");
       upload_status.classList.add("line-item-buttons");
+      upload_status.title = "Upload"
       const progress = document.createElement("progress");
       progress.max = 0;
       progress.value = 0;
@@ -1859,6 +1864,7 @@ class GISSTNewInstance extends HTMLElement {
     move_up_btn.classList.add("move-up");
     move_up_btn.classList.add("line-item-buttons");
     move_up_btn.textContent = "↑";
+    move_up_btn.title = "Move up"
     line_item_move_div.appendChild(move_up_btn);
 
     const move_down_btn = document.createElement("button");
@@ -1866,6 +1872,7 @@ class GISSTNewInstance extends HTMLElement {
     move_down_btn.classList.add("move-down");
     move_down_btn.classList.add("line-item-buttons");
     move_down_btn.textContent = "↓";
+    move_down_btn.title = "Move down"
     line_item_move_div.appendChild(move_down_btn);
 
     (line_item.querySelector("button.move-up")! as HTMLButtonElement).onclick =

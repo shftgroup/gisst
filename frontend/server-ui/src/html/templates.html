@@ -17,7 +17,8 @@
 
 <template id="add-work-method-one">
   <div class="add-work-search-container">
-    <p>Method 1: Search for an existing instance (you can change the work details or content files later).</p>
+    <h4>Method 1:</h4>
+    <p>Search for an existing instance (you can change the work details or content files later).</p>
 
     <div id="add-work-search-box"></div>
 
@@ -35,7 +36,7 @@
 
 <template id="add-work-method-two">
   <div class="add-work-method-two-container">
-    <p>Method 2:</p>
+    <h4>Method 2:</h4>
     <div class="add-work-method-two-contents">
       <div>
         <label for="match_core_chooser">What platform is this work for?</label>
@@ -44,8 +45,12 @@
         </select>
       </div>
       <div>
-        <label>Search using the given main content file:</label>
-        <input type="file" id="content-match-upload" class="content-match-upload"></input>
+        <div class="content-search-container">
+          <p>Search using the given main content file:</p>
+          <input type="file" id="content-match-upload" class="content-match-upload visually-hidden"></input>
+          <label for="content-match-upload" class="gisst-Instance-btn gisst-Search-btn-primary">Browse...</label>
+          <p class="content-file-name">No file chosen</p>
+        </div>
         <p class="content_match_result"></p>
       </div>
     </div>
@@ -57,7 +62,7 @@
   <form id="work-info" class="add-work-details-container">
     <div class="add-work-details-col">
       <div>
-        <p>Work details:</p>
+        <h4>Work details:</h4>
         <p>
           <label for="work_core_chooser">Platform:</label>
           <select name="work_core_chooser" class="core_chooser"></select>
@@ -75,18 +80,18 @@
       <div>
         <p>Select files:</p>
         <p>
-          <label for="instance-dep-upload" class="gisst-Instance-btn gisst-Search-btn-primary">Add instance dependency</label>
-          <input type="file" id="instance-dep-upload" name="instance_dep_upload" class="instance-file-upload" data-target="dependency" hidden></input>
+          <label for="instance-dep-upload" class="gisst-Instance-btn gisst-Search-btn-primary ">+ Add instance dependency</label>
+          <input type="file" id="instance-dep-upload" name="instance_dep_upload" class="instance-file-upload visually-hidden" data-target="dependency"></input>
         </p>
         <ol class="gisst-Select-file-lists"></ol>
         <p>
-          <label for="instance-config-upload" class="gisst-Instance-btn gisst-Search-btn-primary">Add instance config files</label>
-          <input type="file" id="instance-config-upload" name="instance_config_upload" class="instance-file-upload" data-target="config" hidden></input>
+          <label for="instance-config-upload" class="gisst-Instance-btn gisst-Search-btn-primary">+ Add instance config files</label>
+          <input type="file" id="instance-config-upload" name="instance_config_upload" class="instance-file-upload visually-hidden" data-target="config"></input>
         </p>
         <ol class="gisst-Select-file-lists"></ol>
         <p>
-          <label for="instance-content-upload" class="gisst-Instance-btn gisst-Search-btn-primary">Add instance content files</label>
-          <input type="file" id="instance-content-upload" name="instance_content_upload" class="instance-file-upload" data-target="content" hidden></input>
+          <label for="instance-content-upload" class="gisst-Instance-btn gisst-Search-btn-primary">+ Add instance content files</label>
+          <input type="file" id="instance-content-upload" name="instance_content_upload" class="instance-file-upload visually-hidden" data-target="content"></input>
         </p>
         <ol class="gisst-Select-file-lists"></ol>
       </div>
