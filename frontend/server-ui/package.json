@@ -22,7 +22,7 @@
     "@types/path-browserify": "^1.0.3",
     "esbuild": "^0.28.1",
     "meilisearch": "^0.57.0",
-    "shx": "^0.4.0",
+    "shx": "^0.3.4",
     "typescript": "^5.8.2",
     "vite": "^8.0.16",
     "vite-plugin-checker": "^0.9.0",
@@ -32,10 +32,10 @@
     "@algolia/autocomplete-js": "^1.19.8",
     "@meilisearch/autocomplete-client": "^0.8.0",
     "@meilisearch/instant-meilisearch": "^0.31.1",
+    "gisst-style": "file:../gisst-style",
     "instantsearch.css": "^8.17.0",
     "instantsearch.js": "^4.101.0",
     "spark-md5": "^3.0.2",
-    "tus-js-client": "^4.3.1",
-    "gisst-style": "file:../gisst-style"
+    "tus-js-client": "^4.3.1"
   }
 }

@@ -55,40 +55,41 @@ test("Create Savefile button", async ({ page }) => {
   );
 });
 
-  test("Save State timestamp", async ({ page }) => {
-    await page.goto("/");
+test("Save State timestamp", async ({ page }) => {
+  await page.goto("/");
 
-    const gisstStatesList = page.locator("#gisst-states-list");
-    
-    const currentTimestampMil = Date.now();
-    await page.getByRole("button", { name: "Save State" }).click();
+  const gisstStatesList = page.locator("#gisst-states-list");
 
-    const latestState = gisstStatesList.locator("div[id*=state]").last();
-    const stateCreatedString = await latestState.getByText("Created").innerText();
-    const stateTimestamp = stateCreatedString.replace("Created", "").trim();
-    const stateTimestampMil = stateTimestamp ? new Date(stateTimestamp).getTime() : 0;
+  const currentTimestampMil = Date.now();
+  await page.getByRole("button", { name: "Save State" }).click();
 
-    const timeDifference = Math.abs(currentTimestampMil - stateTimestampMil);
-    expect(timeDifference).toBeLessThan(2000);
-  })
+  const latestState = gisstStatesList.locator("div[id*=state]").last();
+  const stateCreatedString = await latestState.getByText("Created").innerText();
+  const stateTimestamp = stateCreatedString.replace("Created", "").trim();
+  const stateTimestampMil = stateTimestamp
+    ? new Date(stateTimestamp).getTime()
+    : 0;
+
+  const timeDifference = Math.abs(currentTimestampMil - stateTimestampMil);
+  expect(timeDifference).toBeLessThan(2000);
+});
 
 const zoomButtons = [
   { name: "0.5x", width: 240, height: 180 },
   { name: "1x", width: 480, height: 360 },
-  { name: "2x", width: 960, height: 720 }
+  { name: "2x", width: 960, height: 720 },
 ];
 
-test.describe('Zoom Buttons', () => {
+test.describe("Zoom Buttons", () => {
   for (const button of zoomButtons) {
     test(`${button.name} button`, async ({ page }) => {
-      await page.goto('/');
+      await page.goto("/");
 
-      await page.getByRole("button", { name : button.name }).click();
+      await page.getByRole("button", { name: button.name }).click();
       const emulatorDiv = page.locator("#canvas_div");
 
-      await expect(emulatorDiv!).toHaveCSS('width', `${button.width}px`);
-      await expect(emulatorDiv!).toHaveCSS('height', `${button.height}px`);
+      await expect(emulatorDiv!).toHaveCSS("width", `${button.width}px`);
+      await expect(emulatorDiv!).toHaveCSS("height", `${button.height}px`);
     });
   }
 });
-
