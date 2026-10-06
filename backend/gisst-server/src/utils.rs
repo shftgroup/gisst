@@ -78,7 +78,7 @@ mod tests {
     fn test_check_header_unknown_header(){
         let headers = HeaderMap::new();
         let check = check_header(&headers, "unknown", |value| value == "1");
-        assert!(!check)
+        assert!(!check);
     }
 
     #[test]
@@ -97,7 +97,7 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert("test_header", HeaderValue::from_bytes(b"\xFF\xFE").unwrap());
         let header = parse_header::<i32>(&headers, "test_header");
-        assert!(header.is_none())
+        assert!(header.is_none());
     }
     // test_parse_unknown_header (empty)
     #[test]
