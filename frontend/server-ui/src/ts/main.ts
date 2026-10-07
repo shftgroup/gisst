@@ -1836,7 +1836,7 @@ class GISSTNewInstance extends HTMLElement {
     if (is_existing) {
       const exist_note = document.createElement("span");
       exist_note.classList.add("exists-note");
-      exist_note.textContent = "E";
+      exist_note.textContent = "Existing file";
       line_item_upload_div.appendChild(exist_note);
     } else {
       const upload_status = document.createElement("button");
@@ -1912,7 +1912,6 @@ class GISSTNewInstance extends HTMLElement {
       this.file_lists[role].splice(idx, 1);
       lst.removeChild(line_item);
     };
-
   }
   async update_work_instanceenv_info(instance_id: string) {
     const env_config = document.querySelector(

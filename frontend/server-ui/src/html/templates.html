@@ -10,7 +10,7 @@
         <li>Searching for a similar existing work already in the GISST system, OR</li>
         <li>Attempt to match your content file against a community-developed database.</li>
       </ol>
-      <p>Using either method will populate the fields below, or you can skip both methods and create a new work by hand.</p>
+      <p>Using either method will populate the work details below, or you can skip both methods and create a new work by hand.</p>
     </div>
   </div>
 </template>
@@ -78,9 +78,9 @@
       </div>
 
       <div>
-        <p>Select files:</p>
+        <p class="gisst-New-instance-header-files">Select files:</p>
         <p>
-          <label for="instance-dep-upload" class="gisst-Instance-btn gisst-Search-btn-primary ">+ Add instance dependency</label>
+          <label for="instance-dep-upload" class="gisst-Instance-btn gisst-Search-btn-primary">+ Add instance dependency</label>
           <input type="file" id="instance-dep-upload" name="instance_dep_upload" class="instance-file-upload visually-hidden" data-target="dependency"></input>
         </p>
         <ol class="gisst-Select-file-lists"></ol>
@@ -99,7 +99,7 @@
 
     <div class="add-work-details-col add-work-environment-container">
       <div class="add-work-environment">
-        <label for="env-config">Environment config:</label>
+        <label class="gisst-New-instance-label-env-conf" for="env-config">Environment config:</label>
         <textarea id="env-config" name="env_config"></textarea>
       </div>
     </div>
