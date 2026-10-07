@@ -41,7 +41,9 @@ h4 {
   width: 1px;
 }
 
-input:disabled + label {
+input:disabled + label,
+li:first-child .move-up,
+li:last-child .move-down {
   pointer-events: none;
   opacity: 0.5;
 }
