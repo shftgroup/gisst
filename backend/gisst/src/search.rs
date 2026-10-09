@@ -81,10 +81,26 @@ impl MeiliIndexer {
         // Try to get the inner index if the task succeeded
         Ok(task.try_make_index(&self.meili).unwrap())
     }
+
+    /// wrapper implementation of delete from Meili API
+    async fn delete_index(&self, idx: &str) -> Result<(), crate::error::SearchIndex> {
+        if self.meili.get_index(idx).await.is_err() {
+            return Ok(());
+        }
+        let task = self.meili.delete_index(idx).await?;
+        task.wait_for_completion(&self.meili, None, None).await?;
+        tracing::info!("Deleted Meili index: {idx}");
+        Ok(())
+    }
+
     /// # Errors
     /// If the configured search URL is no good or another meili API problem occurs
     #[allow(clippy::too_many_lines)]
     pub async fn init_indices(&self) -> Result<(), crate::error::SearchIndex> {
+        for idx in ["instance", "state", "save", "replay", "creator"] {
+            self.delete_index(idx).await?;
+        }
+        
         let mut instances = self.create_index("instance", "instance_id").await?;
         instances.set_primary_key("instance_id").await?;
         instances
