@@ -93,7 +93,7 @@
 
 <template id="new-instance-details-form">
   <form id="work-info" class="gisst-New-instance-details-container">
-    <div class="gisst-New-instance-details-col">
+    <div class="gisst-New-instance-details-row">
       <div>
         <h4>Work details:</h4>
         <p>
@@ -159,18 +159,177 @@
         <ol class="gisst-New-instance-select-file-lists"></ol>
       </div>
     </div>
+  </form>
+</template>
 
-    <div
-      class="gisst-New-instance-details-col gisst-New-instance-environment-container"
-    >
+<template id="new-instance-config-form">
+  <div
+    class="gisst-New-instance-details-row gisst-New-instance-environment-container"
+  >
+    <p>Please select a configuration method:</p>
+    <div class="gisst-New-instance-config-btns">
+      <button class="gisst-Instance-btn">Form</button>
+      <button class="gisst-Instance-btn">Manual entry</button>
+    </div>
+
+    <!-- body to switch out for form/manual -->
+    <div class="gisst-New-instance-config-body">
+      <div class="gisst-New-instance-config-form">
+        <div class="gisst-New-instance-disk-file-select">
+          <!-- change this class name -->
+          <!-- also "content-file-name" class -->
+          <div class="gisst-New-instance-content-search-container">
+            <p>Hard disk A:</p>
+            <input
+              type="file"
+              id="hard-disk-a-upload"
+              class="content-match-upload gisst-New-instance-visually-hidden"
+            />
+            <label
+              for="hard-disk-a-upload"
+              class="gisst-Instance-btn gisst-Search-btn-primary"
+              >Browse...</label
+            >
+            <p class="content-file-name">No file chosen</p>
+          </div>
+          <div class="gisst-New-instance-content-search-container">
+            <p>Hard disk B:</p>
+            <input
+              type="file"
+              id="hard-disk-b-upload"
+              class="content-match-upload gisst-New-instance-visually-hidden"
+            />
+            <label
+              for="hard-disk-b-upload"
+              class="gisst-Instance-btn gisst-Search-btn-primary"
+              >Browse...</label
+            >
+            <p class="content-file-name">No file chosen</p>
+          </div>
+          <div class="gisst-New-instance-content-search-container">
+            <p>Floppy A:</p>
+            <input
+              type="file"
+              id="floppy-a-upload"
+              class="content-match-upload gisst-New-instance-visually-hidden"
+            />
+            <label
+              for="floppy-a-upload"
+              class="gisst-Instance-btn gisst-Search-btn-primary"
+              >Browse...</label
+            >
+            <p class="content-file-name">No file chosen</p>
+          </div>
+          <div class="gisst-New-instance-content-search-container">
+            <p>Floppy B:</p>
+            <input
+              type="file"
+              id="floppy-b-upload"
+              class="content-match-upload gisst-New-instance-visually-hidden"
+            />
+            <label
+              for="floppy-b-upload"
+              class="gisst-Instance-btn gisst-Search-btn-primary"
+              >Browse...</label
+            >
+            <p class="content-file-name">No file chosen</p>
+          </div>
+          <div class="gisst-New-instance-content-search-container">
+            <p>CD-ROM:</p>
+            <input
+              type="file"
+              id="cd-rom-upload"
+              class="content-match-upload gisst-New-instance-visually-hidden"
+            />
+            <label
+              for="cd-rom-upload"
+              class="gisst-Instance-btn gisst-Search-btn-primary"
+              >Browse...</label
+            >
+            <p class="content-file-name">No file chosen</p>
+          </div>
+        </div>
+
+        <div>
+          <div>
+            <label for="memory-size-select">Memory size:</label>
+            <input
+              id="memory-size-select"
+              type="number"
+              name="mem-size"
+              step="16"
+              min="16"
+              max="1024"
+            />
+          </div>
+          <div>
+            <label for="gpu-memory-select">GPU memory size:</label>
+            <input
+              id="gpu-memory-select"
+              type="number"
+              name="gpu-memory"
+              step="1"
+              min="16"
+              max="1024"
+            />
+          </div>
+        </div>
+
+        <div class="gisst-New-instance-bios-select">
+          <fieldset>
+            <legend>Bios:</legend>
+            <div>
+              <input
+                type="radio"
+                id="bios-seabios"
+                name="bios"
+                value="seabios"
+                checked
+              />
+              <label for="bios-seabios">Seabios</label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="bios-bochs"
+                name="bios"
+                value="bios-bochs"
+              />
+              <label for="bios-bochs">Bochs</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>VGA bios:</legend>
+            <div>
+              <input
+                type="radio"
+                id="vga-bios-standard"
+                name="vga-bios"
+                value="vga-bios-standard"
+                checked
+              />
+              <label for="vga-bios-standard">Standard</label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="vga-bios-bochs"
+                name="vga-bios"
+                value="vga-bios-bochs"
+              />
+              <label for="vga-bios-bochs">Bochs</label>
+            </div>
+          </fieldset>
+        </div>
+      </div>
       <div class="gisst-New-instance-environment">
         <label class="gisst-New-instance-label-env-conf" for="env-config"
           >Environment config:</label
         >
-        <textarea id="env-config" name="env_config"></textarea>
+        <textarea id="env-config" name="env_config" disabled></textarea>
       </div>
     </div>
-  </form>
+  </div>
 </template>
 
 <template id="new-instance-submit">

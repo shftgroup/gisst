@@ -8,6 +8,11 @@ h4 {
   margin: 0.5rem 0;
 }
 
+textarea:disabled {
+  color: rgb(165, 165, 165);
+  padding: 0.2rem;
+}
+
 .gisst-New-instance-container {
   min-width: 350px;
   max-width: 1200px;
@@ -40,7 +45,8 @@ ol {
   margin-bottom: 1rem;
 }
 
-.gisst-New-instance-description-list {
+.gisst-New-instance-description-list,
+.gisst-New-instance-config-form-list {
   list-style-position: inside;
 }
 
@@ -113,22 +119,49 @@ li:last-child .gisst-New-instance-move-down {
 
 .gisst-New-instance-details-container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 4rem;
 }
 
-.gisst-New-instance-details-col > * {
+.gisst-New-instance-details-row > * {
   margin: 1rem auto;
 }
 
-.gisst-New-instance-environment-container {
+.gisst-New-instance-config-body {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  text-align: left;
+  border: 0.1rem solid rgb(184, 177, 178);
+}
+
+.gisst-New-instance-config-form {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  border: 0.1rem solid rgb(234, 90, 90);
+  border-radius: 0.5rem;
+}
+
+.gisst-New-instance-config-form > * {
+  border: 0.1rem solid rgb(135, 130, 130);
+  border-radius: 0.5rem;
+  margin: 0.3rem 0;
+  padding: 0.5rem;
+}
+
+.gisst-New-instance-disk-file-select > * {
+  margin: 0.2rem;
+}
+
+.gisst-New-instance-bios-select > * {
+  border: 0.1rem solid rgb(97, 100, 167);
 }
 
 .gisst-New-instance-environment {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  height: 100%;
 }
 
 .gisst-New-instance-environment > textarea {
@@ -201,4 +234,8 @@ li:last-child .gisst-New-instance-move-down {
   #env-config {
     height: 7rem;
   }
+}
+
+.gisst-New-instance-environment {
+  box-sizing: border-box;
 }
