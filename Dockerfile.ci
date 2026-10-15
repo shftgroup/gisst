@@ -44,6 +44,7 @@ RUN rustup target add wasm32-unknown-unknown
 RUN cargo install --locked cargo-binstall
 RUN cargo binstall -y sqlx-cli cargo-chef cargo-audit cargo-deny cargo-udeps cargo-vet
 RUN npm install -g depcheck
+RUN npm install -g prettier
 USER root
 RUN <<EOF
     cd
