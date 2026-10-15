@@ -29,7 +29,7 @@ services:
       - db
       - meili
       - meilitest
-    networks: 
+    networks:
       - net
   db:
     image: postgres:16
