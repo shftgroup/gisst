@@ -77,9 +77,9 @@ describe("nested_replace", () => {
 
     expect(config).toEqual({
       one: { url: "REPLACED" },
-      two: { 
-        inner: { url: "REPLACED" }
-       },
+      two: {
+        inner: { url: "REPLACED" },
+      },
       three: {
         mid: {
           inner: { url: "REPLACED" },
@@ -122,7 +122,6 @@ describe("nested_replace", () => {
       disk: { url: "REPLACED" },
     });
   });
-
 
   it("does not replace a different case or extra space", () => {
     // The match has to be the whole string, with the same letters and
