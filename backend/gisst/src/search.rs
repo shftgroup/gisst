@@ -85,6 +85,14 @@ impl MeiliIndexer {
     /// If the configured search URL is no good or another meili API problem occurs
     #[allow(clippy::too_many_lines)]
     pub async fn init_indices(&self) -> Result<(), crate::error::SearchIndex> {
+        for idx in ["instance", "state", "save", "replay", "creator"] {
+            self.meili
+                .delete_index(idx)
+                .await?
+                .wait_for_completion(&self.meili, None, None)
+                .await?;
+        }
+        
         let mut instances = self.create_index("instance", "instance_id").await?;
         instances.set_primary_key("instance_id").await?;
         instances
