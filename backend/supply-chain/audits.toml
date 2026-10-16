@@ -13,6 +13,12 @@ criteria = "safe-to-deploy"
 version = "2.0.2"
 notes = "Local vendored copy of bincode_derive"
 
+[[audits.chd]]
+who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
+criteria = "safe-to-deploy"
+delta = "0.3.4 -> 0.3.5"
+notes = "Bump to ruzstd version"
+
 [[audits.fatfs]]
 who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
 criteria = "safe-to-deploy"
@@ -44,11 +50,23 @@ criteria = "safe-to-deploy"
 version = "0.32.1"
 notes = "No unsafe, no dangerous dependencies, no powerful imports"
 
+[[audits.quinn-proto]]
+who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
+criteria = "safe-to-deploy"
+delta = "0.11.17 -> 0.11.18"
+notes = "Most additions are tests and comments. A few bug fixes do not look suspicuous."
+
 [[audits.rand_pcg]]
 who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
 criteria = "safe-to-deploy"
 version = "0.10.2"
 notes = "No unsafe, no powerful imports, no filesystem access."
+
+[[audits.ruzstd]]
+who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
+criteria = "safe-to-deploy"
+delta = "0.8.3 -> 0.9.1"
+notes = "Changes to sizes, etc which enter unsafe areas seem reasonable. No secret binary blobs or network junk."
 
 [[audits.tracing]]
 who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
