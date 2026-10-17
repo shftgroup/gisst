@@ -17,6 +17,7 @@ export * as widgets from "instantsearch.js/es/widgets";
 import * as tus from "tus-js-client";
 import templates from "../html/templates.html?raw";
 import connectStats from "instantsearch.js/es/connectors/stats/connectStats";
+import { V86ImageType, V86Options } from "./v86";
 
 // Import all templates from templates.html
 const TEMPLATES = document.createElement("template");
@@ -1518,6 +1519,15 @@ class GISSTNewInstance extends HTMLElement {
       };
     }
 
+    // V86 Environment Config Handling
+    (
+      config_form.querySelector(
+        ".gisst-New-instance-config-body .gisst-New-instance-config-form",
+      ) as HTMLFormElement
+    ).oninput = () => {
+      this.fill_env_config_preview();
+    };
+
     const button =
       submit_div.querySelector<HTMLButtonElement>("button.submit")!;
     const status =
@@ -1656,6 +1666,8 @@ class GISSTNewInstance extends HTMLElement {
     contents.appendChild(config_form);
     contents.appendChild(submit_div);
     this.appendChild(contents);
+
+    this.fill_env_config_preview();
   }
 
   async content_check_hash(platform: string, file: File, hash: string) {
@@ -1994,6 +2006,74 @@ class GISSTNewInstance extends HTMLElement {
     this.instance = full_instance.info;
     this.work = full_instance.work;
     // TODO: fetch other bibliographic info fields...
+  }
+
+  fill_env_config_preview() {
+    const generated_config = this.gen_env_config_v86();
+    const preview_element = document.querySelector(
+      'textarea[name="env_config"]',
+    ) as HTMLInputElement;
+    preview_element.textContent = JSON.stringify(generated_config, null, 2);
+    this.environment.environment_config = generated_config;
+  }
+
+  gen_env_config_v86(): V86Options {
+    const form = document.querySelector(
+      ".gisst-New-instance-config-body .gisst-New-instance-config-form",
+    ) as HTMLFormElement;
+    const form_data = new FormData(form);
+
+    const hda = form_data.get("hda") as File;
+    const hdb = form_data.get("hdb") as File;
+    const fda = form_data.get("fda") as File;
+    const fdb = form_data.get("fdb") as File;
+    const cdrom = form_data.get("cdrom") as File;
+
+    const memory_size_mib = Number(form_data.get("mem-size"));
+    const vga_memory_size_mib = Number(form_data.get("gpu-memory"));
+
+    const bios = form_data.get("bios") as "bios-seabios" | "bios-bochs";
+    const vga_bios = form_data.get("vga-bios") as
+      | "vga-bios-standard"
+      | "vga-bios-bochs";
+
+    // Build env config from form data
+    let config: V86Options = {
+      memory_size: memory_size_mib * 1048576,
+      vga_memory_size: vga_memory_size_mib * 1048576,
+      bios: {
+        url: bios === "bios-seabios" ? "seabios.bin" : "bochs-bios.bin",
+      },
+      vga_bios: {
+        url:
+          vga_bios === "vga-bios-standard"
+            ? "vgabios.bin"
+            : "bochs-vgabios.bin",
+      },
+    };
+
+    // Build $CONTENT0, $CONTENT1, etc mapping from present files in order
+    const images: Record<V86ImageType, File> = {
+      hda,
+      hdb,
+      fda,
+      fdb,
+      cdrom,
+    };
+    let entry_num = 0;
+    for (const [key, file] of Object.entries(images)) {
+      // No file selected check
+      if (file.name === "") continue;
+
+      const image_type = key as V86ImageType;
+      config[image_type] = {
+        url: `$CONTENT${entry_num}`,
+        async: true,
+      };
+      entry_num += 1;
+    }
+
+    return config;
   }
 }
 

@@ -174,7 +174,7 @@
 
     <!-- body to switch out for form/manual -->
     <div class="gisst-New-instance-config-body">
-      <div class="gisst-New-instance-config-form">
+      <form class="gisst-New-instance-config-form">
         <div class="gisst-New-instance-disk-file-select">
           <!-- change this class name -->
           <!-- also "content-file-name" class -->
@@ -182,6 +182,7 @@
             <p>Hard disk A:</p>
             <input
               type="file"
+              name="hda"
               id="hard-disk-a-upload"
               class="content-match-upload gisst-New-instance-visually-hidden"
             />
@@ -196,6 +197,7 @@
             <p>Hard disk B:</p>
             <input
               type="file"
+              name="hdb"
               id="hard-disk-b-upload"
               class="content-match-upload gisst-New-instance-visually-hidden"
             />
@@ -210,6 +212,7 @@
             <p>Floppy A:</p>
             <input
               type="file"
+              name="fda"
               id="floppy-a-upload"
               class="content-match-upload gisst-New-instance-visually-hidden"
             />
@@ -224,6 +227,7 @@
             <p>Floppy B:</p>
             <input
               type="file"
+              name="fdb"
               id="floppy-b-upload"
               class="content-match-upload gisst-New-instance-visually-hidden"
             />
@@ -238,6 +242,7 @@
             <p>CD-ROM:</p>
             <input
               type="file"
+              name="cdrom"
               id="cd-rom-upload"
               class="content-match-upload gisst-New-instance-visually-hidden"
             />
@@ -283,7 +288,7 @@
                 type="radio"
                 id="bios-seabios"
                 name="bios"
-                value="seabios"
+                value="bios-seabios"
                 checked
               />
               <label for="bios-seabios">Seabios</label>
@@ -321,7 +326,8 @@
             </div>
           </fieldset>
         </div>
-      </div>
+      </form>
+
       <div class="gisst-New-instance-environment">
         <label class="gisst-New-instance-label-env-conf" for="env-config"
           >Environment config:</label
