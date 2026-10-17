@@ -285,6 +285,10 @@ criteria = "safe-to-deploy"
 version = "3.1.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.nix]]
+version = "0.31.3"
+criteria = "safe-to-deploy"
+
 [[exemptions.nom]]
 version = "8.0.0"
 criteria = "safe-to-deploy"

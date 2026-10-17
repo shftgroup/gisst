@@ -259,6 +259,7 @@ allow-build-scripts = [
   "libc@0.2.189",
   "mime_guess@2.0.5",
   "multer@3.1.0",
+  "nix@0.31.3",
   "num-traits@0.2.19",
   "parking_lot_core@0.9.12",
   "portable-atomic@1.15.0",
