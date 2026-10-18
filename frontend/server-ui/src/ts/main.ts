@@ -17,7 +17,7 @@ export * as widgets from "instantsearch.js/es/widgets";
 import * as tus from "tus-js-client";
 import templates from "../html/templates.html?raw";
 import connectStats from "instantsearch.js/es/connectors/stats/connectStats";
-import { V86ImageType, V86Options } from "./v86";
+import { V86Image, V86ImageType, V86Options } from "./v86";
 
 // Import all templates from templates.html
 const TEMPLATES = document.createElement("template");
@@ -1971,19 +1971,28 @@ class GISSTNewInstance extends HTMLElement {
       lst.removeChild(line_item);
     };
   }
+
+  /**
+   * Prefill the add work form with information from an existing instance
+   * @param instance_id The ID of the existing instance.
+   */
   async update_work_instanceenv_info(instance_id: string) {
-    const env_config = document.querySelector<HTMLInputElement>(
-      "#work-info textarea[name=env_config]",
-    )!;
     const full_instance = (await (
       await fetch(
         `${this.base_url}/instances/${encodeURIComponent(instance_id)}`,
         { headers: [["Accept", "application/json"]] },
       )
     ).json()) as FullInstance;
+
+    const env_config = document.querySelector<HTMLInputElement>(
+      ".gisst-New-instance-config-body textarea[name=env_config]",
+    )!;
     env_config.value = JSON.stringify(
       full_instance.environment.environment_config || {},
+      null,
+      2,
     );
+
     this.clear_file_lists();
     full_instance.objects.sort(
       (a: ObjectLink, b: ObjectLink) =>
@@ -1994,6 +2003,7 @@ class GISSTNewInstance extends HTMLElement {
         existing: lnk.object_id,
       });
     }
+
     this.environment = full_instance.environment;
     const core_chooser = document.querySelector<HTMLSelectElement>(
       "#work-info select[name=work_core_chooser]",
@@ -2006,6 +2016,94 @@ class GISSTNewInstance extends HTMLElement {
     this.instance = full_instance.info;
     this.work = full_instance.work;
     // TODO: fetch other bibliographic info fields...
+
+    this.env_form_sync();
+  }
+
+  /**
+   * Parse an environment config JSON and populate the form based on its value.
+   */
+  env_form_sync() {
+    const env_config = this.environment.environment_config as V86Options;
+    if (this.environment.environment_framework !== "v86") return;
+    if (!env_config) return;
+
+    // Populate memory sizes
+    const mem_size_input = document.querySelector(
+      "#memory-size-select",
+    ) as HTMLInputElement;
+    mem_size_input.value = String(
+      Math.round((env_config.memory_size ?? 0) / 1048576),
+    );
+    const gpu_mem_size_input = document.querySelector(
+      "#gpu-memory-select",
+    ) as HTMLInputElement;
+    gpu_mem_size_input.value = String(
+      Math.round((env_config.vga_memory_size ?? 0) / 1048576),
+    );
+
+    // Populate BIOS
+    const seabios_radio = document.querySelector(
+      "#bios-seabios",
+    ) as HTMLInputElement;
+    const bochs_radio = document.querySelector(
+      "#bios-bochs",
+    ) as HTMLInputElement;
+    if (env_config.bios?.url === "seabios.bin") {
+      seabios_radio.checked = true;
+    } else if (env_config.bios?.url === "bochs-bios.bin") {
+      bochs_radio.checked = true;
+    }
+
+    const vga_standard_radio = document.querySelector(
+      "#vga-bios-standard",
+    ) as HTMLInputElement;
+    const vga_bochs_radio = document.querySelector(
+      "#vga-bios-bochs",
+    ) as HTMLInputElement;
+    if (env_config.vga_bios?.url === "vgabios.bin") {
+      vga_standard_radio.checked = true;
+    } else if (env_config.bios?.url === "bochs-vgabios.bin") {
+      vga_bochs_radio.checked = true;
+    }
+
+    // Update file selects
+    const images: Record<string, V86ImageType> = {
+      "#hard-disk-a-upload ~ p.content-file-name": "hda",
+      "#hard-disk-b-upload ~ p.content-file-name": "hdb",
+      "#floppy-a-upload ~ p.content-file-name": "fda",
+      "#floppy-b-upload ~ p.content-file-name": "fdb",
+      "#cd-rom-upload ~ p.content-file-name": "cdrom",
+    };
+    for (const [query, image_type] of Object.entries(images)) {
+      const element = document.querySelector(query);
+      if (!element) continue;
+
+      this.env_form_label_sync(element, env_config[image_type]);
+    }
+  }
+
+  /**
+   * Update a given element with the file name of the V86Image in the content file list.
+   * The V86Image should have a url matching `$CONTENT{X}` where X is an index into the
+   * content files. `$CONTENT` is also recognised as `$CONTENT0`.
+   * @param label The element to update the text of.
+   * @param image The V86Image to match to a file.
+   */
+  env_form_label_sync(label: Element, image?: V86Image) {
+    label.textContent = "No file chosen";
+    if (!image) return;
+
+    // Extract content number, i.e. "$CONTENT{X}"
+    const parsed = image.url.match(/^\$CONTENT(\d*)$/m);
+    const index = parsed?.[1];
+    if (index === undefined) return;
+
+    // "" is parsed into 0, so $CONTENT is ok
+    const filename = this.file_lists.content.at(Number(index))?.filename;
+    if (!filename) return;
+
+    label.textContent = filename;
   }
 
   fill_env_config_preview() {
