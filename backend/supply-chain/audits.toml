@@ -86,6 +86,12 @@ criteria = "safe-to-deploy"
 version = "1.25.0"
 notes = "I have skimmed the code and am fairly confident that this code does no filesystem or network operations."
 
+[[audits.zip]]
+who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
+criteria = "safe-to-deploy"
+delta = "8.6.0 -> 9.0.4"
+notes = "most of the churn is due to huge refactors. zip is slop now though so I want to find an alternative if possible for saving out parts of fat filesystems for download."
+
 [[trusted.aes]]
 criteria = "safe-to-deploy"
 trusted-publisher = "github:RustCrypto/block-ciphers"

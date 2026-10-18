@@ -92,7 +92,7 @@ impl MeiliIndexer {
                 .wait_for_completion(&self.meili, None, None)
                 .await?;
         }
-        
+
         let mut instances = self.create_index("instance", "instance_id").await?;
         instances.set_primary_key("instance_id").await?;
         instances

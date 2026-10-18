@@ -73,7 +73,7 @@ uuid = "1.23"
 virtue = "0.0.18"
 walkdir = "2.5.0"
 yaup = "0.3.1"
-zip = { version = "8.6.0", default-features = false }
+zip = { version = "9.0.0", default-features = false }
 
 #[profile.dev]
 #debug = 0
