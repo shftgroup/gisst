@@ -75,6 +75,11 @@ const coresHandler: MockHandler = {
           core_version: "some_hash",
           core_platform: "Intellivision",
         },
+        {
+          core_name: "v86",
+          core_version: "some_hash",
+          core_platform: "x86 PC",
+        }
       ],
     });
   },
@@ -159,6 +164,76 @@ const instanceDataHandler: MockHandler = {
     });
   },
 };
+const instanceV86DataHandler: MockHandler = {
+  path: "/instances/12",
+  handler: (_req: MockApiHandlerRequest, res: MockApiHandlerResponse) => {
+    setJSON(res, {
+      work: {
+        work_platform: "x86 PC",
+        work_name: "work l",
+        work_version: "0.1",
+        work_id: "11",
+      },
+      info: {
+        instance_id: "12",
+        work_id: "11",
+        environment_id: "12",
+        instance_config: {},
+        created_on: new Date(8.64e15),
+        derived_from_instance: null,
+        derived_from_state: null,
+      },
+      environment: {
+        enviroment_id: "12",
+        environment_name: "work l environment",
+        environment_platform: "x86 PC",
+        environment_framework: "v86",
+        environment_core_name: "v86",
+        environment_core_version: "some_hash",
+        environment_derived_from: null,
+        "environment_config": {
+          "bios": {
+            "url": "seabios.bin"
+          },
+          "hda": {
+            "async": true,
+            "url": "$CONTENT0"
+          },
+          "cdrom": {
+            "async": true,
+            "url": "$CONTENT1",
+          },
+          "memory_size": 67108864,
+          "vga_bios": {
+            "url": "vgabios.bin"
+          },
+          "vga_memory_size": 8388608
+        },
+        created_on: new Date(8.64e15),
+      },
+      objects: [
+        {
+          object_id: "o5",
+          object_role: "content",
+          object_role_index: 0,
+          file_hash: "some_hash",
+          file_filename: "hda.img",
+          file_source_path: "",
+          file_dest_path: "",
+        },
+        {
+          object_id: "o6",
+          object_role: "content",
+          object_role_index: 1,
+          file_hash: "some_hash",
+          file_filename: "cdrom.img",
+          file_source_path: "",
+          file_dest_path: "",
+        },
+      ],
+    });
+  },
+};
 const resourcesHandler: MockHandler = {
   path: "/resources/",
   handler: (_req: MockApiHandlerRequest, res: MockApiHandlerResponse) => {
@@ -229,6 +304,7 @@ const lookupWorkHandler: MockHandler = {
 
 export default [
   coresHandler,
+  instanceV86DataHandler,
   instanceDataHandler,
   objectCreateHandler,
   environmentCreateHandler,
