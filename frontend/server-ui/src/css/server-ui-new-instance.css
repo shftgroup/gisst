@@ -1,4 +1,6 @@
-select, input, textarea {
+select,
+input,
+textarea {
   margin-left: 0.8rem;
 }
 
@@ -11,7 +13,18 @@ h4 {
   max-width: 1200px;
   margin: 0 auto;
   padding: 1.5rem;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    "Open Sans",
+    "Helvetica Neue",
+    sans-serif;
 }
 
 .gisst-New-instance-container > * {
@@ -22,7 +35,8 @@ h4 {
   margin: 1rem 0;
 }
 
-.gisst-New-instance-description > p, ol {
+.gisst-New-instance-description > p,
+ol {
   margin-bottom: 1rem;
 }
 
@@ -68,10 +82,11 @@ li:last-child .gisst-New-instance-move-down {
 }
 
 .gisst-New-instance-select-file-lists > li {
-  border: 0.1rem solid light-dark(
-    var(--gisst-light-theme-primary),
-    var(--gisst-dark-theme-primary)
-  );
+  border: 0.1rem solid
+    light-dark(
+      var(--gisst-light-theme-primary),
+      var(--gisst-dark-theme-primary)
+    );
   border-radius: 0.5rem;
   margin: 0.3rem 0;
   padding: 0.5rem;
@@ -127,7 +142,7 @@ li:last-child .gisst-New-instance-move-down {
 
 .gisst-New-instance-search-item-button {
   background: none;
-	border: none;
+  border: none;
   width: 100%;
   text-align: left;
   cursor: pointer;

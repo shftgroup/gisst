@@ -15,7 +15,7 @@ export * as search from "instantsearch.js";
 import * as widgets from "instantsearch.js/es/widgets";
 export * as widgets from "instantsearch.js/es/widgets";
 import * as tus from "tus-js-client";
-import templates from '../html/templates.html?raw';
+import templates from "../html/templates.html?raw";
 import connectStats from "instantsearch.js/es/connectors/stats/connectStats";
 
 // Import all templates from templates.html
@@ -28,7 +28,9 @@ TEMPLATES.innerHTML = templates.trim();
  * @returns a {@link DocumentFragment} of the template being imported.
  */
 function elementFromTemplates(template_id: string): DocumentFragment {
-  const template_element = TEMPLATES.content.querySelector("#" + template_id) as HTMLTemplateElement
+  const template_element = TEMPLATES.content.querySelector(
+    "#" + template_id,
+  ) as HTMLTemplateElement;
   return document.importNode(template_element.content, true);
 }
 
@@ -1282,15 +1284,25 @@ class GISSTNewInstance extends HTMLElement {
     this.base_url = base_url;
 
     // Initialize templates
-    this.content_matcher = elementFromTemplates("new-instance-method-two").firstElementChild as HTMLDivElement;
-    const search_method_div = elementFromTemplates("new-instance-method-one").firstElementChild as HTMLDivElement;
-    const metadata_form = elementFromTemplates("new-instance-details-form").firstElementChild as HTMLFormElement;
-    const submit_div = elementFromTemplates("new-instance-submit").firstElementChild as HTMLDivElement;
+    this.content_matcher = elementFromTemplates("new-instance-method-two")
+      .firstElementChild as HTMLDivElement;
+    const search_method_div = elementFromTemplates("new-instance-method-one")
+      .firstElementChild as HTMLDivElement;
+    const metadata_form = elementFromTemplates("new-instance-details-form")
+      .firstElementChild as HTMLFormElement;
+    const submit_div = elementFromTemplates("new-instance-submit")
+      .firstElementChild as HTMLDivElement;
 
     // Setup method 1 search
-    const search_box = search_method_div.querySelector("#new-instance-search-box") as HTMLElement;
-    const results_box = search_method_div.querySelector("#new-instance-results-box") as HTMLElement;
-    const results_header = search_method_div.querySelector(".gisst-New-instance-search-header") as HTMLElement;
+    const search_box = search_method_div.querySelector(
+      "#new-instance-search-box",
+    ) as HTMLElement;
+    const results_box = search_method_div.querySelector(
+      "#new-instance-results-box",
+    ) as HTMLElement;
+    const results_header = search_method_div.querySelector(
+      ".gisst-New-instance-search-header",
+    ) as HTMLElement;
     const results_header_display = results_header.style.display;
 
     const search = search_instances(search_url, search_key, {});
@@ -1323,9 +1335,7 @@ class GISSTNewInstance extends HTMLElement {
 
                 const work = hit as object as InstanceWork;
                 self.update_work_bibinfo(work);
-                self.update_work_instanceenv_info(
-                  work.instance_id,
-                );
+                self.update_work_instanceenv_info(work.instance_id);
 
                 // Set the search bar to the name of the work without showing any results
                 search.helper!.setQuery("").search();
@@ -1394,7 +1404,8 @@ class GISSTNewInstance extends HTMLElement {
       match_platform = (event.target! as HTMLInputElement).value!;
     };
 
-    const content_file_name = this.content_matcher.querySelector(".content-file-name");
+    const content_file_name =
+      this.content_matcher.querySelector(".content-file-name");
     content_match_upload.onchange = (event) => {
       const files = (event.target! as HTMLInputElement).files ?? [];
       if (files.length == 1 && match_platform != null) {
@@ -1610,7 +1621,7 @@ class GISSTNewInstance extends HTMLElement {
     };
 
     const contents = document.createElement("div");
-    contents.className = "gisst-New-instance-container"
+    contents.className = "gisst-New-instance-container";
     contents.appendChild(elementFromTemplates("new-instance-header"));
     contents.appendChild(search_method_div);
     contents.appendChild(this.content_matcher);
@@ -1844,7 +1855,7 @@ class GISSTNewInstance extends HTMLElement {
       const upload_status = document.createElement("button");
       upload_status.classList.add("upload");
       upload_status.classList.add("gisst-New-instance-line-item-buttons");
-      upload_status.title = "Upload"
+      upload_status.title = "Upload";
       const progress = document.createElement("progress");
       progress.max = 0;
       progress.value = 0;
@@ -1866,7 +1877,7 @@ class GISSTNewInstance extends HTMLElement {
     move_up_btn.classList.add("gisst-New-instance-move-up");
     move_up_btn.classList.add("gisst-New-instance-line-item-buttons");
     move_up_btn.textContent = "↑";
-    move_up_btn.title = "Move up"
+    move_up_btn.title = "Move up";
     line_item_move_div.appendChild(move_up_btn);
 
     const move_down_btn = document.createElement("button");
@@ -1874,24 +1885,29 @@ class GISSTNewInstance extends HTMLElement {
     move_down_btn.classList.add("gisst-New-instance-move-down");
     move_down_btn.classList.add("gisst-New-instance-line-item-buttons");
     move_down_btn.textContent = "↓";
-    move_down_btn.title = "Move down"
+    move_down_btn.title = "Move down";
     line_item_move_div.appendChild(move_down_btn);
 
-    (line_item.querySelector("button.gisst-New-instance-move-up")! as HTMLButtonElement).onclick =
-      (_evt) => {
-        const idx = this.file_lists[role].findIndex(
-          (fr) => fr.ui_id == file_record.ui_id,
-        );
-        if (idx > 0) {
-          const tmp = this.file_lists[role][idx - 1];
-          this.file_lists[role][idx - 1] = file_record;
-          this.file_lists[role][idx] = tmp;
-          lst.removeChild(line_item);
-          lst.insertBefore(line_item, lst.children[idx - 1]);
-        }
-      };
     (
-      line_item.querySelector("button.gisst-New-instance-move-down")! as HTMLButtonElement
+      line_item.querySelector(
+        "button.gisst-New-instance-move-up",
+      )! as HTMLButtonElement
+    ).onclick = (_evt) => {
+      const idx = this.file_lists[role].findIndex(
+        (fr) => fr.ui_id == file_record.ui_id,
+      );
+      if (idx > 0) {
+        const tmp = this.file_lists[role][idx - 1];
+        this.file_lists[role][idx - 1] = file_record;
+        this.file_lists[role][idx] = tmp;
+        lst.removeChild(line_item);
+        lst.insertBefore(line_item, lst.children[idx - 1]);
+      }
+    };
+    (
+      line_item.querySelector(
+        "button.gisst-New-instance-move-down",
+      )! as HTMLButtonElement
     ).onclick = (_evt) => {
       const idx = this.file_lists[role].findIndex(
         (fr) => fr.ui_id == file_record.ui_id,
