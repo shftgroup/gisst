@@ -1,0 +1,186 @@
+<template id="new-instance-header">
+  <div class="gisst-New-instance-header">
+    <h1>Add Work</h1>
+    <hr />
+
+    <div class="gisst-New-instance-description">
+      <p>You can find bibliographic data by:</p>
+
+      <ol class="gisst-New-instance-description-list">
+        <li>
+          Searching for a similar existing work already in the GISST system, OR
+        </li>
+        <li>
+          Attempt to match your content file against a community-developed
+          database.
+        </li>
+      </ol>
+      <p>
+        Using either method will populate the work details below, or you can
+        skip both methods and create a new work by hand.
+      </p>
+    </div>
+  </div>
+</template>
+
+<template id="new-instance-method-one">
+  <div class="gisst-New-instance-search-container">
+    <h4>Method 1:</h4>
+    <p>
+      Search for an existing instance (you can change the work details or
+      content files later).
+    </p>
+
+    <div id="new-instance-search-box"></div>
+
+    <div class="gisst-Search-results-header gisst-New-instance-search-header">
+      <div
+        class="gisst-Search-header-cell gisst-New-instance-search-header-description"
+      >
+        Description
+      </div>
+      <div
+        class="gisst-Search-header-cell gisst-New-instance-search-header-platform"
+      >
+        Platform
+      </div>
+      <div
+        class="gisst-Search-header-cell gisst-New-instance-search-header-version"
+      >
+        Version
+      </div>
+    </div>
+
+    <div class="gisst-Search-table-view">
+      <div
+        id="new-instance-results-box"
+        class="gisst-Search-results-body"
+      ></div>
+    </div>
+  </div>
+</template>
+
+<template id="new-instance-method-two">
+  <div class="gisst-New-instance-method-two-container">
+    <h4>Method 2:</h4>
+    <div class="gisst-New-instance-method-two-contents">
+      <div>
+        <label for="match_core_chooser">What platform is this work for?</label>
+        <select name="match_core_chooser" class="core_chooser">
+          <option value="(init)">Select core...</option>
+        </select>
+      </div>
+      <div>
+        <div class="gisst-New-instance-content-search-container">
+          <p>Search using the given main content file:</p>
+          <input
+            type="file"
+            id="content-match-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
+          <label
+            for="content-match-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >Browse...</label
+          >
+          <p class="content-file-name">No file chosen</p>
+        </div>
+        <p class="content_match_result"></p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="new-instance-details-form">
+  <form id="work-info" class="gisst-New-instance-details-container">
+    <div class="gisst-New-instance-details-col">
+      <div>
+        <h4>Work details:</h4>
+        <p>
+          <label for="work_core_chooser">Platform:</label>
+          <select name="work_core_chooser" class="core_chooser"></select>
+        </p>
+        <p>
+          <label for="work_name">Name:</label>
+          <input name="work_name" required />
+        </p>
+        <p>
+          <label for="work_version">Version:</label>
+          <input name="work_version" />
+        </p>
+      </div>
+
+      <div>
+        <p class="gisst-New-instance-header-files">Select files:</p>
+        <p>
+          <label
+            for="instance-dep-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >+ Add instance dependency</label
+          >
+          <input
+            type="file"
+            id="instance-dep-upload"
+            name="instance_dep_upload"
+            class="instance-file-upload gisst-New-instance-visually-hidden"
+            data-target="dependency"
+          />
+        </p>
+        <ol class="gisst-New-instance-select-file-lists"></ol>
+        <p>
+          <label
+            for="instance-config-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >+ Add instance config files</label
+          >
+          <input
+            type="file"
+            id="instance-config-upload"
+            name="instance_config_upload"
+            class="instance-file-upload gisst-New-instance-visually-hidden"
+            data-target="config"
+          />
+        </p>
+        <ol class="gisst-New-instance-select-file-lists"></ol>
+        <p>
+          <label
+            for="instance-content-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >+ Add instance content files</label
+          >
+          <input
+            type="file"
+            id="instance-content-upload"
+            name="instance_content_upload"
+            class="instance-file-upload gisst-New-instance-visually-hidden"
+            data-target="content"
+          />
+        </p>
+        <ol class="gisst-New-instance-select-file-lists"></ol>
+      </div>
+    </div>
+
+    <div
+      class="gisst-New-instance-details-col gisst-New-instance-environment-container"
+    >
+      <div class="gisst-New-instance-environment">
+        <label class="gisst-New-instance-label-env-conf" for="env-config"
+          >Environment config:</label
+        >
+        <textarea id="env-config" name="env_config"></textarea>
+      </div>
+    </div>
+  </form>
+</template>
+
+<template id="new-instance-submit">
+  <div>
+    <button
+      class="submit gisst-Instance-btn gisst-Search-btn-primary"
+      type="button"
+    >
+      Create Instance
+    </button>
+    <p class="submit-status"></p>
+  </div>
+</template>

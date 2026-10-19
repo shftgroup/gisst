@@ -1,3 +1,204 @@
-li[aria-selected="true"] .gisst-new-instance-selector {
-  border: 2px red solid;
+select,
+input,
+textarea {
+  margin-left: 0.8rem;
+}
+
+h4 {
+  margin: 0.5rem 0;
+}
+
+.gisst-New-instance-container {
+  min-width: 350px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    "Open Sans",
+    "Helvetica Neue",
+    sans-serif;
+}
+
+.gisst-New-instance-container > * {
+  margin-bottom: 2rem;
+}
+
+.gisst-New-instance-header > * {
+  margin: 1rem 0;
+}
+
+.gisst-New-instance-description > p,
+ol {
+  margin-bottom: 1rem;
+}
+
+.gisst-New-instance-description-list {
+  list-style-position: inside;
+}
+
+/* hide default file input */
+.gisst-New-instance-visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+input:disabled + label,
+li:first-child .gisst-New-instance-move-up,
+li:last-child .gisst-New-instance-move-down {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.gisst-New-instance-content-search-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gisst-New-instance-method-two-contents > *,
+.gisst-New-instance-search-container > *,
+.gisst-New-instance-header-files,
+.gisst-New-instance-label-env-conf {
+  margin: 0.5rem 0;
+}
+
+.gisst-New-instance-select-file-lists {
+  margin: 0.25rem 0 0.5rem;
+  /* list-style-position: inside; */
+}
+
+.gisst-New-instance-select-file-lists > li {
+  border: 0.1rem solid
+    light-dark(
+      var(--gisst-light-theme-primary),
+      var(--gisst-dark-theme-primary)
+    );
+  border-radius: 0.5rem;
+  margin: 0.3rem 0;
+  padding: 0.5rem;
+}
+
+.gisst-New-instance-line-item-buttons {
+  margin: 0.1rem;
+  padding: 0.15rem 0.35rem;
+}
+
+.gisst-New-instance-line-item-top {
+  display: flex;
+  justify-content: space-between;
+}
+
+.gisst-New-instance-line-item-bottom {
+  display: flex;
+  justify-content: space-between;
+}
+
+.gisst-New-instance-line-item-bottom > div {
+  display: inline-block;
+}
+
+.gisst-New-instance-details-container {
+  display: flex;
+  flex-direction: row;
+  gap: 4rem;
+}
+
+.gisst-New-instance-details-col > * {
+  margin: 1rem auto;
+}
+
+.gisst-New-instance-environment-container {
+  flex: 1;
+}
+
+.gisst-New-instance-environment {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.gisst-New-instance-environment > textarea {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+
+  white-space: nowrap;
+  overflow: auto;
+}
+
+.gisst-New-instance-search-item-button {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gisst-New-instance-search-work-name {
+  font-weight: 500;
+  width: 45%;
+  flex: 0 0 45%;
+}
+
+.gisst-New-instance-search-platform-info {
+  color: light-dark(
+    var(--gisst-light-theme-text-light),
+    rgba(var(--gisst-dark-theme-input-bg), 0.7)
+  );
+  width: 40%;
+  flex: 0 0 40%;
+}
+
+.gisst-New-instance-search-version-info {
+  color: light-dark(
+    var(--gisst-light-theme-text-light),
+    rgba(var(--gisst-dark-theme-input-bg), 0.7)
+  );
+  width: 15%;
+  flex: 0 0 15%;
+  font-size: 0.8rem;
+}
+
+.gisst-Search-results-header .gisst-New-instance-search-header-description {
+  width: 45%;
+  flex: 0 0 45%;
+}
+
+.gisst-Search-results-header .gisst-New-instance-search-header-platform {
+  width: 40%;
+  flex: 0 0 40%;
+}
+
+.gisst-Search-results-header .gisst-New-instance-search-header-version {
+  width: 15%;
+  flex: 0 0 15%;
+}
+
+@media (max-width: 768px) {
+  .gisst-New-instance-container {
+    padding: 1rem;
+  }
+
+  .gisst-New-instance-details-container {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  #env-config {
+    height: 7rem;
+  }
 }
