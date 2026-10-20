@@ -1528,6 +1528,21 @@ class GISSTNewInstance extends HTMLElement {
       this.fill_env_config_preview();
     };
 
+    // update disk filename labels
+    const disk_files_div = config_form.querySelectorAll(
+      ".gisst-New-instance-disk-file-select",
+    )!;
+    disk_files_div.forEach((disk_select) => {
+      const input = disk_select.querySelector("input") as HTMLInputElement;
+      const label_text = disk_select.querySelector(
+        ".content-file-name",
+      )! as HTMLElement;
+      input.addEventListener("change", () => {
+        const file = input.files![0];
+        label_text.innerHTML = file.name;
+      });
+    });
+
     const button =
       submit_div.querySelector<HTMLButtonElement>("button.submit")!;
     const status =

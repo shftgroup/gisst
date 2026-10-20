@@ -132,13 +132,14 @@ li:last-child .gisst-New-instance-move-down {
   flex-direction: row;
   justify-content: flex-start;
   text-align: left;
-  border: 0.1rem solid rgb(184, 177, 178);
+  gap: 1rem;
 }
 
 .gisst-New-instance-config-form {
   display: flex;
   flex: 1;
   flex-direction: column;
+  border: 0.1rem solid rgb(53, 53, 55);
   border-radius: 0.5rem;
 }
 
@@ -198,8 +199,9 @@ li:last-child .gisst-New-instance-move-down {
 }
 
 .gisst-New-instance-bios-select > * {
-  border: 0.1rem solid rgb(97, 100, 167);
+  /* border: 0.1rem solid rgb(97, 100, 167); */
   margin: 0.35rem 0.2rem;
+  border: none;
 }
 
 .gisst-New-instance-bios-select > fieldset > legend {
