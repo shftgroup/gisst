@@ -168,121 +168,171 @@
   >
     <p>Please select a configuration method:</p>
     <div class="gisst-New-instance-config-btns">
-      <button class="gisst-Instance-btn">Form</button>
+      <button class="gisst-Instance-btn gisst-Search-btn-primary">Form</button>
       <button class="gisst-Instance-btn">Manual entry</button>
     </div>
 
     <!-- body to switch out for form/manual -->
     <div class="gisst-New-instance-config-body">
       <form class="gisst-New-instance-config-form">
-        <div class="gisst-New-instance-disk-file-select">
+        <!-- <h4 class="gisst-New-instance-config-form-headers">Images</h4> -->
+
+        <div class="gisst-New-instance-disk-file-selectors">
           <!-- change this class name -->
           <!-- also "content-file-name" class -->
-          <div class="gisst-New-instance-content-search-container">
-            <p>Hard disk A:</p>
-            <input
-              type="file"
-              name="hda"
-              id="hard-disk-a-upload"
-              class="content-match-upload gisst-New-instance-visually-hidden"
-            />
-            <label
-              for="hard-disk-a-upload"
-              class="gisst-Instance-btn gisst-Search-btn-primary"
-              >Browse...</label
-            >
-            <p class="content-file-name">No file chosen</p>
+          <div
+            class="gisst-New-instance-content-search-container gisst-New-instance-disk-file-select"
+          >
+            <div>
+              <p>Hard disk A:</p>
+            </div>
+            <div>
+              <input
+                type="file"
+                name="hda"
+                id="hard-disk-a-upload"
+                class="content-match-upload gisst-New-instance-visually-hidden"
+              />
+              <label
+                for="hard-disk-a-upload"
+                class="gisst-Instance-btn gisst-Search-btn-primary"
+                >Browse...</label
+              >
+              <p class="content-file-name">No file chosen</p>
+            </div>
           </div>
-          <div class="gisst-New-instance-content-search-container">
-            <p>Hard disk B:</p>
-            <input
-              type="file"
-              name="hdb"
-              id="hard-disk-b-upload"
-              class="content-match-upload gisst-New-instance-visually-hidden"
-            />
-            <label
-              for="hard-disk-b-upload"
-              class="gisst-Instance-btn gisst-Search-btn-primary"
-              >Browse...</label
-            >
-            <p class="content-file-name">No file chosen</p>
+          <div
+            class="gisst-New-instance-content-search-container gisst-New-instance-disk-file-select"
+          >
+            <div>
+              <p>Hard disk B:</p>
+            </div>
+            <div>
+              <input
+                type="file"
+                name="hdb"
+                id="hard-disk-b-upload"
+                class="content-match-upload gisst-New-instance-visually-hidden"
+              />
+              <label
+                for="hard-disk-b-upload"
+                class="gisst-Instance-btn gisst-Search-btn-primary"
+                >Browse...</label
+              >
+              <p class="content-file-name">No file chosen</p>
+            </div>
           </div>
-          <div class="gisst-New-instance-content-search-container">
-            <p>Floppy A:</p>
-            <input
-              type="file"
-              name="fda"
-              id="floppy-a-upload"
-              class="content-match-upload gisst-New-instance-visually-hidden"
-            />
-            <label
-              for="floppy-a-upload"
-              class="gisst-Instance-btn gisst-Search-btn-primary"
-              >Browse...</label
-            >
-            <p class="content-file-name">No file chosen</p>
+          <div
+            class="gisst-New-instance-content-search-container gisst-New-instance-disk-file-select"
+          >
+            <div>
+              <p>Floppy A:</p>
+            </div>
+            <div>
+              <input
+                type="file"
+                name="fda"
+                id="floppy-a-upload"
+                class="content-match-upload gisst-New-instance-visually-hidden"
+              />
+              <label
+                for="floppy-a-upload"
+                class="gisst-Instance-btn gisst-Search-btn-primary"
+                >Browse...</label
+              >
+              <p class="content-file-name">No file chosen</p>
+            </div>
           </div>
-          <div class="gisst-New-instance-content-search-container">
-            <p>Floppy B:</p>
-            <input
-              type="file"
-              name="fdb"
-              id="floppy-b-upload"
-              class="content-match-upload gisst-New-instance-visually-hidden"
-            />
-            <label
-              for="floppy-b-upload"
-              class="gisst-Instance-btn gisst-Search-btn-primary"
-              >Browse...</label
-            >
-            <p class="content-file-name">No file chosen</p>
+          <div
+            class="gisst-New-instance-content-search-container gisst-New-instance-disk-file-select"
+          >
+            <div>
+              <p>Floppy B:</p>
+            </div>
+            <div>
+              <input
+                type="file"
+                name="fdb"
+                id="floppy-b-upload"
+                class="content-match-upload gisst-New-instance-visually-hidden"
+              />
+              <label
+                for="floppy-b-upload"
+                class="gisst-Instance-btn gisst-Search-btn-primary"
+                >Browse...</label
+              >
+              <p class="content-file-name">No file chosen</p>
+            </div>
           </div>
-          <div class="gisst-New-instance-content-search-container">
-            <p>CD-ROM:</p>
-            <input
-              type="file"
-              name="cdrom"
-              id="cd-rom-upload"
-              class="content-match-upload gisst-New-instance-visually-hidden"
-            />
-            <label
-              for="cd-rom-upload"
-              class="gisst-Instance-btn gisst-Search-btn-primary"
-              >Browse...</label
-            >
-            <p class="content-file-name">No file chosen</p>
+          <div
+            class="gisst-New-instance-content-search-container gisst-New-instance-disk-file-select"
+          >
+            <div>
+              <p>CD-ROM:</p>
+            </div>
+            <div>
+              <input
+                type="file"
+                name="cdrom"
+                id="cd-rom-upload"
+                class="content-match-upload gisst-New-instance-visually-hidden"
+              />
+              <label
+                for="cd-rom-upload"
+                class="gisst-Instance-btn gisst-Search-btn-primary"
+                >Browse...</label
+              >
+              <p class="content-file-name">No file chosen</p>
+            </div>
           </div>
         </div>
 
-        <div>
-          <div>
-            <label for="memory-size-select">Memory size:</label>
-            <input
-              id="memory-size-select"
-              type="number"
-              name="mem-size"
-              step="16"
-              min="16"
-              max="1024"
-            />
+        <hr />
+
+        <!-- <h4 class="gisst-New-instance-config-form-headers">Memory</h4> -->
+
+        <div class="gisst-New-instance-memory-and-gpu-size">
+          <div class="gisst-New-instance-memory-size-select">
+            <div>
+              <label for="memory-size-select">Memory size:</label>
+            </div>
+            <div>
+              <input
+                id="memory-size-select"
+                type="number"
+                name="mem-size"
+                step="16"
+                min="16"
+                max="1024"
+              />
+              MiB
+            </div>
           </div>
-          <div>
-            <label for="gpu-memory-select">GPU memory size:</label>
-            <input
-              id="gpu-memory-select"
-              type="number"
-              name="gpu-memory"
-              step="1"
-              min="16"
-              max="1024"
-            />
+          <div class="gisst-New-instance-gpu-memory-select">
+            <div>
+              <label for="gpu-memory-select">GPU memory size:</label>
+            </div>
+            <div>
+              <input
+                id="gpu-memory-select"
+                type="number"
+                name="gpu-memory"
+                step="1"
+                min="16"
+                max="1024"
+              />
+              MiB
+            </div>
           </div>
         </div>
+
+        <hr />
+
+        <!-- <h4 class="gisst-New-instance-config-form-headers">BIOS</h4> -->
 
         <div class="gisst-New-instance-bios-select">
           <fieldset>
-            <legend>Bios:</legend>
+            <legend>BIOS:</legend>
             <div>
               <input
                 type="radio"
@@ -304,7 +354,7 @@
             </div>
           </fieldset>
           <fieldset>
-            <legend>VGA bios:</legend>
+            <legend>VGA BIOS:</legend>
             <div>
               <input
                 type="radio"

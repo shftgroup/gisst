@@ -139,29 +139,83 @@ li:last-child .gisst-New-instance-move-down {
   display: flex;
   flex: 1;
   flex-direction: column;
-  border: 0.1rem solid rgb(234, 90, 90);
   border-radius: 0.5rem;
 }
 
-.gisst-New-instance-config-form > * {
-  border: 0.1rem solid rgb(135, 130, 130);
+.gisst-New-instance-config-form-headers {
+  margin-left: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.gisst-New-instance-config-form > div {
+  /* border: 0.1rem solid rgb(135, 130, 130); */
   border-radius: 0.5rem;
-  margin: 0.3rem 0;
+  margin: 0;
   padding: 0.5rem;
 }
 
-.gisst-New-instance-disk-file-select > * {
+.gisst-New-instance-config-form > hr {
+  margin: 0 1rem;
+}
+
+.gisst-New-instance-disk-file-selectors {
+  margin: 0.5rem;
+}
+
+.gisst-New-instance-disk-file-selectors > * {
   margin: 0.2rem;
+}
+
+.gisst-New-instance-disk-file-select > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 50%;
+}
+
+.gisst-New-instance-memory-and-gpu-size {
+  margin: 0.5rem;
+}
+
+.gisst-New-instance-memory-size-select,
+.gisst-New-instance-gpu-memory-select {
+  display: flex;
+  margin: 0.35rem 0.2rem;
+}
+
+.gisst-New-instance-memory-size-select > *,
+.gisst-New-instance-gpu-memory-select > * {
+  width: 50%;
+}
+
+.gisst-New-instance-memory-size-select > * > input,
+.gisst-New-instance-gpu-memory-select > * input {
+  padding: 0.1rem;
+}
+
+.gisst-New-instance-bios-select {
+  margin: 0.5rem;
 }
 
 .gisst-New-instance-bios-select > * {
   border: 0.1rem solid rgb(97, 100, 167);
+  margin: 0.35rem 0.2rem;
+}
+
+.gisst-New-instance-bios-select > fieldset > legend {
+  margin: 0 0.5rem;
+}
+
+.gisst-New-instance-bios-select > * > * {
+  margin-bottom: 0.3rem;
 }
 
 .gisst-New-instance-environment {
   display: flex;
   flex: 1;
   flex-direction: column;
+  margin-right: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .gisst-New-instance-environment > textarea {
