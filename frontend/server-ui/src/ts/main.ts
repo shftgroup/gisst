@@ -1787,16 +1787,18 @@ class GISSTNewInstance extends HTMLElement {
       this.environment.environment_core_name == "v86" ? "v86" : "retroarch";
     // TODO: set them here...
   }
+
   clear_file_lists() {
     this.file_lists.config.length = 0;
     this.file_lists.dependency.length = 0;
     this.file_lists.content.length = 0;
     document
-      .querySelectorAll("#work-info .instance-file-upload + ol")
+      .querySelectorAll("#work-info .gisst-New-instance-select-file-lists")
       .forEach((lst) => {
         lst.innerHTML = "";
       });
   }
+
   async upload_file(
     role: Role,
     index: number,
