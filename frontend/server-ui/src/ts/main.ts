@@ -1338,7 +1338,13 @@ class GISSTNewInstance extends HTMLElement {
       .firstElementChild as HTMLFormElement;
     const submit_div = elementFromTemplates("new-instance-submit")
       .firstElementChild as HTMLDivElement;
+
+    // config panels for form/manual entry tabs
     const config_form = elementFromTemplates("new-instance-config-form")
+      .firstElementChild as HTMLDivElement;
+    const config_form_panel = elementFromTemplates("config-form-panel")
+      .firstElementChild as HTMLDivElement;
+    const config_manual_panel = elementFromTemplates("config-manual-entry-panel")
       .firstElementChild as HTMLDivElement;
 
     // Setup method 1 search
@@ -1502,7 +1508,7 @@ class GISSTNewInstance extends HTMLElement {
       self.work.work_version = target.value;
     };
 
-    config_form.querySelector<HTMLInputElement>(
+    config_form_panel.querySelector<HTMLInputElement>(
       'textarea[name="env_config"]',
     )!.onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
@@ -1537,8 +1543,31 @@ class GISSTNewInstance extends HTMLElement {
     }
 
     // V86 Environment Config Handling
+
+    // initialize config method tabbing
+    const tabsContainer = config_form.querySelector(".gisst-New-instance-tabs");
+    const tabList = tabsContainer!.querySelector('[role="tablist"]');
+    const tabs = Array.from(tabList!.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const tabPanelsContainer = tabsContainer!.querySelector(".tab-panels");
+    const tabPanels = Array.from(tabPanelsContainer!.querySelectorAll<HTMLDivElement>('[role="tabpanel"]'));
+
+    const panel_1 = tabPanelsContainer!.querySelector("#panel-1") as HTMLDivElement;
+    const panel_2 = tabPanelsContainer!.querySelector("#panel-2")as HTMLDivElement;
+
+    panel_1.appendChild(config_form_panel);
+    panel_2.appendChild(config_manual_panel);
+
+    // switch panel visibility
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", (e) => {
+        const btn = e.target as HTMLButtonElement;
+        this.showTab(btn, tabs, tabPanels);
+      });
+    });
+
+
     (
-      config_form.querySelector(
+      config_form_panel.querySelector(
         ".gisst-New-instance-config-body .gisst-New-instance-config-form",
       ) as HTMLFormElement
     ).addEventListener("input", () => {
@@ -2152,6 +2181,32 @@ class GISSTNewInstance extends HTMLElement {
 
     this.env_form_existing_sync();
   }
+
+  showTab(
+    targetTab: HTMLButtonElement,
+    tabs: HTMLButtonElement[],
+    tabPanels: HTMLDivElement[],
+  ) {
+    for (const tab of tabs) {
+      // select/unselect tabs
+      if (tab === targetTab) continue;
+      tab.setAttribute('aria-selected', 'false');
+      tab.tabIndex = -1;
+    }
+    targetTab.setAttribute("aria-selected", 'true');
+    targetTab.tabIndex = 0;
+
+    // hide/show tab panels
+    const targetTabPanel = document.getElementById(
+      targetTab.getAttribute("aria-controls")!,
+    );
+    for (const panel of tabPanels) {
+      if (panel === targetTabPanel) continue;
+      panel.hidden = true;
+    }
+    targetTabPanel!.hidden = false;
+  }
+
 
   /**
    * Parse an environment config JSON and populate the form based on its value.

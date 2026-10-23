@@ -167,19 +167,58 @@
     class="gisst-New-instance-details-row gisst-New-instance-environment-container"
   >
     <p>Please select a configuration method:</p>
-    <div class="gisst-New-instance-config-btns">
-      <button class="gisst-Instance-btn gisst-Search-btn-primary">Form</button>
-      <button class="gisst-Instance-btn">Manual entry</button>
+    <div class="gisst-New-instance-config-btns gisst-New-instance-tabs">
+      <div class="gisst-New-instance-tab-btns" role="tablist" aria-label="config-method">
+        <button
+          class="gisst-Instance-btn gisst-Search-btn-primary"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-1"
+          id="tab-1"
+          tabindex="0">
+          Form
+        </button>
+        <button
+          class="gisst-Instance-btn gisst-Search-btn-primary"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-2"
+          id="tab-2"
+          tabindex="-1">
+          Manual entry
+        </button>
+      </div>
+      <div class="tab-panels">
+        <div id="panel-1" role="tabpanel" tabindex="0" aria-labelledby="tab-1">
+        </div>
+        <div id="panel-2" role="tabpanel" tabindex="0" aria-labelledby="tab-2" hidden>
+        </div>
+      </div>
     </div>
+  </div>
+</template>
 
-    <!-- body to switch out for form/manual -->
+<template id="new-instance-submit">
+  <div>
+    <button
+      class="submit gisst-Instance-btn gisst-Search-btn-primary"
+      type="button"
+    >
+      Create Instance
+    </button>
+    <p class="submit-status"></p>
+  </div>
+</template>
+
+
+<!-- config method panels (for tabs) -->
+
+<template id="config-form-panel">
+  <div>
     <div class="gisst-New-instance-config-body">
       <form class="gisst-New-instance-config-form">
         <!-- <h4 class="gisst-New-instance-config-form-headers">Images</h4> -->
-
         <div class="gisst-New-instance-disk-file-selectors">
-          <!-- change this class name -->
-          <!-- also "content-file-name" class -->
           <div
             class="gisst-New-instance-content-search-container gisst-New-instance-disk-file-select"
           >
@@ -379,23 +418,22 @@
       </form>
 
       <div class="gisst-New-instance-environment">
-        <label class="gisst-New-instance-label-env-conf" for="env-config"
+        <label class="gisst-New-instance-label-env-conf" for="env-config-form"
           >Environment config:</label
         >
-        <textarea id="env-config" name="env_config" disabled></textarea>
+        <textarea id="env-config-form" name="env_config" disabled></textarea>
       </div>
     </div>
   </div>
 </template>
 
-<template id="new-instance-submit">
+<template id="config-manual-entry-panel">
   <div>
-    <button
-      class="submit gisst-Instance-btn gisst-Search-btn-primary"
-      type="button"
-    >
-      Create Instance
-    </button>
-    <p class="submit-status"></p>
+      <div class="gisst-New-instance-environment gisst-New-instance-config-manual">
+        <label class="gisst-New-instance-label-env-conf" for="env-config-manual"
+          >Environment config:</label
+        >
+        <textarea id="env-config-manual" name="env_config"></textarea>
+      </div>
   </div>
 </template>

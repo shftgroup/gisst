@@ -13,6 +13,10 @@ textarea:disabled {
   padding: 0.2rem;
 }
 
+[aria-selected="false"] {
+  opacity: 0.32;
+}
+
 .gisst-New-instance-container {
   min-width: 350px;
   max-width: 1200px;
@@ -65,7 +69,7 @@ input:disabled + label,
 li:first-child .gisst-New-instance-move-up,
 li:last-child .gisst-New-instance-move-down {
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.32;
 }
 
 .gisst-New-instance-content-search-container {
@@ -78,6 +82,7 @@ li:last-child .gisst-New-instance-move-down {
 .gisst-New-instance-method-two-contents > *,
 .gisst-New-instance-search-container > *,
 .gisst-New-instance-header-files,
+.gisst-New-instance-tab-btns,
 .gisst-New-instance-label-env-conf {
   margin: 0.5rem 0;
 }
@@ -159,6 +164,7 @@ li:last-child .gisst-New-instance-move-down {
   margin: 0 1rem;
 }
 
+
 .gisst-New-instance-disk-file-selectors {
   margin: 0.5rem;
 }
@@ -229,6 +235,11 @@ li:last-child .gisst-New-instance-move-down {
   overflow: auto;
 }
 
+.gisst-New-instance-config-manual > textarea {
+  max-width: 42rem;
+  min-height: 20rem;
+}
+
 .gisst-New-instance-search-item-button {
   background: none;
   border: none;
@@ -285,10 +296,6 @@ li:last-child .gisst-New-instance-move-down {
   .gisst-New-instance-details-container {
     flex-direction: column;
     gap: 0;
-  }
-
-  #env-config {
-    height: 7rem;
   }
 }
 
