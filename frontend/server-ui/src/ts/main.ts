@@ -1342,7 +1342,12 @@ class GISSTNewInstance extends HTMLElement {
     // config panels for form/manual entry tabs
     const config_form = elementFromTemplates("new-instance-config-form")
       .firstElementChild as HTMLDivElement;
-    const config_form_panel = elementFromTemplates("config-form-panel")
+    const missing_config_form_panel = elementFromTemplates(
+      "missing-config-form-panel",
+    ).firstElementChild as HTMLDivElement;
+    const v86_config_form_panel = elementFromTemplates("v86-config-form-panel")
+      .firstElementChild as HTMLDivElement;
+    const ra_config_form_panel = elementFromTemplates("ra-config-form-panel")
       .firstElementChild as HTMLDivElement;
     const config_manual_panel = elementFromTemplates(
       "config-manual-entry-panel",
@@ -1509,7 +1514,7 @@ class GISSTNewInstance extends HTMLElement {
       self.work.work_version = target.value;
     };
 
-    config_form_panel.querySelector<HTMLInputElement>(
+    v86_config_form_panel.querySelector<HTMLInputElement>(
       'textarea[name="env_config"]',
     )!.onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
@@ -1559,7 +1564,9 @@ class GISSTNewInstance extends HTMLElement {
       "#panel-2",
     ) as HTMLDivElement;
 
-    panel_1.appendChild(config_form_panel);
+    panel_1.appendChild(missing_config_form_panel);
+    panel_1.appendChild(v86_config_form_panel);
+    panel_1.appendChild(ra_config_form_panel);
     panel_2.appendChild(config_manual_panel);
 
     // switch panel visibility
@@ -1579,7 +1586,7 @@ class GISSTNewInstance extends HTMLElement {
 
 
     (
-      config_form_panel.querySelector(
+      v86_config_form_panel.querySelector(
         ".gisst-New-instance-config-body .gisst-New-instance-config-form",
       ) as HTMLFormElement
     ).addEventListener("input", () => {
@@ -1747,7 +1754,7 @@ class GISSTNewInstance extends HTMLElement {
     contents.appendChild(submit_div);
     this.appendChild(contents);
 
-    this.env_form_generate();
+    this.env_form_reset();
   }
 
   async content_check_hash(platform: string, file: File, hash: string) {
@@ -1968,14 +1975,59 @@ class GISSTNewInstance extends HTMLElement {
         const move_down = file.list_item.querySelector(
           ".gisst-New-instance-move-down",
         ) as HTMLElement;
-        move_up.style.display = this.file_list_should_allow_move(role as Role)
-          ? "inline"
-          : "none";
-        move_down.style.display = this.file_list_should_allow_move(role as Role)
-          ? "inline"
-          : "none";
+        move_up.style.visibility = this.file_list_should_allow_move(role as Role)
+          ? ""
+          : "hidden";
+        move_down.style.visibility = this.file_list_should_allow_move(role as Role)
+          ? ""
+          : "hidden";
       }
     }
+  }
+
+  /**
+   * Sync the state of the environment config form with the selected platform and form mode.
+   */
+  env_form_state_sync() {
+    // Show correct form based on page state
+    const missing_form_body = document.querySelector(
+      "#missing-env-form-body",
+    ) as HTMLElement;
+    const v86_form_body = document.querySelector(
+      "#v86-env-form-body",
+    ) as HTMLElement;
+    const ra_form_body = document.querySelector(
+      "#ra-env-form-body",
+    ) as HTMLElement;
+    switch (this.environment.environment_framework) {
+      case "v86":
+        v86_form_body.style.display = "";
+        missing_form_body.style.display = "none";
+        ra_form_body.style.display = "none";
+        break;
+
+      case "retroarch":
+        v86_form_body.style.display = "none";
+        missing_form_body.style.display = "none";
+        ra_form_body.style.display = "";
+        break;
+
+      default:
+        v86_form_body.style.display = "none";
+        missing_form_body.style.display = "";
+        ra_form_body.style.display = "none";
+        break;
+    }
+
+    // Disable content file upload if v86 form, since they should use the form to upload instead
+    const content_file_upload = document.querySelector(
+      "#instance-content-upload",
+    ) as HTMLInputElement;
+    content_file_upload.disabled =
+      this.env_form_mode === "form" &&
+      this.environment.environment_framework === "v86";
+
+    this.file_list_update_move();
   }
 
   /**
@@ -1992,15 +2044,7 @@ class GISSTNewInstance extends HTMLElement {
       this.env_form_generate();
     }
 
-    this.file_list_update_move();
-
-    // Disable content file upload if v86 form, since they should use the form to upload instead
-    const content_file_upload = document.querySelector(
-      "#instance-content-upload",
-    ) as HTMLInputElement;
-    content_file_upload.disabled =
-      this.env_form_mode === "form" &&
-      this.environment.environment_framework === "v86";
+    this.env_form_state_sync();
   }
 
   add_to_file_list(
@@ -2077,9 +2121,9 @@ class GISSTNewInstance extends HTMLElement {
     move_up_btn.classList.add("gisst-New-instance-line-item-buttons");
     move_up_btn.textContent = "↑";
     move_up_btn.title = "Move up";
-    move_up_btn.style.display = this.file_list_should_allow_move(role)
-      ? "inline"
-      : "none";
+    move_up_btn.style.visibility = this.file_list_should_allow_move(role)
+      ? ""
+      : "hidden";
     line_item_move_div.appendChild(move_up_btn);
 
     const move_down_btn = document.createElement("button");
@@ -2088,9 +2132,9 @@ class GISSTNewInstance extends HTMLElement {
     move_down_btn.classList.add("gisst-New-instance-line-item-buttons");
     move_down_btn.textContent = "↓";
     move_down_btn.title = "Move down";
-    move_down_btn.style.display = this.file_list_should_allow_move(role)
-      ? "inline"
-      : "none";
+    move_down_btn.style.visibility = this.file_list_should_allow_move(role)
+      ? ""
+      : "hidden";
     line_item_move_div.appendChild(move_down_btn);
 
     line_item.querySelector<HTMLButtonElement>(
@@ -2194,14 +2238,17 @@ class GISSTNewInstance extends HTMLElement {
     this.instance = full_instance.info;
     this.work = full_instance.work;
 
-    const env_config = document.querySelector<HTMLTextAreaElement>(
-      ".gisst-New-instance-config-body textarea[name=env_config]",
-    )!;
-    env_config.value = JSON.stringify(
+    const env_config_string = JSON.stringify(
       full_instance.environment.environment_config || {},
       null,
       2,
     );
+    const env_configs = Array.from(
+      document.querySelectorAll<HTMLTextAreaElement>("textarea[name=env_config]"),
+    );
+    for (const env_config of env_configs) {
+      env_config.value = env_config_string;
+    }
 
     this.clear_file_lists();
     full_instance.objects.sort(
@@ -2303,6 +2350,8 @@ class GISSTNewInstance extends HTMLElement {
       const element = document.querySelector(query)!;
       this.env_form_file_sync(element, env_config?.[image_type], image_type);
     }
+
+    this.env_form_state_sync();
   }
 
   /**

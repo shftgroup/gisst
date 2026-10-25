@@ -229,8 +229,19 @@
 
 <!-- config method panels (for tabs) -->
 
-<template id="config-form-panel">
-  <div>
+<template id="missing-config-form-panel">
+  <div
+    id="missing-env-form-body"
+    class="gisst-New-instance-environment gisst-New-instance-config-manual"
+  >
+    <p class="gisst-New-instance-label-env-conf">
+      Please select a platform to use the environment config form.
+    </p>
+  </div>
+</template>
+
+<template id="v86-config-form-panel">
+  <div id="v86-env-form-body">
     <div class="gisst-New-instance-config-body">
       <form class="gisst-New-instance-config-form">
         <!-- <h4 class="gisst-New-instance-config-form-headers">Images</h4> -->
@@ -443,8 +454,29 @@
   </div>
 </template>
 
+<template id="ra-config-form-panel">
+  <div id="ra-env-form-body">
+    <div class="gisst-New-instance-config-body">
+      <form class="gisst-New-instance-config-form">
+        <div>
+          <p>
+            Form not yet avaialble for Retroarch platforms. Use manual instead.
+          </p>
+        </div>
+      </form>
+
+      <div class="gisst-New-instance-environment">
+        <label class="gisst-New-instance-label-env-conf" for="env-config-form"
+          >Environment config:</label
+        >
+        <textarea id="env-config-form" name="env_config" disabled></textarea>
+      </div>
+    </div>
+  </div>
+</template>
+
 <template id="config-manual-entry-panel">
-  <div>
+  <div id="manual-env-form-body">
     <div
       class="gisst-New-instance-environment gisst-New-instance-config-manual"
     >
