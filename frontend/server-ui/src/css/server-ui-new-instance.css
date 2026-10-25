@@ -90,6 +90,10 @@ li:last-child .gisst-New-instance-move-down {
 .gisst-New-instance-select-file-lists {
   margin: 0.25rem 0 0.5rem;
   /* list-style-position: inside; */
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
 }
 
 .gisst-New-instance-select-file-lists > li {
