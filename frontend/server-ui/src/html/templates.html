@@ -168,14 +168,20 @@
   >
     <p>Please select a configuration method:</p>
     <div class="gisst-New-instance-config-btns gisst-New-instance-tabs">
-      <div class="gisst-New-instance-tab-btns" role="tablist" aria-label="config-method">
+      <div
+        class="gisst-New-instance-tab-btns"
+        role="tablist"
+        aria-label="config-method"
+      >
         <button
           class="gisst-Instance-btn gisst-Search-btn-primary"
           role="tab"
           aria-selected="true"
           aria-controls="panel-1"
           id="tab-1"
-          tabindex="0">
+          tabindex="0"
+          data-mode="form"
+        >
           Form
         </button>
         <button
@@ -184,15 +190,26 @@
           aria-selected="false"
           aria-controls="panel-2"
           id="tab-2"
-          tabindex="-1">
+          tabindex="-1"
+          data-mode="manual"
+        >
           Manual entry
         </button>
       </div>
       <div class="tab-panels">
-        <div id="panel-1" role="tabpanel" tabindex="0" aria-labelledby="tab-1">
-        </div>
-        <div id="panel-2" role="tabpanel" tabindex="0" aria-labelledby="tab-2" hidden>
-        </div>
+        <div
+          id="panel-1"
+          role="tabpanel"
+          tabindex="0"
+          aria-labelledby="tab-1"
+        ></div>
+        <div
+          id="panel-2"
+          role="tabpanel"
+          tabindex="0"
+          aria-labelledby="tab-2"
+          hidden
+        ></div>
       </div>
     </div>
   </div>
@@ -209,7 +226,6 @@
     <p class="submit-status"></p>
   </div>
 </template>
-
 
 <!-- config method panels (for tabs) -->
 
@@ -429,11 +445,13 @@
 
 <template id="config-manual-entry-panel">
   <div>
-      <div class="gisst-New-instance-environment gisst-New-instance-config-manual">
-        <label class="gisst-New-instance-label-env-conf" for="env-config-manual"
-          >Environment config:</label
-        >
-        <textarea id="env-config-manual" name="env_config"></textarea>
-      </div>
+    <div
+      class="gisst-New-instance-environment gisst-New-instance-config-manual"
+    >
+      <label class="gisst-New-instance-label-env-conf" for="env-config-manual"
+        >Environment config:</label
+      >
+      <textarea id="env-config-manual" name="env_config"></textarea>
+    </div>
   </div>
 </template>

@@ -1344,8 +1344,9 @@ class GISSTNewInstance extends HTMLElement {
       .firstElementChild as HTMLDivElement;
     const config_form_panel = elementFromTemplates("config-form-panel")
       .firstElementChild as HTMLDivElement;
-    const config_manual_panel = elementFromTemplates("config-manual-entry-panel")
-      .firstElementChild as HTMLDivElement;
+    const config_manual_panel = elementFromTemplates(
+      "config-manual-entry-panel",
+    ).firstElementChild as HTMLDivElement;
 
     // Setup method 1 search
     const search_box = search_method_div.querySelector(
@@ -1490,7 +1491,7 @@ class GISSTNewInstance extends HTMLElement {
       self.environment.environment_core_version = opt.dataset["coreVersion"]!;
       self.environment.environment_framework =
         self.environment.environment_core_name == "v86" ? "v86" : "retroarch";
-      this.file_list_update_move();
+      this.env_form_reset();
     };
 
     metadata_form.querySelector<HTMLInputElement>(
@@ -1551,8 +1552,12 @@ class GISSTNewInstance extends HTMLElement {
     const tabPanelsContainer = tabsContainer!.querySelector(".tab-panels");
     const tabPanels = Array.from(tabPanelsContainer!.querySelectorAll<HTMLDivElement>('[role="tabpanel"]'));
 
-    const panel_1 = tabPanelsContainer!.querySelector("#panel-1") as HTMLDivElement;
-    const panel_2 = tabPanelsContainer!.querySelector("#panel-2")as HTMLDivElement;
+    const panel_1 = tabPanelsContainer!.querySelector(
+      "#panel-1",
+    ) as HTMLDivElement;
+    const panel_2 = tabPanelsContainer!.querySelector(
+      "#panel-2",
+    ) as HTMLDivElement;
 
     panel_1.appendChild(config_form_panel);
     panel_2.appendChild(config_manual_panel);
@@ -1562,6 +1567,13 @@ class GISSTNewInstance extends HTMLElement {
       tab.addEventListener("click", (e) => {
         const btn = e.target as HTMLButtonElement;
         this.showTab(btn, tabs, tabPanels);
+
+        if (btn.dataset.mode === "form") {
+          this.env_form_mode = "form";
+        } else {
+          this.env_form_mode = "manual";
+        }
+        this.env_form_reset();
       });
     });
 
@@ -1571,7 +1583,7 @@ class GISSTNewInstance extends HTMLElement {
         ".gisst-New-instance-config-body .gisst-New-instance-config-form",
       ) as HTMLFormElement
     ).addEventListener("input", () => {
-      this.env_form_update();
+      this.env_form_generate();
     });
 
     // update file lists
@@ -1735,7 +1747,7 @@ class GISSTNewInstance extends HTMLElement {
     contents.appendChild(submit_div);
     this.appendChild(contents);
 
-    this.env_form_update();
+    this.env_form_generate();
   }
 
   async content_check_hash(platform: string, file: File, hash: string) {
@@ -1964,6 +1976,23 @@ class GISSTNewInstance extends HTMLElement {
           : "none";
       }
     }
+  }
+
+  /**
+   * Reset the env form.
+   */
+  env_form_reset() {
+    if (
+      this.environment.environment_framework === "v86" &&
+      this.env_form_mode === "form"
+    ) {
+      this.clear_file_lists();
+      this.environment.environment_config = {};
+      this.env_form_existing_sync();
+      this.env_form_generate();
+    }
+
+    this.file_list_update_move();
   }
 
   add_to_file_list(
@@ -2218,15 +2247,18 @@ class GISSTNewInstance extends HTMLElement {
     const mem_size_input = document.querySelector(
       "#memory-size-select",
     ) as HTMLInputElement;
-    mem_size_input.value = String(
-      Math.round((env_config.memory_size ?? 0) / 1048576),
-    );
+    mem_size_input.value =
+      env_config?.memory_size !== undefined
+        ? String(Math.round(env_config.memory_size / 1048576))
+        : "";
+
     const gpu_mem_size_input = document.querySelector(
       "#gpu-memory-select",
     ) as HTMLInputElement;
-    gpu_mem_size_input.value = String(
-      Math.round((env_config.vga_memory_size ?? 0) / 1048576),
-    );
+    gpu_mem_size_input.value =
+      env_config?.vga_memory_size !== undefined
+        ? String(Math.round(env_config.vga_memory_size / 1048576))
+        : "";
 
     // Populate BIOS
     const seabios_radio = document.querySelector(
@@ -2235,9 +2267,8 @@ class GISSTNewInstance extends HTMLElement {
     const bochs_radio = document.querySelector(
       "#bios-bochs",
     ) as HTMLInputElement;
-    if (env_config.bios?.url === "seabios.bin") {
-      seabios_radio.checked = true;
-    } else if (env_config.bios?.url === "bochs-bios.bin") {
+    seabios_radio.checked = true;
+    if (env_config?.bios?.url === "bochs-bios.bin") {
       bochs_radio.checked = true;
     }
 
@@ -2247,9 +2278,8 @@ class GISSTNewInstance extends HTMLElement {
     const vga_bochs_radio = document.querySelector(
       "#vga-bios-bochs",
     ) as HTMLInputElement;
-    if (env_config.vga_bios?.url === "vgabios.bin") {
-      vga_standard_radio.checked = true;
-    } else if (env_config.bios?.url === "bochs-vgabios.bin") {
+    vga_standard_radio.checked = true;
+    if (env_config?.bios?.url === "bochs-vgabios.bin") {
       vga_bochs_radio.checked = true;
     }
 
@@ -2262,10 +2292,8 @@ class GISSTNewInstance extends HTMLElement {
       "#cd-rom-upload ~ p.content-file-name": "cdrom",
     };
     for (const [query, image_type] of Object.entries(images)) {
-      const element = document.querySelector(query);
-      if (!element) continue;
-
-      this.env_form_file_sync(element, env_config[image_type], image_type);
+      const element = document.querySelector(query)!;
+      this.env_form_file_sync(element, env_config?.[image_type], image_type);
     }
   }
 
@@ -2303,7 +2331,7 @@ class GISSTNewInstance extends HTMLElement {
   /**
    * Generate a new environment config and update the form.
    */
-  env_form_update() {
+  env_form_generate() {
     const form = document.querySelector(
       ".gisst-New-instance-config-body .gisst-New-instance-config-form",
     ) as HTMLFormElement;
@@ -2393,7 +2421,7 @@ class GISSTNewInstance extends HTMLElement {
       }
     }
 
-    this.env_form_update();
+    this.env_form_generate();
   }
 }
 
