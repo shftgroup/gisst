@@ -1993,6 +1993,14 @@ class GISSTNewInstance extends HTMLElement {
     }
 
     this.file_list_update_move();
+
+    // Disable content file upload if v86 form, since they should use the form to upload instead
+    const content_file_upload = document.querySelector(
+      "#instance-content-upload",
+    ) as HTMLInputElement;
+    content_file_upload.disabled =
+      this.env_form_mode === "form" &&
+      this.environment.environment_framework === "v86";
   }
 
   add_to_file_list(
