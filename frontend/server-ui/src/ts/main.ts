@@ -2213,8 +2213,6 @@ class GISSTNewInstance extends HTMLElement {
    */
   env_form_existing_sync() {
     const env_config = this.environment.environment_config as V86Options;
-    if (this.environment.environment_framework !== "v86") return;
-    if (!env_config) return;
 
     // Populate memory sizes
     const mem_size_input = document.querySelector(
