@@ -96,29 +96,27 @@
     <div class="gisst-New-instance-details-row">
       <div>
         <h4>Work details:</h4>
-        <p>
+        <div class="gisst-New-instance-details">
           <label for="work_core_chooser">Platform:</label>
           <select name="work_core_chooser" class="core_chooser"></select>
-        </p>
-        <p>
           <label for="work_name">Name:</label>
           <input name="work_name" required />
-        </p>
-        <p>
           <label for="work_version">Version:</label>
           <input name="work_version" />
-        </p>
+        </div>
       </div>
     </div>
   </form>
 </template>
 
 <template id="new-instance-config-form">
-  <div
-    class="gisst-New-instance-details-row gisst-New-instance-environment-container"
-  >
+  <div class="gisst-New-instance-environment-container">
+    <h4>Environment Config:</h4>
     <p>Please select a configuration method:</p>
-    <div class="gisst-New-instance-config-btns gisst-New-instance-tabs">
+
+    <div
+      class="gisst-New-instance-details-row gisst-New-instance-config-btns gisst-New-instance-tabs"
+    >
       <div
         class="gisst-New-instance-tab-btns"
         role="tablist"
@@ -169,7 +167,7 @@
 <template id="new-instance-select-files-form">
   <form id="work-files" class="gisst-New-instance-details-container">
     <div>
-      <p class="gisst-New-instance-header-files">Select files:</p>
+      <h4 class="gisst-New-instance-header-files">Select files:</h4>
       <p>
         <input
           type="file"

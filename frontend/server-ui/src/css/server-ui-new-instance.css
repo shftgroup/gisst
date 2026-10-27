@@ -136,6 +136,17 @@ li:last-child .gisst-New-instance-move-down {
   margin: 1rem auto;
 }
 
+.gisst-New-instance-details {
+  display: grid;
+  grid-template: repeat(2, max-content) / repeat(2, max-content);
+  row-gap: 0.25rem;
+}
+
+.gisst-New-instance-details > select,
+.gisst-New-instance-details > input {
+  padding: 0.1rem;
+}
+
 .gisst-New-instance-config-body {
   display: flex;
   flex-direction: row;
