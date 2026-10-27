@@ -154,7 +154,6 @@ li:last-child .gisst-New-instance-move-down {
 }
 
 .gisst-New-instance-config-form > div {
-  /* border: 0.1rem solid rgb(135, 130, 130); */
   border-radius: 0.5rem;
   margin: 0;
   padding: 0.5rem;
@@ -163,7 +162,6 @@ li:last-child .gisst-New-instance-move-down {
 .gisst-New-instance-config-form > hr {
   margin: 0 1rem;
 }
-
 
 .gisst-New-instance-disk-file-selectors {
   margin: 0.5rem;
@@ -201,21 +199,14 @@ li:last-child .gisst-New-instance-move-down {
 }
 
 .gisst-New-instance-bios-select {
-  margin: 0.5rem;
+  display: grid;
+  grid-template: repeat(2, auto) / repeat(2, auto);
+  margin: 0.2rem;
+  row-gap: 0.25rem;
 }
 
-.gisst-New-instance-bios-select > * {
-  /* border: 0.1rem solid rgb(97, 100, 167); */
-  margin: 0.35rem 0.2rem;
-  border: none;
-}
-
-/* .gisst-New-instance-bios-select > fieldset > legend {
-  margin: 0 0.5rem;
-} */
-
-.gisst-New-instance-bios-select > * > * {
-  margin-bottom: 0.3rem;
+.gisst-New-instance-bios-select > select {
+  padding: 0.1rem;
 }
 
 .gisst-New-instance-environment {

@@ -400,51 +400,30 @@
 
         <!-- <h4 class="gisst-New-instance-config-form-headers">BIOS</h4> -->
 
-        <div class="gisst-New-instance-bios-select">
-          <fieldset>
-            <legend>BIOS:</legend>
-            <div>
-              <input
-                type="radio"
-                id="bios-seabios"
-                name="bios"
-                value="bios-seabios"
-                checked
-              />
-              <label for="bios-seabios">Seabios</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="bios-bochs"
-                name="bios"
-                value="bios-bochs"
-              />
-              <label for="bios-bochs">Bochs</label>
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend>VGA BIOS:</legend>
-            <div>
-              <input
-                type="radio"
-                id="vga-bios-standard"
-                name="vga-bios"
-                value="vga-bios-standard"
-                checked
-              />
-              <label for="vga-bios-standard">Standard</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="vga-bios-bochs"
-                name="vga-bios"
-                value="vga-bios-bochs"
-              />
-              <label for="vga-bios-bochs">Bochs</label>
-            </div>
-          </fieldset>
+        <div>
+          <div class="gisst-New-instance-bios-select">
+            <label for="bios-chooser">BIOS:</label>
+            <select
+              id="bios-chooser"
+              name="bios"
+              class="gisst-New-instance-bios-chooser"
+            >
+              <option value="bios-seabios">Seabios</option>
+              <option value="bios-bochs">Bochs</option>
+              <option value="bios-custom">Custom</option>
+            </select>
+
+            <label for="vga-bios-chooser">VGA BIOS:</label>
+            <select
+              id="vga-bios-chooser"
+              name="vga-bios"
+              class="gisst-New-instance-vga-bios-chooser"
+            >
+              <option value="vga-bios-standard">Standard</option>
+              <option value="vga-bios-bochs">Bochs</option>
+              <option value="vga-bios-custom">Custom</option>
+            </select>
+          </div>
         </div>
       </form>
 

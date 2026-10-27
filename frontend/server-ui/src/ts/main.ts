@@ -1336,8 +1336,9 @@ class GISSTNewInstance extends HTMLElement {
       .firstElementChild as HTMLDivElement;
     const metadata_form = elementFromTemplates("new-instance-details-form")
       .firstElementChild as HTMLFormElement;
-    const select_files_form = elementFromTemplates("new-instance-select-files-form")
-      .firstElementChild as HTMLFormElement;
+    const select_files_form = elementFromTemplates(
+      "new-instance-select-files-form",
+    ).firstElementChild as HTMLFormElement;
     const submit_div = elementFromTemplates("new-instance-submit")
       .firstElementChild as HTMLDivElement;
 
@@ -1978,10 +1979,14 @@ class GISSTNewInstance extends HTMLElement {
         const move_down = file.list_item.querySelector(
           ".gisst-New-instance-move-down",
         ) as HTMLElement;
-        move_up.style.visibility = this.file_list_should_allow_move(role as Role)
+        move_up.style.visibility = this.file_list_should_allow_move(
+          role as Role,
+        )
           ? ""
           : "hidden";
-        move_down.style.visibility = this.file_list_should_allow_move(role as Role)
+        move_down.style.visibility = this.file_list_should_allow_move(
+          role as Role,
+        )
           ? ""
           : "hidden";
       }
@@ -2319,26 +2324,20 @@ class GISSTNewInstance extends HTMLElement {
         : "";
 
     // Populate BIOS
-    const seabios_radio = document.querySelector(
-      "#bios-seabios",
+    const bios_chooser = document.querySelector(
+      "#bios-chooser",
     ) as HTMLInputElement;
-    const bochs_radio = document.querySelector(
-      "#bios-bochs",
-    ) as HTMLInputElement;
-    seabios_radio.checked = true;
+    bios_chooser.value = "bios-seabios";
     if (env_config?.bios?.url === "bochs-bios.bin") {
-      bochs_radio.checked = true;
+      bios_chooser.value = "bios-bochs";
     }
 
-    const vga_standard_radio = document.querySelector(
-      "#vga-bios-standard",
+    const vga_bios_chooser = document.querySelector(
+      "#vga-bios-chooser",
     ) as HTMLInputElement;
-    const vga_bochs_radio = document.querySelector(
-      "#vga-bios-bochs",
-    ) as HTMLInputElement;
-    vga_standard_radio.checked = true;
+    vga_bios_chooser.value = "vga-bios-standard";
     if (env_config?.bios?.url === "bochs-vgabios.bin") {
-      vga_bochs_radio.checked = true;
+      vga_bios_chooser.value = "vga-bios-bochs";
     }
 
     // Update file selects
