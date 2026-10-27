@@ -1336,6 +1336,8 @@ class GISSTNewInstance extends HTMLElement {
       .firstElementChild as HTMLDivElement;
     const metadata_form = elementFromTemplates("new-instance-details-form")
       .firstElementChild as HTMLFormElement;
+    const select_files_form = elementFromTemplates("new-instance-select-files-form")
+      .firstElementChild as HTMLFormElement;
     const submit_div = elementFromTemplates("new-instance-submit")
       .firstElementChild as HTMLDivElement;
 
@@ -1526,7 +1528,7 @@ class GISSTNewInstance extends HTMLElement {
 
     // other biblio stuff
 
-    for (const input of metadata_form.querySelectorAll(
+    for (const input of select_files_form.querySelectorAll(
       ".instance-file-upload",
     ) as unknown as HTMLInputElement[]) {
       const lst = input.parentElement?.nextElementSibling;
@@ -1751,6 +1753,7 @@ class GISSTNewInstance extends HTMLElement {
     contents.appendChild(this.content_matcher);
     contents.appendChild(metadata_form);
     contents.appendChild(config_form);
+    contents.appendChild(select_files_form);
     contents.appendChild(submit_div);
     this.appendChild(contents);
 
@@ -1873,7 +1876,7 @@ class GISSTNewInstance extends HTMLElement {
     };
 
     document
-      .querySelectorAll("#work-info .gisst-New-instance-select-file-lists")
+      .querySelectorAll("#work-files .gisst-New-instance-select-file-lists")
       .forEach((lst) => {
         lst.innerHTML = "";
       });
@@ -2056,7 +2059,7 @@ class GISSTNewInstance extends HTMLElement {
   ) {
     const is_existing = "existing" in source;
     const lst = document.querySelector<HTMLOListElement>(
-      `#work-info p:has(input[data-target=${role}]) + ol`,
+      `#work-files p:has(input[data-target=${role}]) + ol`,
     )!;
     const line_item = document.createElement("li");
     const file_record = {

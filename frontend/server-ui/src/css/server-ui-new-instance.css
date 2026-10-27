@@ -210,9 +210,9 @@ li:last-child .gisst-New-instance-move-down {
   border: none;
 }
 
-.gisst-New-instance-bios-select > fieldset > legend {
+/* .gisst-New-instance-bios-select > fieldset > legend {
   margin: 0 0.5rem;
-}
+} */
 
 .gisst-New-instance-bios-select > * > * {
   margin-bottom: 0.3rem;

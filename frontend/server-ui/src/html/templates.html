@@ -109,55 +109,6 @@
           <input name="work_version" />
         </p>
       </div>
-
-      <div>
-        <p class="gisst-New-instance-header-files">Select files:</p>
-        <p>
-          <input
-            type="file"
-            id="instance-dep-upload"
-            name="instance_dep_upload"
-            class="instance-file-upload gisst-New-instance-visually-hidden"
-            data-target="dependency"
-          />
-          <label
-            for="instance-dep-upload"
-            class="gisst-Instance-btn gisst-Search-btn-primary"
-            >+ Add instance dependency</label
-          >
-        </p>
-        <ol class="gisst-New-instance-select-file-lists"></ol>
-        <p>
-          <input
-            type="file"
-            id="instance-config-upload"
-            name="instance_config_upload"
-            class="instance-file-upload gisst-New-instance-visually-hidden"
-            data-target="config"
-          />
-          <label
-            for="instance-config-upload"
-            class="gisst-Instance-btn gisst-Search-btn-primary"
-            >+ Add instance config files</label
-          >
-        </p>
-        <ol class="gisst-New-instance-select-file-lists"></ol>
-        <p>
-          <input
-            type="file"
-            id="instance-content-upload"
-            name="instance_content_upload"
-            class="instance-file-upload gisst-New-instance-visually-hidden"
-            data-target="content"
-          />
-          <label
-            for="instance-content-upload"
-            class="gisst-Instance-btn gisst-Search-btn-primary"
-            >+ Add instance content files</label
-          >
-        </p>
-        <ol class="gisst-New-instance-select-file-lists"></ol>
-      </div>
     </div>
   </form>
 </template>
@@ -213,6 +164,59 @@
       </div>
     </div>
   </div>
+</template>
+
+<template id="new-instance-select-files-form">
+  <form id="work-files" class="gisst-New-instance-details-container">
+    <div>
+        <p class="gisst-New-instance-header-files">Select files:</p>
+        <p>
+          <input
+            type="file"
+            id="instance-dep-upload"
+            name="instance_dep_upload"
+            class="instance-file-upload gisst-New-instance-visually-hidden"
+            data-target="dependency"
+          />
+          <label
+            for="instance-dep-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >+ Add instance dependency</label
+          >
+        </p>
+        <ol class="gisst-New-instance-select-file-lists"></ol>
+        <p>
+          <input
+            type="file"
+            id="instance-config-upload"
+            name="instance_config_upload"
+            class="instance-file-upload gisst-New-instance-visually-hidden"
+            data-target="config"
+          />
+          <label
+            for="instance-config-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >+ Add instance config files</label
+          >
+        </p>
+        <ol class="gisst-New-instance-select-file-lists"></ol>
+        <p>
+          <input
+            type="file"
+            id="instance-content-upload"
+            name="instance_content_upload"
+            class="instance-file-upload gisst-New-instance-visually-hidden"
+            data-target="content"
+          />
+          <label
+            for="instance-content-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >+ Add instance content files</label
+          >
+        </p>
+        <ol class="gisst-New-instance-select-file-lists"></ol>
+      </div>
+  </form>
 </template>
 
 <template id="new-instance-submit">
