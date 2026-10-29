@@ -24,16 +24,16 @@
   },
   "devDependencies": {
     "@types/path-browserify": "^1.0.3",
-    "@vitest/ui": "^4.1.11",
-    "happy-dom": "^20.10.1",
+    "@vitest/ui": "^5.0",
+    "happy-dom": "^21",
     "shx": "^0.3.4",
     "sirv": "^3.0.2",
     "typescript": "^5.8.2",
-    "vite": "^8.0.16",
+    "vite": "^8.3",
     "vite-plugin-checker": "^0.9.0",
     "vite-plugin-dts": "^5.1.2",
     "vite-plugin-mkcert": "^1.17.6",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0"
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.7.53",

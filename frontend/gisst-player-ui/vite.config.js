@@ -29,7 +29,7 @@ export default defineConfig({
   build: {
     lib: {
       // Could also be a dictionary or array of multiple entry points
-      entry: resolve(__dirname, "src/ts/main.ts"),
+      entry: resolve(import.meta.dirname, "src/ts/main.ts"),
       name: "GisstPlayer",
       formats: ["es"],
       // the proper extensions will be added
@@ -50,8 +50,11 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "~bootstrap": resolve(__dirname, "../node_modules/bootstrap"),
-      "~keyboard-css": resolve(__dirname, "../node_modules/keyboard-css"),
+      "~bootstrap": resolve(import.meta.dirname, "../node_modules/bootstrap"),
+      "~keyboard-css": resolve(
+        import.meta.dirname,
+        "../node_modules/keyboard-css",
+      ),
     },
   },
   // root: resolve(__dirname, 'src'),

@@ -30,7 +30,7 @@ export default {
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, "src/main.ts"),
+      entry: resolve(import.meta.dirname, "src/main.ts"),
       name: "GISST",
       fileName: "embed",
       formats: ["es"],
