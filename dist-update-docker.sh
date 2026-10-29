@@ -128,7 +128,7 @@ for f in $CORENAMES v86; do
 
     if [ $f = "v86" ]
     then
-        # make clean
+        make clean || echo "failed to clean"
         WASM_OPT=true PATH="${PATH}:${EMSDK}/upstream/bin" make all -j || die "could not build v86"
         cp build/libv86.js build/v86.wasm "$OUT_DIR"
         for biosfile in $(jq -r ".v86.dependencies // {} | keys[]" "$MANIFEST_FILE"); do
@@ -146,6 +146,7 @@ for f in $CORENAMES v86; do
         continue
     elif [ $f = "sameboy" ]
     then
+	emmake make platform=emscripten clean || echo "failed to clean"
         rgbds_repo=$(jq -r '.retroarch.cores.sameboy.rgbds_repo' "$MANIFEST_FILE")
         rgbds_version=$(jq -r '.retroarch.cores.sameboy.rgbds_version' "$MANIFEST_FILE")
         git clone $rgbds_repo rgbds && pushd rgbds && git checkout $rgbds_version && popd
@@ -155,18 +156,18 @@ for f in $CORENAMES v86; do
         cp build/bin/${f}_libretro_emscripten.bc ../ra/libretro_emscripten.bc
     elif [ -f Makefile.libretro ]
     then
-        # emmake make -f Makefile.libretro platform=emscripten clean
+        emmake make -f Makefile.libretro platform=emscripten clean || echo "failed to clean"
         emmake make -f Makefile.libretro platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC $EXTRA_ARGS -j || die "could not build core ${f}"
         cp ${f}_libretro_emscripten.bc ../ra/libretro_emscripten.bc
     elif [ -d libretro ] && [ -f libretro/Makefile ]
     then
         pushd libretro
-        # emmake make platform=emscripten clean
+        emmake make platform=emscripten clean || echo "failed to clean"
         emmake make platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC $EXTRA_ARGS -j || die "could not build core ${f}"
         cp ${f}_libretro_emscripten.bc ../../ra/libretro_emscripten.bc
         popd
     else
-        # emmake make platform=emscripten clean
+        emmake make platform=emscripten clean || echo "failed to clean"
         emmake make platform=emscripten pthread=4 STATIC_LINKING=1 ASYNC=$ASYNC $EXTRA_ARGS -j || die "could not build core ${f}"
         cp ${f}_libretro_emscripten.bc ../ra/libretro_emscripten.bc
     fi
@@ -174,7 +175,7 @@ for f in $CORENAMES v86; do
     cp libretro_emscripten.bc libretro_emscripten.a
     # flags may have changed so we should really clean the build here
     rm -rf obj-emscripten
-    emmake make -f Makefile.emscripten LIBRETRO=$f clean
+    emmake make -f Makefile.emscripten LIBRETRO=$f clean || echo "failed to clean"
     emmake make -f Makefile.emscripten LIBRETRO=$f ASYNC=$ASYNC "${build_args[@]}" -j all || die "could not build RA dist for ${f}"
     cp ${f}_libretro.* "$OUT_DIR"/cores
     # compute hash from manifest (except for v86 and non-this-core RA cores)

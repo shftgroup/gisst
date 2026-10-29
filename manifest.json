@@ -82,9 +82,8 @@
         "platforms": ["Super Nintendo Entertainment System", "Nintendo Super Famicom"]
       },
       "stella2014": {
-        "skip": true,
         "repo": "https://github.com/libretro/stella2014-libretro",
-        "version": "4a7da82595d27b8df7af1ecb467a64b642a41bc9",
+        "version": "eed47e154d1bbda3305e9ef2d486b6710c8973f4",
         "platforms": ["Atari 2600"]
       },
       "vba_next": {
