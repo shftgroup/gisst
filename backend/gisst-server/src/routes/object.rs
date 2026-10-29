@@ -31,7 +31,7 @@ async fn get_single_object(
 ) -> Result<axum::response::Response, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let mut conn = app_state.pool.acquire().await?;
 
@@ -66,9 +66,9 @@ async fn get_single_object(
             };
             Html(object_page.render(context!(
                 base_url => BASE_URL.get(),
-                object => object,
-                file => file,
-                directory => directory,
+                object => minijinja::value::Serde(object),
+                file => minijinja::value::Serde(file),
+                directory => minijinja::value::Serde(directory),
             ))?)
             .into_response()
         } else if accept
@@ -93,7 +93,7 @@ async fn get_subobject(
     use gisst::fslist::{file_to_path, get_file_at_path, is_disk_image};
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
 
     let mut conn = app_state.pool.acquire().await?;
@@ -166,10 +166,11 @@ async fn create_object(
 ) -> Result<Json<Object>, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let creator_id = auth
-        .user
+        .user()
+        .await
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
 

@@ -19,7 +19,7 @@ bytes = { workspace = true, features = ["serde"] }
 config = { workspace = true, features = ["toml"] }
 futures.workspace = true
 sqlx = { workspace = true, features = ["migrate", "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "uuid", "chrono", "json", "macros"] }
-minijinja = { workspace = true, features = ["builtins", "macros", "json", "loader", "urlencode"] }
+minijinja = { workspace = true, features = ["builtins", "macros", "json", "serde", "urlencode"] }
 secrecy = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["raw_value"] }

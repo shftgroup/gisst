@@ -37,10 +37,11 @@ async fn hideshow_state(
 ) -> Result<NoContent, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let user = auth
-        .user
+        .user()
+        .await
         .as_ref()
         .map(LoggedInUserInfo::generate_from_user)
         .ok_or(ServerError::AuthUserNotAuthenticated)?;
@@ -81,7 +82,7 @@ async fn create_state(
 ) -> Result<Json<State>, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let mut conn = app_state.pool.acquire().await?;
 
@@ -100,7 +101,8 @@ async fn create_state(
                     screenshot_id: state.screenshot_id,
                     replay_id: state.replay_id,
                     creator_id: auth
-                        .user
+                        .user()
+                        .await
                         .ok_or(ServerError::AuthUserNotAuthenticated)?
                         .creator_id,
                     state_replay_index: state.state_replay_index,

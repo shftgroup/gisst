@@ -32,10 +32,11 @@ async fn create_or_derive_environment(
 ) -> Result<Json<Environment>, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let creator_id = auth
-        .user
+        .user()
+        .await
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
 

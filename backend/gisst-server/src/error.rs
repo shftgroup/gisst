@@ -45,7 +45,7 @@ pub enum ServerError {
     #[error("user login error")]
     AuthUserSerdeLogin(#[from] serde_json::Error),
     #[error("session error")]
-    AuthSession(#[from] axum_login::tower_sessions::session::Error),
+    AuthSession(#[from] tower_sessions::session::Error),
     #[error("auth backend error")]
     AuthBackend(#[from] AuthError),
     #[error("auth system error")]

@@ -21,7 +21,6 @@ use axum::{
     routing::method_routing::{get, patch, post},
 };
 
-use axum_login::tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
 use gisst::storage::{PendingUpload, StorageHandler};
 use minijinja::context;
 use secrecy::ExposeSecret;
@@ -31,6 +30,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
+use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
 use tracing::info;
 use uuid::Uuid;
 

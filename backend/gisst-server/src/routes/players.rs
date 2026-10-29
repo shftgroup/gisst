@@ -207,8 +207,8 @@ pub async fn get_data(
             ],
             Html(citation_page.render(context! {
                 base_url => BASE_URL.get(),
-                pending_task => pending_task,
-                embed_data => embed_data,
+                pending_task => minijinja::value::Serde(pending_task),
+                embed_data => minijinja::value::Serde(embed_data),
             })?),
         )
             .into_response()
@@ -243,7 +243,7 @@ pub async fn get_player(
 ) -> Result<axum::response::Response, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let mut conn = app_state.pool.acquire().await?;
     let instance = Instance::get_by_id(&mut conn, id)
@@ -265,7 +265,7 @@ pub async fn get_player(
                 table: Table::Work,
                 uuid: instance.work_id,
             })?;
-    let user = LoggedInUserInfo::generate_from_user(&auth.user.unwrap());
+    let user = LoggedInUserInfo::generate_from_user(&auth.user().await.unwrap());
     let start = match (params.state, params.replay) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(
@@ -310,8 +310,8 @@ pub async fn get_player(
                     base_url => BASE_URL.get(),
                     // Need to pass 'user' to outer layout template as well
                     // May want to create a layout_params object at some point
-                    user => user,
-                    player_params => PlayerTemplateInfo {
+                    user => minijinja::value::Serde(&user),
+                    player_params => minijinja::value::Serde(PlayerTemplateInfo {
                         gisst_root: BASE_URL.get().unwrap().clone(),
                         environment,
                         instance,
@@ -322,7 +322,7 @@ pub async fn get_player(
                         core_manifest,
                         manifest,
                         boot_into_record: params.boot_into_record.unwrap_or_default(),
-                    }
+                    })
                 ))?,
         ),
     )
