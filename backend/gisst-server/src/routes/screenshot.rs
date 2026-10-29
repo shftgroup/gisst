@@ -30,7 +30,7 @@ async fn create_screenshot(
     auth: axum_login::AuthSession<auth::AuthBackend>,
     Json(screenshot): Json<ScreenshotCreateInfo>,
 ) -> Result<Json<gisst::models::Screenshot>, ServerError> {
-    let user_id = auth.user.as_ref().map(|u| u.creator_id);
+    let user_id = auth.user().await.as_ref().map(|u| u.creator_id);
     tracing::Span::current().record("userid", user_id.map(|u| u.to_string()));
     let mut conn = app_state.pool.acquire().await?;
     Ok(Json(

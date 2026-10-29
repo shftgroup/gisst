@@ -1,6 +1,13 @@
 
 # cargo-vet audits file
 
+[[audits.axum-login]]
+who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
+criteria = "safe-to-deploy"
+delta = "0.18.0 -> 0.18.0@git:151c72d7a1b4646830f86b4332e6bd6e34d719a7"
+importable = false
+notes = "Not malware."
+
 [[audits.bincode]]
 who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
 criteria = "safe-to-deploy"
@@ -242,6 +249,12 @@ trusted-publisher = "github:rust-lang/cc-rs"
 start = "2025-09-01"
 end = "2027-08-24"
 
+[[trusted.cfg-if]]
+criteria = "safe-to-deploy"
+user-id = 55123 # rust-lang-owner
+start = "2025-06-09"
+end = "2027-10-29"
+
 [[trusted.chacha20]]
 criteria = "safe-to-deploy"
 trusted-publisher = "github:RustCrypto/stream-ciphers"
@@ -358,9 +371,15 @@ end = "2027-08-24"
 
 [[trusted.defmt]]
 criteria = "safe-to-deploy"
-user-id = 16374 # Lukas Wirth (Veykril)
+user-id = 16374
 start = "2025-04-01"
 end = "2027-08-24"
+
+[[trusted.defmt]]
+criteria = "safe-to-deploy"
+user-id = 414585 # knoellle
+start = "2026-05-12"
+end = "2027-10-29"
 
 [[trusted.defmt-macros]]
 criteria = "safe-to-deploy"
@@ -370,9 +389,15 @@ end = "2027-08-24"
 
 [[trusted.defmt-parser]]
 criteria = "safe-to-deploy"
-user-id = 16374 # Lukas Wirth (Veykril)
+user-id = 16374
 start = "2025-04-01"
 end = "2027-08-24"
+
+[[trusted.defmt-parser]]
+criteria = "safe-to-deploy"
+user-id = 414585 # knoellle
+start = "2026-10-15"
+end = "2027-10-29"
 
 [[trusted.digest]]
 criteria = "safe-to-deploy"
@@ -415,6 +440,12 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2022-11-24"
 end = "2027-08-24"
+
+[[trusted.equivalent]]
+criteria = "safe-to-deploy"
+user-id = 539 # Josh Stone (cuviper)
+start = "2023-02-05"
+end = "2027-10-29"
 
 [[trusted.event-listener]]
 criteria = "safe-to-deploy"
@@ -604,6 +635,12 @@ end = "2027-08-24"
 
 [[trusted.hyper-rustls]]
 criteria = "safe-to-deploy"
+user-id = 2751 # Joe Birr-Pixton (ctz)
+start = "2019-03-16"
+end = "2027-10-29"
+
+[[trusted.hyper-rustls]]
+criteria = "safe-to-deploy"
 user-id = 209038 # Daniel McCarney (cpu)
 start = "2024-01-04"
 end = "2027-08-24"
@@ -626,6 +663,12 @@ user-id = 128408 # Shane F. Carr (sffc)
 start = "2022-08-05"
 end = "2027-08-24"
 
+[[trusted.icu_collections]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-01-26"
+end = "2027-10-29"
+
 [[trusted.icu_locale_core]]
 criteria = "safe-to-deploy"
 user-id = 1139 # Manish Goregaokar (Manishearth)
@@ -637,6 +680,12 @@ criteria = "safe-to-deploy"
 user-id = 128408 # Shane F. Carr (sffc)
 start = "2024-11-23"
 end = "2027-08-24"
+
+[[trusted.icu_locale_core]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2025-05-07"
+end = "2027-10-29"
 
 [[trusted.icu_normalizer]]
 criteria = "safe-to-deploy"
@@ -650,6 +699,12 @@ user-id = 128408 # Shane F. Carr (sffc)
 start = "2022-08-05"
 end = "2027-08-24"
 
+[[trusted.icu_normalizer]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-01-26"
+end = "2027-10-29"
+
 [[trusted.icu_normalizer_data]]
 criteria = "safe-to-deploy"
 user-id = 1139 # Manish Goregaokar (Manishearth)
@@ -661,6 +716,12 @@ criteria = "safe-to-deploy"
 user-id = 128408 # Shane F. Carr (sffc)
 start = "2023-09-23"
 end = "2027-08-24"
+
+[[trusted.icu_normalizer_data]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-11-16"
+end = "2027-10-29"
 
 [[trusted.icu_properties]]
 criteria = "safe-to-deploy"
@@ -674,6 +735,12 @@ user-id = 128408 # Shane F. Carr (sffc)
 start = "2021-11-02"
 end = "2027-08-24"
 
+[[trusted.icu_properties]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-01-26"
+end = "2027-10-29"
+
 [[trusted.icu_properties_data]]
 criteria = "safe-to-deploy"
 user-id = 1139 # Manish Goregaokar (Manishearth)
@@ -686,6 +753,12 @@ user-id = 128408 # Shane F. Carr (sffc)
 start = "2023-09-23"
 end = "2027-08-24"
 
+[[trusted.icu_properties_data]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-11-16"
+end = "2027-10-29"
+
 [[trusted.icu_provider]]
 criteria = "safe-to-deploy"
 user-id = 1139 # Manish Goregaokar (Manishearth)
@@ -697,6 +770,12 @@ criteria = "safe-to-deploy"
 user-id = 128408 # Shane F. Carr (sffc)
 start = "2021-07-29"
 end = "2027-08-24"
+
+[[trusted.icu_provider]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2022-10-08"
+end = "2027-10-29"
 
 [[trusted.id-arena]]
 criteria = "safe-to-deploy"
@@ -721,6 +800,12 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2024-05-02"
 end = "2027-08-24"
+
+[[trusted.iso8601]]
+criteria = "safe-to-deploy"
+user-id = 48
+start = "2020-02-27"
+end = "2027-10-29"
 
 [[trusted.itertools]]
 criteria = "safe-to-deploy"
@@ -782,6 +867,12 @@ trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
 start = "2026-04-28"
 end = "2027-08-24"
 
+[[trusted.lazy_static]]
+criteria = "safe-to-deploy"
+user-id = 55123 # rust-lang-owner
+start = "2026-10-01"
+end = "2027-10-29"
+
 [[trusted.libc]]
 criteria = "safe-to-deploy"
 user-id = 55123 # rust-lang-owner
@@ -820,7 +911,7 @@ end = "2027-08-24"
 
 [[trusted.lru-slab]]
 criteria = "safe-to-deploy"
-user-id = 5298 # Benjamin Saunders (Ralith)
+user-id = 5298
 start = "2024-05-31"
 end = "2027-08-24"
 
@@ -856,7 +947,7 @@ end = "2027-08-24"
 
 [[trusted.mio]]
 criteria = "safe-to-deploy"
-user-id = 10
+user-id = 10 # Carl Lerche (carllerche)
 start = "2019-05-15"
 end = "2027-08-24"
 
@@ -1018,13 +1109,19 @@ end = "2027-08-24"
 
 [[trusted.quinn]]
 criteria = "safe-to-deploy"
-user-id = 5298 # Benjamin Saunders (Ralith)
+user-id = 5298
 start = "2019-04-18"
 end = "2027-08-24"
 
 [[trusted.quinn-proto]]
 criteria = "safe-to-deploy"
-user-id = 5298 # Benjamin Saunders (Ralith)
+user-id = 4556 # Dirkjan Ochtman (djc)
+start = "2019-09-09"
+end = "2027-10-29"
+
+[[trusted.quinn-proto]]
+criteria = "safe-to-deploy"
+user-id = 5298
 start = "2019-04-18"
 end = "2027-08-24"
 
@@ -1036,7 +1133,7 @@ end = "2027-08-24"
 
 [[trusted.quinn-udp]]
 criteria = "safe-to-deploy"
-user-id = 5298 # Benjamin Saunders (Ralith)
+user-id = 5298
 start = "2022-02-19"
 end = "2027-08-24"
 
@@ -1214,6 +1311,12 @@ user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-08-20"
 end = "2027-08-24"
 
+[[trusted.serde_spanned]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-01-20"
+end = "2027-10-29"
+
 [[trusted.serde_with]]
 criteria = "safe-to-deploy"
 trusted-publisher = "github:jonasbb/serde_with"
@@ -1249,6 +1352,12 @@ criteria = "safe-to-deploy"
 user-id = 6741 # Alice Ryhl (Darksonn)
 start = "2021-10-13"
 end = "2027-08-24"
+
+[[trusted.smallvec]]
+criteria = "safe-to-deploy"
+user-id = 2017 # Matt Brubeck (mbrubeck)
+start = "2019-10-28"
+end = "2027-10-29"
 
 [[trusted.socket2]]
 criteria = "safe-to-deploy"
@@ -1316,6 +1425,12 @@ user-id = 128408 # Shane F. Carr (sffc)
 start = "2022-08-04"
 end = "2027-08-24"
 
+[[trusted.tinystr]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-01-26"
+end = "2027-10-29"
+
 [[trusted.tinyvec]]
 criteria = "safe-to-deploy"
 user-id = 7211 # Lokathor (Lokathor)
@@ -1358,11 +1473,23 @@ user-id = 6743 # Ed Page (epage)
 start = "2022-12-14"
 end = "2027-08-24"
 
+[[trusted.toml_datetime]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-10-21"
+end = "2027-10-29"
+
 [[trusted.toml_parser]]
 criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2025-07-08"
 end = "2027-08-24"
+
+[[trusted.toml_writer]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2025-07-08"
+end = "2027-10-29"
 
 [[trusted.tonic]]
 criteria = "safe-to-deploy"
@@ -1396,7 +1523,7 @@ end = "2027-08-24"
 
 [[trusted.tower-layer]]
 criteria = "safe-to-deploy"
-user-id = 10
+user-id = 10 # Carl Lerche (carllerche)
 start = "2019-04-27"
 end = "2027-08-24"
 
@@ -1408,7 +1535,7 @@ end = "2027-08-24"
 
 [[trusted.tracing-subscriber]]
 criteria = "safe-to-deploy"
-user-id = 10
+user-id = 10 # Carl Lerche (carllerche)
 start = "2025-08-29"
 end = "2027-08-24"
 
@@ -1459,6 +1586,12 @@ criteria = "safe-to-deploy"
 user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-06-09"
 end = "2027-08-24"
+
+[[trusted.want]]
+criteria = "safe-to-deploy"
+user-id = 359 # Sean McArthur (seanmonstar)
+start = "2019-03-19"
+end = "2027-10-29"
 
 [[trusted.wasi]]
 criteria = "safe-to-deploy"
@@ -1540,9 +1673,21 @@ end = "2027-08-24"
 
 [[trusted.webpki-root-certs]]
 criteria = "safe-to-deploy"
+user-id = 2751 # Joe Birr-Pixton (ctz)
+start = "2024-11-21"
+end = "2027-10-29"
+
+[[trusted.webpki-root-certs]]
+criteria = "safe-to-deploy"
 user-id = 4556 # Dirkjan Ochtman (djc)
 start = "2025-10-07"
 end = "2027-08-24"
+
+[[trusted.webpki-roots]]
+criteria = "safe-to-deploy"
+user-id = 2751 # Joe Birr-Pixton (ctz)
+start = "2019-07-21"
+end = "2027-10-29"
 
 [[trusted.webpki-roots]]
 criteria = "safe-to-deploy"
@@ -1682,21 +1827,33 @@ user-id = 1139 # Manish Goregaokar (Manishearth)
 start = "2021-05-01"
 end = "2027-08-24"
 
+[[trusted.yoke]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-01-26"
+end = "2027-10-29"
+
 [[trusted.yoke-derive]]
 criteria = "safe-to-deploy"
 user-id = 1139 # Manish Goregaokar (Manishearth)
 start = "2021-07-02"
 end = "2027-08-24"
 
+[[trusted.yoke-derive]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-01-26"
+end = "2027-10-29"
+
 [[trusted.zerocopy]]
 criteria = "safe-to-deploy"
-user-id = 7178 # Josh Liebow-Feeser (joshlf)
+user-id = 7178
 start = "2019-02-28"
 end = "2027-08-24"
 
 [[trusted.zerocopy-derive]]
 criteria = "safe-to-deploy"
-user-id = 7178 # Josh Liebow-Feeser (joshlf)
+user-id = 7178
 start = "2019-02-28"
 end = "2027-08-24"
 
@@ -1717,6 +1874,12 @@ criteria = "safe-to-deploy"
 user-id = 1139 # Manish Goregaokar (Manishearth)
 start = "2022-04-06"
 end = "2027-08-24"
+
+[[trusted.zerofrom-derive]]
+criteria = "safe-to-deploy"
+user-id = 128408 # Shane F. Carr (sffc)
+start = "2023-09-22"
+end = "2027-10-29"
 
 [[trusted.zeroize]]
 criteria = "safe-to-deploy"
@@ -1748,6 +1911,12 @@ user-id = 1139 # Manish Goregaokar (Manishearth)
 start = "2021-04-19"
 end = "2027-08-24"
 
+[[trusted.zerovec]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-01-26"
+end = "2027-10-29"
+
 [[trusted.zerovec-derive]]
 criteria = "safe-to-deploy"
 user-id = 1139 # Manish Goregaokar (Manishearth)
@@ -1759,6 +1928,12 @@ criteria = "safe-to-deploy"
 user-id = 128408 # Shane F. Carr (sffc)
 start = "2022-08-05"
 end = "2027-08-24"
+
+[[trusted.zerovec-derive]]
+criteria = "safe-to-deploy"
+user-id = 166196 # Robert Bastian (robertbastian)
+start = "2023-01-26"
+end = "2027-10-29"
 
 [[trusted.zlib-rs]]
 criteria = "safe-to-deploy"

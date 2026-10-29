@@ -38,10 +38,11 @@ async fn hideshow_save(
 ) -> Result<NoContent, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let user = auth
-        .user
+        .user()
+        .await
         .as_ref()
         .map(LoggedInUserInfo::generate_from_user)
         .ok_or(ServerError::AuthUserNotAuthenticated)?;
@@ -79,10 +80,11 @@ async fn create_save(
 ) -> Result<Json<Save>, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let creator_id = auth
-        .user
+        .user()
+        .await
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
 

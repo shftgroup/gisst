@@ -41,10 +41,14 @@ async fn get_instances(
 ) -> Result<axum::response::Response, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let accept: Option<String> = parse_header(&headers, "Accept");
-    let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
+    let user = auth
+        .user()
+        .await
+        .as_ref()
+        .map(LoggedInUserInfo::generate_from_user);
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             let (search_url, search_key) = app_state.search.frontend_data();
@@ -53,7 +57,7 @@ async fn get_instances(
                 base_url => BASE_URL.get(),
                 search_url => search_url,
                 search_key => search_key,
-                user => user,
+                user => minijinja::value::Serde(user),
             ))?)
             .into_response()
         } else if accept
@@ -111,7 +115,7 @@ async fn get_all_for_instance(
 ) -> Result<axum::response::Response, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let mut conn = app_state.pool.acquire().await?;
     if let Some(instance) = Instance::get_by_id(&mut conn, id).await? {
@@ -128,7 +132,11 @@ async fn get_all_for_instance(
 
         let accept: Option<String> = parse_header(&headers, "Accept");
 
-        let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
+        let user = auth
+            .user()
+            .await
+            .as_ref()
+            .map(LoggedInUserInfo::generate_from_user);
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
@@ -140,12 +148,12 @@ async fn get_all_for_instance(
                     base_url => BASE_URL.get(),
                     search_url => search_url,
                     search_key => search_key,
-                    creator_id => params.creator_id,
-                    instance => instance,
-                    work => work,
-                    environment => environment,
-                    objects => objects,
-                    user => user,
+                    creator_id => minijinja::value::Serde(params.creator_id),
+                    instance => minijinja::value::Serde(instance),
+                    work => minijinja::value::Serde(work),
+                    environment => minijinja::value::Serde(environment),
+                    objects => minijinja::value::Serde(objects),
+                    user => minijinja::value::Serde(user),
                 ))?)
                 .into_response()
             } else if accept
@@ -187,10 +195,11 @@ async fn clone_v86_instance(
     use sqlx::Acquire;
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let creator_id = auth
-        .user
+        .user()
+        .await
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
     let mut conn = app_state.pool.acquire().await?;
@@ -218,9 +227,13 @@ async fn get_new_instance_page(
 ) -> Result<axum::response::Response, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
-    let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
+    let user = auth
+        .user()
+        .await
+        .as_ref()
+        .map(LoggedInUserInfo::generate_from_user);
     let instance_new = app_state.templates.get_template("instance_new.html")?;
     let (search_url, search_key) = app_state.search.frontend_data();
 
@@ -228,7 +241,7 @@ async fn get_new_instance_page(
         base_url => BASE_URL.get(),
         search_url => search_url,
         search_key => search_key,
-        user => user,
+        user => minijinja::value::Serde(user),
     ))?)
     .into_response())
 }
@@ -263,10 +276,11 @@ async fn create_or_derive_instance(
     use sqlx::Acquire;
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let creator_id = auth
-        .user
+        .user()
+        .await
         .ok_or(ServerError::AuthUserNotAuthenticated)?
         .creator_id;
 

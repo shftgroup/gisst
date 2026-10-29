@@ -27,7 +27,11 @@ async fn get_single_creator(
     if let Some(creator) = Creator::get_by_id(&mut conn, id).await? {
         let accept: Option<String> = parse_header(&headers, "Accept");
 
-        let user = auth.user.as_ref().map(LoggedInUserInfo::generate_from_user);
+        let user = auth
+            .user()
+            .await
+            .as_ref()
+            .map(LoggedInUserInfo::generate_from_user);
 
         Ok(
             (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
@@ -39,8 +43,8 @@ async fn get_single_creator(
                     base_url => BASE_URL.get(),
                     search_url => search_url,
                     search_key => search_key,
-                    creator => creator,
-                    user => user,
+                    creator => minijinja::value::Serde(creator),
+                    user => minijinja::value::Serde(user),
                 ))?)
                 .into_response()
             } else if accept

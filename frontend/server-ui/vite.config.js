@@ -25,7 +25,7 @@ export default {
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, "src/ts/main.ts"),
+      entry: resolve(import.meta.dirname, "src/ts/main.ts"),
       name: "UI",
       formats: ["es"],
       fileName: "ui",

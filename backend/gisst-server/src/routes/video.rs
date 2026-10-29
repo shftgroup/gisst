@@ -34,7 +34,7 @@ async fn create_video(
     auth: axum_login::AuthSession<auth::AuthBackend>,
     Json(video): Json<VideoCreateInfo>,
 ) -> Result<Json<Video>, ServerError> {
-    let user_id = auth.user.as_ref().map(|u| u.creator_id);
+    let user_id = auth.user().await.as_ref().map(|u| u.creator_id);
     tracing::Span::current().record("userid", user_id.map(|u| u.to_string()));
     let mut conn = app_state.pool.acquire().await?;
     if File::get_by_id(&mut conn, video.file_id).await?.is_some() {

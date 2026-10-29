@@ -37,10 +37,11 @@ async fn hideshow_replay(
 ) -> Result<NoContent, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let user = auth
-        .user
+        .user()
+        .await
         .as_ref()
         .map(LoggedInUserInfo::generate_from_user)
         .ok_or(ServerError::AuthUserNotAuthenticated)?;
@@ -76,7 +77,7 @@ async fn create_replay(
 ) -> Result<Json<Replay>, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let mut conn = app_state.pool.acquire().await?;
     if File::get_by_id(&mut conn, replay.file_id).await?.is_some() {
@@ -90,7 +91,8 @@ async fn create_replay(
                     replay_description: replay.replay_description,
                     instance_id: replay.instance_id,
                     creator_id: auth
-                        .user
+                        .user()
+                        .await
                         .ok_or(ServerError::AuthUserNotAuthenticated)?
                         .creator_id,
                     replay_forked_from: replay.replay_forked_from,

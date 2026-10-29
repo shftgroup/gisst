@@ -71,6 +71,7 @@ std = [
 [lib]
 name = "bincode"
 path = "src/lib.rs"
+doctest = false
 
 [dependencies]
 bincode_derive= { workspace = true, optional = true }

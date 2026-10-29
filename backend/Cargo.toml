@@ -8,69 +8,70 @@ edition = "2024"
 license = "AGPL-3.0-or-later"
 
 [workspace.dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.104"
 async-compression = { version = "0.4", default-features = false }
 async-trait = "0.1.92"
 axum = "0.8.9"
 axum-extra = "0.12.6"
-axum-login = "0.18.0"
+axum-login = {git = "https://github.com/JoeOsborn/axum-login", rev="151c72d7a1b4646830f86b4332e6bd6e34d719a7"}
 axum-server = "0.8.0"
 base16ct = "1.0.0"
-base64 = "0.22.1"
+base64 = "0.23.1"
 bincode = { path = "vendor/bincode" }
 bincode_derive = { version = "2.0.2", path = "vendor/bincode_derive" }
-bitvec = "1.0.1"
-bytes = "1.11.1"
-cc = "1.2"
-chd = "0.3.4"
-chrono = "0.4.44"
-clap = "4.6.1"
+bitvec = "1.1.1"
+bytes = "1.12.1"
+cc = "1.10"
+chd = "0.4.0"
+chrono = "0.4.45"
+clap = "4.6.7"
 clap-verbosity-flag = "3.0.4"
-config = { version = "0.15.23", default-features = false }
+config = { version = "0.15.25", default-features = false }
+crypto-common = "0.2.2"
 digest-io = "0.1.0"
-env_logger = "0.11.10"
+env_logger = "0.11.11"
 fscommon = "0.1.1"
-futures = "0.3.32"
+futures = "0.3.34"
 futures-core = "0.3.34"
 futures-io = "0.3.34"
 gisst = { path = "gisst" }
-log = "0.4.29"
+log = "0.4.34"
 mbrman = { path = "vendor/mbrman" }
 md-5 = "0.11"
 meilisearch-sdk = { version = "0.33.0", default-features = false }
-minijinja = "2.20.0"
+minijinja = "3.0.4"
 num-traits = "0.2.19"
-oauth2 = { version = "5.0.0", default-features = false }
-oauth2-reqwest = "0.1.0-alpha.3"
-opentelemetry = "0.32"
-opentelemetry-otlp = "0.32"
-opentelemetry-semantic-conventions = "0.32"
-opentelemetry-stdout = "0.32"
-opentelemetry_sdk = "0.32"
+oauth2 = { version="5", default-features = false }
+oauth2-reqwest = { version="0.1.0-alpha.3" }
+opentelemetry = "0.33"
+opentelemetry-otlp = "0.33"
+opentelemetry-semantic-conventions = "0.33"
+opentelemetry-stdout = "0.33"
+opentelemetry_sdk = "0.33"
 pin-project-lite = "0.2.17"
 rdb-sys = { path = "rdb-sys" }
-regex = "1.12.3"
-reqwest = { version = "0.13.3", default-features = false }
-rustls = "0.23.40"
-rustls-platform-verifier = { version="0.7.0",default-features=false}
+regex = "1.13.1"
+reqwest = { version = "0.13.5", default-features = false }
+rustls = "0.23"
+rustls-platform-verifier = { version="0.7.1",default-features=false}
 secrecy = "0.10.3"
-serde = { version = "1.0.228", default-features = false }
+serde = { version = "1.0.229", default-features = false }
 serde-big-array = "0.5.1"
-serde_json = "1.0.149"
+serde_json = "1.0.154"
 serde_with = "3.20.0"
-sqlx = { version = "0.9", default-features = false }
-thiserror = "2.0.18"
-tokio = "1.52.3"
+sqlx = { version="0.9.0", default-features = false }
+thiserror = "2.0.21"
+tokio = "1.54"
 tower = "0.5.3"
-tower-http = "0.6.11"
-tower-sessions = "0.14.0"
+tower-http = "0.7"
+tower-sessions = "0.15"
 tracing = "0.1.44"
-tracing-opentelemetry = "0.33.0"
+tracing-opentelemetry = "0.34.0"
 tracing-subscriber = "0.3.23"
 tree_magic_mini = "3.2.2"
-unty = "0.0.4"
-uuid = "1.23"
-virtue = "0.0.18"
+unty = "0.0.5"
+uuid = "1.26"
+virtue = "0.0.19"
 walkdir = "2.5.0"
 yaup = "0.3.1"
 zip = { version = "9.0.0", default-features = false }
@@ -85,3 +86,11 @@ opt-level = 3
 # [profile.dev]
 # debug=line-tables-only
 
+[patch.crates-io]
+# remove these with next sqlx version
+sqlx-core = { git="https://github.com/transact-rs/sqlx", rev="7d20938935b264f0b4051c47a6aa38cbc544db0d"}
+sqlx-macros-core = { git="https://github.com/transact-rs/sqlx", rev="7d20938935b264f0b4051c47a6aa38cbc544db0d"}
+sqlx = { git="https://github.com/transact-rs/sqlx", rev="7d20938935b264f0b4051c47a6aa38cbc544db0d"}
+# remove these with next oauth version
+oauth2 = { git="https://github.com/JoeOsborn/oauth2-rs", rev="89585f4a280afd7b285eaf1c9be0068874e03d22"}
+oauth2-reqwest = { git="https://github.com/JoeOsborn/oauth2-rs", rev="89585f4a280afd7b285eaf1c9be0068874e03d22"}

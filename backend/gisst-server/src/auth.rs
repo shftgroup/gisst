@@ -166,15 +166,15 @@ pub struct AuthRequest {
 
 #[tracing::instrument(skip(auth), fields(userid))]
 pub async fn oauth_callback_handler(
-    mut auth: axum_login::AuthSession<AuthBackend>,
+    auth: axum_login::AuthSession<AuthBackend>,
     Query(query): Query<AuthRequest>,
-    session: axum_login::tower_sessions::Session,
+    session: tower_sessions::Session,
 ) -> Result<Redirect, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
-    debug!("Running oauth callback {query:?}, {:?}", auth.user);
+    debug!("Running oauth callback {query:?}, {:?}", auth.user().await);
     // This unwrap is fine since BASE_URL is initialized at launch
     let base_url = crate::server::BASE_URL.get().unwrap();
     // Compare the csrf state in the callback with the state generated before the
@@ -198,14 +198,14 @@ pub async fn oauth_callback_handler(
     let user = auth.authenticate(creds).await?.unwrap(); // Always is Some() for this backend if no error
     auth.login(&user).await?;
     if let Ok(Some(next)) = session.remove::<String>(NEXT_URL_KEY).await {
-        debug!("success {:?}, redirect to {next}", auth.user);
+        debug!("success {:?}, redirect to {next}", auth.user().await);
         if next.starts_with(base_url) {
             Ok(Redirect::to(&next))
         } else {
             Ok(Redirect::to(&format!("{base_url}/instances")))
         }
     } else {
-        debug!("success {:?}, redirect to instances", auth.user);
+        debug!("success {:?}, redirect to instances", auth.user().await);
         Ok(Redirect::to(&format!("{base_url}/instances")))
     }
 }
@@ -220,14 +220,18 @@ pub struct NextUrl {
 pub async fn login_handler(
     auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
-    session: axum_login::tower_sessions::Session,
+    session: tower_sessions::Session,
 ) -> Result<impl IntoResponse, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth_session.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth_session
+            .user()
+            .await
+            .as_ref()
+            .map(|u| u.creator_id.to_string()),
     );
-    info!("Login user {:?}", auth_session.user);
-    let (auth_url, csrf_state) = auth_session.backend.authorize_url();
+    info!("Login user {:?}", auth_session.user().await);
+    let (auth_url, csrf_state) = auth_session.backend().authorize_url();
     session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
     session.insert(NEXT_URL_KEY, next.next).await?;
     Ok(Redirect::to(auth_url.as_str()).into_response())
@@ -236,16 +240,20 @@ pub async fn login_handler(
 #[cfg(feature = "dummy_auth")]
 #[tracing::instrument(name = "dummy_auth_login", skip(auth_session), fields(userid))]
 pub async fn login_handler(
-    mut auth_session: axum_login::AuthSession<AuthBackend>,
+    auth_session: axum_login::AuthSession<AuthBackend>,
     Query(next): Query<NextUrl>,
-    session: axum_login::tower_sessions::Session,
+    session: tower_sessions::Session,
 ) -> Result<impl IntoResponse, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth_session.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth_session
+            .user()
+            .await
+            .as_ref()
+            .map(|u| u.creator_id.to_string()),
     );
     info!("Login user with dummy auth");
-    let (_, csrf_state) = auth_session.backend.authorize_url();
+    let (_, csrf_state) = auth_session.backend().authorize_url();
     session.insert(CSRF_STATE_KEY, csrf_state.secret()).await?;
     session.insert(NEXT_URL_KEY, next.next).await?;
     let creds = Credentials {
@@ -266,11 +274,11 @@ pub async fn login_handler(
 
 #[tracing::instrument(skip(auth), fields(userid))]
 pub async fn logout_handler(
-    mut auth: axum_login::AuthSession<AuthBackend>,
+    auth: axum_login::AuthSession<AuthBackend>,
 ) -> Result<impl IntoResponse, ServerError> {
     tracing::Span::current().record(
         "userid",
-        auth.user.as_ref().map(|u| u.creator_id.to_string()),
+        auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     auth.logout().await?;
     // This unwrap is fine since BASE_URL is initialized at launch
