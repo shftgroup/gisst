@@ -164,48 +164,45 @@ li:last-child .gisst-New-instance-move-down {
 }
 
 .gisst-New-instance-disk-file-selectors {
-  margin: 0.5rem;
-}
-
-.gisst-New-instance-disk-file-selectors > * {
+  display: grid;
+  align-items: center;
+  grid-template-areas: "gisst-New-instance-disk-file-type label content-file-name";
+  grid-template-columns: 50% max-content;
+  row-gap: 0.25rem;
   margin: 0.2rem;
 }
 
-.gisst-New-instance-disk-file-select > div {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 50%;
+.gisst-New-instance-disk-file-selectors > label {
+  margin-left: 0.1rem;
+  margin-right: 0.2rem;
 }
 
 .gisst-New-instance-memory-and-gpu-size {
-  margin: 0.5rem;
+  display: grid;
+  grid-template-areas: "label input span";
+  grid-template-columns: 50% max-content;
+  margin: 0.2rem;
+  row-gap: 0.25rem;
 }
 
-.gisst-New-instance-memory-size-select,
-.gisst-New-instance-gpu-memory-select {
-  display: flex;
-  margin: 0.35rem 0.2rem;
+.gisst-New-instance-memory-and-gpu-size > input {
+  margin-left: 0.1rem;
 }
 
-.gisst-New-instance-memory-size-select > *,
-.gisst-New-instance-gpu-memory-select > * {
-  width: 50%;
-}
-
-.gisst-New-instance-memory-size-select > * > input,
-.gisst-New-instance-gpu-memory-select > * input {
-  padding: 0.1rem;
+.gisst-New-instance-memory-and-gpu-size > span {
+  margin-left: 0.2rem;
 }
 
 .gisst-New-instance-bios-select {
   display: grid;
-  grid-template: repeat(2, auto) / repeat(2, auto);
+  grid-template-areas: "label select";
+  grid-template-columns: 50%;
   margin: 0.2rem;
   row-gap: 0.25rem;
 }
 
 .gisst-New-instance-bios-select > select {
+  margin: 0 0.1rem;
   padding: 0.1rem;
 }
 
