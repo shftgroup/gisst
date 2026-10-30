@@ -5,7 +5,7 @@
   "emsdk_version": "4.0.17",
   "v86": {
     "repo": "https://github.com/copy/v86",
-    "version": "2f1346b0e7d88d4cbbbcc05fe15b4e369c3de23f",
+    "version": "cc37f35c43bf14865d74ad76879ecf9410f69eb1",
     "dependencies": {
       "seabios.bin": "v86bios/seabios_a74f33d58109877723201ef02d20b46b84c36974.bin",
       "bochs-bios.bin": "v86bios/bochs-bios_6b1400c2a76c82d9535456866cc4cd23c5c70311.bin",
