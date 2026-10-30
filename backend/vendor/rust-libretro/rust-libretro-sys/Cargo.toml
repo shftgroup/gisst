@@ -21,4 +21,4 @@ libc.workspace = true
 rust-libretro-sys-proc = { path = "rust-libretro-sys-proc", version = "0.4.0"}
 
 [build-dependencies]
-bindgen = "0.72.1"
+bindgen = "0.73.2"

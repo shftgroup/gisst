@@ -7,14 +7,14 @@ license.workspace = true
 [dependencies]
 gisst.workspace = true
 server-types.workspace = true
-rply-codec = { git = "https://github.com/JoeOsborn/rply-codec", rev = "3c143acfd2b50efff47738fce57e2d1e86cd9344"}
+rply-codec = { git = "https://github.com/JoeOsborn/rply-codec", rev = "8b1c6b561d0f453698456e8b439b16e47377c6bc"}
 retro-rs = { workspace = true, default-features=false }
 rust-libretro-sys.workspace = true
 ffmpeg-next = "9.0.0"
 ringbuf = "0.5.2"
 reqwest.workspace = true
 tokio.workspace = true
-clap.workspace = true
+clap = { workspace = true, features = ["derive", "cargo", "env"]}
 clap-verbosity-flag.workspace = true
 anyhow.workspace = true
 env_logger.workspace = true

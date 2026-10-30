@@ -43,7 +43,7 @@ async fn get_instances(
         auth.user().await.as_ref().map(|u| u.creator_id.to_string()),
     );
     let accept: Option<String> = parse_header(&headers, "Accept");
-    let user = auth.user.as_ref().map(crate::routes::user_from);
+    let user = auth.user().await.as_ref().map(crate::routes::user_from);
     Ok(
         (if accept.is_none() || accept.as_ref().is_some_and(|hv| hv.contains("text/html")) {
             let (search_url, search_key) = app_state.search.frontend_data();
