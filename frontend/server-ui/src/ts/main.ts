@@ -1598,10 +1598,10 @@ class GISSTNewInstance extends HTMLElement {
 
     // update file lists
     const disk_files_div = config_form.querySelectorAll(
-      ".gisst-New-instance-disk-file-select",
+      ".gisst-New-instance-disk-file-selectors input",
     )!;
-    disk_files_div.forEach((disk_select) => {
-      const input = disk_select.querySelector("input") as HTMLInputElement;
+    disk_files_div.forEach((disk_input) => {
+      const input = disk_input as HTMLInputElement;
       input.addEventListener("change", () => {
         const files = input.files ?? [];
         if (files.length == 0) return;
