@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 cargo sqlx database reset -y --force
 cargo sqlx prepare --all --workspace -- --all-targets

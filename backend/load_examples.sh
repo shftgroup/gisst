@@ -73,6 +73,8 @@ if ! $GISST_CI; then
     update_version ../build/cores/vba_next_libretro.hash examples/records/gba/vba_environment.json
     ./target/debug/gisst-cli add-core ../build/cores/vice_x64_libretro.json
     update_version ../build/cores/vice_x64_libretro.hash examples/records/c64/vice_x64_environment.json
+    ./target/debug/gisst-cli add-core ../build/cores/mupen64plus_next_libretro.json
+    update_version ../build/cores/mupen64plus_next_libretro.hash examples/records/n64/mupen64plus_next_environment.json
 fi
 ./target/debug/gisst-cli add-core ../build/cores/gambatte_libretro.json
 update_version ../build/cores/gambatte_libretro.hash $GB_ENV
@@ -80,11 +82,20 @@ update_version ../build/cores/gambatte_libretro.hash $GB_ENV
 update_version ../build/cores/pcsx_rearmed_libretro.hash $PSX_ENV
 ./target/debug/gisst-cli add-core ../build/v86.json
 update_version ../build/v86.hash $V86_FREEDOS_ENV
+
+for ncore in ../build/native_cores/*_libretro.*; do
+  FNAME=$(basename "$ncore")
+  COREMETA="${FNAME%%.*}.json"
+  echo "add native core $FNAME for $COREMETA"
+  ./target/debug/gisst-cli add-native-core "../build/cores/${COREMETA}" "${ncore}"
+done
+
 if ! $GISST_CI; then
 update_version ../build/v86.hash $V86_WIN31_ENV
 ./target/debug/gisst-cli environment create --json-file ./examples/records/nes/nes_fceumm_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/snes/snes_snes9x_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/c64/vice_x64_environment.json
+./target/debug/gisst-cli environment create --json-file ./examples/records/n64/mupen64plus_next_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gba/vba_environment.json
 ./target/debug/gisst-cli environment create --json-file ./examples/records/gb/sameboy_environment.json
 ./target/debug/gisst-cli environment create --json-file $V86_WIN31_ENV --environment-config-string '{"bios":{"url":"seabios.bin"},"vga_bios":{"url":"vgabios.bin"},"memory_size": 67108864, "hda":{"url":"$CONTENT0","async":true,"fixed_chunk_size":44194304}}'
@@ -165,12 +176,14 @@ do
                                --environment-id $uuid_sameboy --cwd examples/data/gb/ \
                                --content "$file"
       fi
-  # elif ! $GISST_CI && [ "$folder" = "n64" ]
-  # then
-      # ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo 64" --work-version "NTSC" --work-name "$base" \
-                               # --work-id "$work_uuid" --instance-id "$work_uuid" \
-                               # --environment-id $uuid_n64 --cwd examples/data/n64/ \
-                               # --content "$file"
+  elif ! $GISST_CI && [ "$folder" = "n64" ]
+  then
+      work_uuid=$(get_uuid_from_counter)
+      uuid_counter=$((uuid_counter+1));
+      ./target/debug/gisst-cli add-work-instance --platform-name "Nintendo 64" --work-version "NTSC" --work-name "$base" \
+                               --work-id "$work_uuid" --instance-id "$work_uuid" \
+                               --environment-id $uuid_n64 --cwd examples/data/n64/ \
+                               --content "$file"
   fi
 done
 

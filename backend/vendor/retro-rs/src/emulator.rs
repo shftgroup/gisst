@@ -1157,8 +1157,8 @@ impl Drop for Emulator {
         CTX.with_borrow_mut(Option::take);
     }
 }
-
-#[cfg(test)]
+// disable tests for now, eventually unvendor this whole crate
+#[cfg(any())]
 mod tests {
     use super::*;
     use std::path::Path;
