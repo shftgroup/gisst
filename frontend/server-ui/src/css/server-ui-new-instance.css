@@ -87,6 +87,29 @@ li:last-child .gisst-New-instance-move-down {
   margin: 0.5rem 0;
 }
 
+.gisst-New-instance-file-selects {
+  border: 0.1rem solid
+    light-dark(
+      var(--gisst-light-theme-secondary),
+      var(--gisst-dark-theme-secondary)
+    );
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.5rem;
+}
+
+.gisst-New-instance-file-selects > legend {
+  align-items: center;
+  display: grid;
+  grid-template-areas: "span label";
+  margin-left: 0.5rem;
+  padding: 0 0.2rem;
+}
+
+.gisst-New-instance-file-selects > legend > span{
+  width: 7rem;
+}
+
 .gisst-New-instance-select-file-lists {
   margin: 0.25rem 0 0.5rem;
   /* list-style-position: inside; */

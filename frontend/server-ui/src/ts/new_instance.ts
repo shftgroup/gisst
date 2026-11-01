@@ -414,10 +414,9 @@ export class GISSTNewInstance extends HTMLElement {
     for (const input of select_files_form.querySelectorAll(
       ".instance-file-upload",
     ) as unknown as HTMLInputElement[]) {
-      const lst = input.parentElement?.nextElementSibling;
       const group = input.getAttribute("data-target")!;
       input.onchange = (event) => {
-        console.log(event, lst);
+        console.log(event);
         const files = input.files ?? [];
         if (files.length == 0) {
           return;
@@ -907,7 +906,7 @@ export class GISSTNewInstance extends HTMLElement {
   ) {
     const is_existing = "existing" in source;
     const lst = document.querySelector<HTMLOListElement>(
-      `#work-files p:has(input[data-target=${role}]) + ol`,
+      `#work-files fieldset.gisst-New-instance-file-selects:has(input[data-target=${role}]) ol.gisst-New-instance-select-file-lists`,
     )!;
     const line_item = document.createElement("li");
     const file_record = {

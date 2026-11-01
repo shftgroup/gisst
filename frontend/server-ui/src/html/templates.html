@@ -168,51 +168,62 @@
   <form id="work-files" class="gisst-New-instance-details-container">
     <div>
       <h4 class="gisst-New-instance-header-files">Select files:</h4>
-      <p>
-        <input
-          type="file"
-          id="instance-dep-upload"
-          name="instance_dep_upload"
-          class="instance-file-upload gisst-New-instance-visually-hidden"
-          data-target="dependency"
-        />
-        <label
-          for="instance-dep-upload"
-          class="gisst-Instance-btn gisst-Search-btn-primary"
-          >+ Add instance dependency</label
-        >
-      </p>
-      <ol class="gisst-New-instance-select-file-lists"></ol>
-      <p>
-        <input
-          type="file"
-          id="instance-config-upload"
-          name="instance_config_upload"
-          class="instance-file-upload gisst-New-instance-visually-hidden"
-          data-target="config"
-        />
-        <label
-          for="instance-config-upload"
-          class="gisst-Instance-btn gisst-Search-btn-primary"
-          >+ Add instance config files</label
-        >
-      </p>
-      <ol class="gisst-New-instance-select-file-lists"></ol>
-      <p>
-        <input
-          type="file"
-          id="instance-content-upload"
-          name="instance_content_upload"
-          class="instance-file-upload gisst-New-instance-visually-hidden"
-          data-target="content"
-        />
-        <label
-          for="instance-content-upload"
-          class="gisst-Instance-btn gisst-Search-btn-primary"
-          >+ Add instance content files</label
-        >
-      </p>
-      <ol class="gisst-New-instance-select-file-lists"></ol>
+      <fieldset class="gisst-New-instance-file-selects">
+        <legend>
+          <span>Dependencies</span>
+          <input
+            type="file"
+            id="instance-dep-upload"
+            name="instance_dep_upload"
+            class="instance-file-upload gisst-New-instance-visually-hidden"
+            data-target="dependency"
+          />
+          <label
+            for="instance-dep-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >+ Add</label
+          >
+        </legend>
+        <ol class="gisst-New-instance-select-file-lists"></ol>
+      </fieldset>
+
+      <fieldset class="gisst-New-instance-file-selects">
+        <legend>
+          <span>Config files</span>
+          <input
+            type="file"
+            id="instance-config-upload"
+            name="instance_config_upload"
+            class="instance-file-upload gisst-New-instance-visually-hidden"
+            data-target="config"
+          />
+          <label
+            for="instance-config-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >+ Add</label
+          >
+        </legend>
+        <ol class="gisst-New-instance-select-file-lists"></ol>
+      </fieldset>
+
+      <fieldset class="gisst-New-instance-file-selects">
+        <legend>
+          <span>Content files</span>
+          <input
+            type="file"
+            id="instance-content-upload"
+            name="instance_content_upload"
+            class="instance-file-upload gisst-New-instance-visually-hidden"
+            data-target="content"
+          />
+          <label
+            for="instance-content-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >+ Add</label
+          >
+        </legend>
+        <ol class="gisst-New-instance-select-file-lists"></ol>
+      </fieldset>
     </div>
   </form>
 </template>
