@@ -6,6 +6,7 @@
     "gisst-style",
     "frontend-embed",
     "gisst-player-ui",
+    "editor-ui",
     "frontend-web",
     "server-ui"
   ],

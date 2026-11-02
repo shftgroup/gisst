@@ -1,0 +1,172 @@
+editor-layout {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 12px;
+  background: var(--gisst-light-theme-bg);
+  color: var(--gisst-light-theme-text-main);
+  font-family: sans-serif;
+}
+
+.editor-main {
+  display: grid;
+  grid-template-rows: auto auto minmax(160px, 1fr) auto auto;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+editor-tabs,
+editor-timeline,
+editor-stage,
+editor-controls,
+.editor-lower {
+  box-sizing: border-box;
+  min-width: 0;
+  background: var(--gisst-light-theme-card-bg);
+  border: 1px solid rgb(var(--gisst-light-theme-border));
+}
+
+.editor-tabs-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+}
+
+.editor-tabs-filters,
+.editor-tabs-side,
+.editor-controls-row,
+.editor-card-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.editor-tabs-filters {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.editor-tabs-side {
+  flex-shrink: 0;
+}
+
+editor-sidebar {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+}
+
+.editor-sidebar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 12px;
+  background: var(--gisst-light-theme-card-bg);
+  border: 1px solid rgb(var(--gisst-light-theme-border));
+}
+
+.editor-sidebar-title,
+.editor-sidebar-id {
+  margin: 0;
+}
+
+.editor-sidebar-id {
+  margin-top: auto;
+  color: var(--gisst-light-theme-text-light);
+}
+
+editor-tabs button,
+editor-controls button,
+editor-sidebar button,
+editor-state-card button,
+editor-save-card button,
+editor-replay-card button {
+  font: inherit;
+  color: var(--gisst-light-theme-text-main);
+  background: var(--gisst-light-theme-card-bg);
+  border: 1px solid rgb(var(--gisst-light-theme-border));
+  padding: 6px 10px;
+}
+
+.editor-tabs-filters button.is-active {
+  color: var(--gisst-light-theme-light);
+  background: var(--gisst-light-theme-primary);
+  border-color: var(--gisst-light-theme-primary);
+}
+
+editor-timeline {
+  overflow-x: auto;
+}
+
+.editor-timeline-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 72px;
+  padding: 8px;
+}
+
+.editor-timeline-empty {
+  margin: 0;
+  color: var(--gisst-light-theme-text-light);
+}
+
+editor-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+}
+
+.editor-stage-label {
+  margin: 0;
+}
+
+.editor-controls-row {
+  padding: 8px;
+  overflow-x: auto;
+}
+
+.editor-lower {
+  min-height: 48px;
+}
+
+editor-state-card,
+editor-save-card,
+editor-replay-card {
+  display: block;
+}
+
+.editor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 140px;
+  padding: 8px;
+  background: var(--gisst-light-theme-card-bg);
+  border: 1px solid rgb(var(--gisst-light-theme-border));
+}
+
+.editor-card-thumb {
+  height: 48px;
+  background: var(--gisst-light-theme-bg);
+}
+
+.editor-card-name,
+.editor-card-description,
+.editor-card-time {
+  min-height: 1em;
+  margin: 0;
+}

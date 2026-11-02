@@ -1,0 +1,27 @@
+{
+  "name": "editor-ui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "module": "./dist/editor-ui.js",
+  "exports": {
+    ".": {
+      "import": "./dist/editor-ui.js"
+    }
+  },
+  "types": "./dist/editor-ui.d.ts",
+  "dependencies": {
+    "gisst-style": "file:../gisst-style"
+  },
+  "scripts": {
+    "dev": "vite",
+    "check": "tsc && eslint src",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "vite": "^8.0.16",
+    "vite-plugin-dts": "^5.1.2"
+  }
+}
