@@ -17,7 +17,7 @@ export * as widgets from "instantsearch.js/es/widgets";
 import * as tus from "tus-js-client";
 import templates from "../html/templates.html?raw";
 import connectStats from "instantsearch.js/es/connectors/stats/connectStats";
-import { V86Image, V86ImageType, V86Options } from "./v86";
+import { GISSTNewInstanceEnvFormV86 } from "./env-forms/v86";
 
 // Import all templates from templates.html
 const TEMPLATES = document.createElement("template");
@@ -1197,9 +1197,8 @@ interface FileUpload {
 interface InstanceFile {
   ui_id: number;
   filename: string;
-  source: ExistingFile | FileUpload;
   list_item: HTMLLIElement;
-  input_element?: HTMLInputElement;
+  source: ExistingFile | FileUpload;
 }
 
 interface CoreInfo {
@@ -1253,7 +1252,8 @@ class GISSTNewInstance extends HTMLElement {
   work: Work;
   instance: Instance;
   environment: Environment;
-  env_form_v86_img_map: Record<V86ImageType, number | null>;
+  env_form_active: GISSTNewInstanceEnvForm | null;
+  env_form_v86: GISSTNewInstanceEnvFormV86 | null;
   env_form_mode: "form" | "manual";
 
   constructor() {
@@ -1289,14 +1289,9 @@ class GISSTNewInstance extends HTMLElement {
     this.base_url = "/";
     this.next_ui_id = 0;
     this.content_matcher = document.createElement("div");
-    this.env_form_v86_img_map = {
-      hda: null,
-      hdb: null,
-      fda: null,
-      fdb: null,
-      cdrom: null,
-    };
     this.env_form_mode = "form";
+    this.env_form_active = null;
+    this.env_form_v86 = null;
   }
   /*
     Workflow:
@@ -1348,8 +1343,6 @@ class GISSTNewInstance extends HTMLElement {
     const missing_config_form_panel = elementFromTemplates(
       "missing-config-form-panel",
     ).firstElementChild as HTMLDivElement;
-    const v86_config_form_panel = elementFromTemplates("v86-config-form-panel")
-      .firstElementChild as HTMLDivElement;
     const ra_config_form_panel = elementFromTemplates("ra-config-form-panel")
       .firstElementChild as HTMLDivElement;
     const config_manual_panel = elementFromTemplates(
@@ -1499,7 +1492,9 @@ class GISSTNewInstance extends HTMLElement {
       self.environment.environment_core_version = opt.dataset["coreVersion"]!;
       self.environment.environment_framework =
         self.environment.environment_core_name == "v86" ? "v86" : "retroarch";
-      this.env_form_reset();
+      this.clear_file_lists();
+      this.env_form_state_sync();
+      this.env_form_active?.reset();
     };
 
     metadata_form.querySelector<HTMLInputElement>(
@@ -1517,7 +1512,7 @@ class GISSTNewInstance extends HTMLElement {
       self.work.work_version = target.value;
     };
 
-    v86_config_form_panel.querySelector<HTMLInputElement>(
+    config_manual_panel.querySelector<HTMLInputElement>(
       'textarea[name="env_config"]',
     )!.onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
@@ -1540,18 +1535,11 @@ class GISSTNewInstance extends HTMLElement {
         if (files.length == 0) {
           return;
         }
-        self.add_to_file_list(
-          group as Role,
-          files[0].name,
-          {
-            to_upload: files[0],
-          },
-          input,
-        );
+        self.add_to_file_list(group as Role, files[0].name, {
+          to_upload: files[0],
+        });
       };
     }
-
-    // V86 Environment Config Handling
 
     // initialize config method tabbing
     const tabsContainer = config_form.querySelector(".gisst-New-instance-tabs");
@@ -1566,9 +1554,10 @@ class GISSTNewInstance extends HTMLElement {
     const panel_2 = tabPanelsContainer!.querySelector(
       "#panel-2",
     ) as HTMLDivElement;
+    this.env_form_v86 = new GISSTNewInstanceEnvFormV86();
 
     panel_1.appendChild(missing_config_form_panel);
-    panel_1.appendChild(v86_config_form_panel);
+    panel_1.appendChild(this.env_form_v86);
     panel_1.appendChild(ra_config_form_panel);
     panel_2.appendChild(config_manual_panel);
 
@@ -1580,44 +1569,38 @@ class GISSTNewInstance extends HTMLElement {
 
         if (btn.dataset.mode === "form") {
           this.env_form_mode = "form";
+          this.clear_file_lists();
         } else {
           this.env_form_mode = "manual";
         }
-        this.env_form_reset();
+        this.env_form_state_sync();
+        this.env_form_active?.reset();
       });
     });
 
 
-    (
-      v86_config_form_panel.querySelector(
-        ".gisst-New-instance-config-body .gisst-New-instance-config-form",
-      ) as HTMLFormElement
-    ).addEventListener("input", () => {
-      this.env_form_generate();
+    // Environment Config Form Handlers
+    this.addEventListener("gisst-env-form-on-new-conf", (ev) => {
+      this.environment.environment_config = ev.new_conf;
+    });
+    this.addEventListener("gisst-env-form-on-content-add", (ev) => {
+      this.add_to_file_list(
+        "content",
+        ev.content_file.name,
+        {
+          to_upload: ev.content_file,
+        },
+        ev.index,
+      );
+    });
+    this.addEventListener("gisst-env-form-on-content-remove", (ev) => {
+      this.remove_from_file_list(
+        "content",
+        ev.index,
+      )
     });
 
-    // update file lists
-    const disk_files_div = config_form.querySelectorAll(
-      ".gisst-New-instance-disk-file-selectors input",
-    )!;
-    disk_files_div.forEach((disk_input) => {
-      const input = disk_input as HTMLInputElement;
-      input.addEventListener("change", () => {
-        const files = input.files ?? [];
-        if (files.length == 0) return;
-
-        self.add_to_file_list(
-          "content",
-          files[0].name,
-          {
-            to_upload: files[0],
-          },
-          input,
-          this.env_form_v86_img_map[input.name as V86ImageType]!,
-        );
-      });
-    });
-
+    // Form submission handling
     const button =
       submit_div.querySelector<HTMLButtonElement>("button.submit")!;
     const status =
@@ -1758,7 +1741,7 @@ class GISSTNewInstance extends HTMLElement {
     contents.appendChild(submit_div);
     this.appendChild(contents);
 
-    this.env_form_reset();
+    this.env_form_state_sync();
   }
 
   async content_check_hash(platform: string, file: File, hash: string) {
@@ -1808,12 +1791,14 @@ class GISSTNewInstance extends HTMLElement {
       this.add_to_file_list("content", file.name, { to_upload: file });
     }
   }
+
   content_check_show_error(err: Error) {
     console.error(err);
     this.content_matcher.getElementsByClassName(
       "content_match_result",
     )[0].textContent = `error computing hash`;
   }
+
   async init_core_chooser(elt: HTMLSelectElement) {
     const cores = (await (await fetch(`${this.base_url}/cores`)).json()) as {
       cores: CoreInfo[];
@@ -1834,6 +1819,7 @@ class GISSTNewInstance extends HTMLElement {
       elt.appendChild(option);
     }
   }
+
   update_work_bibinfo(work: WorkBib) {
     const core_chooser = document.querySelector<HTMLSelectElement>(
       "#work-info select[name=work_core_chooser]",
@@ -1868,13 +1854,6 @@ class GISSTNewInstance extends HTMLElement {
     this.file_lists.config.length = 0;
     this.file_lists.dependency.length = 0;
     this.file_lists.content.length = 0;
-    this.env_form_v86_img_map = {
-      hda: null,
-      hdb: null,
-      fda: null,
-      fdb: null,
-      cdrom: null,
-    };
 
     document
       .querySelectorAll("#work-files .gisst-New-instance-select-file-lists")
@@ -1954,42 +1933,20 @@ class GISSTNewInstance extends HTMLElement {
   }
 
   /**
-   * Check whether a file list member should be allowed to move.
-   * @param role The role of the file to check
-   * @returns True if the movement buttons should show. False otherwise.
-   */
-  file_list_should_allow_move(role: Role) {
-    if (role !== "content") return true;
-    return (
-      this.environment.environment_framework !== "v86" ||
-      this.env_form_mode !== "form"
-    );
-  }
-
-  /**
    * Updates whether the movement buttons should show on the
-   * file list elements based on the current state of the form.
+   * content files based on the current state of the form.
    */
   file_list_update_move() {
-    for (const [role, file_list] of Object.entries(this.file_lists)) {
-      for (const file of file_list) {
-        const move_up = file.list_item.querySelector(
-          ".gisst-New-instance-move-up",
-        ) as HTMLElement;
-        const move_down = file.list_item.querySelector(
-          ".gisst-New-instance-move-down",
-        ) as HTMLElement;
-        move_up.style.visibility = this.file_list_should_allow_move(
-          role as Role,
-        )
-          ? ""
-          : "hidden";
-        move_down.style.visibility = this.file_list_should_allow_move(
-          role as Role,
-        )
-          ? ""
-          : "hidden";
-      }
+    for (const file of this.file_lists.content) {
+      const move_up = file.list_item.querySelector(
+        ".gisst-New-instance-move-up",
+      ) as HTMLElement;
+      const move_down = file.list_item.querySelector(
+        ".gisst-New-instance-move-down",
+      ) as HTMLElement;
+      const allow_move = !this.env_form_active?.HANDLES_CONTENT_FILES;
+      move_up.style.visibility = allow_move ? "" : "hidden";
+      move_down.style.visibility = allow_move ? "" : "hidden";
     }
   }
 
@@ -2001,29 +1958,30 @@ class GISSTNewInstance extends HTMLElement {
     const missing_form_body = document.querySelector(
       "#missing-env-form-body",
     ) as HTMLElement;
-    const v86_form_body = document.querySelector(
-      "#v86-env-form-body",
-    ) as HTMLElement;
     const ra_form_body = document.querySelector(
       "#ra-env-form-body",
     ) as HTMLElement;
+    const is_form_mode = this.env_form_mode === "form";
     switch (this.environment.environment_framework) {
       case "v86":
-        v86_form_body.style.display = "";
+        this.env_form_v86!.style.display = "";
         missing_form_body.style.display = "none";
         ra_form_body.style.display = "none";
+        this.env_form_active = is_form_mode ? this.env_form_v86 : null;
         break;
 
       case "retroarch":
-        v86_form_body.style.display = "none";
+        this.env_form_v86!.style.display = "none";
         missing_form_body.style.display = "none";
         ra_form_body.style.display = "";
+        this.env_form_active = null;
         break;
 
       default:
-        v86_form_body.style.display = "none";
+        this.env_form_v86!.style.display = "none";
         missing_form_body.style.display = "";
         ra_form_body.style.display = "none";
+        this.env_form_active = null;
         break;
     }
 
@@ -2032,34 +1990,14 @@ class GISSTNewInstance extends HTMLElement {
       "#instance-content-upload",
     ) as HTMLInputElement;
     content_file_upload.disabled =
-      this.env_form_mode === "form" &&
-      this.environment.environment_framework === "v86";
-
+      this.env_form_active?.HANDLES_CONTENT_FILES ?? false;
     this.file_list_update_move();
-  }
-
-  /**
-   * Reset the env form.
-   */
-  env_form_reset() {
-    if (
-      this.environment.environment_framework === "v86" &&
-      this.env_form_mode === "form"
-    ) {
-      this.clear_file_lists();
-      this.environment.environment_config = {};
-      this.env_form_existing_sync();
-      this.env_form_generate();
-    }
-
-    this.env_form_state_sync();
   }
 
   add_to_file_list(
     role: Role,
     filename: string,
     source: { existing: string } | { to_upload: File },
-    input_element?: HTMLInputElement,
     index?: number,
   ) {
     const is_existing = "existing" in source;
@@ -2079,7 +2017,6 @@ class GISSTNewInstance extends HTMLElement {
             upload_result_id: null,
           },
       list_item: line_item,
-      input_element,
     };
 
     line_item.innerHTML = `
@@ -2123,15 +2060,14 @@ class GISSTNewInstance extends HTMLElement {
       line_item_upload_div.appendChild(progress);
     }
 
+    const can_move = !this.env_form_active?.HANDLES_CONTENT_FILES;
     const move_up_btn = document.createElement("button");
     move_up_btn.type = "button";
     move_up_btn.classList.add("gisst-New-instance-move-up");
     move_up_btn.classList.add("gisst-New-instance-line-item-buttons");
     move_up_btn.textContent = "↑";
     move_up_btn.title = "Move up";
-    move_up_btn.style.visibility = this.file_list_should_allow_move(role)
-      ? ""
-      : "hidden";
+    move_up_btn.style.visibility = can_move ? "" : "hidden";
     line_item_move_div.appendChild(move_up_btn);
 
     const move_down_btn = document.createElement("button");
@@ -2140,16 +2076,12 @@ class GISSTNewInstance extends HTMLElement {
     move_down_btn.classList.add("gisst-New-instance-line-item-buttons");
     move_down_btn.textContent = "↓";
     move_down_btn.title = "Move down";
-    move_down_btn.style.visibility = this.file_list_should_allow_move(role)
-      ? ""
-      : "hidden";
+    move_down_btn.style.visibility = can_move ? "" : "hidden";
     line_item_move_div.appendChild(move_down_btn);
 
     line_item.querySelector<HTMLButtonElement>(
       "button.gisst-New-instance-move-up",
     )!.onclick = (_evt) => {
-      if (!this.file_list_should_allow_move(role)) return;
-
       const idx = this.file_lists[role].findIndex(
         (fr) => fr.ui_id == file_record.ui_id,
       );
@@ -2166,8 +2098,6 @@ class GISSTNewInstance extends HTMLElement {
     line_item.querySelector<HTMLButtonElement>(
       "button.gisst-New-instance-move-down",
     )!.onclick = (_evt) => {
-      if (!this.file_list_should_allow_move(role)) return;
-
       const idx = this.file_lists[role].findIndex(
         (fr) => fr.ui_id == file_record.ui_id,
       );
@@ -2187,24 +2117,12 @@ class GISSTNewInstance extends HTMLElement {
       const idx = this.file_lists[role].findIndex(
         (fr) => fr.ui_id == file_record.ui_id,
       );
-      const removed_instance_file = this.file_lists[role][idx];
 
       this.file_lists[role].splice(idx, 1);
       lst.removeChild(line_item);
 
-      // Clear file selector if known
-      const input_element = removed_instance_file.input_element;
-      if (input_element) {
-        input_element.value = "";
-      }
-
-      // Remove mapping in v86 form and regenerate config
-      for (const [key, img_idx] of Object.entries(this.env_form_v86_img_map)) {
-        const image_type = key as V86ImageType;
-        if (img_idx === idx) {
-          this.env_form_image_remove(image_type);
-          break;
-        }
+      if (role === "content") {
+        this.env_form_active?.remove_content_file(idx);
       }
     };
 
@@ -2220,6 +2138,14 @@ class GISSTNewInstance extends HTMLElement {
       lst.appendChild(line_item);
     }
     this.file_lists[role].splice(position, 1, file_record);
+  }
+
+  remove_from_file_list(
+    role: Role,
+    index: number
+  ) {
+    const remove_button = this.file_lists[role][index].list_item.querySelector('button[title="remove"]') as HTMLButtonElement;
+    remove_button.click();
   }
 
   /**
@@ -2259,6 +2185,7 @@ class GISSTNewInstance extends HTMLElement {
     }
 
     this.clear_file_lists();
+    this.env_form_state_sync();
     full_instance.objects.sort(
       (a: ObjectLink, b: ObjectLink) =>
         a.object_role_index - b.object_role_index,
@@ -2269,9 +2196,16 @@ class GISSTNewInstance extends HTMLElement {
       });
     }
 
-    // TODO: fetch other bibliographic info fields...
+    // Apply to env config form
+    const content_file_map = this.file_lists.content.map(
+      (file) => file.filename,
+    );
+    this.env_form_active?.set_env_conf(
+      this.environment.environment_config ?? {},
+      content_file_map,
+    );
 
-    this.env_form_existing_sync();
+    // TODO: fetch other bibliographic info fields...
   }
 
   showTab(
@@ -2297,190 +2231,6 @@ class GISSTNewInstance extends HTMLElement {
       panel.hidden = true;
     }
     targetTabPanel!.hidden = false;
-  }
-
-
-  /**
-   * Parse an environment config JSON and populate the form based on its value.
-   */
-  env_form_existing_sync() {
-    const env_config = this.environment.environment_config as V86Options;
-
-    // Populate memory sizes
-    const mem_size_input = document.querySelector(
-      "#memory-size-select",
-    ) as HTMLInputElement;
-    mem_size_input.value =
-      env_config?.memory_size !== undefined
-        ? String(Math.round(env_config.memory_size / 1048576))
-        : "";
-
-    const gpu_mem_size_input = document.querySelector(
-      "#gpu-memory-select",
-    ) as HTMLInputElement;
-    gpu_mem_size_input.value =
-      env_config?.vga_memory_size !== undefined
-        ? String(Math.round(env_config.vga_memory_size / 1048576))
-        : "";
-
-    // Populate BIOS
-    const bios_chooser = document.querySelector(
-      "#bios-chooser",
-    ) as HTMLInputElement;
-    bios_chooser.value = "bios-seabios";
-    if (env_config?.bios?.url === "bochs-bios.bin") {
-      bios_chooser.value = "bios-bochs";
-    }
-
-    const vga_bios_chooser = document.querySelector(
-      "#vga-bios-chooser",
-    ) as HTMLInputElement;
-    vga_bios_chooser.value = "vga-bios-standard";
-    if (env_config?.bios?.url === "bochs-vgabios.bin") {
-      vga_bios_chooser.value = "vga-bios-bochs";
-    }
-
-    // Update file selects
-    const images: Record<string, V86ImageType> = {
-      "#hard-disk-a-upload ~ p.content-file-name": "hda",
-      "#hard-disk-b-upload ~ p.content-file-name": "hdb",
-      "#floppy-a-upload ~ p.content-file-name": "fda",
-      "#floppy-b-upload ~ p.content-file-name": "fdb",
-      "#cd-rom-upload ~ p.content-file-name": "cdrom",
-    };
-    for (const [query, image_type] of Object.entries(images)) {
-      const element = document.querySelector(query)!;
-      this.env_form_file_sync(element, env_config?.[image_type], image_type);
-    }
-
-    this.env_form_state_sync();
-  }
-
-  /**
-   * Sync an existing file with the v86 environment form. The corresponding file name
-   * label is updated, along with the map between content file indicies and images.
-   * The V86Image should have a url matching `$CONTENT{X}` where X is an index into the
-   * content files. `$CONTENT` is also recognised as `$CONTENT0`.
-   * @param label The element to update the text of.
-   * @param image The V86Image to match to a file.
-   * @param image_type The type of the V86Image that we are syncing.
-   */
-  env_form_file_sync(
-    label: Element,
-    image?: V86Image,
-    image_type?: V86ImageType,
-  ) {
-    label.textContent = "No file chosen";
-    if (!image || !image_type) return;
-
-    // Extract content number, i.e. "$CONTENT{X}"
-    const parsed = image.url.match(/^\$CONTENT(\d*)$/m);
-    const index = parsed?.[1];
-    if (index === undefined) return;
-
-    // "" is parsed into 0, so $CONTENT is ok
-    const index_num = Number(index);
-    const filename = this.file_lists.content.at(Number(index))?.filename;
-    if (!filename) return;
-
-    this.env_form_v86_img_map[image_type] = Number(index_num);
-    label.textContent = filename;
-  }
-
-  /**
-   * Generate a new environment config and update the form.
-   */
-  env_form_generate() {
-    const form = document.querySelector(
-      ".gisst-New-instance-config-body .gisst-New-instance-config-form",
-    ) as HTMLFormElement;
-    const form_data = new FormData(form);
-
-    const hda = form_data.get("hda") as File;
-    const hdb = form_data.get("hdb") as File;
-    const fda = form_data.get("fda") as File;
-    const fdb = form_data.get("fdb") as File;
-    const cdrom = form_data.get("cdrom") as File;
-
-    const memory_size_mib = Number(form_data.get("mem-size"));
-    const vga_memory_size_mib = Number(form_data.get("gpu-memory"));
-
-    const bios = form_data.get("bios") as "bios-seabios" | "bios-bochs";
-    const vga_bios = form_data.get("vga-bios") as
-      | "vga-bios-standard"
-      | "vga-bios-bochs";
-
-    // Build env config from form data
-    let config: V86Options = {
-      memory_size: memory_size_mib * 1048576,
-      vga_memory_size: vga_memory_size_mib * 1048576,
-      bios: {
-        url: bios === "bios-seabios" ? "seabios.bin" : "bochs-bios.bin",
-      },
-      vga_bios: {
-        url:
-          vga_bios === "vga-bios-standard"
-            ? "vgabios.bin"
-            : "bochs-vgabios.bin",
-      },
-    };
-
-    // Build $CONTENT0, $CONTENT1, etc mapping from present files in order
-    const images: Record<V86ImageType, File> = {
-      hda,
-      hdb,
-      fda,
-      fdb,
-      cdrom,
-    };
-    for (const [key, file] of Object.entries(images)) {
-      const image_type = key as V86ImageType;
-      const file_label = form.querySelector(`input[name="${image_type}"] ~ p`)!;
-      // Note it is possible for the input element to have no file selected but
-      // still be present in the map as an existing one.
-      if (file.name === "" && this.env_form_v86_img_map[image_type] === null) {
-        this.env_form_file_sync(file_label);
-        continue;
-      }
-
-      // Image doesn't exist, so assign it the next content number
-      if (this.env_form_v86_img_map[image_type] === null) {
-        this.env_form_v86_img_map[image_type] = this.file_lists.content.length;
-      }
-      config[image_type] = {
-        url: `$CONTENT${this.env_form_v86_img_map[image_type]}`,
-        async: true,
-      };
-
-      if (file.name === "") {
-        // Existing file, so file name needs to be synced from content file list
-        this.env_form_file_sync(file_label, config[image_type], image_type);
-      } else {
-        file_label.textContent = file.name;
-      }
-    }
-
-    const preview_element = document.querySelector(
-      'textarea[name="env_config"]',
-    ) as HTMLInputElement;
-    preview_element.value = JSON.stringify(config, null, 2);
-    this.environment.environment_config = config;
-  }
-
-  env_form_image_remove(image_type: V86ImageType) {
-    const removed_idx = this.env_form_v86_img_map[image_type];
-    if (removed_idx === null) return;
-    this.env_form_v86_img_map[image_type] = null;
-
-    // Subtract one from the remaining indicies that match the one removed
-    for (const [key, idx] of Object.entries(this.env_form_v86_img_map)) {
-      const image_type = key as V86ImageType;
-      if (idx && idx > removed_idx) {
-        --this.env_form_v86_img_map[image_type]!;
-      }
-    }
-
-    this.env_form_generate();
   }
 }
 
