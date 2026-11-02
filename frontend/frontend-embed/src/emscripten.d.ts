@@ -287,7 +287,7 @@ declare interface FS {
   createPreloadedFile(
     parent: string | FSNode,
     name?: string,
-    url: string | TypedArray,
+    url: string | ArrayBufferView,
     canRead: boolean,
     canWrite: boolean,
     onload?: () => void,
@@ -298,7 +298,7 @@ declare interface FS {
   createDataFile(
     parent: string | FSNode,
     name?: string,
-    data: TypedArray,
+    data: ArrayBufferView,
     canRead: boolean,
     canWrite: boolean,
     canOwn: boolean,

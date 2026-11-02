@@ -1,7 +1,10 @@
+import { EmbedV86 } from "embedv86";
+import type { LibretroModule } from "./libretro_adapter";
+
 export interface EmbedOptions {
   controls: ControllerOverlayMode;
-  record_from_start: bool;
-  record_video: bool;
+  record_from_start: boolean;
+  record_video: boolean;
 }
 
 export enum ControllerOverlayMode {
@@ -12,6 +15,16 @@ export enum ControllerOverlayMode {
 
 export interface StringIndexable {
   [s: string]: StringIndexable | string;
+}
+
+export interface PlayerConfig {
+  environment: Environment;
+  instance: Instance;
+  work: Work;
+  start: ColdStart | StateStart | ReplayStart;
+  core_manifest: CoreFileLink[];
+  manifest: ObjectLink[];
+  saves: SaveFileLink[];
 }
 
 export interface Environment {
@@ -50,7 +63,7 @@ export interface CoreFileLink {
   core_name: string;
   core_version: string;
   core_role: string;
-  core_role_index: integer;
+  core_role_index: number;
   file_hash: string;
   file_filename: string;
   file_source_path: string;
@@ -60,7 +73,7 @@ export interface CoreFileLink {
 export interface ObjectLink {
   /* gisst::models::ObjectLink */
   object_role: string;
-  object_role_index: integer;
+  object_role_index: number;
   object_id: string;
   file_dest_path: string;
   file_filename: string;
@@ -128,7 +141,7 @@ export interface ReplayStart {
 }
 
 export interface EmuControls {
-  toggle_mute();
+  toggle_mute(): void;
   halt(): Promise<void>;
   gisst_root: string;
   environment: Environment;
@@ -146,9 +159,11 @@ export interface EmuControls {
 
 export interface RetroarchCore {
   send_message(string): Promise<void>;
-  read_response(bool): Promise<string>;
+  read_response(bool): Promise<string | undefined>;
   module: LibretroModule;
   content_name: string;
   state_dir: string;
   saves_dir: string;
 }
+
+export type LibretroModule = LibretroModule;

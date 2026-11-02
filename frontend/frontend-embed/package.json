@@ -23,10 +23,9 @@
     "testdata": "node scripts/testdata.js"
   },
   "devDependencies": {
-    "@types/path-browserify": "^1.0.3",
     "@vitest/ui": "^5.0",
     "happy-dom": "^21",
-    "shx": "^0.3.4",
+    "shx": "^0.4",
     "sirv": "^3.0.2",
     "typescript": "^5.8.2",
     "vite": "^8.3",
@@ -37,8 +36,6 @@
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.7.53",
-    "embedv86": "file:../embedv86",
-    "gisst-style": "file:../gisst-style",
-    "path-browserify": "^1.0.1"
+    "embedv86": "file:../embedv86"
   }
 }

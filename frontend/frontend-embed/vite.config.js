@@ -20,11 +20,8 @@ export default {
       typescript: true,
     }),
     dts({
-      skipDiagnostics: false,
-      logDiagnostics: true,
       insertTypesEntry: true,
       copyDtsFiles: true,
-      outputDir: ["dist", "types"],
     }),
     ServerFilesPlugin,
   ],

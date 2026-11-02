@@ -17,11 +17,8 @@ export default defineConfig({
   },
   plugins: [
     dts({
-      skipDiagnostics: false,
-      logDiagnostics: true,
       insertTypesEntry: true,
       copyDtsFiles: true,
-      outputDir: ["dist", "types"],
     }),
   ],
   rollupOptions: {

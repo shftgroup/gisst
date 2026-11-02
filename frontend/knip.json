@@ -1,0 +1,21 @@
+{
+  "workspaces": {
+    "embedv86": {
+      "entry": ["src/replay_worker.ts"]
+    },
+    "ra-util": {},
+    "frontend-embed": {
+      "entry": ["src/libretro.worker.ts"]
+    },
+    "frontend-web": {
+      "entry": ["mock-api/index.ts"],
+      "project": ["!public/**"]
+    },
+    "gisst-style": {},
+    "gisst-player-ui": {},
+    "server-ui": {
+      "entry": ["mock-api/index.ts"]
+    },
+    ".": {}
+  }
+}

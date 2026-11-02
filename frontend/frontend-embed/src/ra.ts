@@ -79,12 +79,12 @@ export async function init(
       });
     }
   }
-  const content_file = content.file_filename!;
+  const content_file = content.file_filename;
   const content_base = content_file.substring(0, content_file.lastIndexOf("."));
   const entryState = start.type == "state";
   const movie = start.type == "replay";
-  const source_path = content.file_source_path!.replace(
-    content.file_filename!,
+  const source_path = content.file_source_path.replace(
+    content.file_filename,
     "",
   );
   const use_gamepad_overlay =
@@ -136,7 +136,7 @@ export async function init(
     retro_args.push("/fetch/content/retroarch.cfg");
   }
   retro_args.push(
-    "/fetch/content/" + source_path + "/" + content.file_filename!,
+    "/fetch/content/" + source_path + "/" + content.file_filename,
   );
   console.log(retro_args);
   let ra_cfg_text: string = await (
@@ -153,148 +153,155 @@ export async function init(
         FETCH_BASE_DIR: "/fetchfs/",
       },
       true,
-      async function (module: LibretroModule) {
-        const enc = new TextEncoder();
-        module.FS.createPath("/", "fetch/content", true, true);
-        module.FS.createPath("/", state_dir, true, true);
-        module.FS.createPath("/", saves_dir, true, true);
-        let fetch_manifest = `${gisst_root}/storage/\n`;
-        /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
-        for (const file of manifest) {
-          if (file.object_role == "config") {
-            continue;
-          }
-          let sep = file.file_source_path.startsWith("/") ? "" : "/";
-          let download_source_path_full =
-            "/fetch/content" + sep + file.file_source_path;
-          let download_source_path = download_source_path_full;
-          const last_index = download_source_path.lastIndexOf(
-            file.file_filename!,
-          );
-          if (last_index >= 0) {
-            download_source_path = download_source_path_full.substring(
-              0,
-              last_index,
+      function (module: LibretroModule) {
+        void (async () => {
+          const enc = new TextEncoder();
+          module.FS.createPath("/", "fetch/content", true, true);
+          module.FS.createPath("/", state_dir, true, true);
+          module.FS.createPath("/", saves_dir, true, true);
+          let fetch_manifest = `${gisst_root}/storage/\n`;
+          /* TODO many of these awaits could be instead done simultaneously with Promise.all() */
+          for (const file of manifest) {
+            if (file.object_role == "config") {
+              continue;
+            }
+            let sep = file.file_source_path.startsWith("/") ? "" : "/";
+            let download_source_path_full =
+              "/fetch/content" + sep + file.file_source_path;
+            let download_source_path = download_source_path_full;
+            const last_index = download_source_path.lastIndexOf(
+              file.file_filename,
             );
-          } else {
-            sep = download_source_path_full.endsWith("/") ? "" : "/";
-            download_source_path_full += sep + file.file_filename!;
+            if (last_index >= 0) {
+              download_source_path = download_source_path_full.substring(
+                0,
+                last_index,
+              );
+            } else {
+              sep = download_source_path_full.endsWith("/") ? "" : "/";
+              download_source_path_full += sep + file.file_filename;
+            }
+            const content_url = gisst_root + "/storage/" + file.file_dest_path;
+            const resp = await fetch(content_url, { method: "HEAD" });
+            let sz = 0;
+            if (resp.status == 200) {
+              sz = parseInt(resp.headers.get("Content-Length") ?? "0", 10);
+            }
+            await resp.text();
+            if (sz > 0 && sz <= 16 * 1024 * 1024) {
+              const data = await (await fetch(content_url)).arrayBuffer();
+              create_file(
+                module,
+                download_source_path,
+                file.file_filename,
+                new Uint8Array(data),
+              );
+            } else {
+              const content_url_encoded = encodeURI(file.file_dest_path);
+              fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
+            }
           }
-          const content_url = gisst_root + "/storage/" + file.file_dest_path;
-          const resp = await fetch(content_url, { method: "HEAD" });
-          let sz = 0;
-          if (resp.status == 200) {
-            sz = parseInt(resp.headers.get("Content-Length") ?? "0", 10);
-          }
-          await resp.text();
-          if (sz > 0 && sz <= 16 * 1024 * 1024) {
-            const data = await (await fetch(content_url)).arrayBuffer();
+          console.log("Place fetch manifest", fetch_manifest);
+          create_file(module, "/mem", "fetch.txt", enc.encode(fetch_manifest));
+          module.FS.createPath("/", state_dir, true, true);
+          module.FS.createPath("/", saves_dir, true, true);
+          if (entryState) {
+            nonnull(state_data);
             create_file(
               module,
-              download_source_path,
-              file.file_filename!,
-              new Uint8Array(data),
+              state_dir,
+              content_base + ".state1.entry",
+              state_data,
             );
-          } else {
-            const content_url_encoded = encodeURI(file.file_dest_path);
-            fetch_manifest += `${content_url_encoded} ${download_source_path_full}\n`;
+            create_file(
+              module,
+              state_dir,
+              content_base + ".state1.",
+              state_data,
+            );
           }
-        }
-        console.log("Place fetch manifest", fetch_manifest);
-        create_file(module, "/mem", "fetch.txt", enc.encode(fetch_manifest));
-        module.FS.createPath("/", state_dir, true, true);
-        module.FS.createPath("/", saves_dir, true, true);
-        if (entryState) {
-          nonnull(state_data);
-          create_file(
-            module,
-            state_dir,
-            content_base + ".state1.entry",
-            state_data,
-          );
-          create_file(module, state_dir, content_base + ".state1.", state_data);
-        }
-        if (movie) {
-          nonnull(replay);
-          create_file(module, state_dir, content_base + ".replay1", replay);
-        }
-        for (const [data, savefile] of save_data) {
-          console.log(
-            data,
-            "/storage/" + data.file_dest_path,
-            saves_dir + "/" + data.save_id + ".srm",
-          );
-          create_file(module, saves_dir, data.save_id + ".srm", savefile);
-        }
-        if (save_data.length > 0) {
-          create_file(
-            module,
-            saves_dir,
-            content_base + ".srm",
-            save_data[0][1],
-          );
-        }
-        if (use_gamepad_overlay) {
-          // gameboy, gba, nes, snes, retropad
-          // gambatte, vba_next, fceumm, snes9x
-          const overlays = {
-            gambatte: "gameboy",
-            vba_next: "gba",
-            fceumm: "nes",
-            snes9x: "snes",
-          };
-          let overlay = "retropad";
-          if (core in overlays) {
-            overlay = overlays[core as keyof typeof overlays];
+          if (movie) {
+            nonnull(replay);
+            create_file(module, state_dir, content_base + ".replay1", replay);
           }
-          ra_cfg_text +=
-            '\ninput_overlay_enable = "true"\ninput_overlay = "/home/web_user/retroarch/overlays/gamepads/' +
-            overlay +
-            "/" +
-            overlay +
-            '.cfg"\ninput_overlay_enable_autopreferred = "true"';
-        }
-        for (const config of extra_configs) {
-          const config_url = gisst_root + "/storage/" + config;
-          const text = await (await fetch(config_url)).text();
-          ra_cfg_text += "\n" + text + "\n";
-        }
-        create_file(module, "/mem", "retroarch.cfg", enc.encode(ra_cfg_text));
-        const self = {
-          toggle_mute: () => {
-            send_message(module, "MUTE");
-          },
-          halt: async () => {
-            await send_message(module, "QUIT");
-            await sleep(50);
-            await send_message(module, "QUIT");
-          },
-          gisst_root,
-          environment,
-          work,
-          instance,
-          start,
-          saves,
-          core_manifest,
-          manifest,
-          container,
-          embed_options,
-          on_ready: () => {},
-          inner: {
-            send_message(s: string): Promise<void> {
-              return send_message(module, s);
+          for (const [data, savefile] of save_data) {
+            console.log(
+              data,
+              "/storage/" + data.file_dest_path,
+              saves_dir + "/" + data.save_id + ".srm",
+            );
+            create_file(module, saves_dir, data.save_id + ".srm", savefile);
+          }
+          if (save_data.length > 0) {
+            create_file(
+              module,
+              saves_dir,
+              content_base + ".srm",
+              save_data[0][1],
+            );
+          }
+          if (use_gamepad_overlay) {
+            // gameboy, gba, nes, snes, retropad
+            // gambatte, vba_next, fceumm, snes9x
+            const overlays = {
+              gambatte: "gameboy",
+              vba_next: "gba",
+              fceumm: "nes",
+              snes9x: "snes",
+            };
+            let overlay = "retropad";
+            if (core in overlays) {
+              overlay = overlays[core as keyof typeof overlays];
+            }
+            ra_cfg_text +=
+              '\ninput_overlay_enable = "true"\ninput_overlay = "/home/web_user/retroarch/overlays/gamepads/' +
+              overlay +
+              "/" +
+              overlay +
+              '.cfg"\ninput_overlay_enable_autopreferred = "true"';
+          }
+          for (const config of extra_configs) {
+            const config_url = gisst_root + "/storage/" + config;
+            const text = await (await fetch(config_url)).text();
+            ra_cfg_text += "\n" + text + "\n";
+          }
+          create_file(module, "/mem", "retroarch.cfg", enc.encode(ra_cfg_text));
+          const self = {
+            toggle_mute: () => {
+              void send_message(module, "MUTE");
             },
-            read_response(b: boolean): Promise<string | undefined> {
-              return read_response(module, b);
+            halt: async () => {
+              await send_message(module, "QUIT");
+              await sleep(50);
+              await send_message(module, "QUIT");
             },
-            content_name: content_base,
-            state_dir,
-            saves_dir,
-            module,
-          },
-        };
-        retroReady(module, retro_args, container, self);
-        res(self);
+            gisst_root,
+            environment,
+            work,
+            instance,
+            start,
+            saves,
+            core_manifest,
+            manifest,
+            container,
+            embed_options,
+            on_ready: () => {},
+            inner: {
+              send_message(s: string): Promise<void> {
+                return send_message(module, s);
+              },
+              read_response(b: boolean): Promise<string | undefined> {
+                return read_response(module, b);
+              },
+              content_name: content_base,
+              state_dir,
+              saves_dir,
+              module,
+            },
+          } as EmuControls;
+          retroReady(module, retro_args, container, self);
+          res(self);
+        })();
       },
     );
   });
@@ -324,9 +331,7 @@ function retroReady(
   const preview = container.getElementsByTagName("img")[0];
   preview.classList.add("gisst-embed-loaded");
   preview.addEventListener("click", function () {
-    const canv = <HTMLCanvasElement>(
-      container.getElementsByTagName("canvas")[0]!
-    );
+    const canv = container.getElementsByTagName("canvas")[0];
     preview.classList.add("gisst-embed-hidden");
     module.startRetroArch(canv, retro_args, function () {
       canv.classList.remove("gisst-embed-hidden");
@@ -391,6 +396,6 @@ function mobileAndTabletCheck() {
 
 function nonnull(obj: unknown): asserts obj {
   if (obj == null) {
-    throw "Must be non-null";
+    throw new Error("Must be non-null");
   }
 }

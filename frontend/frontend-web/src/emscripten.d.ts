@@ -287,7 +287,7 @@ declare interface FS {
   createPreloadedFile(
     parent: string | FSNode,
     name?: string,
-    url: string | TypedArray,
+    url: string | ArrayBufferView,
     canRead: boolean,
     canWrite: boolean,
     onload?: () => void,

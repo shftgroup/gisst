@@ -1,6 +1,7 @@
 import { Replay, ReplayMode, Evt } from "./v86replay";
 import { nonnull } from "./utils";
 export { ReplayEvent } from "./v86replay";
+
 export interface StateInfo {
   name: string;
   thumbnail: string;
@@ -31,6 +32,7 @@ export interface ConfigSettings {
   cdrom?: V86Image;
   memory_size?: number;
   vga_memory_size?: number;
+  disable_jit?: boolean;
 }
 
 export class State {
@@ -142,7 +144,7 @@ export class EmbedV86 {
         await replay.reset_to_checkpoint(n, replay.mode, this.emulator),
       );
     } else {
-      this.emulator.restore_state(this.states[n].state);
+      await this.emulator.restore_state(this.states[n].state);
     }
   }
   async play_replay_slot(n: number): Promise<void> {
@@ -186,7 +188,7 @@ export class EmbedV86 {
         ];
       }
     } else if (category == "save") {
-      throw "Not yet implemented";
+      throw new Error("Not yet implemented");
     } else if (category == "replay") {
       const num_str = file_name.match(/replay([0-9]+)$/)?.[1] ?? "0";
       const replay_num = parseInt(num_str, 10);
@@ -202,16 +204,16 @@ export class EmbedV86 {
       const file = await this.get_replay_video(replay_num);
       return [file, file.name];
     } else {
-      throw "Invalid save category";
+      throw new Error("Invalid save category");
     }
   }
   async get_replay_video(replay_num: number): Promise<File> {
     if (!this.config.record_video) {
-      throw "Can't obtain video, recording not enabled in config";
+      throw new Error("Can't obtain video, recording not enabled in config");
     }
     const rep = this.replays[replay_num];
     if (rep.mode == ReplayMode.Record) {
-      throw "Can't obtain video, recording not finished";
+      throw new Error("Can't obtain video, recording not finished");
     }
     const file = await rep.get_video();
     nonnull(file);
@@ -223,29 +225,35 @@ export class EmbedV86 {
       this.replays[this.active_replay].log_evt(this.emulator, evt, val);
     }
   }
-  replay_tick() {
+  queue_tick() {
     if (window?.requestAnimationFrame) {
       window.requestAnimationFrame(() => this.replay_tick());
     } else {
       setTimeout(() => this.replay_tick(), 0);
     }
+  }
+  replay_tick() {
     if (!this.emulator || this.active_replay === null) {
+      this.queue_tick();
       return;
     }
     const replay = this.replays[this.active_replay];
     const old_cp_count = replay.checkpoints.length;
     if (replay.mode == ReplayMode.Finished) {
+      this.queue_tick();
       return;
     }
     // console.log("old count",old_cp_count);
-    replay.tick(this.emulator);
-    if (old_cp_count < replay.checkpoints.length) {
-      // console.log("new cp!",replay.checkpoints.length);
-      this.config.replay_checkpoints_changed(
-        replay.checkpoints.slice(old_cp_count),
-        [],
-      );
-    }
+    void replay.tick(this.emulator).then(() => {
+      if (old_cp_count < replay.checkpoints.length) {
+        // console.log("new cp!",replay.checkpoints.length);
+        this.config.replay_checkpoints_changed(
+          replay.checkpoints.slice(old_cp_count),
+          [],
+        );
+      }
+      this.queue_tick();
+    });
   }
   async run(
     content: ConfigSettings | string,
@@ -264,10 +272,10 @@ export class EmbedV86 {
       autostart: true,
     };
     if (entryState && movie) {
-      throw "Can't specify both entry state and movie";
+      throw new Error("Can't specify both entry state and movie");
     }
     if (!movie && video) {
-      throw "Can't provide video without replay movie";
+      throw new Error("Can't provide video without replay movie");
     }
     // TODO: avoid use of /, get explicit paths or a path joining function as arguments or config props
     if (entryState) {
@@ -305,7 +313,7 @@ export class EmbedV86 {
         const blob = await video_resp.blob();
         video_file = new File([blob], "", { type: blob.type });
       }
-      const replay_resp = results[0]!;
+      const replay_resp = results[0];
       if (!replay_resp.ok) {
         alert("Failed to load replay movie");
         return;
@@ -325,7 +333,7 @@ export class EmbedV86 {
         alert("Failed to load content");
         return;
       }
-      content_json = await content_resp.json();
+      content_json = (await content_resp.json()) as ConfigSettings;
     } else {
       content_json = content;
     }
@@ -343,7 +351,7 @@ export class EmbedV86 {
       config.vga_memory_size = content_json.vga_memory_size;
     }
     config.disable_jit = content_json.disable_jit ?? false;
-    let video_elt = this.config.container.getElementsByTagName("video")[0]!;
+    let video_elt = this.config.container.getElementsByTagName("video")[0];
     if (!video_elt) {
       video_elt = document.createElement("video");
       this.config.container.appendChild(video_elt);
@@ -381,16 +389,16 @@ export class EmbedV86 {
           this.audioDestination = (
             speaker.context as AudioContext
           ).createMediaStreamDestination();
-          speaker.connect(this.audioDestination!);
+          speaker.connect(this.audioDestination);
         }
         this.emulator!.remove_listener(
           "emulator-started",
           start_initial_replay,
         );
         if (movie) {
-          this.play_replay_slot(0).then(resolve);
+          void this.play_replay_slot(0).then(resolve);
         } else if (this.config.record_from_start) {
-          this.record_replay().then(resolve);
+          void this.record_replay().then(resolve);
         } else {
           resolve();
         }
@@ -426,8 +434,18 @@ export class EmbedV86 {
     nonnull(this.emulator);
     this.muted = muted;
     this.emulator.speaker_adapter.mixer.set_volume(muted ? 0 : 1);
-    const video = this.config.container.getElementsByTagName("video")[0]!;
+    const video = this.config.container.getElementsByTagName("video")[0];
     video.muted = muted;
+  }
+  public set_input_enabled(enabled: boolean): void {
+    this.emulator?.keyboard_set_status(enabled);
+    this.emulator?.mouse_set_status(enabled);
+  }
+  public lock_mouse(): void {
+    this.emulator?.lock_mouse();
+  }
+  public screen_set_scale(x: number, y: number): void {
+    this.emulator?.screen_set_scale(x, y);
   }
 }
 function setup_image(
@@ -439,7 +457,7 @@ function setup_image(
   if (img in content_json) {
     const cjimg = content_json[img]!;
     if ("url" in cjimg) {
-      cjimg["url"] = content_folder + "/" + cjimg["url"]!;
+      cjimg["url"] = content_folder + "/" + cjimg["url"];
       if ("async" in cjimg) {
         // nop
       } else {

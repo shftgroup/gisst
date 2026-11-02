@@ -104,7 +104,7 @@ addEventListener("load", () => {
         if (metadata) {
           resolve(metadata);
         } else {
-          reject("metadata is null");
+          reject(new Error("metadata is null"));
         }
       });
     },
@@ -119,7 +119,7 @@ addEventListener("load", () => {
   });
   ui_state.setConfig(
     JSON.parse(
-      document.getElementById("config")!.textContent!,
+      document.getElementById("config")!.textContent,
     ) as FrontendConfig,
   );
   ui_state.control.set_zoom(ui.ZoomLevel.X1);

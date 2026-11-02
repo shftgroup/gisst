@@ -41,12 +41,11 @@ let base_height: number = 360;
 let zoom_fit = false;
 
 function zoom_to_fit() {
-  const canv = <HTMLCanvasElement>(
-    ui_state.emulator_div.querySelector("canvas")!
-  );
-  const content = <HTMLDivElement>(
-    document.querySelector(".gisst-internal-content-body")!
-  );
+  const canv: HTMLCanvasElement =
+    ui_state.emulator_div.querySelector("canvas")!;
+  const content: HTMLDivElement = document.querySelector(
+    ".gisst-internal-content-body",
+  )!;
   const n = Math.min(
     content.clientWidth / base_width,
     content.clientHeight / base_height,
@@ -69,13 +68,12 @@ export async function init(ui: UI, embed: EmuControls) {
       elt.innerText = evt as string;
       return elt;
     },
-    activate_save: (savefile: string) => activate_save(savefile),
-    create_save: () => create_save(),
+    activate_save: (savefile: string) => void activate_save(savefile),
+    create_save: () => void create_save(),
     toggle_mute: () => embed.toggle_mute(),
     set_zoom: (level: ZoomLevel) => {
-      const canv = <HTMLCanvasElement>(
-        ui_state.emulator_div.querySelector("canvas")!
-      );
+      const canv =
+        ui_state.emulator_div.querySelector<HTMLCanvasElement>("canvas")!;
       zoom_fit = level == ZoomLevel.Fit;
       switch (level) {
         case ZoomLevel.X05:
@@ -98,7 +96,7 @@ export async function init(ui: UI, embed: EmuControls) {
     },
     enter_fullscreen: () => {
       zoom_fit = false;
-      RA.send_message("FULLSCREEN_TOGGLE");
+      void RA.send_message("FULLSCREEN_TOGGLE");
     },
     load_state: (state: string) => {
       const num_str = state.match(/state([0-9]+)$/)?.[1] ?? "0";
@@ -109,7 +107,7 @@ export async function init(ui: UI, embed: EmuControls) {
     play_replay: (rply: string) => {
       const num_str = rply.match(/replay([0-9]+)$/)?.[1] ?? "0";
       const replay_num = parseInt(num_str, 10);
-      play_replay_slot(replay_num);
+      void play_replay_slot(replay_num);
     },
     start_replay: () => record_replay(),
     stop_and_save_replay: () => stop_replay(),
@@ -161,7 +159,9 @@ export async function init(ui: UI, embed: EmuControls) {
         path = state_dir;
       } else {
         console.error("Invalid save category", category, file_name);
-        throw "Invalid save category:" + category + ":" + file_name;
+        throw new Error("Invalid save category", {
+          cause: { category, file_name },
+        });
       }
       const data = RA.module.FS.readFile(path + "/" + file_name);
       return (async () => {
@@ -245,9 +245,8 @@ export async function init(ui: UI, embed: EmuControls) {
   window.RA = RA;
   window.UI = ui_state;
   window.DB = db;
-  const canv = <HTMLCanvasElement>(
-    ui_state.emulator_div.querySelector("canvas")!
-  );
+  const canv =
+    ui_state.emulator_div.querySelector<HTMLCanvasElement>("canvas")!;
   {
     const container = canv.parentElement!;
     const ro = new ResizeObserver((_entries, _observer) => {
@@ -276,24 +275,24 @@ function autosave_state() {
 }
 function nonnull(obj: unknown): asserts obj {
   if (obj == null) {
-    throw "Must be non-null";
+    throw new Error("Must be non-null", { cause: obj });
   }
 }
 
 function load_state_slot(n: number) {
-  RA.send_message("LOAD_STATE_SLOT " + n.toString());
+  void RA.send_message("LOAD_STATE_SLOT " + n.toString());
 }
 
 function save_state() {
-  RA.send_message("SAVE_STATE");
+  void RA.send_message("SAVE_STATE");
 }
 
 function record_replay() {
-  RA.send_message("RECORD_REPLAY");
+  void RA.send_message("RECORD_REPLAY");
 }
 
 function stop_replay() {
-  RA.send_message("HALT_REPLAY");
+  void RA.send_message("HALT_REPLAY");
 }
 
 function copyFile(from: string, to: string) {
@@ -311,12 +310,12 @@ async function activate_save(savefile: string) {
   const from = `${saves_dir}/${savefile}`;
   await create_save();
   copyFile(from, srm);
-  RA.send_message("LOAD_FILES");
+  await RA.send_message("LOAD_FILES");
 }
 
 let save_counter = 0;
 async function create_save() {
-  RA.send_message("SAVE_FILES");
+  await RA.send_message("SAVE_FILES");
   await RA.read_response(true);
   const srm = `${saves_dir}/${content_base}.srm`;
   const to = `${saves_dir}/autosave_${save_counter}.srm`;
@@ -326,7 +325,7 @@ async function create_save() {
 
 async function play_replay_slot(n: number) {
   clear_current_replay();
-  RA.send_message("PLAY_REPLAY_SLOT " + n.toString());
+  await RA.send_message("PLAY_REPLAY_SLOT " + n.toString());
   const resp = await RA.read_response(true);
   nonnull(resp);
   const num_str = resp.match(/PLAY_REPLAY_SLOT ([0-9]+)$/)?.[1] ?? "0";
@@ -404,7 +403,7 @@ const seen_states: Record<string, string> = {};
 const seen_saves: string[] = [];
 const seen_replays: Record<string, string> = {};
 function checkChangedStatesAndSaves() {
-  const states = RA.module.FS.readdir(state_dir);
+  const states = RA.module.FS.readdir(state_dir) as string[];
   for (const state of states) {
     if (state == "." || state == "..") {
       continue;
@@ -443,8 +442,8 @@ function checkChangedStatesAndSaves() {
       }
     }
   }
-  update_replay_state();
-  const saves = RA.module.FS.readdir(saves_dir);
+  void update_replay_state();
+  const saves = RA.module.FS.readdir(saves_dir) as string[];
   for (const save of saves) {
     if (save.endsWith(".srm") && save != `${content_base}.srm`) {
       if (!seen_saves.includes(save)) {

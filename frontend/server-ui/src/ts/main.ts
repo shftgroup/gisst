@@ -101,7 +101,9 @@ class GISSTInstanceSearch extends HTMLElement {
       search_key == undefined ||
       base_url == undefined
     ) {
-      throw "Cannot create instance search UI without search url, search key, and base url";
+      throw new Error(
+        "Cannot create instance search UI without search url, search key, and base url",
+      );
     }
     this.classList.add("gisst-instance-search");
 
@@ -250,7 +252,9 @@ class GISSTStateSearch extends HTMLElement {
       search_key == undefined ||
       base_url == undefined
     ) {
-      throw "Cannot create state search UI without search url, search key, and base url";
+      throw new Error(
+        "Cannot create state search UI without search url, search key, and base url",
+      );
     }
     const limit_to_instance = this.getAttribute("instance-id");
     const limit_to_creator = this.getAttribute("creator-id");
@@ -522,35 +526,37 @@ class GISSTStateSearch extends HTMLElement {
       }),
     ]);
 
-    results_body.addEventListener("click", async function (event) {
-      if (
-        event.target &&
-        (event.target! as HTMLElement).classList.contains("hide-show-checkbox")
-      ) {
-        const checkbox = event.target! as HTMLInputElement;
-        const id = checkbox.dataset["id"];
-        try {
-          await (
-            await fetch(`${base_url}/states/${id}/hide`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ state: checkbox.checked }),
-            })
-          ).text();
-          if (checkbox.checked) {
-            checkbox.parentElement?.parentElement?.classList.add(
-              "gisst-Search-item-hidden",
-            );
-          } else {
-            checkbox.parentElement?.parentElement?.classList.remove(
-              "gisst-Search-item-hidden",
-            );
+    results_body.addEventListener("click", function (event) {
+      void (async () => {
+        if (
+          event.target &&
+          (event.target as HTMLElement).classList.contains("hide-show-checkbox")
+        ) {
+          const checkbox = event.target as HTMLInputElement;
+          const id = checkbox.dataset["id"];
+          try {
+            await (
+              await fetch(`${base_url}/states/${id}/hide`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ state: checkbox.checked }),
+              })
+            ).text();
+            if (checkbox.checked) {
+              checkbox.parentElement?.parentElement?.classList.add(
+                "gisst-Search-item-hidden",
+              );
+            } else {
+              checkbox.parentElement?.parentElement?.classList.remove(
+                "gisst-Search-item-hidden",
+              );
+            }
+          } catch (error) {
+            console.error(error);
+            checkbox.checked = !checkbox.checked;
           }
-        } catch (error) {
-          console.error(error);
-          checkbox.checked = !checkbox.checked;
         }
-      }
+      })();
     });
     search.start();
   }
@@ -571,7 +577,9 @@ class GISSTSaveSearch extends HTMLElement {
       search_key == undefined ||
       base_url == undefined
     ) {
-      throw "Cannot create save search UI without search url, search key, and base url";
+      throw new Error(
+        "Cannot create save search UI without search url, search key, and base url",
+      );
     }
     const limit_to_instance = this.getAttribute("instance-id");
     const limit_to_creator = this.getAttribute("creator-id");
@@ -801,35 +809,37 @@ class GISSTSaveSearch extends HTMLElement {
         },
       }),
     ]);
-    results_body.addEventListener("click", async function (event) {
-      if (
-        event.target &&
-        (event.target! as HTMLElement).classList.contains("hide-show-checkbox")
-      ) {
-        const checkbox = event.target! as HTMLInputElement;
-        const id = checkbox.dataset["id"];
-        try {
-          await (
-            await fetch(`${base_url}/saves/${id}/hide`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ state: checkbox.checked }),
-            })
-          ).text();
-          if (checkbox.checked) {
-            checkbox.parentElement?.parentElement?.classList.add(
-              "gisst-Search-item-hidden",
-            );
-          } else {
-            checkbox.parentElement?.parentElement?.classList.remove(
-              "gisst-Search-item-hidden",
-            );
+    results_body.addEventListener("click", function (event) {
+      void (async () => {
+        if (
+          event.target &&
+          (event.target as HTMLElement).classList.contains("hide-show-checkbox")
+        ) {
+          const checkbox = event.target as HTMLInputElement;
+          const id = checkbox.dataset["id"];
+          try {
+            await (
+              await fetch(`${base_url}/saves/${id}/hide`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ state: checkbox.checked }),
+              })
+            ).text();
+            if (checkbox.checked) {
+              checkbox.parentElement?.parentElement?.classList.add(
+                "gisst-Search-item-hidden",
+              );
+            } else {
+              checkbox.parentElement?.parentElement?.classList.remove(
+                "gisst-Search-item-hidden",
+              );
+            }
+          } catch (error) {
+            console.error(error);
+            checkbox.checked = !checkbox.checked;
           }
-        } catch (error) {
-          console.error(error);
-          checkbox.checked = !checkbox.checked;
         }
-      }
+      })();
     });
     search.start();
   }
@@ -850,7 +860,9 @@ class GISSTPerformanceSearch extends HTMLElement {
       search_key == undefined ||
       base_url == undefined
     ) {
-      throw "Cannot create performance search UI without search url, search key, and base url";
+      throw new Error(
+        "Cannot create performance search UI without search url, search key, and base url",
+      );
     }
     const limit_to_instance = this.getAttribute("instance-id");
     const limit_to_creator = this.getAttribute("creator-id");
@@ -1058,35 +1070,37 @@ class GISSTPerformanceSearch extends HTMLElement {
       }),
     ]);
 
-    results_body.addEventListener("click", async function (event) {
-      if (
-        event.target &&
-        (event.target! as HTMLElement).classList.contains("hide-show-checkbox")
-      ) {
-        const checkbox = event.target! as HTMLInputElement;
-        const id = checkbox.dataset["id"];
-        try {
-          await (
-            await fetch(`${base_url}/replays/${id}/hide`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ state: checkbox.checked }),
-            })
-          ).text();
-          if (checkbox.checked) {
-            checkbox.parentElement?.parentElement?.classList.add(
-              "gisst-Search-item-hidden",
-            );
-          } else {
-            checkbox.parentElement?.parentElement?.classList.remove(
-              "gisst-Search-item-hidden",
-            );
+    results_body.addEventListener("click", function (event) {
+      void (async () => {
+        if (
+          event.target &&
+          (event.target as HTMLElement).classList.contains("hide-show-checkbox")
+        ) {
+          const checkbox = event.target as HTMLInputElement;
+          const id = checkbox.dataset["id"];
+          try {
+            await (
+              await fetch(`${base_url}/replays/${id}/hide`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ state: checkbox.checked }),
+              })
+            ).text();
+            if (checkbox.checked) {
+              checkbox.parentElement?.parentElement?.classList.add(
+                "gisst-Search-item-hidden",
+              );
+            } else {
+              checkbox.parentElement?.parentElement?.classList.remove(
+                "gisst-Search-item-hidden",
+              );
+            }
+          } catch (error) {
+            console.error(error);
+            checkbox.checked = !checkbox.checked;
           }
-        } catch (error) {
-          console.error(error);
-          checkbox.checked = !checkbox.checked;
         }
-      }
+      })();
     });
     search.start();
   }
@@ -1174,6 +1188,12 @@ interface InstanceFile {
   source: ExistingFile | FileUpload;
 }
 
+interface CoreInfo {
+  core_name: string;
+  core_version: string;
+  core_platform: string;
+}
+
 function compute_hash(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunkSize = 16 * 1024 * 1024,
@@ -1182,7 +1202,7 @@ function compute_hash(file: File): Promise<string> {
       fileReader = new FileReader();
     let currentChunk = 0;
     fileReader.onload = function (e) {
-      spark.append((e.target! as FileReader).result as ArrayBuffer);
+      spark.append(e.target!.result as ArrayBuffer);
       currentChunk++;
 
       if (currentChunk < chunks) {
@@ -1192,7 +1212,7 @@ function compute_hash(file: File): Promise<string> {
       }
     };
     fileReader.onerror = function () {
-      reject();
+      reject(new Error("Hash computation error", { cause: fileReader.error }));
     };
     function loadNext() {
       const start = currentChunk * chunkSize,
@@ -1278,7 +1298,9 @@ class GISSTNewInstance extends HTMLElement {
       search_key == undefined ||
       base_url == undefined
     ) {
-      throw "Cannot create instance search UI without search url, search key, and base url";
+      throw new Error(
+        "Cannot create instance search UI without search url, search key, and base url",
+      );
     }
 
     this.base_url = base_url;
@@ -1335,14 +1357,14 @@ class GISSTNewInstance extends HTMLElement {
 
                 const work = hit as object as InstanceWork;
                 self.update_work_bibinfo(work);
-                self.update_work_instanceenv_info(work.instance_id);
+                void self.update_work_instanceenv_info(work.instance_id);
 
                 // Set the search bar to the name of the work without showing any results
                 search.helper!.setQuery("").search();
                 search.helper!.setQuery(work.work_name);
 
                 if (document.activeElement) {
-                  (document.activeElement as HTMLElement)!.blur();
+                  (document.activeElement as HTMLElement).blur();
                 }
               }}">
                 <div
@@ -1375,10 +1397,10 @@ class GISSTNewInstance extends HTMLElement {
     search.start();
 
     // Setup method 2
-    this.init_core_chooser(
+    void this.init_core_chooser(
       this.content_matcher.getElementsByClassName(
         "core_chooser",
-      )[0]! as HTMLSelectElement,
+      )[0] as HTMLSelectElement,
     );
 
     /* eslint @typescript-eslint/no-this-alias: "off" */
@@ -1386,12 +1408,11 @@ class GISSTNewInstance extends HTMLElement {
 
     const content_match_upload = this.content_matcher.getElementsByClassName(
       "content-match-upload",
-    )[0]! as HTMLInputElement;
+    )[0] as HTMLInputElement;
     content_match_upload.disabled = true;
     let match_platform: string | null = null;
-    const match_core_chooser = this.content_matcher.querySelector(
-      ".core_chooser",
-    )! as HTMLSelectElement;
+    const match_core_chooser: HTMLSelectElement =
+      this.content_matcher.querySelector(".core_chooser")!;
 
     // Method 2 Event Listeners
     match_core_chooser.onchange = (event) => {
@@ -1414,7 +1435,9 @@ class GISSTNewInstance extends HTMLElement {
         compute_hash(file)
           .then((hash) => self.content_check_hash(match_platform!, file, hash))
           .catch((err) => {
-            self.content_check_show_error(err);
+            self.content_check_show_error(
+              new Error("content hash check failed", { cause: err }),
+            );
           });
         if (content_file_name != null) {
           content_file_name.innerHTML = file.name;
@@ -1424,11 +1447,11 @@ class GISSTNewInstance extends HTMLElement {
 
     const core_chooser = metadata_form.getElementsByClassName(
       "core_chooser",
-    )[0]! as HTMLSelectElement;
-    this.init_core_chooser(core_chooser);
+    )[0] as HTMLSelectElement;
+    void this.init_core_chooser(core_chooser);
     core_chooser.onchange = () => {
       // update work platform, environment core
-      const opt = core_chooser.selectedOptions[0]! as HTMLOptionElement;
+      const opt = core_chooser.selectedOptions[0];
       self.work.work_platform = opt.dataset["corePlatform"]!;
       self.environment.environment_platform = self.work.work_platform;
       self.environment.environment_core_name = opt.dataset["coreName"]!;
@@ -1437,35 +1460,29 @@ class GISSTNewInstance extends HTMLElement {
         self.environment.environment_core_name == "v86" ? "v86" : "retroarch";
     };
 
-    (
-      metadata_form.querySelector(
-        'input[name="work_name"]',
-      )! as HTMLInputElement
-    ).onchange = (evt) => {
+    metadata_form.querySelector<HTMLInputElement>(
+      'input[name="work_name"]',
+    )!.onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
       self.work.work_name = target.value;
       self.environment.environment_name = target.value;
     };
 
-    (
-      metadata_form.querySelector(
-        'input[name="work_version"]',
-      )! as HTMLInputElement
-    ).onchange = (evt) => {
+    metadata_form.querySelector<HTMLInputElement>(
+      'input[name="work_version"]',
+    )!.onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
       self.work.work_version = target.value;
     };
 
-    (
-      metadata_form.querySelector(
-        'textarea[name="env_config"]',
-      )! as HTMLInputElement
-    ).onchange = (evt) => {
+    metadata_form.querySelector<HTMLInputElement>(
+      'textarea[name="env_config"]',
+    )!.onchange = (evt) => {
       const target = evt.target as HTMLInputElement;
       self.environment.environment_config =
         target.value == "" || target.value == "null"
           ? {}
-          : JSON.parse(target.value);
+          : (JSON.parse(target.value) as object);
     };
 
     // other biblio stuff
@@ -1487,12 +1504,10 @@ class GISSTNewInstance extends HTMLElement {
       };
     }
 
-    const button = submit_div.querySelector(
-      "button.submit",
-    )! as HTMLButtonElement;
-    const status = submit_div.querySelector(
-      "p.submit-status",
-    )! as HTMLParagraphElement;
+    const button =
+      submit_div.querySelector<HTMLButtonElement>("button.submit")!;
+    const status =
+      submit_div.querySelector<HTMLParagraphElement>("p.submit-status")!;
 
     button.onclick = async () => {
       let ready = true;
@@ -1505,14 +1520,12 @@ class GISSTNewInstance extends HTMLElement {
           }
 
           if (file.source.upload == Upload.NotStarted) {
-            const upload_button = file.list_item.querySelector(
-              "button.upload",
-            )! as HTMLButtonElement;
-            const progress = file.list_item.querySelector(
-              "progress",
-            )! as HTMLProgressElement;
+            const upload_button =
+              file.list_item.querySelector<HTMLButtonElement>("button.upload")!;
+            const progress =
+              file.list_item.querySelector<HTMLProgressElement>("progress")!;
 
-            this.upload_file(role as Role, index, upload_button, progress);
+            void this.upload_file(role as Role, index, upload_button, progress);
             // TODO: set a status message somewhere
             console.log("Start uploading", role, index, file);
             ready = false;
@@ -1533,7 +1546,7 @@ class GISSTNewInstance extends HTMLElement {
       status.textContent = "Creating records...";
       try {
         const work_id = (
-          await (
+          (await (
             await fetch(`${this.base_url}/works/create`, {
               method: "POST",
               cache: "no-cache",
@@ -1543,11 +1556,11 @@ class GISSTNewInstance extends HTMLElement {
               },
               body: JSON.stringify(this.work),
             })
-          ).json()
+          ).json()) as Work
         ).work_id;
 
         const environment_id = (
-          await (
+          (await (
             await fetch(`${this.base_url}/environments/create`, {
               method: "POST",
               cache: "no-cache",
@@ -1557,7 +1570,7 @@ class GISSTNewInstance extends HTMLElement {
               },
               body: JSON.stringify(this.environment),
             })
-          ).json()
+          ).json()) as Environment
         ).environment_id;
 
         this.instance.work_id = work_id;
@@ -1590,7 +1603,7 @@ class GISSTNewInstance extends HTMLElement {
         }
 
         const instance_id = (
-          await (
+          (await (
             await fetch(`${this.base_url}/instances/create`, {
               method: "POST",
               cache: "no-cache",
@@ -1605,7 +1618,7 @@ class GISSTNewInstance extends HTMLElement {
                 content,
               }),
             })
-          ).json()
+          ).json()) as Instance
         ).instance_id;
 
         // redirect to new instance id if successful
@@ -1634,32 +1647,33 @@ class GISSTNewInstance extends HTMLElement {
     const filename = file.name;
     const match_result = this.content_matcher.getElementsByClassName(
       "content_match_result",
-    )[0]!;
+    )[0];
     match_result.textContent = `${filename}:${hash}`;
     const platform_esc = encodeURIComponent(platform);
     const filename_esc = encodeURIComponent(filename);
     const hash_esc = encodeURIComponent(hash);
-    const core_chooser = document.querySelector(
+    const core_chooser = document.querySelector<HTMLSelectElement>(
       "#work-info select[name=work_core_chooser]",
-    )! as HTMLSelectElement;
-    const match_core_chooser = this.content_matcher.querySelector(
-      ".core_chooser",
-    )! as HTMLSelectElement;
+    )!;
+    const match_core_chooser =
+      this.content_matcher.querySelector<HTMLSelectElement>(".core_chooser")!;
     try {
-      const resp = await (
+      const resp = (await (
         await fetch(
           `${this.base_url}/lookup-work?platform=${platform_esc}&filename=${filename_esc}&md5=${hash_esc}`,
         )
-      ).json();
+      ).json()) as WorkBib;
       // resp has work bib fields
       // and if there is an existing instance we should use that
-      if (resp.instance_id) {
-        this.update_work_bibinfo(resp as WorkBib);
-        this.update_work_instanceenv_info(resp.instance_id);
+      if ("instance_id" in resp) {
+        this.update_work_bibinfo(resp);
+        await this.update_work_instanceenv_info(
+          (resp as InstanceWork).instance_id,
+        );
         match_result.textContent = "Matched existing instance";
       } else {
         core_chooser.selectedIndex = match_core_chooser.selectedIndex;
-        this.update_work_bibinfo(resp as WorkBib);
+        this.update_work_bibinfo(resp);
         match_result.textContent = "Matched known work";
         this.add_to_file_list("content", file.name, { to_upload: file });
       }
@@ -1680,10 +1694,12 @@ class GISSTNewInstance extends HTMLElement {
     console.error(err);
     this.content_matcher.getElementsByClassName(
       "content_match_result",
-    )[0]!.textContent = `error computing hash`;
+    )[0].textContent = `error computing hash`;
   }
   async init_core_chooser(elt: HTMLSelectElement) {
-    const cores = await (await fetch(`${this.base_url}/cores`)).json();
+    const cores = (await (await fetch(`${this.base_url}/cores`)).json()) as {
+      cores: CoreInfo[];
+    };
     const default_option = document.createElement("option");
     default_option.disabled = true;
     default_option.selected = true;
@@ -1700,16 +1716,16 @@ class GISSTNewInstance extends HTMLElement {
       elt.appendChild(option);
     }
   }
-  async update_work_bibinfo(work: WorkBib) {
-    const core_chooser = document.querySelector(
+  update_work_bibinfo(work: WorkBib) {
+    const core_chooser = document.querySelector<HTMLSelectElement>(
       "#work-info select[name=work_core_chooser]",
-    )! as HTMLSelectElement;
-    const work_name = document.querySelector(
+    )!;
+    const work_name = document.querySelector<HTMLInputElement>(
       "#work-info input[name=work_name]",
-    )! as HTMLInputElement;
-    const work_version = document.querySelector(
+    )!;
+    const work_version = document.querySelector<HTMLInputElement>(
       "#work-info input[name=work_version]",
-    )! as HTMLInputElement;
+    )!;
     // TODO: fetch other bibliographic info fields...
     if (core_chooser.selectedOptions.length == 0) {
       core_chooser.selectedIndex = Array.from(core_chooser.options).findIndex(
@@ -1721,7 +1737,7 @@ class GISSTNewInstance extends HTMLElement {
     this.work.work_platform = work.work_platform;
     this.work.work_name = work.work_name;
     this.work.work_version = work.work_version;
-    const opt = core_chooser.selectedOptions[0]! as HTMLOptionElement;
+    const opt = core_chooser.selectedOptions[0];
     this.environment.environment_core_name = opt.dataset["coreName"]!;
     this.environment.environment_core_version = opt.dataset["coreVersion"]!;
     this.environment.environment_platform = this.work.work_platform;
@@ -1749,7 +1765,7 @@ class GISSTNewInstance extends HTMLElement {
     if ("existing" in file.source) {
       return;
     }
-    const src = file.source as FileUpload;
+    const src = file.source;
     if (src.upload != Upload.NotStarted) {
       return;
     }
@@ -1782,7 +1798,7 @@ class GISSTNewInstance extends HTMLElement {
         upload.start();
       });
       const object_id = (
-        await (
+        (await (
           await fetch(`${this.base_url}/objects/create`, {
             method: "POST",
             cache: "no-cache",
@@ -1795,7 +1811,7 @@ class GISSTNewInstance extends HTMLElement {
               object_description: file.filename,
             }),
           })
-        ).json()
+        ).json()) as ObjectLink
       ).object_id;
       src.upload = Upload.Finished;
       src.upload_result_id = object_id;
@@ -1814,9 +1830,9 @@ class GISSTNewInstance extends HTMLElement {
     source: { existing: string } | { to_upload: File },
   ) {
     const is_existing = "existing" in source;
-    const lst = document.querySelector(
+    const lst = document.querySelector<HTMLOListElement>(
       `#work-info p:has(input[data-target=${role}]) + ol`,
-    )! as HTMLOListElement;
+    )!;
     const line_item = document.createElement("li");
     const file_record = {
       ui_id: this.next_ui_id++,
@@ -1864,7 +1880,7 @@ class GISSTNewInstance extends HTMLElement {
         const idx = this.file_lists[role].findIndex(
           (fr) => fr.ui_id == file_record.ui_id,
         );
-        this.upload_file(role, idx, upload_status, progress);
+        void this.upload_file(role, idx, upload_status, progress);
       };
       line_item_upload_div.appendChild(upload_status);
       line_item_upload_div.appendChild(progress);
@@ -1888,11 +1904,9 @@ class GISSTNewInstance extends HTMLElement {
     move_down_btn.title = "Move down";
     line_item_move_div.appendChild(move_down_btn);
 
-    (
-      line_item.querySelector(
-        "button.gisst-New-instance-move-up",
-      )! as HTMLButtonElement
-    ).onclick = (_evt) => {
+    line_item.querySelector<HTMLButtonElement>(
+      "button.gisst-New-instance-move-up",
+    )!.onclick = (_evt) => {
       const idx = this.file_lists[role].findIndex(
         (fr) => fr.ui_id == file_record.ui_id,
       );
@@ -1904,11 +1918,10 @@ class GISSTNewInstance extends HTMLElement {
         lst.insertBefore(line_item, lst.children[idx - 1]);
       }
     };
-    (
-      line_item.querySelector(
-        "button.gisst-New-instance-move-down",
-      )! as HTMLButtonElement
-    ).onclick = (_evt) => {
+
+    line_item.querySelector<HTMLButtonElement>(
+      "button.gisst-New-instance-move-down",
+    )!.onclick = (_evt) => {
       const idx = this.file_lists[role].findIndex(
         (fr) => fr.ui_id == file_record.ui_id,
       );
@@ -1921,7 +1934,7 @@ class GISSTNewInstance extends HTMLElement {
         lst.insertBefore(swap_item, line_item);
       }
     };
-    (line_item.querySelector("button.remove")! as HTMLButtonElement).onclick = (
+    line_item.querySelector<HTMLButtonElement>("button.remove")!.onclick = (
       _evt,
     ) => {
       const idx = this.file_lists[role].findIndex(
@@ -1932,15 +1945,15 @@ class GISSTNewInstance extends HTMLElement {
     };
   }
   async update_work_instanceenv_info(instance_id: string) {
-    const env_config = document.querySelector(
+    const env_config = document.querySelector<HTMLInputElement>(
       "#work-info textarea[name=env_config]",
-    )! as HTMLInputElement;
-    const full_instance: FullInstance = await (
+    )!;
+    const full_instance = (await (
       await fetch(
         `${this.base_url}/instances/${encodeURIComponent(instance_id)}`,
         { headers: [["Accept", "application/json"]] },
       )
-    ).json();
+    ).json()) as FullInstance;
     env_config.value = JSON.stringify(
       full_instance.environment.environment_config || {},
     );
@@ -1955,9 +1968,9 @@ class GISSTNewInstance extends HTMLElement {
       });
     }
     this.environment = full_instance.environment;
-    const core_chooser = document.querySelector(
+    const core_chooser = document.querySelector<HTMLSelectElement>(
       "#work-info select[name=work_core_chooser]",
-    )! as HTMLSelectElement;
+    )!;
     core_chooser.selectedIndex = Array.from(core_chooser.options).findIndex(
       (o) =>
         o.dataset["coreName"] == this.environment.environment_core_name &&

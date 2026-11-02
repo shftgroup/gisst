@@ -1,31 +1,28 @@
-import typescriptEslint from "@typescript-eslint/eslint-plugin";
-import tsParser from "@typescript-eslint/parser";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import js from "@eslint/js";
-import { FlatCompat } from "@eslint/eslintrc";
-import eslintConfigPrettier from "eslint-config-prettier/flat";
+import tseslint from "typescript-eslint";
+import eslintConfigPrettier from "eslint-config-prettier";
+import { defineConfig, globalIgnores } from "eslint/config";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
-});
-
-export default [
-  ...compat.extends(
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-  ),
+export default defineConfig([
+  globalIgnores([
+    "**/dist",
+    "**/vite.config.js",
+    "**/playwright.config.ts",
+    "**/mock-api",
+    "*/types/",
+    "**/mock-data",
+    "**/scripts/",
+    "**/assets/",
+    "**/test/",
+    "*.test.ts",
+    "**/*.worker.ts",
+    "**/vitest.config.js",
+  ]),
   {
-    plugins: {
-      "@typescript-eslint": typescriptEslint,
-    },
-
+    files: ["**/*.{js,ts}"],
+    extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
     languageOptions: {
-      parser: tsParser,
+      parserOptions: { projectService: true },
     },
 
     rules: {
@@ -41,4 +38,4 @@ export default [
     },
   },
   eslintConfigPrettier,
-];
+]);

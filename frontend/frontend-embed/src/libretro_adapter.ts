@@ -72,7 +72,9 @@ export function loadRetroArch(
         });
       }
     } else {
-      throw "Asset downloads currently require OPFS env variable set to /home/web_user/retroarch/";
+      throw new Error(
+        "Asset downloads currently require OPFS env variable set to /home/web_user/retroarch/",
+      );
     }
   }
 
@@ -127,7 +129,7 @@ export function loadRetroArch(
   } else {
     promise = new Promise((resolve) => resolve(gisst_root + "/" + core));
   }
-  Promise.all([promise, fsready]).then(([scriptUrlOrBlob, _]) => {
+  void Promise.all([promise, fsready]).then(([scriptUrlOrBlob, _]) => {
     let initial_mod: LibretroModule | undefined;
     const module: LibretroModuleDef = {
       startRetroArch: function (
@@ -167,17 +169,17 @@ export function loadRetroArch(
         },
         function (init_mod: object | undefined) {
           if (init_mod === undefined) {
-            throw "Must use modularized emscripten";
+            throw new Error("Must use modularized emscripten");
           }
-          initial_mod = <LibretroModule>init_mod!;
+          initial_mod = <LibretroModule>init_mod;
         },
       ],
       postRun: [],
       onRuntimeInitialized: function () {
         if (initial_mod === undefined) {
-          throw "Must use modularized emscripten libretro";
+          throw new Error("Must use modularized emscripten libretro");
         }
-        const module = <LibretroModule>initial_mod!;
+        const module = initial_mod;
         loaded_cb(module);
       },
       locateFile: function (path, _prefix) {
@@ -202,8 +204,11 @@ export function loadRetroArch(
       const importPromise = import(
         /* @vite-ignore */ new URL(scriptUrlOrBlob, import.meta.url).toString()
       );
+      type LibretroImport = {
+        default: (mod: LibretroModuleDef) => Promise<LibretroModule>;
+      };
       importPromise
-        .then((fac) => {
+        .then((fac: LibretroImport) => {
           cores[core] = fac.default;
           instantiate(cores[core]);
         })

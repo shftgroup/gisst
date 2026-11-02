@@ -40,7 +40,7 @@ RUN cargo binstall -y sqlx-cli cargo-udeps cargo-audit cargo-deny cargo-vet forg
 COPY .devcontainer/nginx.conf /etc/nginx/sites-enabled/default
 
 RUN npm install -g typescript-language-server
-RUN npm install -g depcheck
+RUN npm install -g knip
 RUN npm install -g prettier
 RUN pipx install pre-commit && pipx ensurepath
 

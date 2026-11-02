@@ -88,8 +88,8 @@ test.describe("Zoom Buttons", () => {
       await page.getByRole("button", { name: button.name }).click();
       const emulatorDiv = page.locator("#canvas_div");
 
-      await expect(emulatorDiv!).toHaveCSS("width", `${button.width}px`);
-      await expect(emulatorDiv!).toHaveCSS("height", `${button.height}px`);
+      await expect(emulatorDiv).toHaveCSS("width", `${button.width}px`);
+      await expect(emulatorDiv).toHaveCSS("height", `${button.height}px`);
     });
   }
 });
