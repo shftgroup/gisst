@@ -64,7 +64,14 @@ type V86SyncFileImage = {
  * better compression ration.
  */
 export type V86Image = V86AsyncFileImage | V86SyncFileImage;
-export type V86ImageType = "hda" | "hdb" | "fda" | "fdb" | "cdrom";
+export type V86ImageType =
+  | "hda"
+  | "hdb"
+  | "fda"
+  | "fdb"
+  | "cdrom"
+  | "bios"
+  | "vga_bios";
 
 /**
  * Emulator instance constructor options.

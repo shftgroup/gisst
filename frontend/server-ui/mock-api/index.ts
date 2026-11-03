@@ -79,7 +79,7 @@ const coresHandler: MockHandler = {
           core_name: "v86",
           core_version: "some_hash",
           core_platform: "x86 PC",
-        }
+        },
       ],
     });
   },
@@ -191,23 +191,23 @@ const instanceV86DataHandler: MockHandler = {
         environment_core_name: "v86",
         environment_core_version: "some_hash",
         environment_derived_from: null,
-        "environment_config": {
-          "bios": {
-            "url": "seabios.bin"
+        environment_config: {
+          bios: {
+            url: "$CONTENT2",
           },
-          "hda": {
-            "async": true,
-            "url": "$CONTENT0"
+          hda: {
+            async: true,
+            url: "$CONTENT0",
           },
-          "cdrom": {
-            "async": true,
-            "url": "$CONTENT1",
+          cdrom: {
+            async: true,
+            url: "$CONTENT1",
           },
-          "memory_size": 67108864,
-          "vga_bios": {
-            "url": "vgabios.bin"
+          memory_size: 67108864,
+          vga_bios: {
+            url: "vgabios.bin",
           },
-          "vga_memory_size": 8388608
+          vga_memory_size: 8388608,
         },
         created_on: new Date(8.64e15),
       },
@@ -227,6 +227,15 @@ const instanceV86DataHandler: MockHandler = {
           object_role_index: 1,
           file_hash: "some_hash",
           file_filename: "cdrom.img",
+          file_source_path: "",
+          file_dest_path: "",
+        },
+        {
+          object_id: "o7",
+          object_role: "content",
+          object_role_index: 2,
+          file_hash: "some_hash",
+          file_filename: "somebios.bin",
           file_source_path: "",
           file_dest_path: "",
         },

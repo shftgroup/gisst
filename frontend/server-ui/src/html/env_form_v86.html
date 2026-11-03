@@ -110,24 +110,36 @@
           <label for="bios-chooser">BIOS:</label>
           <select
             id="bios-chooser"
-            name="bios"
+            name="bios-select"
             class="gisst-New-instance-bios-chooser"
           >
             <option value="bios-seabios">Seabios</option>
             <option value="bios-bochs">Bochs</option>
             <option value="bios-custom">Custom</option>
           </select>
+          <input
+            type="file"
+            name="bios"
+            id="bios-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
 
           <label for="vga-bios-chooser">VGA BIOS:</label>
           <select
             id="vga-bios-chooser"
-            name="vga-bios"
+            name="vga-bios-select"
             class="gisst-New-instance-vga-bios-chooser"
           >
             <option value="vga-bios-standard">Standard</option>
             <option value="vga-bios-bochs">Bochs</option>
             <option value="vga-bios-custom">Custom</option>
           </select>
+          <input
+            type="file"
+            name="vga_bios"
+            id="vga-bios-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
         </div>
       </div>
     </form>

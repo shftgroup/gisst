@@ -2,7 +2,15 @@ import html from "../../html/env_form_v86.html?raw";
 import styles from "../../css/server-ui-all.css?inline";
 import { V86ImageType, V86Options } from "../v86";
 
-const V86Images = ["hda", "hdb", "fda", "fdb", "cdrom"] as const;
+const V86Images = [
+  "hda",
+  "hdb",
+  "fda",
+  "fdb",
+  "cdrom",
+  "bios",
+  "vga_bios",
+] as const;
 
 // Initialise styles and template
 const STYLE_SHEET = new CSSStyleSheet();
@@ -65,8 +73,12 @@ export class GISSTNewInstanceEnvFormV86
   private img_upload_labels: HTMLParagraphElement[];
   private mem_input: HTMLInputElement;
   private gpu_mem_input: HTMLInputElement;
-  private bios_chooser: HTMLInputElement;
-  private vga_bios_chooser: HTMLInputElement;
+  private bios_chooser: HTMLSelectElement;
+  private bios_upload: HTMLInputElement;
+  private bios_custom?: HTMLOptionElement;
+  private vga_bios_chooser: HTMLSelectElement;
+  private vga_bios_upload: HTMLInputElement;
+  private vga_bios_custom?: HTMLOptionElement;
   private env_copy_button: HTMLButtonElement;
   private env_preview: HTMLTextAreaElement;
 
@@ -97,9 +109,15 @@ export class GISSTNewInstanceEnvFormV86
     ) as HTMLInputElement;
     this.bios_chooser = fragment.querySelector(
       "#bios-chooser",
+    ) as HTMLSelectElement;
+    this.bios_upload = fragment.querySelector(
+      "#bios-upload",
     ) as HTMLInputElement;
     this.vga_bios_chooser = fragment.querySelector(
       "#vga-bios-chooser",
+    ) as HTMLSelectElement;
+    this.vga_bios_upload = fragment.querySelector(
+      "#vga-bios-upload",
     ) as HTMLInputElement;
     this.env_copy_button = fragment.querySelector(
       "#env-config-form-copy-btn",
@@ -116,6 +134,19 @@ export class GISSTNewInstanceEnvFormV86
         () => (img_upload.dataset.changed = "true"),
       );
     }
+
+    this.bios_chooser.addEventListener("input", (ev) => {
+      if (this.bios_chooser.value === "bios-custom") {
+        ev.stopPropagation();
+        this.bios_upload.click();
+      }
+    });
+    this.vga_bios_chooser.addEventListener("input", (ev) => {
+      if (this.vga_bios_chooser.value === "vga-bios-custom") {
+        ev.stopPropagation();
+        this.vga_bios_upload.click();
+      }
+    });
 
     this.shadow.appendChild(fragment);
   }
@@ -158,6 +189,19 @@ export class GISSTNewInstanceEnvFormV86
         --this.cur_content_idx;
         delete this.env_conf[img_type];
 
+        if (img_upload.name === "bios") {
+          this.bios_chooser.value = "bios-seabios";
+          this.bios_custom?.remove();
+          this.bios_custom = undefined;
+          this.bios_upload.value = "";
+        }
+        if (img_upload.name === "vga_bios") {
+          this.vga_bios_chooser.value = "vga-bios-standard";
+          this.vga_bios_custom?.remove();
+          this.vga_bios_custom = undefined;
+          this.vga_bios_upload.value = "";
+        }
+
         // Correct indicies on remaining images
         for (const image_type of V86Images) {
           const image = this.env_conf[image_type];
@@ -194,12 +238,20 @@ export class GISSTNewInstanceEnvFormV86
         : "";
 
     // Populate BIOS
-    this.bios_chooser.value = "bios-seabios";
-    if (this.env_conf.bios?.url === "bochs-bios.bin") {
+    this.bios_chooser.value = this.env_conf.bios
+      ? "bios-custom"
+      : "bios-seabios";
+    if (this.env_conf.bios?.url === "seabios.bin") {
+      this.bios_chooser.value = "bios-seabios";
+    } else if (this.env_conf.bios?.url === "bochs-bios.bin") {
       this.bios_chooser.value = "bios-bochs";
     }
-    this.vga_bios_chooser.value = "vga-bios-standard";
-    if (this.env_conf.bios?.url === "bochs-vgabios.bin") {
+    this.vga_bios_chooser.value = this.env_conf.vga_bios
+      ? "vga-bios-custom"
+      : "vga-bios-standard";
+    if (this.env_conf.vga_bios?.url === "vgabios.bin") {
+      this.vga_bios_chooser.value = "vga-bios-standard";
+    } else if (this.env_conf.vga_bios?.url === "bochs-vgabios.bin") {
       this.vga_bios_chooser.value = "vga-bios-bochs";
     }
 
@@ -214,13 +266,43 @@ export class GISSTNewInstanceEnvFormV86
    * Queries the current config and updates all the file name labels.
    */
   #update_img_names() {
-    for (let i = 0; i < this.img_uploads.length; ++i) {
-      const img_upload = this.img_uploads[i];
-      const img_upload_label = this.img_upload_labels[i];
-      img_upload_label.textContent =
+    for (const label of this.img_upload_labels) {
+      const data_image = label.dataset.image;
+      const img_upload = this.shadow.querySelector(
+        `input[name="${data_image}"]`,
+      ) as HTMLInputElement;
+      label.textContent =
         img_upload.files?.[0]?.name ??
         img_upload.dataset.existing_filename ??
         "No file chosen";
+    }
+
+    if (this.bios_chooser.value === "bios-custom") {
+      const option_text =
+        this.bios_upload.files?.[0]?.name ??
+        this.bios_upload.dataset.existing_filename ??
+        "Unknown";
+      if (!this.bios_custom) {
+        this.bios_custom = new Option(option_text, "bios-custom");
+        this.bios_chooser.add(this.bios_custom);
+      } else {
+        this.bios_custom.text = option_text;
+      }
+      this.bios_custom.selected = true;
+    }
+
+    if (this.vga_bios_chooser.value === "vga-bios-custom") {
+      const option_text =
+        this.vga_bios_upload.files?.[0]?.name ??
+        this.vga_bios_upload.dataset.existing_filename ??
+        "Unknown";
+      if (!this.vga_bios_custom) {
+        this.vga_bios_custom = new Option(option_text, "vga-bios-custom");
+        this.vga_bios_chooser.add(this.vga_bios_custom);
+      } else {
+        this.vga_bios_custom.text = option_text;
+      }
+      this.vga_bios_custom.selected = true;
     }
   }
 
@@ -234,24 +316,31 @@ export class GISSTNewInstanceEnvFormV86
     const memory_size_mib = Number(form_data.get("mem-size"));
     const vga_memory_size_mib = Number(form_data.get("gpu-memory"));
 
-    const bios = form_data.get("bios") as "bios-seabios" | "bios-bochs";
-    const vga_bios = form_data.get("vga-bios") as
+    const bios = form_data.get("bios-select") as
+      | "bios-seabios"
+      | "bios-bochs"
+      | "bios-custom";
+    const vga_bios = form_data.get("vga-bios-select") as
       | "vga-bios-standard"
-      | "vga-bios-bochs";
+      | "vga-bios-bochs"
+      | "vga-bios-custom";
+
+    if (bios !== "bios-custom" && this.bios_custom) {
+      const index = this.#extract_content_index(old_config.bios!.url)!;
+      this.remove_content_file(index);
+      this.dispatchEvent(new GISSTEnvFormOnContentRemoveEvent(index));
+    }
+
+    if (vga_bios !== "vga-bios-custom" && this.vga_bios_custom) {
+      const index = this.#extract_content_index(old_config.vga_bios!.url)!;
+      this.remove_content_file(index);
+      this.dispatchEvent(new GISSTEnvFormOnContentRemoveEvent(index));
+    }
 
     // Build env config from form data
     let config: V86Options = {
       memory_size: memory_size_mib * 1048576,
       vga_memory_size: vga_memory_size_mib * 1048576,
-      bios: {
-        url: bios === "bios-seabios" ? "seabios.bin" : "bochs-bios.bin",
-      },
-      vga_bios: {
-        url:
-          vga_bios === "vga-bios-standard"
-            ? "vgabios.bin"
-            : "bochs-vgabios.bin",
-      },
     };
 
     // Setup file <-> `$CONTENT{X}` mapping
@@ -268,16 +357,35 @@ export class GISSTNewInstanceEnvFormV86
       // Image is either a new selection or modification
       delete img_upload.dataset.changed;
       delete img_upload.dataset.existing_filename;
-      const index = old_image
-        ? this.#extract_content_index(old_image.url)!
-        : this.cur_content_idx++;
+      const old_index = old_image
+        ? this.#extract_content_index(old_image.url)
+        : null;
+      const index = old_index ?? this.cur_content_idx++;
       config[image_type] = {
         url: `$CONTENT${index}`,
-        async: true,
+        async:
+          img_upload.name === "bios" || img_upload.name === "vga_bios"
+            ? undefined
+            : true,
       };
       this.dispatchEvent(
         new GISSTEnvFormOnContentAddEvent(img_upload.files![0], index),
       );
+    }
+
+    if (bios !== "bios-custom") {
+      config.bios = {
+        url: bios === "bios-seabios" ? "seabios.bin" : "bochs-bios.bin",
+      };
+    }
+
+    if (vga_bios !== "vga-bios-custom") {
+      config.vga_bios = {
+        url:
+          vga_bios === "vga-bios-standard"
+            ? "vgabios.bin"
+            : "bochs-vgabios.bin",
+      };
     }
 
     this.env_preview.value = JSON.stringify(config, null, 2);
@@ -287,7 +395,7 @@ export class GISSTNewInstanceEnvFormV86
   }
 
   /**
-   * Copies the text in the environment configuration textarea (aka the preview)
+   * Copies the text in the environment configuration textarea (aka the preview).
    */
   async #copy_config() {
     await navigator.clipboard.writeText(this.env_preview.value);

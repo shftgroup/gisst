@@ -1594,10 +1594,7 @@ class GISSTNewInstance extends HTMLElement {
       );
     });
     this.addEventListener("gisst-env-form-on-content-remove", (ev) => {
-      this.remove_from_file_list(
-        "content",
-        ev.index,
-      )
+      this.remove_from_file_list("content", ev.index);
     });
 
     // Form submission handling
@@ -2140,11 +2137,10 @@ class GISSTNewInstance extends HTMLElement {
     this.file_lists[role].splice(position, 1, file_record);
   }
 
-  remove_from_file_list(
-    role: Role,
-    index: number
-  ) {
-    const remove_button = this.file_lists[role][index].list_item.querySelector('button[title="remove"]') as HTMLButtonElement;
+  remove_from_file_list(role: Role, index: number) {
+    const remove_button = this.file_lists[role][index].list_item.querySelector(
+      'button[title="Remove"]',
+    ) as HTMLButtonElement;
     remove_button.click();
   }
 
