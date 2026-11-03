@@ -67,6 +67,7 @@ export class GISSTNewInstanceEnvFormV86
   private gpu_mem_input: HTMLInputElement;
   private bios_chooser: HTMLInputElement;
   private vga_bios_chooser: HTMLInputElement;
+  private env_copy_button: HTMLButtonElement;
   private env_preview: HTMLTextAreaElement;
 
   constructor() {
@@ -100,11 +101,15 @@ export class GISSTNewInstanceEnvFormV86
     this.vga_bios_chooser = fragment.querySelector(
       "#vga-bios-chooser",
     ) as HTMLInputElement;
+    this.env_copy_button = fragment.querySelector(
+      "#env-config-form-copy-btn",
+    ) as HTMLButtonElement;
     this.env_preview = fragment.querySelector(
       'textarea[name="env_config"]',
     ) as HTMLTextAreaElement;
 
     this.form.addEventListener("input", () => this.#generate_config());
+    this.env_copy_button.addEventListener("click", () => this.#copy_config());
     for (const img_upload of this.img_uploads) {
       img_upload.addEventListener(
         "input",
@@ -279,6 +284,26 @@ export class GISSTNewInstanceEnvFormV86
     this.env_conf = config;
     this.#update_img_names();
     this.dispatchEvent(new GISSTEnvFormOnNewConfEvent(this.env_conf));
+  }
+
+  /**
+   * Copies the text in the environment configuration textarea (aka the preview)
+   */
+  async #copy_config() {
+    await navigator.clipboard.writeText(this.env_preview.value);
+
+    const original_text = this.env_copy_button.textContent;
+    this.env_copy_button.textContent = "Copied!";
+    this.env_copy_button.disabled = true;
+    this.env_copy_button.classList.remove("gisst-Search-btn-primary");
+    this.env_copy_button.classList.add("gisst-Search-btn-secondary");
+
+    setTimeout(() => {
+      this.env_copy_button.textContent = original_text;
+      this.env_copy_button.disabled = false;
+      this.env_copy_button.classList.remove("gisst-Search-btn-secondary");
+      this.env_copy_button.classList.add("gisst-Search-btn-primary");
+    }, 2000);
   }
 
   /**

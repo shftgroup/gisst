@@ -214,8 +214,23 @@ li:last-child .gisst-New-instance-move-down {
   margin-bottom: 1rem;
 }
 
-.gisst-New-instance-environment > textarea {
+.gisst-New-instance-config-preview-container {
+  background-color: rgb(34, 33, 40);
+  border: 0.1rem solid rgb(53, 53, 55);
+  border-radius: 0.5rem;
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+}
+
+.gisst-New-instance-config-preview-container > textarea {
+  border: none;
+  border-radius: 0.5rem;
+  outline: none;
+  resize: none;
+
   margin: 0;
+  padding: 0.5rem;
   width: 100%;
   height: 100%;
 
@@ -223,7 +238,13 @@ li:last-child .gisst-New-instance-move-down {
   overflow: auto;
 }
 
+.gisst-New-instance-config-preview-container > button {
+  height: max-content;
+  margin: 0.5rem;
+}
+
 .gisst-New-instance-config-manual > textarea {
+  margin: 0;
   max-width: 42rem;
   min-height: 20rem;
 }
