@@ -53,8 +53,3 @@ export class GISSTNewInstanceEnvFormRA extends GISSTNewInstanceEnvForm {
 
   remove_content_file(_index: number) {}
 }
-
-customElements.define(
-  "gisst-new-instance-env-form-ra",
-  GISSTNewInstanceEnvFormRA,
-);
