@@ -32,7 +32,7 @@ export class BlockIndex {
     ths.object_size = object_size;
     const zeroes = new Uint8Array(object_size);
     if (!(await ths.insert_exact(zeroes, 0, 0))) {
-      throw "Couldn't initialize with zeros";
+      throw new Error("Couldn't initialize with zeros");
     }
     return ths;
   }
@@ -49,7 +49,7 @@ export class BlockIndex {
     frame: number,
   ): Promise<InsertResult> {
     if (object.length != this.object_size) {
-      throw "object too large";
+      throw new Error("object too large");
     }
     const hash = await xxhash128(
       new Uint32Array(object.buffer, object.byteOffset, object.byteLength / 4),
@@ -133,12 +133,12 @@ export class BlockIndex {
     const object = this.objects.pop();
     const hash = this.hashes.pop();
     if (!hash || !object) {
-      throw "Tried to pop empty index";
+      throw new Error("Tried to pop empty index");
     }
     const bucket = this.index[hash];
     const loc = bucket.indexOf(idx);
     if (loc < 0) {
-      throw "Tried to pop index already popped";
+      throw new Error("Tried to pop index already popped");
     }
     bucket.splice(loc, 1);
     if (bucket.length == 0) {
@@ -158,13 +158,13 @@ export class BlockIndex {
     }
     this.additions.length = i + 1;
   }
-  public clear() {
+  public async clear() {
     const zeros = this.objects[0];
     this.index = {};
     this.objects.length = 0;
     this.hashes.length = 0;
     this.additions.length = 0;
-    this.insert_exact(zeros, 0, 0);
+    await this.insert_exact(zeros, 0, 0);
   }
   public length() {
     return this.objects.length;

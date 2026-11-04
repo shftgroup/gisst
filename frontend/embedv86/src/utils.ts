@@ -39,14 +39,14 @@ export function bytes_to_uuid(buf: Uint8Array): string {
 }
 export function nonnull(obj: unknown): asserts obj {
   if (obj == null) {
-    throw "Must be non-null";
+    throw new Error("Must be non-null");
   }
 }
 //https://stackoverflow.com/a/30407959
 export function dataURLToBlob(dataurl: string) {
   const arr = dataurl.split(","),
-    mime = arr[0]!.match(/:(.*?);/)![1],
-    bstr = atob(arr[1]!);
+    mime = arr[0].match(/:(.*?);/)![1],
+    bstr = atob(arr[1]);
   let n = bstr.length;
   const u8arr = new Uint8Array(n);
   while (n--) {
@@ -59,7 +59,8 @@ export function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
+    reader.onerror = () =>
+      reject(new Error("reader error", { cause: reader.error }));
     reader.onabort = () => reject(new Error("Read aborted"));
     reader.readAsDataURL(blob);
   });
@@ -134,7 +135,7 @@ export async function mux_videos(webms: Blob[][]): Promise<Blob> {
         const vpack = vpacket.value.clone({
           timestamp: vtime,
         });
-        out_video_src.add(
+        await out_video_src.add(
           vpack,
           vtime == 0
             ? { decoderConfig: (await vtrack.getDecoderConfig())! }
@@ -149,7 +150,7 @@ export async function mux_videos(webms: Blob[][]): Promise<Blob> {
         const apack = apacket.value.clone({
           timestamp: atime,
         });
-        out_audio_src.add(
+        await out_audio_src.add(
           apack,
           atime == 0
             ? { decoderConfig: (await atrack.getDecoderConfig())! }

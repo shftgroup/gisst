@@ -3,6 +3,7 @@ import { nonnull, bytes_to_uuid } from "./utils";
 import { WorkerResponse } from "./worker_protocol.d";
 import ReplayWorker from "./replay_worker.ts?worker&inline";
 import { mux_videos } from "./utils";
+
 export enum Evt {
   KeyCode = 0,
   MouseClick = 1,
@@ -59,6 +60,7 @@ export class Checkpoint {
     this.thumbnail = thumbnail;
   }
 }
+const expired_fence = (_seq: number) => {};
 
 export class Replay {
   events: ReplayEvent[] = []; // replace with file
@@ -141,7 +143,7 @@ export class Replay {
             const seq = data.args.sequence;
             if (ths.pending_fences[seq]) {
               ths.pending_fences[seq](seq);
-              delete ths.pending_fences[seq];
+              ths.pending_fences[seq] = expired_fence;
             }
             break;
           }
@@ -236,13 +238,22 @@ export class Replay {
   ) {
     // seek file, do reads
     if (event_index > this.events.length) {
-      throw "Seek: event index out of bounds";
+      throw new Error("Seek: event index out of bounds", {
+        cause: { checkpoint_index, event_index, t },
+      });
     }
     const [wraps, time] = this.cpu_time(t);
     if (event_index < this.events.length) {
       if (this.events[event_index].when < t) {
         console.log("evt time check", this.events[event_index].when, t);
-        throw "Seek: current event is before given t";
+        throw new Error("Seek: current event is before given t", {
+          cause: {
+            checkpoint_index,
+            event_index,
+            t,
+            event: this.events[event_index],
+          },
+        });
       }
     }
     this.index = event_index;
@@ -274,7 +285,7 @@ export class Replay {
       emulator.keyboard_set_status(false);
       // don't truncate!
     } else {
-      throw "Resume: invalid mode";
+      throw new Error("Resume: invalid mode", { cause: { mode } });
     }
   }
   current_time(): number {
@@ -379,7 +390,7 @@ export class Replay {
       case ReplayMode.Record: {
         let last_t = 0;
         if (this.recorder) {
-          const canvas = this.container!.getElementsByTagName("canvas")[0]!;
+          const canvas = this.container!.getElementsByTagName("canvas")[0];
           if (canvas.style.display == "none") {
             // hidden because we're in text mode, so we absolutely must make a screenshot to get that into the mediastream!
             const screen = emulator.screen_make_screenshot();
@@ -393,7 +404,8 @@ export class Replay {
         }
         if (real_t - last_t > REPLAY_CHECKPOINT_INTERVAL) {
           // do not await, could take some time
-          this.make_checkpoint(
+          // TODO fixme, should at least guarantee the replay checkpoint list gets bigger before the await
+          void this.make_checkpoint(
             emulator,
             new Uint8Array(await emulator.save_state()),
           );
@@ -472,7 +484,7 @@ export class Replay {
     if (record_video) {
       nonnull(audioDestination);
       nonnull(container);
-      const canvas = container.getElementsByTagName("canvas")[0]!;
+      const canvas = container.getElementsByTagName("canvas")[0];
       const canvas_stream = canvas.captureStream(30);
       const audio_stream = audioDestination.stream;
       const stream = new MediaStream(
@@ -481,7 +493,11 @@ export class Replay {
       r.recording_stream = stream;
     }
     // do not await, could take some time
-    r.make_checkpoint(emulator, new Uint8Array(await emulator.save_state()));
+    // TODO: fixme, should at least make the checkpoint list bigger before awaiting
+    void r.make_checkpoint(
+      emulator,
+      new Uint8Array(await emulator.save_state()),
+    );
     return r;
   }
   private async finish_playback(emulator: V86) {
@@ -493,7 +509,7 @@ export class Replay {
         emulator,
       );
       await emulator.run();
-      const video = this.container!.getElementsByTagName("video")[0]!;
+      const video = this.container!.getElementsByTagName("video")[0];
       emulator.speaker_adapter.mixer.set_volume(video.muted ? 0 : 1);
       video.style.display = "none";
       video.pause();
@@ -516,9 +532,9 @@ export class Replay {
     this.encode_proms = [];
   }
   public async get_video(): Promise<File | null> {
-    return this.video;
+    return Promise.resolve(this.video);
   }
-  private async finish_recording(emulator: V86) {
+  private async finish_recording(emulator: V86): Promise<void> {
     const proms = [
       this.make_checkpoint(
         emulator,
@@ -529,7 +545,7 @@ export class Replay {
       proms.push(this.stop_video_recording());
     }
     this.mode = ReplayMode.Finished;
-    Promise.all(proms);
+    await Promise.all(proms);
   }
   private async worker_fence(): Promise<void> {
     const fence = this.last_fence;
@@ -537,7 +553,7 @@ export class Replay {
     return new Promise((resolve) => {
       this.pending_fences.push((num) => {
         if (num != fence) {
-          throw "wrong fence";
+          throw new Error("wrong fence", { cause: { num, fence } });
         }
         resolve();
       });
@@ -568,7 +584,7 @@ export class Replay {
     emulator.mouse_set_status(false);
     emulator.keyboard_set_status(false);
     if (this.video) {
-      const video = this.container.getElementsByTagName("video")[0]!;
+      const video = this.container.getElementsByTagName("video")[0];
       return new Promise((resolve) => {
         video.onloadedmetadata = (_e) => {
           // duration is ready
@@ -576,8 +592,8 @@ export class Replay {
         };
         video.src = URL.createObjectURL(this.video!);
         video.style.display = "block";
-        video.play();
-        emulator.stop();
+        void video.play();
+        void emulator.stop();
       });
     } else {
       const check = this.checkpoints[0];
@@ -590,7 +606,7 @@ export class Replay {
   }
   async serialize(): Promise<ArrayBuffer> {
     if (this.pending_serialize) {
-      throw "please wait for previous serialize call to finish";
+      throw new Error("please wait for previous serialize call to finish");
     }
     return new Promise((resolve, _reject) => {
       this.pending_serialize = resolve;
@@ -606,7 +622,9 @@ export class Replay {
     const magic = view.getUint32(x, true);
     x += 4;
     if (magic != 0x4c505256) {
-      throw "Invalid magic, not a v86replay file";
+      throw new Error("Invalid magic, not a v86replay file", {
+        cause: { magic },
+      });
     }
     // metadata: 16 bytes UUID; reserve the rest for later.
     const id = bytes_to_uuid(new Uint8Array(buf, x, 16));
@@ -615,7 +633,7 @@ export class Replay {
     const version = view.getUint8(x);
     // x += 1 would move us past that version field;
     if (version > REPLAY_VERSION) {
-      throw "Unrecognized replay version";
+      throw new Error("Unrecognized replay version", { cause: { version } });
     }
     if (version <= REPLAY_LEGACY_VERSION) {
       return (await LegacyReplay.deserialize(buf)) as unknown as Replay;

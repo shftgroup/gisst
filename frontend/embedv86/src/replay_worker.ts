@@ -72,7 +72,7 @@ class ReplayData {
         }
       }
     }
-    return buffer;
+    return Promise.resolve(buffer);
   }
   async encode_checkpoint(
     time: number,
@@ -202,7 +202,7 @@ class ReplayData {
     x += 4;
     // these will be written as we go
     for (const evt of events) {
-      view.setUint8(x, evt.code as number);
+      view.setUint8(x, evt.code);
       x += 1;
       view.setBigUint64(x, BigInt(evt.when), true);
       x += 8;
@@ -225,7 +225,7 @@ class ReplayData {
           view.setFloat64(x, val[0], true);
           if (Number.isNaN(view.getFloat64(x, true))) {
             console.error("uh oh");
-            throw "no way";
+            throw new Error("deserialized NaN mouse wheel or delta");
           }
           view.setFloat64(x + 8, val[1], true);
           x += 8 * 2;
@@ -239,7 +239,7 @@ class ReplayData {
           x += 8 * 4;
           break;
         default:
-          throw "Unhandled event type";
+          throw new Error("Unhandled event type", { cause: evt });
       }
     }
     // these will be written as we go
@@ -332,18 +332,20 @@ class ReplayData {
       await BlockIndex.create(SUPERBLOCK_SIZE * 4),
     );
     for (let i = 0; i < frame_count; i++) {
-      const code = view.getUint8(x);
+      const code: Evt = view.getUint8(x);
       x += 1;
       const when_b = view.getBigUint64(x, true);
       x += 8;
       if (when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
         console.log(when_b);
-        throw "When is too big";
+        throw new Error("When is too big", { cause: { frame: i } });
       }
       const when = Number(when_b);
       if (BigInt(when) != when_b) {
         console.log(when, when_b);
-        throw "When didn't match";
+        throw new Error("When didn't match", {
+          cause: { frame: i, when, when_b },
+        });
       }
       let value: object | number;
       switch (code) {
@@ -377,7 +379,9 @@ class ReplayData {
           break;
         }
         default:
-          throw "Unhandled event type";
+          throw new Error("Unhandled event type", {
+            cause: { frame: i, when, code },
+          });
       }
       events.push(new ReplayEvent(when, code, value));
     }
@@ -387,12 +391,16 @@ class ReplayData {
       x += 8;
       if (when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
         console.log(when_b);
-        throw "When is too big";
+        throw new Error("When is too big", {
+          cause: { when_b, checkpoint: i },
+        });
       }
       const when = Number(when_b);
       if (BigInt(when) != when_b) {
         console.log(when, when_b);
-        throw "When didn't match";
+        throw new Error("When didn't match", {
+          cause: { checkpoint: i, when, when_b },
+        });
       }
       const event_index = view.getUint32(x, true);
       x += 4;
@@ -470,7 +478,7 @@ class ReplayData {
     };
   }
 }
-let replay;
+let replay: ReplayData | null;
 const queue: WorkerCommand[] = [];
 let busy = false;
 if (!import.meta.vitest) {
@@ -498,7 +506,7 @@ function processCommand(data: WorkerCommand) {
   console.log("start cmd", data);
   switch (data.type) {
     case "init": {
-      Promise.all([
+      void Promise.all([
         BlockIndex.create(BLOCK_SIZE),
         BlockIndex.create(SUPERBLOCK_SIZE * 4),
       ]).then(([bi, sbi]) => {
@@ -518,7 +526,7 @@ function processCommand(data: WorkerCommand) {
     case "serialize": {
       const events = data.args.events;
       const checkpoints = data.args.checkpoints;
-      replay!.serialize(events, checkpoints).then((ab: ArrayBuffer) => {
+      void replay!.serialize(events, checkpoints).then((ab: ArrayBuffer) => {
         postMessage(
           { type: "serialize", args: { result: ab } },
           { transfer: [ab] },
@@ -529,7 +537,7 @@ function processCommand(data: WorkerCommand) {
     }
     case "deserialize": {
       const buffer = data.args.buffer;
-      ReplayData.deserialize(buffer).then((result) => {
+      void ReplayData.deserialize(buffer).then((result) => {
         replay = result.worker_data;
         postMessage({ type: "deserialize", args: result.replay_data });
         finishCommand();
@@ -540,7 +548,7 @@ function processCommand(data: WorkerCommand) {
       const time = data.args.time;
       const state = data.args.state;
       const which = data.args.which;
-      replay!
+      void replay!
         .encode_checkpoint(time, state, which)
         .then((result: EncodedCheckpoint) => {
           postMessage(
@@ -560,7 +568,7 @@ function processCommand(data: WorkerCommand) {
       const header_info = data.args.header_info;
       const superblock_seq = data.args.superblock_seq;
       const which = data.args.which;
-      replay!
+      void replay!
         .restore_checkpoint(header_info, superblock_seq)
         .then((result: ArrayBuffer) => {
           postMessage(
@@ -577,7 +585,7 @@ function processCommand(data: WorkerCommand) {
       break;
     }
     default:
-      throw "Unrecognized message";
+      throw new Error("Unrecognized message", { cause: data });
   }
 }
 setTimeout(pumpQueue, 0);

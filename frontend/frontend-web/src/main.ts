@@ -14,7 +14,7 @@ window.onload = async function () {
   );
   const options = {
     controls: ControllerOverlayMode.Auto,
-    record_from_start: params.get("boot_into_record"),
+    record_from_start: params.get("boot_into_record") == "true",
     record_video: true,
   };
   const ui = new UI(<HTMLDivElement>document.getElementById("ui")!, false);

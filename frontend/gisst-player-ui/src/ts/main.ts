@@ -24,6 +24,10 @@ import "gisst-style/base.css";
 import templates from "../html/templates.html?raw";
 import { UITemplateConst, UIIDConst } from "./template_consts";
 
+const templates_element: HTMLTemplateElement =
+  document.createElement("template");
+templates_element.innerHTML = templates.trim();
+
 export enum ReplayMode {
   Inactive = 0,
   Record,
@@ -105,53 +109,53 @@ export class UI {
     }
     this.control = {
       toggle_mute: () => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       set_zoom: (_lev: ZoomLevel) => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       enter_fullscreen: () => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       activate_save: (_save: string) => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       create_save: () => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       load_state: (_sn: string) => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       save_state: () => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       start_replay: () => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       stop_and_save_replay: () => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       play_replay: (_sn: string) => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       download_file: (
         _category: "save" | "state" | "replay",
         _file_name: string,
       ) => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       upload_file: (
         _category: "save" | "state" | "replay",
         _file_name: string,
         _metadata: Metadata,
       ) => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       checkpoints_of: (_replay: string) => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
       evt_to_html: (_evt: unknown) => {
-        throw "not implemented";
+        throw new Error("not implemented");
       },
     };
     this.ui_root = ui_root;
@@ -207,52 +211,52 @@ export class UI {
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_TOGGLE_MUTE_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.toggle_mute();
+          this.control.toggle_mute();
         });
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_ZOOM_X05_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.set_zoom(ZoomLevel.X05);
+          this.control.set_zoom(ZoomLevel.X05);
         });
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_ZOOM_X1_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.set_zoom(ZoomLevel.X1);
+          this.control.set_zoom(ZoomLevel.X1);
         });
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_ZOOM_X2_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.set_zoom(ZoomLevel.X2);
+          this.control.set_zoom(ZoomLevel.X2);
         });
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_ZOOM_FIT_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.set_zoom(ZoomLevel.Fit);
+          this.control.set_zoom(ZoomLevel.Fit);
         });
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_ENTER_FULLSCREEN_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.enter_fullscreen();
+          this.control.enter_fullscreen();
         });
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_SAVE_STATE_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.save_state();
+          this.control.save_state();
         });
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_CREATE_SAVE_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.create_save();
+          this.control.create_save();
         });
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_START_REPLAY_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.start_replay();
+          this.control.start_replay();
         });
       this.ui_root
         .querySelector("#" + UIIDConst.EMU_FINISH_REPLAY_BUTTON)!
         .addEventListener("click", () => {
-          this.control!.stop_and_save_replay();
+          this.control.stop_and_save_replay();
         });
     }
 
@@ -320,7 +324,7 @@ export class UI {
       save_file + (group_key !== undefined ? " - " + group_key : "");
     save_object_title.addEventListener("click", () => {
       console.log("Activate", save_file);
-      this.control!["activate_save"](save_file);
+      this.control["activate_save"](save_file);
     });
     const save_object_description = <HTMLElement>(
       new_save_list_object.querySelector(".card-text")
@@ -333,7 +337,7 @@ export class UI {
     new_save_list_object
       .querySelector(".download-button")!
       .addEventListener("click", () =>
-        this.control!.download_file("save", save_file),
+        this.control.download_file("save", save_file),
       );
 
     new_save_list_object
@@ -350,11 +354,11 @@ export class UI {
             ).save_id;
             (metadata.record as Save).save_id = NEVER_UPLOADED_ID;
           }
-          this.control!.upload_file("save", save_file, metadata).then(
-            (md: Metadata) => {
+          void this.control
+            .upload_file("save", save_file, metadata)
+            .then((md: Metadata) => {
               this.completeUpload("sv__" + save_file, md);
-            },
-          );
+            });
         }
       });
 
@@ -436,7 +440,7 @@ export class UI {
 
     img.addEventListener("click", () => {
       console.log("Load", state_file);
-      this.control!["load_state"](state_file);
+      this.control["load_state"](state_file);
     });
 
     const state_object_title = <HTMLHeadElement>(
@@ -456,7 +460,7 @@ export class UI {
     new_state_list_object
       .querySelector(".download-button")!
       .addEventListener("click", () =>
-        this.control!.download_file("state", state_file),
+        this.control.download_file("state", state_file),
       );
 
     new_state_list_object
@@ -473,11 +477,11 @@ export class UI {
             ).state_id;
             (metadata.record as State).state_id = NEVER_UPLOADED_ID;
           }
-          this.control!.upload_file("state", state_file, metadata).then(
-            (md: Metadata) => {
+          void this.control
+            .upload_file("state", state_file, metadata)
+            .then((md: Metadata) => {
               this.completeUpload("st__" + state_file, md);
-            },
-          );
+            });
         }
       });
 
@@ -552,14 +556,14 @@ export class UI {
       "click",
       () => {
         console.log("Play", replay_file);
-        this.control!.play_replay(replay_file);
+        this.control.play_replay(replay_file);
       },
     );
 
     li.querySelector(".replay-list-item-download-button")!.addEventListener(
       "click",
       () => {
-        this.control!.download_file("replay", replay_file);
+        this.control.download_file("replay", replay_file);
       },
     );
 
@@ -576,12 +580,11 @@ export class UI {
           ).replay_id;
           (metadata.record as Replay).replay_id = NEVER_UPLOADED_ID;
         }
-        this.control!.upload_file("replay", replay_file, metadata).then(
-          (md: Metadata) => {
+        void this.control
+          .upload_file("replay", replay_file, metadata)
+          .then((md: Metadata) => {
             this.completeUpload("rp__" + replay_file, md);
-            for (const state_file of this.control!.checkpoints_of(
-              replay_file,
-            )) {
+            for (const state_file of this.control.checkpoints_of(replay_file)) {
               const smetadata = this.metadata_by_name["st__" + state_file];
               if (!smetadata) {
                 console.warn(
@@ -603,14 +606,13 @@ export class UI {
               if (smetadata.editing) {
                 this.toggleEditState(state_file);
               }
-              this.control!.upload_file("state", state_file, smetadata).then(
-                (smd: Metadata) => {
+              void this.control
+                .upload_file("state", state_file, smetadata)
+                .then((smd: Metadata) => {
                   this.completeUpload("st__" + state_file, smd);
-                },
-              );
+                });
             }
-          },
-        );
+          });
       },
     );
 
@@ -733,7 +735,7 @@ export class UI {
       ).replay_description;
       const edit_fields = replay_list_object.querySelectorAll(
         "." + valid_for_css(replay_file) + "-edit-fields",
-      )!;
+      );
       for (let i = 0; i < edit_fields.length; i++) {
         edit_fields[i].remove();
       }
@@ -803,7 +805,7 @@ export class UI {
       ).state_description;
       const edit_fields = state_list_object.querySelectorAll(
         "." + valid_for_css(state_file) + "-edit-fields",
-      )!;
+      );
       for (let i = 0; i < edit_fields.length; i++) {
         edit_fields[i].remove();
       }
@@ -872,7 +874,7 @@ export class UI {
       ).save_description;
       const edit_fields = save_list_object.querySelectorAll(
         "." + valid_for_css(save_file) + "-edit-fields",
-      )!;
+      );
       for (let i = 0; i < edit_fields.length; i++) {
         edit_fields[i].remove();
       }
@@ -931,7 +933,7 @@ export class UI {
   evtlog_append(evts: InputLogEvent[]) {
     for (const evt of evts) {
       this.evtlog.push(evt);
-      const elt = this.control!.evt_to_html(evt.evt);
+      const elt = this.control.evt_to_html(evt.evt);
       const li = document.createElement("li");
       li.innerText = evt.t.toString() + ":";
       li.appendChild(elt);
@@ -941,14 +943,9 @@ export class UI {
 }
 
 function elementFromTemplates(template_name: string): Node {
-  const templates_element = <HTMLTemplateElement>(
-    document.createElement("template")
-  );
-  templates_element.innerHTML = templates.trim();
-  const template_element = <HTMLTemplateElement>(
-    templates_element.content.querySelector("#" + template_name)!
-  );
-  return template_element.content.cloneNode(true);
+  const template_element: HTMLTemplateElement =
+    templates_element.content.querySelector("#" + template_name)!;
+  return (template_element.content as Node).cloneNode(true);
 }
 
 function valid_for_css(s: string): string {
@@ -957,7 +954,7 @@ function valid_for_css(s: string): string {
 
 function nonnull(obj: number | object | null): asserts obj {
   if (obj == null) {
-    throw "Must be non-null";
+    throw new Error("Must be non-null");
   }
 }
 

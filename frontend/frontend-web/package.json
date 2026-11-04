@@ -13,9 +13,8 @@
   },
   "devDependencies": {
     "@gisst/vite-mock-api": "^4.0.1",
-    "@types/path-browserify": "^1.0.3",
     "esbuild": "^0.28.1",
-    "shx": "^0.3.4",
+    "shx": "^0.4",
     "sirv": "^3.0.2",
     "typescript": "^5.8.2",
     "vite": "^8.0.16",
@@ -23,11 +22,7 @@
     "vite-plugin-mkcert": "^1.17.7"
   },
   "dependencies": {
-    "@zip.js/zip.js": "^2.7.57",
-    "embedv86": "file:../embedv86",
     "frontend-embed": "file:../frontend-embed",
-    "gisst-player": "file:../gisst-player-ui",
-    "path-browserify": "^1.0.1",
-    "ra-util": "file:../ra-util"
+    "gisst-player": "file:../gisst-player-ui"
   }
 }

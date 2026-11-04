@@ -62,8 +62,8 @@ export class GISSTDBConnector {
           hash,
         },
         onError: function (error) {
-          console.log("TUS upload failed because: " + error);
-          reject(error);
+          console.log("TUS upload failed because:", error);
+          reject(new Error("TUS upload error", { cause: error }));
         },
         onProgress: function (bytesUploaded, bytesTotal) {
           const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
@@ -78,7 +78,7 @@ export class GISSTDBConnector {
         },
       });
       // Check if there are any previous uploads to continue.
-      upload.findPreviousUploads().then(function (previousUploads) {
+      void upload.findPreviousUploads().then(function (previousUploads) {
         // Found previous uploads so we select the first one.
         if (previousUploads.length) {
           upload.resumeFromPreviousUpload(previousUploads[0]);
@@ -101,7 +101,11 @@ function computeChecksumMd5(file: File): Promise<string> {
     let cursor = 0; // current cursor in file
 
     fileReader.onerror = function (): void {
-      reject("MD5 computation failed - error reading the file");
+      reject(
+        new Error("MD5 computation failed - error reading the file", {
+          cause: fileReader.error,
+        }),
+      );
     };
 
     // read chunk starting at `cursor` into memory
@@ -111,12 +115,8 @@ function computeChecksumMd5(file: File): Promise<string> {
     }
 
     // when it's available in memory, process it
-    // If using TS >= 3.6, you can use `FileReaderProgressEvent` type instead
-    // of `any` for `e` variable, otherwise stick with `any`
-    // See https://github.com/Microsoft/TypeScript/issues/25510
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    fileReader.onload = function (e: any): void {
-      spark.append(e.target.result); // Accumulate chunk to md5 computation
+    fileReader.onload = function (e: ProgressEvent<FileReader>): void {
+      spark.append(e.target!.result as ArrayBuffer); // Accumulate chunk to md5 computation
       cursor += chunkSize; // Move past this chunk
 
       if (cursor < file.size) {

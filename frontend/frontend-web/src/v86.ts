@@ -17,7 +17,7 @@ let v86: EmbedV86;
 export async function init(ui: UI, embed: EmuControls) {
   ui_state = ui;
   db = new GISSTDBConnector(embed.gisst_root);
-  v86 = embed.inner;
+  v86 = embed.inner as EmbedV86;
   let entry_state: boolean = false;
   let entry_screenshot: string | null = null;
   if (embed.start.type == "state") {
@@ -59,16 +59,15 @@ export async function init(ui: UI, embed: EmuControls) {
       return;
     }
     current_zoom = n;
-    v86.emulator.screen_set_scale(n, n);
+    v86.screen_set_scale(n, n);
   }
   function zoom_to_fit() {
-    const container = <HTMLDivElement>(
-      document.querySelector(".gisst-internal-content-body")!
-    );
-    const screen = <HTMLDivElement>(
-      ui_state.emulator_div.querySelector("canvas")!.parentElement!
-        .parentElement!
-    );
+    const container = document.querySelector<HTMLDivElement>(
+      ".gisst-internal-content-body",
+    )!;
+    const screen: HTMLElement =
+      ui_state.emulator_div.querySelector<HTMLCanvasElement>("canvas")!
+        .parentElement!.parentElement!;
     const rect = screen.getBoundingClientRect();
     const n = Math.min(
       container.clientWidth / rect.width,
@@ -80,7 +79,7 @@ export async function init(ui: UI, embed: EmuControls) {
     evt_to_html: (evt_: unknown) => {
       const evt = evt_ as ReplayEvent;
       const elt = document.createElement("span");
-      elt.innerText = `${EvtNames[evt.code]} ${evt.value}`;
+      elt.innerText = `${EvtNames[evt.code]} ${JSON.stringify(evt.value)}`;
       return elt;
     },
     toggle_mute: () => {
@@ -105,18 +104,18 @@ export async function init(ui: UI, embed: EmuControls) {
     },
     enter_fullscreen: () => {
       zoom_fit = false;
-      v86.emulator.screen_set_scale(1, 1);
+      v86.screen_set_scale(1, 1);
       const container = <HTMLDivElement>document.getElementById("canvas_div")!;
-      container.requestFullscreen().then(() => {
+      void container.requestFullscreen().then(() => {
         // const n = Math.min(container.clientWidth/window.innerWidth,container.clientHeight/window.innerHeight);
         // zoom_to(n);
-        v86.emulator.lock_mouse();
+        v86.lock_mouse();
       });
     },
     activate_save: (_savefile) => {},
     create_save: () => {},
     load_state: (name: string) => {
-      (async () => {
+      void (async () => {
         const replay_matches = name.match(/replay([0-9a-f-]+)-state([0-9]+)/);
         if (replay_matches) {
           const replay = v86.replays.findIndex(
@@ -141,24 +140,24 @@ export async function init(ui: UI, embed: EmuControls) {
       })();
     },
     save_state: () => {
-      v86.save_state();
+      void v86.save_state();
     },
     start_replay: () => {
       // clear evt log and fill and update playhead
-      v86.record_replay().then(() => {
+      void v86.record_replay().then(() => {
         ui_state.evtlog_clear();
         ui_state.evtlog_set_playhead(0);
         evtlog_idx = 0;
       });
     },
     stop_and_save_replay: () => {
-      v86.stop_replay();
+      void v86.stop_replay();
     },
     play_replay: (file: string) => {
       const replay_matches = file.match(/replay([0-9a-f-]+)/)!;
       const slot = v86.replays.findIndex((r) => r.id == replay_matches[1]);
       // clear evt log and fill and update playhead
-      v86.play_replay_slot(slot).then(() => {
+      void v86.play_replay_slot(slot).then(() => {
         ui_state.evtlog_clear();
         ui_state.evtlog_set_playhead(0);
         evtlog_idx = 0;
@@ -169,7 +168,7 @@ export async function init(ui: UI, embed: EmuControls) {
       category: "state" | "save" | "replay",
       file_name: string,
     ) => {
-      v86
+      void v86
         .download_file(category, file_name)
         .then(([blob, name]) => saveAs(blob, name));
     },
@@ -304,7 +303,9 @@ export async function init(ui: UI, embed: EmuControls) {
           /replay([0-9a-f-]+)-state([0-9]+)/,
         );
         if (checkpoint_matches == null) {
-          throw "added checkpoint with bad name format";
+          throw new Error("added checkpoint with bad name format", {
+            cause: si,
+          });
         }
         const replay = v86.replays.find(
           (elt) => elt.id == checkpoint_matches[1],
@@ -318,7 +319,7 @@ export async function init(ui: UI, embed: EmuControls) {
       ui_state.setReplayMode(UIReplayMode.Inactive);
     } else {
       const replay = v86.replays[v86.active_replay];
-      const mode = replay.mode as UIReplayMode;
+      const mode: UIReplayMode = replay.mode;
       ui_state.setReplayMode(mode);
       // if recording, append since last index and update playhead to t
       if (mode == UIReplayMode.Record) {

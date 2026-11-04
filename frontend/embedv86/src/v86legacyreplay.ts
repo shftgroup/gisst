@@ -85,7 +85,7 @@ export class LegacyReplay {
         }
       }
     }
-    return buffer;
+    return Promise.resolve(buffer);
   }
   async reset_to_checkpoint(
     _n: number,
@@ -111,13 +111,17 @@ export class LegacyReplay {
   private seek_internal(event_index: number, t: number) {
     // seek file, do reads
     if (event_index > this.events.length) {
-      throw "Seek: event index out of bounds";
+      throw new Error("Seek: event index out of bounds", {
+        cause: { event_index, t },
+      });
     }
     const [wraps, time] = this.cpu_time(t);
     if (event_index < this.events.length) {
       if (this.events[event_index].when < t) {
         console.log("evt time check", this.events[event_index].when, t);
-        throw "Seek: current event is before given t";
+        throw new Error("Seek: current event is before given t", {
+          cause: { event_index, event: this.events[event_index], t },
+        });
       }
     }
     this.index = event_index;
@@ -134,7 +138,7 @@ export class LegacyReplay {
       emulator.keyboard_set_status(false);
       // don't truncate!
     } else {
-      throw "Resume: invalid mode";
+      throw new Error("Resume: invalid mode", { cause: { mode } });
     }
   }
   current_time(): number {
@@ -244,7 +248,9 @@ export class LegacyReplay {
           orig_state.length,
           roundtrip.length,
         );
-        throw "ohno";
+        throw new Error("Bad encode/decode len in roundtrip", {
+          cause: { orig: orig_state.length, roundtrip: roundtrip.length },
+        });
       }
       for (let i = 0; i < roundtrip.length; i++) {
         if (orig_state[i] != roundtrip[i]) {
@@ -256,13 +262,13 @@ export class LegacyReplay {
             " vs ",
             roundtrip[i],
           );
-          throw "uhoh";
+          throw new Error("encode differs from decode state", { cause: { i } });
         }
       }
     }
     return checkpoint;
   }
-  async tick(emulator: V86) {
+  async tick(emulator: V86): Promise<void> {
     // read from / write to file
     const t = emulator.get_instruction_counter();
     if (t < this.last_time) {
@@ -304,16 +310,18 @@ export class LegacyReplay {
         // do nothing
         break;
     }
+    return Promise.resolve();
   }
   private finish_playback(emulator: V86) {
     emulator.mouse_set_status(true);
     emulator.keyboard_set_status(true);
     this.mode = ReplayMode.Finished;
   }
-  async stop(emulator: V86) {
+  async stop(emulator: V86): Promise<void> {
     if (this.mode == ReplayMode.Playback) {
       this.finish_playback(emulator);
     }
+    return Promise.resolve();
   }
   async start_playback(emulator: V86) {
     this.mode = ReplayMode.Playback;
@@ -339,7 +347,9 @@ export class LegacyReplay {
     const magic = view.getUint32(x, true);
     x += 4;
     if (magic != 0x4c505256) {
-      throw "Invalid magic, not a v86replay file";
+      throw new Error("Invalid magic, not a v86replay file", {
+        cause: { magic },
+      });
     }
     // metadata: 16 bytes UUID; reserve the rest for later.
     const id = bytes_to_uuid(new Uint8Array(buf, x, 16));
@@ -348,7 +358,7 @@ export class LegacyReplay {
     const version = view.getUint8(x);
     x += 1;
     if (version > REPLAY_VERSION) {
-      throw "Unrecognized replay version";
+      throw new Error("Unrecognized replay version", { cause: { version } });
     }
     // empty metadata bytes
     x += 15;
@@ -358,18 +368,18 @@ export class LegacyReplay {
     x += 4;
     // these will be read as we go
     for (let i = 0; i < frame_count; i++) {
-      const code = view.getUint8(x);
+      const code: Evt = view.getUint8(x);
       x += 1;
       const when_b = view.getBigUint64(x, true);
       x += 8;
       if (when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
         console.log(when_b);
-        throw "When is too big";
+        throw new Error("When is too big", { cause: { when_b } });
       }
       const when = Number(when_b);
       if (BigInt(when) != when_b) {
         console.log(when, when_b);
-        throw "When didn't match";
+        throw new Error("When didn't match", { cause: { when, when_b } });
       }
       let value: object | number;
       switch (code) {
@@ -403,7 +413,7 @@ export class LegacyReplay {
           break;
         }
         default:
-          throw "Unhandled event type";
+          throw new Error("Unhandled event type", { cause: { code, when } });
       }
       events.push(new ReplayEvent(when, code, value));
     }
@@ -416,12 +426,12 @@ export class LegacyReplay {
       x += 8;
       if (when_b > BigInt(Number.MAX_SAFE_INTEGER)) {
         console.log(when_b);
-        throw "When is too big";
+        throw new Error("When is too big", { cause: { when_b } });
       }
       const when = Number(when_b);
       if (BigInt(when) != when_b) {
         console.log(when, when_b);
-        throw "When didn't match";
+        throw new Error("When didn't match", { cause: { when, when_b } });
       }
       const event_index = view.getUint32(x, true);
       x += 4;
@@ -456,7 +466,7 @@ export class LegacyReplay {
         for (let i = 0; i < new_block_count; i++) {
           const block = new Uint8Array(buf, x, r.block_index.object_size);
           new_blocks.push(r.block_index.length());
-          r.block_index.insert_exact(
+          await r.block_index.insert_exact(
             block.slice(),
             r.block_index.length(),
             when,
@@ -473,7 +483,7 @@ export class LegacyReplay {
             r.superblock_index.object_size,
           );
           new_superblocks.push(r.superblock_index.length());
-          r.superblock_index.insert_exact(
+          await r.superblock_index.insert_exact(
             superblock.slice(),
             r.block_index.length(),
             when,

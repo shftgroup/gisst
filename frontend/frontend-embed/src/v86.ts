@@ -23,7 +23,7 @@ export function nested_replace(
 ) {
   for (const key in obj) {
     if (typeof obj[key] == "object") {
-      nested_replace(obj[key] as StringIndexable, target, replacement);
+      nested_replace(obj[key], target, replacement);
     } else if (obj[key] == target) {
       obj[key] = replacement;
     }
@@ -37,7 +37,7 @@ async function loadScript(url: string) {
       resolve(evt);
     });
     ourScript.addEventListener("error", (reason) => {
-      reject(reason);
+      reject(new Error("could not load v86", { cause: reason }));
     });
     // add your script's src here
     ourScript.src = url;
@@ -65,11 +65,7 @@ export async function init(
       if (filename == "v86.wasm") {
         v86_wasm = obj_path;
       } else {
-        nested_replace(
-          environment.environment_config as StringIndexable,
-          filename,
-          obj_path,
-        );
+        nested_replace(environment.environment_config, filename, obj_path);
       }
     } else if (obj.core_role == "entrypoint") {
       // libv86.js
@@ -77,7 +73,7 @@ export async function init(
     }
   }
   if (!v86_wasm) {
-    throw "No v86 wasm path defined";
+    throw new Error("No v86 wasm path defined");
   }
   for (const obj of manifest) {
     if (obj.object_role == "content") {
@@ -141,6 +137,7 @@ export async function init(
     halt: async () => {
       container.removeEventListener("click", click_to_activate);
       v86.clear();
+      return Promise.resolve();
     },
     toggle_mute: () => {
       is_muted = !is_muted;
@@ -161,18 +158,19 @@ export async function init(
   };
   const preview = container.getElementsByTagName("img")[0];
   preview.classList.add("gisst-embed-loaded");
-  preview.addEventListener("click", async function () {
-    const canv = <HTMLCanvasElement>(
-      container.getElementsByTagName("canvas")[0]!
-    );
+  preview.addEventListener("click", function () {
+    const canv = container.getElementsByTagName("canvas")[0];
     preview.classList.add("gisst-embed-hidden");
     canv.classList.remove("gisst-embed-hidden");
     container
-      .getElementsByTagName("div")[0]!
+      .getElementsByTagName("div")[0]
       .classList.remove("gisst-embed-hidden");
-    await v86.run(environment.environment_config, entry_state, movie, video);
-    activate(v86);
-    self.on_ready();
+    void v86
+      .run(environment.environment_config, entry_state, movie, video)
+      .then(() => {
+        activate(v86);
+        self.on_ready();
+      });
     return false;
   });
   function click_to_activate() {
@@ -185,17 +183,15 @@ export async function init(
 
 function activate(v86: EmbedV86) {
   for (const emu of emulators) {
-    if (emu.emulator) {
-      emu.emulator.keyboard_set_status(emu === v86);
-      emu.emulator.mouse_set_status(emu === v86);
-      if (emu == v86) {
-        emu.emulator.lock_mouse();
-      }
+    emu.set_input_enabled(emu === v86);
+    if (emu === v86) {
+      emu.lock_mouse();
     }
   }
 }
 
-export async function destroy(v86: EmbedV86) {
-  emulators.splice(emulators.indexOf(v86), 1);
-  v86.clear();
-}
+// export async function destroy(v86: EmbedV86): Promise<void> {
+//   emulators.splice(emulators.indexOf(v86), 1);
+//   v86.clear();
+//   return Promise.resolve();
+// }

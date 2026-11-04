@@ -6,9 +6,11 @@ declare class V86 {
   async stop(): Promise<void>;
   mouse_set_status(bool): void;
   keyboard_set_status(bool): void;
+  lock_mouse(): void;
   screen_adapter: ScreenAdapter;
   speaker_adapter: SpeakerAdapter;
-  screen_make_screenshot(): Image;
+  screen_make_screenshot(): HTMLImageElement;
+  screen_set_scale(x: number, y: number): void;
   async save_state(): Promise<ArrayBuffer>;
   async restore_state(sbuf: ArrayBuffer): Promise<void>;
   add_listener(evt: string, listener: (any) => void);
@@ -18,17 +20,17 @@ declare class V86 {
   bus: Bus;
   emulator_bus: Bus;
 }
-declare class Bus {
+interface Bus {
   send(evt: string, val: unknown);
   register(evt: string, handler: (any) => void);
 }
-declare class V86v86 {
+interface V86v86 {
   cpu: Cpu;
 }
-declare class Cpu {
-  instruction_counter: UInt32Array;
+interface Cpu {
+  instruction_counter: Uint32Array;
 }
-declare class ScreenAdapter {
+interface ScreenAdapter {
   is_graphical: boolean;
   graphic_screen: HTMLCanvasElement;
   cursor_element: HTMLDivElement;
@@ -40,10 +42,10 @@ declare class ScreenAdapter {
   cursor_col: number;
   cursor_row: number;
 }
-declare class SpeakerAdapter {
+interface SpeakerAdapter {
   mixer: Mixer;
 }
-declare class Mixer {
+interface Mixer {
   node_merger: AudioNode;
   set_volume(number);
 }

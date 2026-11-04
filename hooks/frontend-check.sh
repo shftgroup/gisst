@@ -2,5 +2,5 @@
 set -e
 cd frontend
 npm audit --ws
-depcheck --ignore-bin-package
+knip
 osv-scanner scan source -r .

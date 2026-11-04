@@ -1,7 +1,12 @@
 import STYLES from "./style.css?inline";
 import * as ra from "./ra";
 import * as v86 from "./v86";
-import { EmuControls, EmbedOptions, ControllerOverlayMode } from "./types.d";
+import {
+  PlayerConfig,
+  EmuControls,
+  EmbedOptions,
+  ControllerOverlayMode,
+} from "./types.d";
 import imgUrl from "./canvas.svg";
 export * as types from "./types.d";
 
@@ -24,13 +29,14 @@ async function createContainerUI(container: HTMLDivElement) {
     .addEventListener("contextmenu", (e) => e.preventDefault());
 
   which_canvas += 1;
+  return Promise.resolve();
 }
 
 export async function fetchConfig(
   gisst_http_proto: string,
   gisst_root: string,
   gisst_query: string,
-) {
+): Promise<PlayerConfig> {
   const data_resp = await fetch(
     gisst_http_proto + "://" + gisst_root + "/data/" + gisst_query,
     { headers: [["Accept", "application/json"]] },
@@ -43,7 +49,7 @@ export async function fetchConfig(
     throw new Error("Request Status 404: Instance Not Found");
   }
 
-  const config = await data_resp.json();
+  const config = (await data_resp.json()) as PlayerConfig;
   console.log(config);
 
   return config;
@@ -76,7 +82,7 @@ export function parseGisstUrl(
       /gisst:\/\/([0-9a-fA-F-]{32,})(\?.+)?$/,
     );
     if (!same_origin_matches) {
-      throw "malformed gisst url";
+      throw new Error("malformed gisst url", { cause: { gisst, formatted } });
     }
     result_host = document.location.origin.slice(
       document.location.origin.indexOf("://") + 3,
@@ -98,23 +104,22 @@ export async function embed(
     style.textContent = STYLES;
     document.head.appendChild(style);
   }
-  createContainerUI(container);
-  const mute_a = container.querySelector(
+  await createContainerUI(container);
+  const mute_a: HTMLLinkElement = container.querySelector(
     "a.gisst-embed-webplayer-mute",
-  )! as HTMLLinkElement;
-  const halt_a = container.querySelector(
+  )!;
+  const halt_a: HTMLLinkElement = container.querySelector(
     "a.gisst-embed-webplayer-halt",
-  )! as HTMLLinkElement;
-  const canvas = container.querySelector(
+  )!;
+  const canvas: HTMLCanvasElement = container.querySelector(
     "canvas.gisst-embed-webplayer",
-  )! as HTMLCanvasElement;
+  )!;
   canvas.style.width =
     container.style.width == "auto" ? "480px" : container.style.width;
   canvas.style.height =
     container.style.height == "auto" ? "360px" : container.style.height;
   const [gisst_http_proto, gisst_root, gisst_query] = parseGisstUrl(gisst);
   const config = await fetchConfig(gisst_http_proto, gisst_root, gisst_query);
-  if (!config) throw "Failed to fetch config";
   const kind = config.environment.environment_framework;
   let emu: EmuControls;
   if (kind == "v86") {
@@ -157,8 +162,8 @@ export async function embed(
   mute_a.addEventListener("click", function () {
     emu.toggle_mute();
   });
-  halt_a.addEventListener("click", async function () {
-    await emu.halt();
+  halt_a.addEventListener("click", function () {
+    void emu.halt();
     container.innerHTML = "";
   });
   canvas.style.touchAction = "none";
@@ -234,13 +239,13 @@ class GISSTElement extends HTMLElement {
   connectedCallback() {
     const src = this.getAttribute("src");
     if (!src) {
-      throw "Cannot create GISST embed without src attribute";
+      throw new Error("Cannot create GISST embed without src attribute");
     }
     const div = document.createElement("div");
     div.style.width = this.getAttribute("width") ?? "auto";
     div.style.height = this.getAttribute("height") ?? "auto";
     this.appendChild(div);
-    embed(src!, div, {
+    void embed(src, div, {
       controls: controller_mode_from(this.getAttribute("controller")),
       record_from_start: false,
       record_video: this.getAttribute("record-video") != null,
