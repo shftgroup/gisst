@@ -1,5 +1,11 @@
 import html from "../../html/env_form_v86.html?raw";
 import styles from "../../css/server-ui-all.css?inline";
+import {
+  GISSTEnvFormOnNewConfEvent,
+  GISSTEnvFormOnContentAddEvent,
+  GISSTEnvFormOnContentRemoveEvent,
+  GISSTNewInstanceEnvForm,
+} from "./common";
 import { V86ImageType, V86Options } from "../v86";
 
 const V86Images = [
@@ -18,51 +24,10 @@ STYLE_SHEET.replaceSync(styles);
 const TEMPLATE = document.createElement("template");
 TEMPLATE.innerHTML = html;
 
-declare global {
-  interface HTMLElementEventMap {
-    "gisst-env-form-on-new-conf": GISSTEnvFormOnNewConfEvent;
-    "gisst-env-form-on-content-add": GISSTEnvFormOnContentAddEvent;
-    "gisst-env-form-on-content-remove": GISSTEnvFormOnContentRemoveEvent;
-  }
-}
-
-class GISSTEnvFormOnNewConfEvent extends Event {
-  constructor(public readonly new_conf: object) {
-    super("gisst-env-form-on-new-conf", {
-      bubbles: true,
-      composed: true,
-    });
-  }
-}
-
-class GISSTEnvFormOnContentAddEvent extends Event {
-  constructor(
-    public readonly content_file: File,
-    public readonly index: number,
-  ) {
-    super("gisst-env-form-on-content-add", {
-      bubbles: true,
-      composed: true,
-    });
-  }
-}
-
-class GISSTEnvFormOnContentRemoveEvent extends Event {
-  constructor(public readonly index: number) {
-    super("gisst-env-form-on-content-remove", {
-      bubbles: true,
-      composed: true,
-    });
-  }
-}
-
 /**
  * Environment configuration form for V86.
  */
-export class GISSTNewInstanceEnvFormV86
-  extends HTMLElement
-  implements GISSTNewInstanceEnvForm
-{
+export class GISSTNewInstanceEnvFormV86 extends GISSTNewInstanceEnvForm {
   public readonly HANDLES_CONTENT_FILES = true;
   private env_conf: V86Options;
   private cur_content_idx: number;
@@ -79,8 +44,8 @@ export class GISSTNewInstanceEnvFormV86
   private vga_bios_chooser: HTMLSelectElement;
   private vga_bios_upload: HTMLInputElement;
   private vga_bios_custom?: HTMLOptionElement;
-  private env_copy_button: HTMLButtonElement;
-  private env_preview: HTMLTextAreaElement;
+  protected env_copy_button: HTMLButtonElement;
+  protected env_preview: HTMLTextAreaElement;
 
   constructor() {
     super();
@@ -127,7 +92,11 @@ export class GISSTNewInstanceEnvFormV86
     ) as HTMLTextAreaElement;
 
     this.form.addEventListener("input", () => this.#generate_config());
-    this.env_copy_button.addEventListener("click", () => this.#copy_config());
+    this.env_copy_button.addEventListener(
+      "click",
+      async () =>
+        await this.copy_config(this.env_preview, this.env_copy_button),
+    );
     for (const img_upload of this.img_uploads) {
       img_upload.addEventListener(
         "input",
@@ -151,6 +120,10 @@ export class GISSTNewInstanceEnvFormV86
     this.shadow.appendChild(fragment);
   }
 
+  get_env_conf(): object {
+    return this.env_conf;
+  }
+
   set_env_conf(new_conf: V86Options, content_file_map: string[]) {
     this.form.reset();
     this.env_conf = new_conf;
@@ -163,7 +136,7 @@ export class GISSTNewInstanceEnvFormV86
       const img_url = new_conf[img_type]?.url;
       if (!img_url) continue;
 
-      const img_idx = this.#extract_content_index(img_url);
+      const img_idx = this.extract_content_index(img_url);
       if (img_idx !== null) {
         img_upload.dataset.existing_filename = content_file_map[img_idx];
       }
@@ -183,7 +156,7 @@ export class GISSTNewInstanceEnvFormV86
       const img_url = this.env_conf[img_type]?.url;
       if (!img_url) continue;
 
-      if (this.#extract_content_index(img_url) === index) {
+      if (this.extract_content_index(img_url) === index) {
         delete img_upload.dataset.existing_filename;
         img_upload.value = "";
         --this.cur_content_idx;
@@ -208,7 +181,7 @@ export class GISSTNewInstanceEnvFormV86
           const url = image?.url;
 
           if (url) {
-            const this_index = this.#extract_content_index(url);
+            const this_index = this.extract_content_index(url);
             if (this_index !== null && this_index > index) {
               image.url = `$CONTENT${this_index - 1}`;
             }
@@ -326,13 +299,13 @@ export class GISSTNewInstanceEnvFormV86
       | "vga-bios-custom";
 
     if (bios !== "bios-custom" && this.bios_custom) {
-      const index = this.#extract_content_index(old_config.bios!.url)!;
+      const index = this.extract_content_index(old_config.bios!.url)!;
       this.remove_content_file(index);
       this.dispatchEvent(new GISSTEnvFormOnContentRemoveEvent(index));
     }
 
     if (vga_bios !== "vga-bios-custom" && this.vga_bios_custom) {
-      const index = this.#extract_content_index(old_config.vga_bios!.url)!;
+      const index = this.extract_content_index(old_config.vga_bios!.url)!;
       this.remove_content_file(index);
       this.dispatchEvent(new GISSTEnvFormOnContentRemoveEvent(index));
     }
@@ -358,7 +331,7 @@ export class GISSTNewInstanceEnvFormV86
       delete img_upload.dataset.changed;
       delete img_upload.dataset.existing_filename;
       const old_index = old_image
-        ? this.#extract_content_index(old_image.url)
+        ? this.extract_content_index(old_image.url)
         : null;
       const index = old_index ?? this.cur_content_idx++;
       config[image_type] = {
@@ -392,38 +365,6 @@ export class GISSTNewInstanceEnvFormV86
     this.env_conf = config;
     this.#update_img_names();
     this.dispatchEvent(new GISSTEnvFormOnNewConfEvent(this.env_conf));
-  }
-
-  /**
-   * Copies the text in the environment configuration textarea (aka the preview).
-   */
-  async #copy_config() {
-    await navigator.clipboard.writeText(this.env_preview.value);
-
-    const original_text = this.env_copy_button.textContent;
-    this.env_copy_button.textContent = "Copied!";
-    this.env_copy_button.disabled = true;
-    this.env_copy_button.classList.remove("gisst-Search-btn-primary");
-    this.env_copy_button.classList.add("gisst-Search-btn-secondary");
-
-    setTimeout(() => {
-      this.env_copy_button.textContent = original_text;
-      this.env_copy_button.disabled = false;
-      this.env_copy_button.classList.remove("gisst-Search-btn-secondary");
-      this.env_copy_button.classList.add("gisst-Search-btn-primary");
-    }, 2000);
-  }
-
-  /**
-   * Helper to extract the index (X) from a url string `$CONTENT{X}`.
-   * @param url The string to extract the content file index from.
-   * @returns The index X or null if not found.
-   */
-  #extract_content_index(url: string): number | null {
-    // Extract content number, i.e. "$CONTENT{X}"
-    const parsed = url.match(/^\$CONTENT(\d*)$/m);
-    const index = parsed?.[1];
-    return index !== undefined ? Number(index) : null;
   }
 }
 

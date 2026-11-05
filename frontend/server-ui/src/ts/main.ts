@@ -18,6 +18,8 @@ import * as tus from "tus-js-client";
 import templates from "../html/templates.html?raw";
 import connectStats from "instantsearch.js/es/connectors/stats/connectStats";
 import { GISSTNewInstanceEnvFormV86 } from "./env-forms/v86";
+import { GISSTNewInstanceEnvForm } from "./env-forms/common";
+import { GISSTNewInstanceEnvFormRA } from "./env-forms/ra";
 
 // Import all templates from templates.html
 const TEMPLATES = document.createElement("template");
@@ -1254,6 +1256,7 @@ class GISSTNewInstance extends HTMLElement {
   environment: Environment;
   env_form_active: GISSTNewInstanceEnvForm | null;
   env_form_v86: GISSTNewInstanceEnvFormV86 | null;
+  env_form_ra: GISSTNewInstanceEnvFormRA | null;
   env_form_mode: "form" | "manual";
 
   constructor() {
@@ -1292,6 +1295,7 @@ class GISSTNewInstance extends HTMLElement {
     this.env_form_mode = "form";
     this.env_form_active = null;
     this.env_form_v86 = null;
+    this.env_form_ra = null;
   }
   /*
     Workflow:
@@ -1343,8 +1347,6 @@ class GISSTNewInstance extends HTMLElement {
     const missing_config_form_panel = elementFromTemplates(
       "missing-config-form-panel",
     ).firstElementChild as HTMLDivElement;
-    const ra_config_form_panel = elementFromTemplates("ra-config-form-panel")
-      .firstElementChild as HTMLDivElement;
     const config_manual_panel = elementFromTemplates(
       "config-manual-entry-panel",
     ).firstElementChild as HTMLDivElement;
@@ -1494,7 +1496,7 @@ class GISSTNewInstance extends HTMLElement {
         self.environment.environment_core_name == "v86" ? "v86" : "retroarch";
       this.clear_file_lists();
       this.env_form_state_sync();
-      this.env_form_active?.reset();
+      this.env_form_reset();
     };
 
     metadata_form.querySelector<HTMLInputElement>(
@@ -1544,9 +1546,13 @@ class GISSTNewInstance extends HTMLElement {
     // initialize config method tabbing
     const tabsContainer = config_form.querySelector(".gisst-New-instance-tabs");
     const tabList = tabsContainer!.querySelector('[role="tablist"]');
-    const tabs = Array.from(tabList!.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const tabs = Array.from(
+      tabList!.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+    );
     const tabPanelsContainer = tabsContainer!.querySelector(".tab-panels");
-    const tabPanels = Array.from(tabPanelsContainer!.querySelectorAll<HTMLDivElement>('[role="tabpanel"]'));
+    const tabPanels = Array.from(
+      tabPanelsContainer!.querySelectorAll<HTMLDivElement>('[role="tabpanel"]'),
+    );
 
     const panel_1 = tabPanelsContainer!.querySelector(
       "#panel-1",
@@ -1555,10 +1561,11 @@ class GISSTNewInstance extends HTMLElement {
       "#panel-2",
     ) as HTMLDivElement;
     this.env_form_v86 = new GISSTNewInstanceEnvFormV86();
+    this.env_form_ra = new GISSTNewInstanceEnvFormRA();
 
     panel_1.appendChild(missing_config_form_panel);
     panel_1.appendChild(this.env_form_v86);
-    panel_1.appendChild(ra_config_form_panel);
+    panel_1.appendChild(this.env_form_ra);
     panel_2.appendChild(config_manual_panel);
 
     // switch panel visibility
@@ -1574,10 +1581,9 @@ class GISSTNewInstance extends HTMLElement {
           this.env_form_mode = "manual";
         }
         this.env_form_state_sync();
-        this.env_form_active?.reset();
+        this.env_form_reset();
       });
     });
-
 
     // Environment Config Form Handlers
     this.addEventListener("gisst-env-form-on-new-conf", (ev) => {
@@ -1739,6 +1745,7 @@ class GISSTNewInstance extends HTMLElement {
     this.appendChild(contents);
 
     this.env_form_state_sync();
+    this.env_form_reset();
   }
 
   async content_check_hash(platform: string, file: File, hash: string) {
@@ -1955,40 +1962,56 @@ class GISSTNewInstance extends HTMLElement {
     const missing_form_body = document.querySelector(
       "#missing-env-form-body",
     ) as HTMLElement;
-    const ra_form_body = document.querySelector(
-      "#ra-env-form-body",
-    ) as HTMLElement;
     const is_form_mode = this.env_form_mode === "form";
     switch (this.environment.environment_framework) {
       case "v86":
         this.env_form_v86!.style.display = "";
         missing_form_body.style.display = "none";
-        ra_form_body.style.display = "none";
+        this.env_form_ra!.style.display = "none";
         this.env_form_active = is_form_mode ? this.env_form_v86 : null;
         break;
 
       case "retroarch":
         this.env_form_v86!.style.display = "none";
         missing_form_body.style.display = "none";
-        ra_form_body.style.display = "";
-        this.env_form_active = null;
+        this.env_form_ra!.style.display = "";
+        this.env_form_active = is_form_mode ? this.env_form_ra : null;
         break;
 
       default:
         this.env_form_v86!.style.display = "none";
         missing_form_body.style.display = "";
-        ra_form_body.style.display = "none";
+        this.env_form_ra!.style.display = "none";
         this.env_form_active = null;
         break;
     }
 
-    // Disable content file upload if v86 form, since they should use the form to upload instead
+    const manual_text_area_value =
+      document.querySelector<HTMLTextAreaElement>("#env-config-manual")?.value;
+    const parsed_manual =
+      !manual_text_area_value || manual_text_area_value === "null"
+        ? {}
+        : (JSON.parse(manual_text_area_value) as object);
+    this.environment.environment_config =
+      this.env_form_active?.get_env_conf() ?? parsed_manual;
+
+    // Disable content file upload if form handles it
     const content_file_upload = document.querySelector(
       "#instance-content-upload",
     ) as HTMLInputElement;
     content_file_upload.disabled =
       this.env_form_active?.HANDLES_CONTENT_FILES ?? false;
     this.file_list_update_move();
+  }
+
+  /**
+   * Reset the environment form that is active.
+   */
+  env_form_reset() {
+    if (this.env_form_active) {
+      this.env_form_active.reset();
+      this.environment.environment_config = {};
+    }
   }
 
   add_to_file_list(
@@ -2174,12 +2197,16 @@ class GISSTNewInstance extends HTMLElement {
       2,
     );
     const env_configs = Array.from(
-      document.querySelectorAll<HTMLTextAreaElement>("textarea[name=env_config]"),
+      document.querySelectorAll<HTMLTextAreaElement>(
+        "textarea[name=env_config]",
+      ),
     );
     for (const env_config of env_configs) {
       env_config.value = env_config_string;
     }
 
+    // env_form_state_sync will sync the form's current config, but we want to use a new one later
+    const saved_env_conf = this.environment.environment_config;
     this.clear_file_lists();
     this.env_form_state_sync();
     full_instance.objects.sort(
@@ -2196,10 +2223,8 @@ class GISSTNewInstance extends HTMLElement {
     const content_file_map = this.file_lists.content.map(
       (file) => file.filename,
     );
-    this.env_form_active?.set_env_conf(
-      this.environment.environment_config ?? {},
-      content_file_map,
-    );
+    this.env_form_active?.set_env_conf(saved_env_conf ?? {}, content_file_map);
+    this.environment.environment_config = this.env_form_active?.get_env_conf() ?? saved_env_conf;
 
     // TODO: fetch other bibliographic info fields...
   }
@@ -2212,10 +2237,10 @@ class GISSTNewInstance extends HTMLElement {
     for (const tab of tabs) {
       // select/unselect tabs
       if (tab === targetTab) continue;
-      tab.setAttribute('aria-selected', 'false');
+      tab.setAttribute("aria-selected", "false");
       tab.tabIndex = -1;
     }
-    targetTab.setAttribute("aria-selected", 'true');
+    targetTab.setAttribute("aria-selected", "true");
     targetTab.tabIndex = 0;
 
     // hide/show tab panels
