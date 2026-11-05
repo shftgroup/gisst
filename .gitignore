@@ -72,3 +72,5 @@ incri.*
 backend/local
 vault_pw
 .fdignore
+dist/
+node_modules/

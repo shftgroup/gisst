@@ -21,9 +21,10 @@
     "test": "tsc && eslint src && vitest --run"
   },
   "devDependencies": {
+    "@types/dom-webcodecs": "^0.1.19",
+    "@types/node": "^26.6.6",
     "@vitest/ui": "^5",
     "serve-static": "^2.2.1",
-    "typescript": "^5.8.2",
     "vite": "^8.3",
     "vite-plugin-dts": "^5.1.2",
     "vitest": "^5"

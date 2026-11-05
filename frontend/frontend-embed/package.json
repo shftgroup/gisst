@@ -27,7 +27,6 @@
     "happy-dom": "^21",
     "shx": "^0.4",
     "sirv": "^3.0.2",
-    "typescript": "^5.8.2",
     "vite": "^8.3",
     "vite-plugin-checker": "^0.9.0",
     "vite-plugin-dts": "^5.1.2",

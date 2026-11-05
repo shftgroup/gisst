@@ -3,6 +3,7 @@ import { nonnull, bytes_to_uuid } from "./utils";
 import { WorkerResponse } from "./worker_protocol.d";
 import ReplayWorker from "./replay_worker.ts?worker&inline";
 import { mux_videos } from "./utils";
+import { type V86 } from "./libv86";
 
 export enum Evt {
   KeyCode = 0,

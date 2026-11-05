@@ -19,20 +19,21 @@
   },
   "devDependencies": {
     "@gisst/vite-mock-api": "^4.0.1",
+    "@types/google.maps": "^3.66.7",
+    "@types/node": "^26.6.6",
     "esbuild": "^0.28.1",
     "meilisearch": "^0.57.0",
     "shx": "^0.4",
-    "typescript": "^5.8.2",
     "vite": "^8.0.16",
     "vite-plugin-checker": "^0.9.0",
-    "vite-plugin-mkcert": "^1.17.7",
-    "vite-plugin-dts": "^5.1.2"
+    "vite-plugin-dts": "^5.1.2",
+    "vite-plugin-mkcert": "^1.17.7"
   },
   "dependencies": {
-    "@meilisearch/instant-meilisearch": "^0.31.1",
+    "@gisst/instant-meilisearch": "^0.32.0",
     "gisst-style": "file:../gisst-style",
-    "instantsearch.css": "^8.17.0",
-    "instantsearch.js": "^4.101.0",
+    "instantsearch.css": "^8.25.0",
+    "instantsearch.js": "^4.122.0",
     "spark-md5": "^3.0.2",
     "tus-js-client": "^4.3.1"
   }

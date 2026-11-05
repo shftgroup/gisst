@@ -9,6 +9,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare namespace Emscripten {
+  type TypedArray = ArrayBufferView;
   type FileSystemType = object;
   type EnvironmentType = "WEB" | "NODE" | "SHELL" | "WORKER";
 
@@ -37,11 +38,11 @@ declare namespace Emscripten {
   }
 }
 
-interface Environment {
+export interface Environment {
   [key: string]: string;
 }
 
-interface EmscriptenModule {
+export interface EmscriptenModule {
   print(str: string): void;
   printErr(str: string): void;
   arguments: string[];
@@ -143,10 +144,10 @@ interface Analyze {
   error: Error;
   name: string;
   path: string;
-  object: FS.FSNode;
+  object: FSNode;
   parentExists: boolean;
   parentPath: string;
-  parentObject: FS.FSNode;
+  parentObject: FSNode;
 }
 
 declare interface FS {
@@ -276,7 +277,12 @@ declare interface FS {
     error: null | ((c: number) => any),
   ): void;
 
-  createPath(parent: string, path: string, canRead: boolean, canWrite: boolean);
+  createPath(
+    parent: string,
+    path: string,
+    canRead: boolean,
+    canWrite: boolean,
+  ): void;
   createLazyFile(
     parent: string | FSNode,
     name: string,
@@ -286,7 +292,7 @@ declare interface FS {
   ): FSNode;
   createPreloadedFile(
     parent: string | FSNode,
-    name?: string,
+    name: string | null,
     url: string | ArrayBufferView,
     canRead: boolean,
     canWrite: boolean,
@@ -297,7 +303,7 @@ declare interface FS {
   ): void;
   createDataFile(
     parent: string | FSNode,
-    name?: string,
+    name: string | null,
     data: ArrayBufferView,
     canRead: boolean,
     canWrite: boolean,
@@ -305,7 +311,7 @@ declare interface FS {
   ): FSNode;
 
   // Etc
-  handleError(code: int): object;
+  handleError(code: number): object;
 }
 
 declare let MEMFS: Emscripten.FileSystemType;

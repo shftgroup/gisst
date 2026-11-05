@@ -1,10 +1,11 @@
+import { type Environment, type EmscriptenModule } from "./emscripten";
+
 export interface LibretroModule extends EmscriptenModule, LibretroModuleDef {
   canvas: HTMLCanvasElement;
   callMain(args: string[]): void;
   // resumeMainLoop(): void;
   EmscriptenSendCommand(msg: string): void;
   EmscriptenReceiveCommandReply(): string;
-  cwrap: typeof cwrap;
 }
 interface LibretroModuleDef {
   startRetroArch(

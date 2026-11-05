@@ -1,6 +1,13 @@
+import {
+  type V86 as V86Core,
+  type V86Constructor,
+  type V86Config,
+  type V86Image,
+} from "./libv86";
 import { Replay, ReplayMode, Evt } from "./v86replay";
 import { nonnull } from "./utils";
 export { ReplayEvent } from "./v86replay";
+declare const V86: V86Constructor;
 
 export interface StateInfo {
   name: string;
@@ -47,7 +54,7 @@ export class State {
 }
 
 export class EmbedV86 {
-  emulator: V86 | null = null;
+  emulator: V86Core | null = null;
   config: EmbedV86Config;
   states: State[] = [];
   replays: Replay[] = [];
@@ -359,7 +366,6 @@ export class EmbedV86 {
     video_elt.muted = false;
     video_elt.style.zIndex = "65535";
     video_elt.style.display = "none";
-
     this.emulator = new V86(config);
     this.emulator.emulator_bus.register("keyboard-code", (k: number) =>
       this.replay_log(Evt.KeyCode, k),

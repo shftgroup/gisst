@@ -1,6 +1,6 @@
 import { EmbedV86 } from "embedv86";
-import type { LibretroModule } from "./libretro_adapter";
-
+import { type LibretroModule } from "./libretro_adapter";
+export { type LibretroModule };
 export interface EmbedOptions {
   controls: ControllerOverlayMode;
   record_from_start: boolean;
@@ -158,12 +158,10 @@ export interface EmuControls {
 }
 
 export interface RetroarchCore {
-  send_message(string): Promise<void>;
-  read_response(bool): Promise<string | undefined>;
+  send_message(msg: string): Promise<void>;
+  read_response(wait: boolean): Promise<string | undefined>;
   module: LibretroModule;
   content_name: string;
   state_dir: string;
   saves_dir: string;
 }
-
-export type LibretroModule = LibretroModule;
