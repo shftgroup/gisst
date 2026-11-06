@@ -413,13 +413,13 @@ end = "2027-08-24"
 
 [[trusted.defmt]]
 criteria = "safe-to-deploy"
-user-id = 414585 # knoellle
+user-id = 414585
 start = "2026-05-12"
 end = "2027-10-29"
 
 [[trusted.defmt-macros]]
 criteria = "safe-to-deploy"
-user-id = 414585 # knoellle
+user-id = 414585
 start = "2026-05-12"
 end = "2027-08-24"
 
@@ -431,7 +431,7 @@ end = "2027-08-24"
 
 [[trusted.defmt-parser]]
 criteria = "safe-to-deploy"
-user-id = 414585 # knoellle
+user-id = 414585
 start = "2026-10-15"
 end = "2027-10-29"
 
@@ -521,7 +521,7 @@ end = "2027-08-24"
 
 [[trusted.flate2]]
 criteria = "safe-to-deploy"
-user-id = 980 # Sebastian Thiel (Byron)
+user-id = 980
 start = "2023-08-15"
 end = "2027-08-24"
 
@@ -602,6 +602,18 @@ criteria = "safe-to-deploy"
 trusted-publisher = "github:rust-random/getrandom"
 start = "2025-12-27"
 end = "2027-08-24"
+
+[[trusted.gisst-rust-libretro-sys]]
+criteria = "safe-to-deploy"
+user-id = 65596 # Joe Osborn (JoeOsborn)
+start = "2026-11-07"
+end = "2027-11-07"
+
+[[trusted.gisst-rust-libretro-sys-proc]]
+criteria = "safe-to-deploy"
+user-id = 65596 # Joe Osborn (JoeOsborn)
+start = "2026-11-07"
+end = "2027-11-07"
 
 [[trusted.glob]]
 criteria = "safe-to-deploy"
@@ -1244,6 +1256,18 @@ criteria = "safe-to-deploy"
 user-id = 359 # Sean McArthur (seanmonstar)
 start = "2019-03-04"
 end = "2027-08-24"
+
+[[trusted.retro-rs]]
+criteria = "safe-to-deploy"
+user-id = 65596 # Joe Osborn (JoeOsborn)
+start = "2019-10-30"
+end = "2027-11-07"
+
+[[trusted.rply-codec]]
+criteria = "safe-to-deploy"
+user-id = 65596 # Joe Osborn (JoeOsborn)
+start = "2026-10-30"
+end = "2027-11-07"
 
 [[trusted.rustic]]
 criteria = "safe-to-deploy"

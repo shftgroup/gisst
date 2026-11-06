@@ -21,7 +21,7 @@ base16ct                = { workspace = true, features = ["alloc"] }
 bytes                   = { workspace = true, features = ["serde"] }
 async-compression       = { workspace = true, features = ["tokio", "gzip"] }
 chrono = { workspace = true, features = ["serde"] }
-serde_with = { workspace = true, features = ["base64"] }
+serde_with.workspace = true
 tracing.workspace = true
 tree_magic_mini = { workspace = true, features = ["with-gpl-data"] }
 fatfs = { git = "https://github.com/rafalh/rust-fatfs/", rev = "c4b88477b22ca7e5131fbd8891f62a5deaa88e6e" }
