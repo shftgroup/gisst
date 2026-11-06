@@ -35,8 +35,7 @@ export class GISSTNewInstanceEnvFormRA extends GISSTNewInstanceEnvForm {
 
     this.env_copy_button.addEventListener(
       "click",
-      async () =>
-        await this.copy_config(this.env_preview, this.env_copy_button),
+      () => void this.copy_config(this.env_preview, this.env_copy_button),
     );
 
     this.shadow.appendChild(fragment);

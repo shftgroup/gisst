@@ -120,8 +120,8 @@ const instance_data = [
     work_version: "0.1",
     work_platform: "x86 PC",
     instance_id: 12,
-    row_num: 12
-  }
+    row_num: 12,
+  },
 ];
 await instances.addDocuments(instance_data);
 console.log("Creating state record index");

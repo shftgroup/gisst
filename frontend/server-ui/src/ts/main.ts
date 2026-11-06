@@ -370,42 +370,48 @@ class GISSTStateSearch extends HTMLElement {
                   })}
                 </div>
               </div>
-              ${show_instance_info
-                ? html`
-                    <div class="gisst-Search-cell gisst-Search-instance-info">
-                      <div class="gisst-Search-instance-name">
-                        <a href="${base_url}/instances/${hit.instance_id}"
+              ${
+                show_instance_info
+                  ? html`
+                      <div class="gisst-Search-cell gisst-Search-instance-info">
+                        <div class="gisst-Search-instance-name">
+                          <a href="${base_url}/instances/${hit.instance_id}"
+                            >${components.Highlight({
+                              hit,
+                              attribute: "work_name",
+                            })}</a
+                          >
+                        </div>
+                        <div class="gisst-Search-instance-details">
+                          ${hit.work_version} • ${hit.work_platform}
+                        </div>
+                      </div>
+                    `
+                  : ""
+              }
+              ${
+                show_creator_info
+                  ? html`
+                      <div class="gisst-Search-cell gisst-Search-creator-info">
+                        <a href="${base_url}/creators/${hit.creator_id}"
                           >${components.Highlight({
                             hit,
-                            attribute: "work_name",
+                            attribute: "creator_full_name",
                           })}</a
                         >
                       </div>
-                      <div class="gisst-Search-instance-details">
-                        ${hit.work_version} • ${hit.work_platform}
-                      </div>
-                    </div>
-                  `
-                : ""}
-              ${show_creator_info
-                ? html`
-                    <div class="gisst-Search-cell gisst-Search-creator-info">
-                      <a href="${base_url}/creators/${hit.creator_id}"
-                        >${components.Highlight({
-                          hit,
-                          attribute: "creator_full_name",
-                        })}</a
-                      >
-                    </div>
-                  `
-                : ""}
-              ${show_hidden_state
-                ? html`
+                    `
+                  : ""
+              }
+              ${
+                show_hidden_state
+                  ? html`
                 <div class="gisst-Search-cell gisst-Search-hidden-info">
                 <input name="hidden-${hit.state_id}" class="hide-show-checkbox" type="checkbox" data-id="${hit.state_id}" checked="${hit.hidden}"></input>
                 </div>
                 `
-                : ""}
+                  : ""
+              }
               <div class="gisst-Search-cell gisst-Search-actions-cell">
                 <a
                   class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only"
@@ -487,41 +493,43 @@ class GISSTStateSearch extends HTMLElement {
                     </g>
                   </svg>
                 </a>
-                ${can_clone
-                  ? html`
-                      <a
-                        class="gisst-Search-btn gisst-Search-btn-accent gisst-Search-btn-text-only"
-                        href="${hit.instance_id}/clone?state=${hit.state_id}"
-                        >Clone</a
-                      >
-                      <a
-                        class="gisst-Search-btn gisst-Search-btn-accent gisst-Search-btn-icon gisst-Search-btn-icon-only"
-                        href="${hit.instance_id}/clone?state=${hit.state_id}"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
+                ${
+                  can_clone
+                    ? html`
+                        <a
+                          class="gisst-Search-btn gisst-Search-btn-accent gisst-Search-btn-text-only"
+                          href="${hit.instance_id}/clone?state=${hit.state_id}"
+                          >Clone</a
                         >
-                          <rect
-                            x="9"
-                            y="9"
-                            width="13"
-                            height="13"
-                            rx="2"
-                            ry="2"
-                          />
-                          <path
-                            d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                          />
-                        </svg>
-                      </a>
-                    `
-                  : ""}
+                        <a
+                          class="gisst-Search-btn gisst-Search-btn-accent gisst-Search-btn-icon gisst-Search-btn-icon-only"
+                          href="${hit.instance_id}/clone?state=${hit.state_id}"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <rect
+                              x="9"
+                              y="9"
+                              width="13"
+                              height="13"
+                              rx="2"
+                              ry="2"
+                            />
+                            <path
+                              d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                            />
+                          </svg>
+                        </a>
+                      `
+                    : ""
+                }
               </div>
             </div>
           `,
@@ -686,49 +694,57 @@ class GISSTSaveSearch extends HTMLElement {
                   })}
                 </div>
               </div>
-              ${show_instance_info
-                ? html`
-                    <div class="gisst-Search-cell gisst-Search-instance-info">
-                      <div class="gisst-Search-instance-name">
-                        <a href="${base_url}/instances/${hit.instance_id}"
+              ${
+                show_instance_info
+                  ? html`
+                      <div class="gisst-Search-cell gisst-Search-instance-info">
+                        <div class="gisst-Search-instance-name">
+                          <a href="${base_url}/instances/${hit.instance_id}"
+                            >${components.Highlight({
+                              hit,
+                              attribute: "work_name",
+                            })}</a
+                          >
+                        </div>
+                        <div class="gisst-Search-instance-details">
+                          ${hit.work_version} • ${hit.work_platform}
+                        </div>
+                      </div>
+                    `
+                  : ""
+              }
+              ${
+                show_creator_info
+                  ? html`
+                      <div class="gisst-Search-cell gisst-Search-creator-info">
+                        <a href="${base_url}/creators/${hit.creator_id}"
                           >${components.Highlight({
                             hit,
-                            attribute: "work_name",
+                            attribute: "creator_full_name",
                           })}</a
                         >
                       </div>
-                      <div class="gisst-Search-instance-details">
-                        ${hit.work_version} • ${hit.work_platform}
-                      </div>
-                    </div>
-                  `
-                : ""}
-              ${show_creator_info
-                ? html`
-                    <div class="gisst-Search-cell gisst-Search-creator-info">
-                      <a href="${base_url}/creators/${hit.creator_id}"
-                        >${components.Highlight({
-                          hit,
-                          attribute: "creator_full_name",
-                        })}</a
-                      >
-                    </div>
-                  `
-                : ""}
-              ${show_hidden_state
-                ? html`
+                    `
+                  : ""
+              }
+              ${
+                show_hidden_state
+                  ? html`
                 <div class="gisst-Search-cell gisst-Search-hidden-info">
                 <input name="hidden-${hit.state_id}" class="hide-show-checkbox" type="checkbox" data-id="${hit.state_id}" checked="${hit.hidden}"></input>
                 </div>
                 `
-                : ""}
+                  : ""
+              }
               <div class="gisst-Search-cell gisst-Search-actions-cell">
-                ${show_hidden_state
-                  ? html`
+                ${
+                  show_hidden_state
+                    ? html`
                 <label for="hidden-${hit.save_id}" class="gisst-Search-checkbox-label">Hide?</label>
                 <input name="hidden-${hit.save_id}" class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only hide-show-checkbox" type="checkbox" data-id="${hit.save_id}" checked="${hit.hidden}"></input>
                 `
-                  : ""}
+                    : ""
+                }
                 <a
                   class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only"
                   href="${base_url}/play/${hit.instance_id}?save=${hit.save_id}"
@@ -973,49 +989,57 @@ class GISSTPerformanceSearch extends HTMLElement {
                   })}
                 </div>
               </div>
-              ${show_instance_info
-                ? html`
-                    <div class="gisst-Search-cell gisst-Search-instance-info">
-                      <div class="gisst-Search-instance-name">
-                        <a href="${base_url}/instances/${hit.instance_id}"
+              ${
+                show_instance_info
+                  ? html`
+                      <div class="gisst-Search-cell gisst-Search-instance-info">
+                        <div class="gisst-Search-instance-name">
+                          <a href="${base_url}/instances/${hit.instance_id}"
+                            >${components.Highlight({
+                              hit,
+                              attribute: "work_name",
+                            })}</a
+                          >
+                        </div>
+                        <div class="gisst-Search-instance-details">
+                          ${hit.work_version} • ${hit.work_platform}
+                        </div>
+                      </div>
+                    `
+                  : ""
+              }
+              ${
+                show_creator_info
+                  ? html`
+                      <div class="gisst-Search-cell gisst-Search-creator-info">
+                        <a href="${base_url}/creators/${hit.creator_id}"
                           >${components.Highlight({
                             hit,
-                            attribute: "work_name",
+                            attribute: "creator_full_name",
                           })}</a
                         >
                       </div>
-                      <div class="gisst-Search-instance-details">
-                        ${hit.work_version} • ${hit.work_platform}
-                      </div>
-                    </div>
-                  `
-                : ""}
-              ${show_creator_info
-                ? html`
-                    <div class="gisst-Search-cell gisst-Search-creator-info">
-                      <a href="${base_url}/creators/${hit.creator_id}"
-                        >${components.Highlight({
-                          hit,
-                          attribute: "creator_full_name",
-                        })}</a
-                      >
-                    </div>
-                  `
-                : ""}
-              ${show_hidden_state
-                ? html`
+                    `
+                  : ""
+              }
+              ${
+                show_hidden_state
+                  ? html`
                 <div class="gisst-Search-cell gisst-Search-hidden-info">
                 <input name="hidden-${hit.state_id}" class="hide-show-checkbox" type="checkbox" data-id="${hit.state_id}" checked="${hit.hidden}"></input>
                 </div>
                 `
-                : ""}
+                  : ""
+              }
               <div class="gisst-Search-cell gisst-Search-actions-cell">
-                ${show_hidden_state
-                  ? html`
+                ${
+                  show_hidden_state
+                    ? html`
                 <label for="hidden-${hit.replay_id}" class="gisst-Search-checkbox-label">Hide?</label>
                 <input name="hidden-${hit.replay_id}" class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only hide-show-checkbox" type="checkbox" data-id="${hit.replay_id}" checked="${hit.hidden}"></input>
                 `
-                  : ""}
+                    : ""
+                }
                 <a
                   class="gisst-Search-btn gisst-Search-btn-primary gisst-Search-btn-text-only"
                   href="${base_url}/play/${hit.instance_id}?replay=${hit.replay_id}"

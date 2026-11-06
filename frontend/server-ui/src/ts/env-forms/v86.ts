@@ -94,8 +94,7 @@ export class GISSTNewInstanceEnvFormV86 extends GISSTNewInstanceEnvForm {
     this.form.addEventListener("input", () => this.#generate_config());
     this.env_copy_button.addEventListener(
       "click",
-      async () =>
-        await this.copy_config(this.env_preview, this.env_copy_button),
+      () => void this.copy_config(this.env_preview, this.env_copy_button),
     );
     for (const img_upload of this.img_uploads) {
       img_upload.addEventListener(
@@ -283,20 +282,16 @@ export class GISSTNewInstanceEnvFormV86 extends GISSTNewInstanceEnvForm {
    * Generates a new environment configuration based on the filled out form.
    */
   #generate_config() {
-    let old_config = this.env_conf;
+    const old_config = this.env_conf;
     const form_data = new FormData(this.form);
 
     const memory_size_mib = Number(form_data.get("mem-size"));
     const vga_memory_size_mib = Number(form_data.get("gpu-memory"));
 
     const bios = form_data.get("bios-select") as
-      | "bios-seabios"
-      | "bios-bochs"
-      | "bios-custom";
+      "bios-seabios" | "bios-bochs" | "bios-custom";
     const vga_bios = form_data.get("vga-bios-select") as
-      | "vga-bios-standard"
-      | "vga-bios-bochs"
-      | "vga-bios-custom";
+      "vga-bios-standard" | "vga-bios-bochs" | "vga-bios-custom";
 
     if (bios !== "bios-custom" && this.bios_custom) {
       const index = this.extract_content_index(old_config.bios!.url)!;
@@ -311,7 +306,7 @@ export class GISSTNewInstanceEnvFormV86 extends GISSTNewInstanceEnvForm {
     }
 
     // Build env config from form data
-    let config: V86Options = {
+    const config: V86Options = {
       memory_size: memory_size_mib * 1048576,
       vga_memory_size: vga_memory_size_mib * 1048576,
     };
