@@ -414,10 +414,9 @@ export class GISSTNewInstance extends HTMLElement {
     for (const input of select_files_form.querySelectorAll(
       ".instance-file-upload",
     ) as unknown as HTMLInputElement[]) {
-      const lst = input.parentElement?.nextElementSibling;
       const group = input.getAttribute("data-target")!;
       input.onchange = (event) => {
-        console.log(event, lst);
+        console.log(event);
         const files = input.files ?? [];
         if (files.length == 0) {
           return;
@@ -907,7 +906,7 @@ export class GISSTNewInstance extends HTMLElement {
   ) {
     const is_existing = "existing" in source;
     const lst = document.querySelector<HTMLOListElement>(
-      `#work-files p:has(input[data-target=${role}]) + ol`,
+      `#work-files fieldset.gisst-New-instance-file-selects:has(input[data-target=${role}]) ol.gisst-New-instance-select-file-lists`,
     )!;
     const line_item = document.createElement("li");
     const file_record = {
@@ -925,7 +924,10 @@ export class GISSTNewInstance extends HTMLElement {
     };
 
     line_item.innerHTML = `
-      <div class="gisst-New-instance-line-item-top">${filename} <button type="button" class="remove gisst-New-instance-line-item-buttons" title="Remove">X</button></div>
+      <div class="gisst-New-instance-line-item-top">${filename} <button type="button" class="remove gisst-New-instance-remove-btn gisst-New-instance-line-item-buttons" title="Remove">
+        <svg class="ais-SearchBox-resetIcon" viewBox="0 0 20 20" width="10" height="10" aria-hidden="true">
+          <path d="M8.114 10L.944 2.83 0 1.885 1.886 0l.943.943L10 8.113l7.17-7.17.944-.943L20 1.886l-.943.943-7.17 7.17 7.17 7.17.943.944L18.114 20l-.943-.943-7.17-7.17-7.17 7.17-.944.943L0 18.114l.943-.943L8.113 10z"></path>
+        </svg></button></div>
     `;
 
     const line_item_bottom_div = document.createElement("div");
@@ -946,10 +948,15 @@ export class GISSTNewInstance extends HTMLElement {
     } else {
       // Upload button and progress bar
       const upload_status = document.createElement("button");
-      upload_status.classList.add("upload");
+      upload_status.classList.add("gisst-New-instance-upload-button");
       upload_status.classList.add("gisst-New-instance-line-item-buttons");
       upload_status.title = "Upload";
-      upload_status.textContent = "U";
+      upload_status.innerHTML = `
+	      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cloud-upload" viewBox="0 0 16 16">
+	        <path fill-rule="evenodd" d="M4.406 1.342A5.53 5.53 0 0 1 8 0c2.69 0 4.923 2 5.166 4.579C14.758 4.804 16 6.137 16 7.773 16 9.569 14.502 11 12.687 11H10a.5.5 0 0 1 0-1h2.688C13.979 10 15 8.988 15 7.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 2.825 10.328 1 8 1a4.53 4.53 0 0 0-2.941 1.1c-.757.652-1.153 1.438-1.153 2.055v.448l-.445.049C2.064 4.805 1 5.952 1 7.318 1 8.785 2.23 10 3.781 10H6a.5.5 0 0 1 0 1H3.781C1.708 11 0 9.366 0 7.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383z"></path>
+	        <path fill-rule="evenodd" d="M7.646 4.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V14.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3z"></path>
+	      </svg>
+	      `;
       upload_status.onclick = (_evt) => {
         const idx = this.file_lists[role].findIndex(
           (fr) => fr.ui_id == file_record.ui_id,

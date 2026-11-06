@@ -34,6 +34,7 @@ textarea:disabled {
     "Open Sans",
     "Helvetica Neue",
     sans-serif;
+  background-color: var(--gisst-dark-theme-bg);
 }
 
 .gisst-New-instance-container > * {
@@ -87,20 +88,54 @@ li:last-child .gisst-New-instance-move-down {
   margin: 0.5rem 0;
 }
 
+.gisst-New-instance-file-selects {
+  border: 1px solid
+    light-dark(
+      rgba(var(--gisst-light-theme-border), 0.3),
+      rgba(var(--gisst-dark-theme-border), 0.3)
+    );
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.5rem;
+  background-color: rgb(var(--gisst-dark-theme-card-bg), 0.25);
+}
+
+.gisst-New-instance-file-selects-header {
+  padding-bottom: 5px;
+  border-bottom: 0.1px solid rgb(var(--gisst-dark-theme-border));
+}
+
+.gisst-New-instance-file-selects legend {
+  align-items: center;
+  margin: 0.25rem;
+  padding: 0 0.2rem;
+}
+
+.gisst-New-instance-file-selects > legend > span {
+  width: 7rem;
+  padding-left: 0.25rem;
+}
+
 .gisst-New-instance-select-file-lists {
-  margin: 0.25rem 0 0.5rem;
-  /* list-style-position: inside; */
+  margin: 0.25rem 0.5rem 0.5rem;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
 }
 
 .gisst-New-instance-select-file-lists > li {
-  border: 0.1rem solid
-    light-dark(
-      var(--gisst-light-theme-primary),
-      var(--gisst-dark-theme-primary)
-    );
+  border: rgb(var(--gisst-dark-theme-border));
   border-radius: 0.5rem;
   margin: 0.3rem 0;
   padding: 0.5rem;
+  background-color: var(--gisst-dark-theme-dark);
+  box-shadow: 0.2rem 0.2rem 0.4rem
+    light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
+}
+
+.gisst-New-instance-select-file-lists > li > * {
+  margin: 0.3rem 0;
 }
 
 .gisst-New-instance-line-item-buttons {
@@ -130,6 +165,17 @@ li:last-child .gisst-New-instance-move-down {
 
 .gisst-New-instance-details-row > * {
   margin: 1rem auto;
+}
+
+.gisst-New-instance-details {
+  display: grid;
+  grid-template: repeat(2, max-content) / repeat(2, max-content);
+  row-gap: 0.25rem;
+}
+
+.gisst-New-instance-details > select,
+.gisst-New-instance-details > input {
+  padding: 0.1rem;
 }
 
 .gisst-New-instance-config-body {
@@ -310,4 +356,39 @@ li:last-child .gisst-New-instance-move-down {
 
 .gisst-New-instance-environment {
   box-sizing: border-box;
+}
+
+.gisst-New-instance-submit-btn-secondary {
+  background-color: light-dark(
+    var(--gisst-light-theme-secondary),
+    var(--gisst-light-theme-secondary)
+  );
+}
+
+.gisst-New-instance-upload-button {
+  display: inline-flex;
+  align-items: center;
+  aspect-ratio: 1 / 1;
+  margin-right: 6px;
+  background-color: var(--gisst-dark-theme-dark);
+  border: 1.5px solid
+    light-dark(
+      var(--gisst-light-theme-primary-dark),
+      var(--gisst-dark-theme-primary-dark)
+    );
+  border-radius: 0.3rem;
+}
+
+.gisst-New-instance-move-up,
+.gisst-New-instance-move-down {
+  border: 1px solid rgb(var(--gisst-dark-theme-border));
+  background-color: var(--gisst-dark-theme-dark);
+
+  border-radius: 0.3rem;
+  align-items: end;
+  padding: 0px 6px 3px;
+}
+
+button.remove {
+  all: unset;
 }
