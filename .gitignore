@@ -74,3 +74,4 @@ vault_pw
 .fdignore
 dist/
 node_modules/
+replay-video-cache/
