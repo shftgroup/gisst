@@ -93,7 +93,7 @@
 
 <template id="new-instance-details-form">
   <form id="work-info" class="gisst-New-instance-details-container">
-    <div class="gisst-New-instance-details-col">
+    <div class="gisst-New-instance-details-row">
       <div>
         <h4>Work details:</h4>
         <p>
@@ -109,66 +109,112 @@
           <input name="work_version" />
         </p>
       </div>
+    </div>
+  </form>
+</template>
 
-      <div>
-        <p class="gisst-New-instance-header-files">Select files:</p>
-        <p>
-          <label
-            for="instance-dep-upload"
-            class="gisst-Instance-btn gisst-Search-btn-primary"
-            >+ Add instance dependency</label
-          >
-          <input
-            type="file"
-            id="instance-dep-upload"
-            name="instance_dep_upload"
-            class="instance-file-upload gisst-New-instance-visually-hidden"
-            data-target="dependency"
-          />
-        </p>
-        <ol class="gisst-New-instance-select-file-lists"></ol>
-        <p>
-          <label
-            for="instance-config-upload"
-            class="gisst-Instance-btn gisst-Search-btn-primary"
-            >+ Add instance config files</label
-          >
-          <input
-            type="file"
-            id="instance-config-upload"
-            name="instance_config_upload"
-            class="instance-file-upload gisst-New-instance-visually-hidden"
-            data-target="config"
-          />
-        </p>
-        <ol class="gisst-New-instance-select-file-lists"></ol>
-        <p>
-          <label
-            for="instance-content-upload"
-            class="gisst-Instance-btn gisst-Search-btn-primary"
-            >+ Add instance content files</label
-          >
-          <input
-            type="file"
-            id="instance-content-upload"
-            name="instance_content_upload"
-            class="instance-file-upload gisst-New-instance-visually-hidden"
-            data-target="content"
-          />
-        </p>
-        <ol class="gisst-New-instance-select-file-lists"></ol>
+<template id="new-instance-config-form">
+  <div
+    class="gisst-New-instance-details-row gisst-New-instance-environment-container"
+  >
+    <p>Please select a configuration method:</p>
+    <div class="gisst-New-instance-config-btns gisst-New-instance-tabs">
+      <div
+        class="gisst-New-instance-tab-btns"
+        role="tablist"
+        aria-label="config-method"
+      >
+        <button
+          class="gisst-Instance-btn gisst-Search-btn-primary"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-1"
+          id="tab-1"
+          tabindex="0"
+          data-mode="form"
+        >
+          Form
+        </button>
+        <button
+          class="gisst-Instance-btn gisst-Search-btn-primary"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-2"
+          id="tab-2"
+          tabindex="-1"
+          data-mode="manual"
+        >
+          Manual entry
+        </button>
+      </div>
+      <div class="tab-panels">
+        <div
+          id="panel-1"
+          role="tabpanel"
+          tabindex="0"
+          aria-labelledby="tab-1"
+        ></div>
+        <div
+          id="panel-2"
+          role="tabpanel"
+          tabindex="0"
+          aria-labelledby="tab-2"
+          hidden
+        ></div>
       </div>
     </div>
+  </div>
+</template>
 
-    <div
-      class="gisst-New-instance-details-col gisst-New-instance-environment-container"
-    >
-      <div class="gisst-New-instance-environment">
-        <label class="gisst-New-instance-label-env-conf" for="env-config"
-          >Environment config:</label
+<template id="new-instance-select-files-form">
+  <form id="work-files" class="gisst-New-instance-details-container">
+    <div>
+      <p class="gisst-New-instance-header-files">Select files:</p>
+      <p>
+        <input
+          type="file"
+          id="instance-dep-upload"
+          name="instance_dep_upload"
+          class="instance-file-upload gisst-New-instance-visually-hidden"
+          data-target="dependency"
+        />
+        <label
+          for="instance-dep-upload"
+          class="gisst-Instance-btn gisst-Search-btn-primary"
+          >+ Add instance dependency</label
         >
-        <textarea id="env-config" name="env_config"></textarea>
-      </div>
+      </p>
+      <ol class="gisst-New-instance-select-file-lists"></ol>
+      <p>
+        <input
+          type="file"
+          id="instance-config-upload"
+          name="instance_config_upload"
+          class="instance-file-upload gisst-New-instance-visually-hidden"
+          data-target="config"
+        />
+        <label
+          for="instance-config-upload"
+          class="gisst-Instance-btn gisst-Search-btn-primary"
+          >+ Add instance config files</label
+        >
+      </p>
+      <ol class="gisst-New-instance-select-file-lists"></ol>
+      <p>
+        <input
+          type="file"
+          id="instance-content-upload"
+          name="instance_content_upload"
+          class="instance-file-upload gisst-New-instance-visually-hidden"
+          data-target="content"
+        />
+        <label
+          for="instance-content-upload"
+          class="gisst-Instance-btn gisst-Search-btn-primary"
+          >+ Add instance content files</label
+        >
+      </p>
+      <ol class="gisst-New-instance-select-file-lists"></ol>
     </div>
   </form>
 </template>
@@ -182,5 +228,31 @@
       Create Instance
     </button>
     <p class="submit-status"></p>
+  </div>
+</template>
+
+<!-- config method panels (for tabs) -->
+
+<template id="missing-config-form-panel">
+  <div
+    id="missing-env-form-body"
+    class="gisst-New-instance-environment gisst-New-instance-config-manual"
+  >
+    <p class="gisst-New-instance-label-env-conf">
+      Please select a platform to use the environment config form.
+    </p>
+  </div>
+</template>
+
+<template id="config-manual-entry-panel">
+  <div id="manual-env-form-body">
+    <div
+      class="gisst-New-instance-environment gisst-New-instance-config-manual"
+    >
+      <label class="gisst-New-instance-label-env-conf" for="env-config-manual"
+        >Environment config:</label
+      >
+      <textarea id="env-config-manual" name="env_config"></textarea>
+    </div>
   </div>
 </template>

@@ -1,0 +1,162 @@
+<div id="v86-env-form-body">
+  <div class="gisst-New-instance-config-body">
+    <form class="gisst-New-instance-config-form">
+      <div>
+        <div class="gisst-New-instance-disk-file-selectors">
+          <p class="gisst-New-instance-disk-file-type">Hard disk A:</p>
+          <input
+            type="file"
+            name="hda"
+            id="hard-disk-a-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
+          <label
+            for="hard-disk-a-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >Browse...</label
+          >
+          <p class="content-file-name" data-image="hda">No file chosen</p>
+
+          <p class="gisst-New-instance-disk-file-type">Hard disk B:</p>
+          <input
+            type="file"
+            name="hdb"
+            id="hard-disk-b-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
+          <label
+            for="hard-disk-b-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >Browse...</label
+          >
+          <p class="content-file-name" data-image="hdb">No file chosen</p>
+
+          <p class="gisst-New-instance-disk-file-type">Floppy A:</p>
+          <input
+            type="file"
+            name="fda"
+            id="floppy-a-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
+          <label
+            for="floppy-a-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >Browse...</label
+          >
+          <p class="content-file-name" data-image="fda">No file chosen</p>
+
+          <p class="gisst-New-instance-disk-file-type">Floppy B:</p>
+          <input
+            type="file"
+            name="fdb"
+            id="floppy-b-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
+          <label
+            for="floppy-b-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >Browse...</label
+          >
+          <p class="content-file-name" data-image="fdb">No file chosen</p>
+
+          <p class="gisst-New-instance-disk-file-type">CD-ROM:</p>
+          <input
+            type="file"
+            name="cdrom"
+            id="cd-rom-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
+          <label
+            for="cd-rom-upload"
+            class="gisst-Instance-btn gisst-Search-btn-primary"
+            >Browse...</label
+          >
+          <p class="content-file-name" data-image="cdrom">No file chosen</p>
+        </div>
+      </div>
+
+      <hr />
+
+      <div>
+        <div class="gisst-New-instance-memory-and-gpu-size">
+          <label for="memory-size-select">Memory size:</label>
+          <input
+            id="memory-size-select"
+            type="number"
+            name="mem-size"
+            step="16"
+            min="16"
+            max="1024"
+          />
+          <span>MiB</span>
+
+          <label for="gpu-memory-select">GPU memory size:</label>
+          <input
+            id="gpu-memory-select"
+            type="number"
+            name="gpu-memory"
+            step="1"
+            min="8"
+            max="1024"
+          />
+          <span>MiB</span>
+        </div>
+      </div>
+
+      <hr />
+
+      <div>
+        <div class="gisst-New-instance-bios-select">
+          <label for="bios-chooser">BIOS:</label>
+          <select
+            id="bios-chooser"
+            name="bios-select"
+            class="gisst-New-instance-bios-chooser"
+          >
+            <option value="bios-seabios">Seabios</option>
+            <option value="bios-bochs">Bochs</option>
+            <option value="bios-custom">Custom</option>
+          </select>
+          <input
+            type="file"
+            name="bios"
+            id="bios-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
+
+          <label for="vga-bios-chooser">VGA BIOS:</label>
+          <select
+            id="vga-bios-chooser"
+            name="vga-bios-select"
+            class="gisst-New-instance-vga-bios-chooser"
+          >
+            <option value="vga-bios-standard">Standard</option>
+            <option value="vga-bios-bochs">Bochs</option>
+            <option value="vga-bios-custom">Custom</option>
+          </select>
+          <input
+            type="file"
+            name="vga_bios"
+            id="vga-bios-upload"
+            class="content-match-upload gisst-New-instance-visually-hidden"
+          />
+        </div>
+      </div>
+    </form>
+
+    <div class="gisst-New-instance-environment">
+      <label class="gisst-New-instance-label-env-conf" for="env-config-form"
+        >Environment config:</label
+      >
+      <div class="gisst-New-instance-config-preview-container">
+        <textarea id="env-config-form" name="env_config" disabled></textarea>
+        <button
+          class="gisst-Instance-btn gisst-Search-btn-primary"
+          id="env-config-form-copy-btn"
+        >
+          Copy
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

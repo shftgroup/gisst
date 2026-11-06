@@ -8,6 +8,15 @@ h4 {
   margin: 0.5rem 0;
 }
 
+textarea:disabled {
+  color: rgb(165, 165, 165);
+  padding: 0.2rem;
+}
+
+[aria-selected="false"] {
+  opacity: 0.32;
+}
+
 .gisst-New-instance-container {
   min-width: 350px;
   max-width: 1200px;
@@ -40,7 +49,8 @@ ol {
   margin-bottom: 1rem;
 }
 
-.gisst-New-instance-description-list {
+.gisst-New-instance-description-list,
+.gisst-New-instance-config-form-list {
   list-style-position: inside;
 }
 
@@ -59,7 +69,7 @@ input:disabled + label,
 li:first-child .gisst-New-instance-move-up,
 li:last-child .gisst-New-instance-move-down {
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.32;
 }
 
 .gisst-New-instance-content-search-container {
@@ -72,6 +82,7 @@ li:last-child .gisst-New-instance-move-down {
 .gisst-New-instance-method-two-contents > *,
 .gisst-New-instance-search-container > *,
 .gisst-New-instance-header-files,
+.gisst-New-instance-tab-btns,
 .gisst-New-instance-label-env-conf {
   margin: 0.5rem 0;
 }
@@ -113,31 +124,129 @@ li:last-child .gisst-New-instance-move-down {
 
 .gisst-New-instance-details-container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 4rem;
 }
 
-.gisst-New-instance-details-col > * {
+.gisst-New-instance-details-row > * {
   margin: 1rem auto;
 }
 
-.gisst-New-instance-environment-container {
+.gisst-New-instance-config-body {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 1rem;
+}
+
+.gisst-New-instance-config-form {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  border: 0.1rem solid rgb(53, 53, 55);
+  border-radius: 0.5rem;
+}
+
+.gisst-New-instance-config-form-headers {
+  margin-left: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.gisst-New-instance-config-form > div {
+  border-radius: 0.5rem;
+  margin: 0;
+  padding: 0.5rem;
+}
+
+.gisst-New-instance-config-form > hr {
+  margin: 0 1rem;
+}
+
+.gisst-New-instance-disk-file-selectors {
+  display: grid;
+  align-items: center;
+  grid-template-areas: "gisst-New-instance-disk-file-type label content-file-name";
+  grid-template-columns: 50% max-content;
+  row-gap: 0.25rem;
+  margin: 0.2rem;
+}
+
+.gisst-New-instance-disk-file-selectors > label {
+  margin-left: 0.1rem;
+  margin-right: 0.2rem;
+}
+
+.gisst-New-instance-memory-and-gpu-size {
+  display: grid;
+  grid-template-areas: "label input span";
+  grid-template-columns: 50% max-content;
+  margin: 0.2rem;
+  row-gap: 0.25rem;
+}
+
+.gisst-New-instance-memory-and-gpu-size > input {
+  margin-left: 0.1rem;
+}
+
+.gisst-New-instance-memory-and-gpu-size > span {
+  margin-left: 0.2rem;
+}
+
+.gisst-New-instance-bios-select {
+  display: grid;
+  grid-template-areas: "label select";
+  grid-template-columns: 50%;
+  margin: 0.2rem;
+  row-gap: 0.25rem;
+}
+
+.gisst-New-instance-bios-select > select {
+  margin: 0 0.1rem;
+  padding: 0.1rem;
 }
 
 .gisst-New-instance-environment {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  height: 100%;
+  margin-right: 0.75rem;
+  margin-bottom: 1rem;
 }
 
-.gisst-New-instance-environment > textarea {
+.gisst-New-instance-config-preview-container {
+  background-color: rgb(34, 33, 40);
+  border: 0.1rem solid rgb(53, 53, 55);
+  border-radius: 0.5rem;
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+}
+
+.gisst-New-instance-config-preview-container > textarea {
+  border: none;
+  border-radius: 0.5rem;
+  outline: none;
+  resize: none;
+
   margin: 0;
+  padding: 0.5rem;
   width: 100%;
   height: 100%;
 
   white-space: nowrap;
   overflow: auto;
+}
+
+.gisst-New-instance-config-preview-container > button {
+  height: max-content;
+  margin: 0.5rem;
+}
+
+.gisst-New-instance-config-manual > textarea {
+  margin: 0;
+  max-width: 42rem;
+  min-height: 20rem;
 }
 
 .gisst-New-instance-search-item-button {
@@ -197,8 +306,8 @@ li:last-child .gisst-New-instance-move-down {
     flex-direction: column;
     gap: 0;
   }
+}
 
-  #env-config {
-    height: 7rem;
-  }
+.gisst-New-instance-environment {
+  box-sizing: border-box;
 }
