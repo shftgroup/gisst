@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use crate::serverconfig::ServerConfig;
+use server_types::config::Config;
 
 use secrecy::ExposeSecret;
 use sqlx::{PgPool, pool::PoolOptions};
 
-pub(crate) async fn new_pool(config: &ServerConfig) -> sqlx::Result<PgPool> {
+pub(crate) async fn new_pool(config: &Config) -> sqlx::Result<PgPool> {
     PoolOptions::new()
         .acquire_timeout(Duration::from_secs(config.database.connect_timeout_seconds))
         .max_connections(config.database.max_connections)

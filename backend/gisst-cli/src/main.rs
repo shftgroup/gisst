@@ -6,9 +6,10 @@ mod cliconfig;
 use crate::cliconfig::CLIConfig;
 use anyhow::Result;
 use args::{
-    AddCoreArgs, AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator, CreateEnvironment,
-    CreateInstance, CreateObject, CreateReplay, CreateSave, CreateScreenshot, CreateState,
-    CreateWork, GISSTCli, GISSTCliError, PatchData, SetUserRole, UpgradeEnvironmentArgs,
+    AddCoreArgs, AddNativeCoreArgs, AddWorkInstanceData, BaseSubcommand, Commands, CreateCreator,
+    CreateEnvironment, CreateInstance, CreateObject, CreateReplay, CreateSave, CreateScreenshot,
+    CreateState, CreateWork, GISSTCli, GISSTCliError, PatchData, SetUserRole,
+    UpgradeEnvironmentArgs,
 };
 use clap::Parser;
 use gisst::{
@@ -63,6 +64,9 @@ async fn main() -> Result<(), GISSTCliError> {
         }
         Commands::AddCore(args) => {
             add_core(args, db, &storage_root).await?;
+        }
+        Commands::AddNativeCore(args) => {
+            add_native_core(args, db, &storage_root).await?;
         }
         Commands::AddWorkInstance(cmd) => {
             add_work_instance(cmd, db, &storage_root, &indexer).await?;
@@ -410,6 +414,86 @@ async fn add_core(
         )
         .await?;
     }
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn add_native_core(
+    AddNativeCoreArgs {
+        core_meta_path,
+        core_lib,
+        depth,
+    }: AddNativeCoreArgs,
+    db: PgPool,
+    storage_root: &str,
+) -> Result<(), GISSTCliError> {
+    use gisst::models::{CoreFileLink, CoreFileRole};
+    let mut tx = db.begin().await?;
+    let now = chrono::Utc::now();
+    let core_meta_path = Path::new(&core_meta_path);
+    let core_hash_path = core_meta_path.with_extension("hash");
+    let core_hash = std::fs::read_to_string(core_hash_path)?;
+    let core_hash = core_hash.trim();
+    let core_meta: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(core_meta_path)?)?;
+    let name = core_meta["core_name"].as_str().unwrap().to_string();
+    let mut source_path = PathBuf::from(&core_lib);
+    let file_name = source_path
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+    source_path.pop();
+    let links = CoreFileLink::get_all_for_core(&mut tx, &name, core_hash).await?;
+    if links.is_empty() {
+        return Err(GISSTCliError::CoreNotFound(
+            name.clone(),
+            core_hash.to_string(),
+            String::new(),
+        ));
+    }
+    if links
+        .iter()
+        .any(|l| l.core_role == CoreFileRole::Native && l.file_filename == file_name)
+    {
+        return Err(GISSTCliError::NativeCoreExists(
+            name.clone(),
+            core_hash.to_string(),
+            core_lib.clone(),
+        ));
+    }
+    let index = links
+        .iter()
+        .filter(|l| l.core_role == CoreFileRole::Native)
+        .map(|l| l.core_role_index + 1)
+        .max()
+        .unwrap_or(0);
+    let hash = StorageHandler::get_file_hash(&core_lib)?;
+    let file_id = if let Some(file) = gisst::models::File::get_by_hash(&mut tx, &hash).await? {
+        file.file_id
+    } else {
+        gisst::models::insert_new_file(
+            &mut tx,
+            storage_root,
+            depth,
+            &file_name,
+            Path::new(&core_lib),
+            &source_path.to_string_lossy().to_string().replace("./", ""),
+            now,
+            None,
+        )
+        .await?
+        .file_id
+    };
+    Core::link_file(
+        &mut tx,
+        &name,
+        core_hash,
+        CoreFileRole::Native,
+        u16::try_from(index).map_err(GISSTCliError::IntegerTooBig)?,
+        file_id,
+    )
+    .await?;
     tx.commit().await?;
     Ok(())
 }

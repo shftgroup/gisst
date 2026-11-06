@@ -1,4 +1,4 @@
-use super::{HideShowParams, LoggedInUserInfo};
+use super::HideShowParams;
 use crate::auth::{AuthBackend, User};
 use crate::{error::ServerError, server::ServerState};
 use axum::response::NoContent;
@@ -43,7 +43,7 @@ async fn hideshow_state(
         .user()
         .await
         .as_ref()
-        .map(LoggedInUserInfo::generate_from_user)
+        .map(crate::routes::user_from)
         .ok_or(ServerError::AuthUserNotAuthenticated)?;
     let mut conn = app_state.pool.acquire().await?;
     let state = State::get_by_id(conn.as_mut(), id)

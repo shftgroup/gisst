@@ -132,7 +132,7 @@ jobs:
       if: steps.cache.outputs.cache-hit != 'true'
       run: |
         mkdir -p build
-        OUT_DIR="${PWD}/build" FILE_ROOT="$PWD" MANIFEST_FILE="${PWD}/manifest-ci.json" GET_ASSETS=0 ./dist-update-docker.sh
+        OUT_DIR="${PWD}/build" FILE_ROOT="$PWD" MANIFEST_FILE="${PWD}/manifest-ci.json" GET_ASSETS=0 BUILD_NATIVE_CORES=1 ./dist-update-docker.sh
     - name: Cache cores
       if: steps.cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v5

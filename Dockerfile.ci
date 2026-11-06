@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
   libxkbcommon0 libatspi2.0-0t64 libxcomposite1 \
   libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2t64 \
     postgresql pkg-config sudo zsh ripgrep ca-certificates \
+    libavutil-dev libavformat-dev libavfilter-dev libavdevice-dev \
     zstd bash jq binaryen bison libpng-dev bsdmainutils cmake && \
     apt-get clean
 

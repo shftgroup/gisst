@@ -126,6 +126,7 @@ pub enum CoreFileRole {
     Entrypoint,
     Dependency,
     Config,
+    Native,
 }
 impl FromStr for CoreFileRole {
     type Err = &'static str;
@@ -135,6 +136,7 @@ impl FromStr for CoreFileRole {
             "entrypoint" => Ok(Self::Entrypoint),
             "dependency" => Ok(Self::Dependency),
             "config" => Ok(Self::Config),
+            "native" => Ok(Self::Native),
             _ => Err("Attempting to convert ObjectRole that does not exist."),
         }
     }

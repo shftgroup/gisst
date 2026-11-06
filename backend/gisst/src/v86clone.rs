@@ -76,9 +76,8 @@ pub async fn clone_v86_machine(
                 let file_path = format!("{storage_root}/{}", link.file_dest_path);
                 env_json = env_json.replace(&link.file_filename, &file_path);
             }
-            CoreFileRole::Config => {
-                // nop
-                tracing::warn!("Configs are not currently supported in v86 clone");
+            CoreFileRole::Config | CoreFileRole::Native => {
+                tracing::warn!("Configs/native cores are not currently supported in v86 clone");
             }
         }
     }

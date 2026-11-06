@@ -1,4 +1,3 @@
-use super::LoggedInUserInfo;
 use crate::{
     error::ServerError,
     server::{BASE_URL, ServerState},
@@ -19,55 +18,11 @@ use axum::{
 use axum_extra::extract::Query;
 use chrono::{DateTime, Local};
 use minijinja::context;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use server_types::embed::{
+    CitationDataInfo, EmbedDataInfo, PlayerStartTemplateInfo, PlayerTemplateInfo,
+};
 use uuid::Uuid;
-
-#[derive(Serialize, Debug)]
-struct PlayerTemplateInfo {
-    gisst_root: String,
-    instance: Instance,
-    work: Work,
-    environment: Environment,
-    user: LoggedInUserInfo,
-    saves: Vec<SaveLink>,
-    start: PlayerStartTemplateInfo,
-    core_manifest: Vec<CoreFileLink>,
-    manifest: Vec<ObjectLink>,
-    boot_into_record: bool,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct EmbedDataInfo {
-    pub gisst_root: String,
-    pub instance: Instance,
-    pub work: Work,
-    pub environment: Environment,
-    pub saves: Vec<SaveLink>,
-    pub start: PlayerStartTemplateInfo,
-    pub core_manifest: Vec<CoreFileLink>,
-    pub manifest: Vec<ObjectLink>,
-    pub host_url: String,
-    pub host_protocol: String,
-    pub citation_data: Option<CitationDataInfo>,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct CitationDataInfo {
-    pub website_title: String,
-    pub url: String,
-    pub gs_page_view_date: String,
-    pub mla_page_view_date: String,
-    pub bibtex_page_view_date: String,
-    pub site_published_year: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(tag = "type", content = "data", rename_all = "lowercase")]
-pub enum PlayerStartTemplateInfo {
-    Cold,
-    State(StateLink),
-    Replay(ReplayLink),
-}
 
 #[derive(Deserialize, Debug, Default)]
 pub struct PlayerParams {
@@ -265,7 +220,8 @@ pub async fn get_player(
                 table: Table::Work,
                 uuid: instance.work_id,
             })?;
-    let user = LoggedInUserInfo::generate_from_user(&auth.user().await.unwrap());
+    // TODO: is this unwrap ok? It's different from other routes...
+    let user = crate::routes::user_from(&auth.user().await.unwrap());
     let start = match (params.state, params.replay) {
         (Some(id), None) => {
             PlayerStartTemplateInfo::State(StateLink::get_by_id(&mut conn, id).await?.ok_or(

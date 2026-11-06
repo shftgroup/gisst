@@ -1,0 +1,2 @@
+-- Add down migration script here
+-- Can't remove values from an enum easily, and extra links won't cause any harm

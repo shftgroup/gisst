@@ -1,0 +1,12 @@
+[package]
+name = "server-types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+gisst.workspace = true
+config = { workspace = true, features = ["toml"], default-features = false }
+secrecy = { workspace = true, features = ["serde"] }
+serde = { workspace = true, features = ["derive"] }
+uuid = { workspace = true, features = ["serde", "v4"] }

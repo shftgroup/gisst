@@ -45,3 +45,4 @@ opentelemetry-stdout.workspace = true
 opentelemetry-semantic-conventions = { workspace = true, features = ["default", "semconv_experimental"] }
 tracing-opentelemetry.workspace = true
 axum-extra = { workspace = true, features = ["query", "tracing"] }
+server-types.workspace = true

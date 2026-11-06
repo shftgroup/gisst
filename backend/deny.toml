@@ -103,7 +103,9 @@ allow = [
     "BSD-3-Clause",
     "GPL-2.0-or-later",
     "CDLA-Permissive-2.0",
-    "AGPL-3.0-or-later"
+    "AGPL-3.0-or-later",
+    "BSL-1.0",
+    "WTFPL"
 ]
 # The confidence threshold for detecting a license from license text.
 # The higher the value, the more closely the license text must be to the
@@ -191,7 +193,7 @@ deny = [
     "jni-sys@*",
     "jni-sys-macros@*",
     "combine@*",
-    "simd_cesu8@*",
+    "simd_cesu8@*"
     #"ansi_term@0.11.0",
     #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is banned" },
     # Wrapper crates can optionally be specified to allow the crate when it
@@ -209,7 +211,8 @@ skip-tree = [
     { crate = "rand@0.9.5", reason = "opentelemetry" },
     { crate = "hashbrown@0.15.5", reason = "petgraph via tree-magic-mini" },
     { crate = "hashbrown@0.16.1", reason = "sqlx" },
-    { crate = "core-foundation@0.9.4", reason = "hyper-util via axum" }
+    { crate = "core-foundation@0.9.4", reason = "hyper-util via axum" },
+    { crate = "bindgen@0.73.2", reason = "nom, libloading"},
 ]
 skip = [
     #"ansi_term@0.11.0", # will be skipped along with _all_ of its direct and transitive dependencies
@@ -230,7 +233,8 @@ rust-version = "1.98.0"
 ignore = [
   "cfg-if",
   "itoa",
-  "once_cell"
+  "once_cell",
+  "num_cpus" # revisit if removed from ffmpeg-next
 ]
 
 [bans.workspace-dependencies]
@@ -243,11 +247,15 @@ allow-build-scripts = [
   "anyhow@1.0.104",
   "aws-lc-rs@1.19.0",
   "aws-lc-sys@0.47.0",
+  "bindgen@0.73.2",
+  "clang-sys@1.9.1",
   "cookie@0.18.2",
   "crc32fast@1.5.3",
   "crossbeam-queue@0.3.13",
   "crossbeam-utils@0.8.23",
-  "encoding_rs@0.8.42",
+  "encoding_rs@0.8.44",
+  "ffmpeg-next@9.0.0",
+  "ffmpeg-sys-next@9.0.1",
   "fs-err@3.3.2",
   "generic-array@0.14.9",
   "getrandom@0.3.4",
@@ -263,19 +271,27 @@ allow-build-scripts = [
   "parking_lot_core@0.9.12",
   "portable-atomic@1.15.0",
   "portable-atomic-util@0.2.7",
+  "prettyplease@0.2.37",
   "proc-macro2@1.0.107",
   "quote@1.0.47",
   "radium@0.7.0",
+  "rust-libretro-sys@0.3.2",
+  "rustix@0.38.44",
   "rustls@0.23.46",
   "rustversion@1.0.23",
   "serde@1.0.229",
   "serde_core@1.0.229",
   "serde_json@1.0.154",
+  "syn@1.0.109",
   "system-configuration-sys@0.6.0",
   "thiserror@1.0.69",
   "thiserror@2.0.21",
+  "windows_x86_64_gnu@0.52.6",
+  "windows_x86_64_msvc@0.52.6",
   "zerocopy@0.8.63",
   "zmij@1.0.23",
+  "zstd-safe@8.2.0",
+  "zstd-sys@2.1.2+zstd.1.5.7"
 ]
 interpreted = "deny"
 
@@ -314,7 +330,7 @@ unknown-git = "deny"
 # if not specified. If it is specified but empty, no registries are allowed.
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # List of URLs for allowed Git repositories
-allow-git = ["git+https://github.com/rafalh/rust-fatfs/", "git+https://github.com/JoeOsborn/axum-login/", "git+https://github.com/JoeOsborn/oauth2-rs", "git+https://github.com/transact-rs/sqlx/"]
+allow-git = ["git+https://github.com/rafalh/rust-fatfs/", "git+https://github.com/JoeOsborn/axum-login/", "git+https://github.com/JoeOsborn/oauth2-rs", "git+https://github.com/transact-rs/sqlx/", "https://github.com/JoeOsborn/rply-codec/"]
 required-git-spec="rev"
 
 [sources.allow-org]
