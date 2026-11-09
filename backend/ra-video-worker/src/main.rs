@@ -12,7 +12,7 @@ use anyhow::{Result, anyhow};
 use args::WorkerArgs;
 use chrono::{DateTime, Utc};
 use clap::Parser;
-use gisst::models::CoreFileRole;
+use gisst::models::{CoreFileRole, ObjectRole};
 use serde::Deserialize;
 use serde_json::json;
 use server_types::embed::PlayerStartTemplateInfo;
@@ -103,7 +103,7 @@ async fn process_one_task(client: &reqwest::Client, cache: &Path, gisst_url: &st
     };
     let task_data: Task = dbg!(resp.json().await?);
     if let Err(e) = run_task(client, cache, gisst_url, &task_data).await {
-        log::error!("Error processing task: {e:?}");
+        log::error!("Error processing task: {e:?}, {:?}", e.backtrace());
         post_error(
             client,
             gisst_url,
@@ -167,11 +167,18 @@ async fn run_task(
             client,
             gisst_url,
             &coredep.file_dest_path,
-            cache.join(&coredep.file_source_path),
+            cache_dir.join(&coredep.file_source_path),
             &coredep.file_filename,
         ));
     }
     // 3. download content
+    let main_content = task
+        .manifest
+        .iter()
+        .find(|l| l.object_role == ObjectRole::Content)
+        .ok_or(anyhow!("no main content file"))?
+        .file_filename
+        .clone();
     for file in &task.manifest {
         downloads.push(download_file(
             client,
@@ -186,7 +193,7 @@ async fn run_task(
         client,
         gisst_url,
         &replay.file_dest_path,
-        replay_dir,
+        replay_dir.clone(),
         &replay_path,
     ));
     // Complete all the downloads we need before generating video
@@ -195,12 +202,127 @@ async fn run_task(
     if !errs.is_empty() {
         return Err(anyhow!("Download errors:{errs:?}"));
     }
-    post_status(client, gisst_url, &task_data, &json!({"ready":true})).await?;
-    // 5. proceed as in the rply-codec genvideo example -- but use glgfx and copy_framebuffer_rgba8888.
-    //   maybe: need to fix retro-rs to fall back to software framebuffer if GL not requested
+    post_status(client, gisst_url, task_data, &json!({"ready":true})).await?;
+    // 5. call video generator program
+    let output_file = spawn_video_task(
+        client,
+        gisst_url,
+        task_data,
+        &cache_dir,
+        &corefile.file_filename,
+        &content_cache_dir,
+        &main_content,
+        &replay_dir.join(replay_path),
+    )
+    .await?;
+    dbg!(output_file);
     // 6. upload the video via TUS to gisst-server (should the task include a file object UUID/WIP tus upload to upload to?)
     dbg!(&task);
     Err(anyhow!("not yet implemented"))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+#[serde(tag = "status")]
+enum StatusUpdate {
+    Error {
+        error: String,
+        cause: serde_json::Value,
+    },
+    Progress {
+        frame: usize,
+        total: Option<usize>,
+        phase: String,
+    },
+    Finished {},
+}
+
+#[expect(clippy::too_many_arguments)]
+async fn spawn_video_task(
+    client: &reqwest::Client,
+    gisst_url: &str,
+    task_data: &Task,
+    system_cache_dir: &Path,
+    core_file: &str,
+    content_cache_dir: &Path,
+    main_content_file: &str,
+    replay_path: &Path,
+) -> Result<PathBuf> {
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    let out_path = replay_path.with_extension("webm");
+    let mut bin_path = std::env::current_exe()?;
+    bin_path.set_file_name("ra-video-genvideo");
+    let mut child = tokio::process::Command::new(bin_path)
+        .args([
+            replay_path
+                .to_str()
+                .ok_or(anyhow!("Could not get replay path as unicode"))?,
+            out_path
+                .to_str()
+                .ok_or(anyhow!("Could not get output path as unicode"))?,
+            // TODO: more sophisticated handling of system files, bios, etc? retro-rs defaults to finding them next to core
+            system_cache_dir
+                .join(core_file)
+                .to_str()
+                .ok_or(anyhow!("Could not get core path as unicode"))?,
+            content_cache_dir
+                .join(main_content_file)
+                .to_str()
+                .ok_or(anyhow!("Could not get main content path as unicode"))?,
+        ])
+        .current_dir(content_cache_dir)
+        .stdout(std::process::Stdio::piped())
+        .kill_on_drop(true)
+        .spawn()
+        .map_err(|e| anyhow!("Could not create task: {e:?}"))?;
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or(anyhow!("child did not have a handle to stdout"))?;
+
+    let mut stdout_reader = BufReader::new(stdout).lines();
+    // TODO: replace with a reader that I can actually append to and a serde_json streamdeserializer
+    let mut json_text = String::new();
+    loop {
+        tokio::select! {
+            result = stdout_reader.next_line() => {
+                match result {
+                    Ok(None) => {},
+                    Ok(Some(line)) => {
+                        json_text.push_str(&line);
+                    },
+                    Err(_) => return Err(anyhow!("unexpected eof on stdout")),
+                }
+                match serde_json::from_str::<StatusUpdate>(&json_text) {
+                    Ok(StatusUpdate::Error{error,cause}) => {
+                        return Err(anyhow!("Video generation error {error} : {cause:?}"));
+                    },
+                    Ok(StatusUpdate::Progress{frame,total,phase}) => {
+                        post_status(client, gisst_url, task_data, &json!({"phase":phase, "frame":frame, "total":total})).await?;
+                        json_text.clear();
+                    }
+                    Ok(StatusUpdate::Finished{}) => {
+                        json_text.clear();
+                        // just wait for process to exit
+                    }
+                    Err(e) if e.is_eof() => {
+                        /* do not clear json_text, we need more lines of output before parsing status or error update */
+                    },
+                    Err(e) => {
+                        return Err(anyhow!("Video generation error {e:?} on {json_text}"));
+                    }
+                }
+            }
+            result = child.wait() => {
+                match result {
+                    Ok(exit_code) if exit_code.success() => return Ok(out_path),
+                    Ok(exit_code) => return Err(anyhow!("Process exited with code {exit_code}")),
+                    Err(e) => return Err(anyhow!(e))
+                }
+            }
+        };
+    }
 }
 async fn post_status(
     client: &reqwest::Client,

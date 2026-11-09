@@ -2791,10 +2791,12 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 name = "ra-video-genvideo"
 version = "0.2.4"
 dependencies = [
+ "anyhow",
  "ffmpeg-next",
  "retro-rs",
  "ringbuf",
  "rply-codec",
+ "serde_json",
 ]
 
 [[package]]
@@ -2985,9 +2987,9 @@ dependencies = [
 
 [[package]]
 name = "retro-rs"
-version = "0.6.1"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44fb03182d45990fc95a82ce74e10443b393638b7724e6a2311f5014d7fb7e43"
+checksum = "57e5785a63919b917e90614d0a8b5b0a9abb130635ec48ff0853e88cf2bbd866"
 dependencies = [
  "cc",
  "euclid",
@@ -3727,7 +3729,6 @@ dependencies = [
  "wayland-sys",
  "winapi",
  "wio",
- "x11-dl",
 ]
 
 [[package]]
@@ -4819,17 +4820,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed"
 dependencies = [
  "tap",
-]
-
-[[package]]
-name = "x11-dl"
-version = "2.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38735924fedd5314a6e548792904ed8c6de6636285cb9fec04d5b1db85c1516f"
-dependencies = [
- "libc",
- "once_cell",
- "pkg-config",
 ]
 
 [[package]]

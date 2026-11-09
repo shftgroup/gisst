@@ -275,7 +275,7 @@ allow-build-scripts = [
   "proc-macro2@1.0.107",
   "quote@1.0.47",
   "radium@0.7.0",
-  "retro-rs@0.6.1",
+  "retro-rs@0.6.3",
   "gisst-rust-libretro-sys@0.4.2",
   "rustix@0.38.44",
   "rustls@0.23.46",
