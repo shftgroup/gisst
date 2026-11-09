@@ -35,8 +35,8 @@ textarea:disabled {
     "Helvetica Neue",
     sans-serif;
   background-color: light-dark(
-    var(--gisst-light-theme-border),
-    var(--gisst-dark-theme-border)
+    var(--gisst-light-theme-bg),
+    var(--gisst-dark-theme-bg)
   );
 }
 
@@ -391,7 +391,7 @@ li:last-child .gisst-New-instance-move-down {
   aspect-ratio: 1 / 1;
   margin-right: 6px;
   background-color: light-dark(
-    var(--gist-light-theme-dark),
+    var(--gisst-light-theme-dark),
     var(--gisst-dark-theme-dark)
   );
   border: 1.5px solid

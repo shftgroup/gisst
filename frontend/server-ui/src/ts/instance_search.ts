@@ -30,7 +30,9 @@ export class GISSTInstanceSearch extends GISSTItemSearch {
     return (hit: Hit<InstanceRecord>, { html, components }) => html`
       <div class="gisst-Search-results-row">
         ${scs.instance_info_3col(this.base_url, hit, html, components)}
-        ${scs.play_actions(this.base_url, hit.instance_id, hit.instance_id, "instance", false, html)}
+        <div class="gisst-Search-cell gisst-Search-actions-cell">
+          ${scs.play_actions(this.base_url, hit.instance_id, hit.instance_id, "instance", false, html)}
+        </div>
       </div>
     `;
   }
