@@ -22,24 +22,26 @@ use uuid::Uuid;
 const CHECK_INTERVAL: u64 = 10;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     use reqwest::ClientBuilder;
     let args = WorkerArgs::parse();
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        "Authorization",
+        reqwest::header::HeaderValue::from_str(&format!("Bearer {}", args.worker_key))?,
+    );
     let client = ClientBuilder::new()
         .tls_danger_accept_invalid_certs(args.allow_invalid_certs)
+        .default_headers(headers)
         .build()
         .unwrap();
     env_logger::Builder::new()
         .filter_level(args.verbose.log_level_filter())
         .init();
-    let claim_url = format!("{}/tasks/claim", args.gisst_url);
-    let auth_header = format!("Bearer {}", args.worker_key);
     let cache = Path::new(&args.corefile_cache);
     loop {
-        if let Err(e) =
-            process_one_task(&client, cache, &args.gisst_url, &claim_url, &auth_header).await
-        {
-            log::error!("Error processing task: {e:?}");
+        if let Err(e) = process_one_task(&client, cache, &args.gisst_url).await {
+            log::error!("Error claiming task: {e:?}");
         }
         tokio::time::sleep(std::time::Duration::from_secs(CHECK_INTERVAL)).await;
     }
@@ -79,16 +81,10 @@ pub struct Task {
     pub task_input: serde_json::Value,
 }
 
-async fn process_one_task(
-    client: &reqwest::Client,
-    cache: &Path,
-    gisst_url: &str,
-    claim_url: &str,
-    auth_header: &str,
-) -> Result<()> {
+async fn process_one_task(client: &reqwest::Client, cache: &Path, gisst_url: &str) -> Result<()> {
+    let claim_url = format!("{gisst_url}/tasks/claim");
     let resp = match client
         .post(claim_url)
-        .header("Authorization", auth_header)
         .header("Content-Encoding", "application/json")
         .json(&json!({"task_type":"retroarch_replay_video"}))
         .send()
@@ -106,7 +102,27 @@ async fn process_one_task(
         Err(e) => return Err(e.into()),
     };
     let task_data: Task = dbg!(resp.json().await?);
-    let task: server_types::embed::EmbedDataInfo = serde_json::from_value(task_data.task_input)?;
+    if let Err(e) = run_task(client, cache, gisst_url, &task_data).await {
+        log::error!("Error processing task: {e:?}");
+        post_error(
+            client,
+            gisst_url,
+            &task_data,
+            &json!({"error":format!("{e:#}")}),
+        )
+        .await
+    } else {
+        Ok(())
+    }
+}
+async fn run_task(
+    client: &reqwest::Client,
+    cache: &Path,
+    gisst_url: &str,
+    task_data: &Task,
+) -> Result<()> {
+    let task: server_types::embed::EmbedDataInfo =
+        serde_json::from_value(task_data.task_input.clone())?;
     let cache_dir = cache
         .join(&task.environment.environment_platform)
         .join(&task.environment.environment_core_name)
@@ -179,9 +195,51 @@ async fn process_one_task(
     if !errs.is_empty() {
         return Err(anyhow!("Download errors:{errs:?}"));
     }
+    post_status(client, gisst_url, &task_data, &json!({"ready":true})).await?;
     // 5. proceed as in the rply-codec genvideo example -- but use glgfx and copy_framebuffer_rgba8888.
     //   maybe: need to fix retro-rs to fall back to software framebuffer if GL not requested
     // 6. upload the video via TUS to gisst-server (should the task include a file object UUID/WIP tus upload to upload to?)
     dbg!(&task);
     Err(anyhow!("not yet implemented"))
+}
+async fn post_status(
+    client: &reqwest::Client,
+    gisst_url: &str,
+    task_data: &Task,
+    json: &serde_json::Value,
+) -> Result<()> {
+    post_update(client, gisst_url, task_data, json, "status").await
+}
+async fn post_error(
+    client: &reqwest::Client,
+    gisst_url: &str,
+    task_data: &Task,
+    json: &serde_json::Value,
+) -> Result<()> {
+    post_update(client, gisst_url, task_data, json, "error").await
+}
+#[expect(unused)]
+async fn post_complete(
+    client: &reqwest::Client,
+    gisst_url: &str,
+    task_data: &Task,
+    json: &serde_json::Value,
+) -> Result<()> {
+    post_update(client, gisst_url, task_data, json, "complete").await
+}
+async fn post_update(
+    client: &reqwest::Client,
+    gisst_url: &str,
+    task_data: &Task,
+    json: &serde_json::Value,
+    status_code: &str,
+) -> Result<()> {
+    let status_url = format!("{gisst_url}/tasks/{}/{status_code}", task_data.task_id);
+    client
+        .post(status_url)
+        .header("Content-Encoding", "application/json")
+        .json(json)
+        .send()
+        .await?;
+    Ok(())
 }
