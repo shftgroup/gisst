@@ -251,33 +251,10 @@ pub async fn launch(config: &Config) -> Result<()> {
         }
     });
 
-    if config.http.dev_ssl {
-        use axum_server::tls_rustls::RustlsConfig;
-        let tlsconfig = RustlsConfig::from_pem_file(
-            config
-                .http
-                .dev_cert
-                .as_ref()
-                .expect("In dev SSL mode, must supply cert in config"),
-            config
-                .http
-                .dev_key
-                .as_ref()
-                .expect("In dev SSL mode, must supply key in config"),
-        )
+    axum_server::bind(addr)
+        .serve(app.into_make_service())
         .await
-        .unwrap();
-
-        axum_server::bind_rustls(addr, tlsconfig)
-            .serve(app.into_make_service())
-            .await
-            .expect("could not launch GISST HTTP server on port 3000");
-    } else {
-        axum_server::bind(addr)
-            .serve(app.into_make_service())
-            .await
-            .expect("could not launch GISST HTTP server on port 3000");
-    }
+        .expect("could not launch GISST HTTP server on port 3000");
     Ok(())
 }
 
