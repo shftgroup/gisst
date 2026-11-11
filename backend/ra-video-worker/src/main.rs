@@ -53,12 +53,12 @@ async fn download_file(
     path: &str,
     local_root: PathBuf,
     local_path: &str,
-) -> Result<PathBuf> {
+) -> Result<()> {
     use std::io::Write;
     let dest = local_root.join(local_path);
     if let Ok(true) = std::fs::exists(&dest) {
         println!("use cached {}", dest.display());
-        return Ok(dest);
+        return Ok(());
     }
     println!("download {gisst_url}/storage/{path} to {}", dest.display());
     let mut resp = client
@@ -69,7 +69,7 @@ async fn download_file(
     while let Some(chunk) = resp.chunk().await? {
         file.write_all(&chunk)?;
     }
-    Ok(dest)
+    Ok(())
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
@@ -132,12 +132,49 @@ async fn run_task(
         .join(&task.environment.environment_platform)
         .join(task.instance.instance_id.to_string());
     std::fs::create_dir_all(&content_cache_dir)?;
+    let (corefile_name, main_content_name, replay_dest_path) = download_files(
+        client,
+        gisst_url,
+        task_data,
+        &task,
+        &cache_dir,
+        &content_cache_dir,
+    )
+    .await?;
+    // 5. call video generator program
+    let output_file = spawn_video_task(
+        client,
+        gisst_url,
+        task_data,
+        &cache_dir,
+        &corefile_name,
+        &content_cache_dir,
+        &main_content_name,
+        &replay_dest_path,
+    )
+    .await?;
+    dbg!(output_file);
+    // 6. upload the video via TUS to gisst-server (should the task include a file object UUID/WIP tus upload to upload to?)
+    dbg!(&task);
+    Err(anyhow!("not yet implemented"))
+}
+
+async fn download_files(
+    client: &reqwest::Client,
+    gisst_url: &str,
+    task_data: &Task,
+    task: &server_types::embed::EmbedDataInfo,
+    cache_dir: &Path,
+    content_cache_dir: &Path,
+) -> Result<(String, String, PathBuf)> {
+    use futures::{StreamExt, future::Either};
     let PlayerStartTemplateInfo::Replay(replay) = &task.start else {
         return Err(anyhow!("Task start is not a replay {:?}", task.start));
     };
     let replay_dir = std::env::temp_dir().join("ra-video-worker-replays");
     std::fs::create_dir_all(&replay_dir)?;
     let replay_path = format!("{}.replay", replay.replay_id);
+    let replay_dest_path = replay_dir.join(&replay_path);
     // 1. use the task's core manifest to find the appropriate native core for this OS/arch
     let suffix = format!(
         "_libretro.{}.{}",
@@ -154,7 +191,7 @@ async fn run_task(
         client,
         gisst_url,
         &corefile.file_dest_path,
-        cache_dir.clone(),
+        cache_dir.to_path_buf(),
         &corefile.file_filename,
     );
     let mut downloads = vec![prom];
@@ -193,32 +230,42 @@ async fn run_task(
         client,
         gisst_url,
         &replay.file_dest_path,
-        replay_dir.clone(),
+        replay_dir,
         &replay_path,
     ));
     // Complete all the downloads we need before generating video
-    let results = futures::future::join_all(downloads).await;
-    let errs: Vec<_> = results.into_iter().filter_map(Result::err).collect();
-    if !errs.is_empty() {
-        return Err(anyhow!("Download errors:{errs:?}"));
+
+    let results = futures::stream::once(futures::future::try_join_all(downloads)).map(Either::Left);
+    let status_update = tokio_stream::wrappers::IntervalStream::new(tokio::time::interval(
+        std::time::Duration::from_secs(180),
+    ))
+    .map(|_| Either::Right(()));
+    let mut updates = futures::stream::select(results, status_update);
+    loop {
+        // TODO: use the futuresunordered stream of downloads to report download progress by file count
+        match updates.select_next_some().await {
+            Either::Left(Err(e)) => {
+                return Err(anyhow!("Download error:{e:?}"));
+            }
+            Either::Left(Ok(_)) => {
+                return Ok((
+                    corefile.file_filename.clone(),
+                    main_content,
+                    replay_dest_path,
+                ));
+            }
+            Either::Right(()) => {
+                // post status update
+                post_status(
+                    client,
+                    gisst_url,
+                    task_data,
+                    &json!({"phase":"downloading"}),
+                )
+                .await?;
+            }
+        }
     }
-    post_status(client, gisst_url, task_data, &json!({"ready":true})).await?;
-    // 5. call video generator program
-    let output_file = spawn_video_task(
-        client,
-        gisst_url,
-        task_data,
-        &cache_dir,
-        &corefile.file_filename,
-        &content_cache_dir,
-        &main_content,
-        &replay_dir.join(replay_path),
-    )
-    .await?;
-    dbg!(output_file);
-    // 6. upload the video via TUS to gisst-server (should the task include a file object UUID/WIP tus upload to upload to?)
-    dbg!(&task);
-    Err(anyhow!("not yet implemented"))
 }
 
 #[derive(serde::Deserialize)]
@@ -248,6 +295,7 @@ async fn spawn_video_task(
     main_content_file: &str,
     replay_path: &Path,
 ) -> Result<PathBuf> {
+    use std::time::Instant;
     use tokio::io::{AsyncBufReadExt, BufReader};
     let out_path = replay_path.with_extension("webm");
     let mut bin_path = std::env::current_exe()?;
@@ -284,8 +332,10 @@ async fn spawn_video_task(
     let mut stdout_reader = BufReader::new(stdout).lines();
     // TODO: replace with a reader that I can actually append to and a serde_json streamdeserializer
     let mut json_text = String::new();
+    let mut last_posted = Instant::now();
     loop {
         tokio::select! {
+            // not cancellation safe, but that's ok because the only other branch is the end of the process
             result = stdout_reader.next_line() => {
                 match result {
                     Ok(None) => {},
@@ -299,7 +349,10 @@ async fn spawn_video_task(
                         return Err(anyhow!("Video generation error {error} : {cause:?}"));
                     },
                     Ok(StatusUpdate::Progress{frame,total,phase}) => {
-                        post_status(client, gisst_url, task_data, &json!({"phase":phase, "frame":frame, "total":total})).await?;
+                        if last_posted.elapsed().as_secs() >= 180 {
+                            post_status(client, gisst_url, task_data, &json!({"phase":phase, "frame":frame, "total":total})).await?;
+                            last_posted = Instant::now();
+                        }
                         json_text.clear();
                     }
                     Ok(StatusUpdate::Finished{}) => {
@@ -357,6 +410,7 @@ async fn post_update(
     status_code: &str,
 ) -> Result<()> {
     let status_url = format!("{gisst_url}/tasks/{}/{status_code}", task_data.task_id);
+    println!("post {status_url} json {json:?}");
     client
         .post(status_url)
         .header("Content-Encoding", "application/json")

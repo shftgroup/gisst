@@ -2816,6 +2816,7 @@ dependencies = [
  "serde_json",
  "server-types",
  "tokio",
+ "tokio-stream",
  "uuid",
 ]
 

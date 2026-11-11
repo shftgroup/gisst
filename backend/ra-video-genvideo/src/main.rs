@@ -192,9 +192,9 @@ impl AudioState {
             ffmpeg_next::ffi::av_channel_layout_default(&raw mut (*aps).ch_layout, 2);
             (*aps).codec_id = out_audio_codec.id().into();
             (*aps).codec_type = ffmpeg_next::ffi::AVMediaType::AVMEDIA_TYPE_AUDIO;
-            (*aps).sample_rate = 48000;
+            (*aps).sample_rate = 48_000;
             (*aps).frame_size = 960;
-            (*aps).bit_rate = 128000;
+            (*aps).bit_rate = 128 * 1024;
         };
         out_audio_ctx
             .set_parameters(audio_params)
@@ -203,7 +203,7 @@ impl AudioState {
             .add_stream_with(&out_audio_ctx)
             .map_err(|e| anyhow!("could not add stream {e:?}"))?;
         let encoded_audio = ffmpeg_next::Packet::empty();
-        let audio_time_base = Rational::new(1, 48000);
+        let audio_time_base = Rational::new(1, 48_000);
         let mut out_audio_enc = out_audio_ctx
             .encoder()
             .audio()
@@ -213,7 +213,7 @@ impl AudioState {
         ));
         out_audio_enc.set_channel_layout(ffmpeg_next::ChannelLayout::STEREO);
         out_audio_enc.set_time_base(audio_time_base);
-        out_audio_enc.set_bit_rate(128000);
+        out_audio_enc.set_bit_rate(128 * 1024);
         out_audio_enc.set_rate(audio_time_base.1);
         let out_audio_enc = out_audio_enc
             .open()
@@ -328,7 +328,7 @@ fn upgrade_v0<R: std::io::BufRead + 'static>(
     use rply_codec::InputData;
     use std::cell::RefCell;
     use std::rc::Rc;
-    let mut writer = std::io::BufWriter::new(std::fs::File::create(&tmp_path)?);
+    let mut writer = std::io::BufWriter::new(std::fs::File::create(tmp_path)?);
     assert!(emu.load(&rply.initial_state));
     let mut header_out = rply.header.clone();
     header_out.upgrade();
@@ -372,10 +372,12 @@ fn upgrade_v0<R: std::io::BufRead + 'static>(
             .read_end_of_frame(&mut frame.borrow_mut())
             .unwrap();
         encoder.write_frame(&frame.borrow()).unwrap();
-        println!(
-            "{}",
-            json!({"status":"progress", "phase": "upgrade", "frame": i, "total":null})
-        );
+        if i % 60 == 0 {
+            println!(
+                "{}",
+                json!({"status":"progress", "phase": "upgrade", "frame": i, "total":null})
+            );
+        }
         i += 1;
     }
     encoder.finish()?;
@@ -547,10 +549,12 @@ fn main() {
             );
             std::process::exit(-2);
         }
-        println!(
-            "{}",
-            json!({"status":"progress", "phase": "render", "frame":rply.frame_number, "total":frame_count})
-        );
+        if rply.frame_number.is_multiple_of(60) {
+            println!(
+                "{}",
+                json!({"status":"progress", "phase": "render", "frame":rply.frame_number, "total":frame_count})
+            );
+        }
 
         if Some(rply.frame_number) == frame_count {
             break;

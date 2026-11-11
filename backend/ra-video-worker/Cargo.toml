@@ -19,3 +19,4 @@ futures.workspace = true
 uuid = { workspace = true, features = ["serde", "v4"] }
 chrono = { workspace = true, features = ["clock"] }
 serde = { workspace = true, features = ["derive"] }
+tokio-stream = "0.1"
