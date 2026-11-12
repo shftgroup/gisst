@@ -34,7 +34,10 @@ textarea:disabled {
     "Open Sans",
     "Helvetica Neue",
     sans-serif;
-  background-color: var(--gisst-dark-theme-bg);
+  background-color: light-dark(
+    var(--gisst-light-theme-bg),
+    var(--gisst-dark-theme-bg)
+  );
 }
 
 .gisst-New-instance-container > * {
@@ -97,12 +100,24 @@ li:last-child .gisst-New-instance-move-down {
   border-radius: 0.5rem;
   margin: 0.5rem 0;
   padding: 0.5rem 0.5rem;
-  background-color: rgb(var(--gisst-dark-theme-card-bg), 0.25);
+  background-color: rgb(
+    light-dark(
+      var(--gisst-light-theme-card-bg),
+      var(--gisst-dark-theme-card-bg)
+    ),
+    0.25
+  );
 }
 
 .gisst-New-instance-file-selects-header {
   padding-bottom: 5px;
-  border-bottom: 0.1px solid rgb(var(--gisst-dark-theme-border));
+  border-bottom: 0.1px solid
+    rgb(
+      light-dark(
+        var(--gisst-light-theme-border),
+        var(--gisst-dark-theme-border)
+      )
+    );
 }
 
 .gisst-New-instance-file-selects legend {
@@ -125,11 +140,16 @@ li:last-child .gisst-New-instance-move-down {
 }
 
 .gisst-New-instance-select-file-lists > li {
-  border: rgb(var(--gisst-dark-theme-border));
+  border: rgb(
+    light-dark(var(--gisst-light-theme-border), var(--gisst-dark-theme-border))
+  );
   border-radius: 0.5rem;
   margin: 0.3rem 0;
   padding: 0.5rem;
-  background-color: var(--gisst-dark-theme-dark);
+  background-color: light-dark(
+    var(--gisst-light-theme-dark),
+    var(--gisst-dark-theme-dark)
+  );
   box-shadow: 0.2rem 0.2rem 0.4rem
     light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
 }
@@ -361,7 +381,7 @@ li:last-child .gisst-New-instance-move-down {
 .gisst-New-instance-submit-btn-secondary {
   background-color: light-dark(
     var(--gisst-light-theme-secondary),
-    var(--gisst-light-theme-secondary)
+    var(--gisst-dark-theme-secondary)
   );
 }
 
@@ -370,7 +390,10 @@ li:last-child .gisst-New-instance-move-down {
   align-items: center;
   aspect-ratio: 1 / 1;
   margin-right: 6px;
-  background-color: var(--gisst-dark-theme-dark);
+  background-color: light-dark(
+    var(--gisst-light-theme-dark),
+    var(--gisst-dark-theme-dark)
+  );
   border: 1.5px solid
     light-dark(
       var(--gisst-light-theme-primary-dark),
@@ -381,8 +404,17 @@ li:last-child .gisst-New-instance-move-down {
 
 .gisst-New-instance-move-up,
 .gisst-New-instance-move-down {
-  border: 1px solid rgb(var(--gisst-dark-theme-border));
-  background-color: var(--gisst-dark-theme-dark);
+  border: 1px solid
+    rgb(
+      light-dark(
+        var(--gisst-light-theme-border),
+        var(--gisst-dark-theme-border)
+      )
+    );
+  background-color: light-dark(
+    var(--gisst-light-theme-dark),
+    var(--gisst-dark-theme-dark)
+  );
 
   border-radius: 0.3rem;
   align-items: end;

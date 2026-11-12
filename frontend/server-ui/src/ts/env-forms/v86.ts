@@ -362,8 +362,3 @@ export class GISSTNewInstanceEnvFormV86 extends GISSTNewInstanceEnvForm {
     this.dispatchEvent(new GISSTEnvFormOnNewConfEvent(this.env_conf));
   }
 }
-
-customElements.define(
-  "gisst-new-instance-env-form-v86",
-  GISSTNewInstanceEnvFormV86,
-);

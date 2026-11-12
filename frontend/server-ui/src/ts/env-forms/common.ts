@@ -51,6 +51,10 @@ export class GISSTEnvFormOnContentRemoveEvent extends Event {
 export abstract class GISSTNewInstanceEnvForm extends HTMLElement {
   public abstract readonly HANDLES_CONTENT_FILES: boolean;
 
+  constructor() {
+    super();
+  }
+
   /**
    * Retrieve the currently generated environment config.
    */

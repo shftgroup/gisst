@@ -1,9 +1,9 @@
 import * as widgets from "instantsearch.js/es/widgets";
 import * as tus from "tus-js-client";
-import { search_instances } from "./main";
+import { search_instances } from "./search_impl";
 import { default as SparkMD5 } from "spark-md5";
 import connectStats from "instantsearch.js/es/connectors/stats/connectStats";
-import { elementFromTemplates } from "./main";
+import { elementFromTemplate } from "./templates";
 import { GISSTNewInstanceEnvForm } from "./env-forms/common";
 import { GISSTNewInstanceEnvFormV86 } from "./env-forms/v86";
 import { GISSTNewInstanceEnvFormRA } from "./env-forms/ra";
@@ -214,38 +214,33 @@ export class GISSTNewInstance extends HTMLElement {
     this.base_url = base_url;
 
     // Initialize templates
-    this.content_matcher = elementFromTemplates("new-instance-method-two")
-      .firstElementChild as HTMLDivElement;
-    const search_method_div = elementFromTemplates("new-instance-method-one")
-      .firstElementChild as HTMLDivElement;
-    const metadata_form = elementFromTemplates("new-instance-details-form")
-      .firstElementChild as HTMLFormElement;
-    const select_files_form = elementFromTemplates(
+    this.content_matcher = elementFromTemplate("new-instance-method-two");
+    const search_method_div = elementFromTemplate("new-instance-method-one");
+    const metadata_form = elementFromTemplate("new-instance-details-form");
+    const select_files_form: HTMLFormElement = elementFromTemplate(
       "new-instance-select-files-form",
-    ).firstElementChild as HTMLFormElement;
-    const submit_div = elementFromTemplates("new-instance-submit")
-      .firstElementChild as HTMLDivElement;
+    );
+    const submit_div = elementFromTemplate("new-instance-submit");
 
     // config panels for form/manual entry tabs
-    const config_form = elementFromTemplates("new-instance-config-form")
-      .firstElementChild as HTMLDivElement;
-    const missing_config_form_panel = elementFromTemplates(
+    const config_form = elementFromTemplate("new-instance-config-form");
+    const missing_config_form_panel = elementFromTemplate(
       "missing-config-form-panel",
-    ).firstElementChild as HTMLDivElement;
-    const config_manual_panel = elementFromTemplates(
+    );
+    const config_manual_panel = elementFromTemplate(
       "config-manual-entry-panel",
-    ).firstElementChild as HTMLDivElement;
+    );
 
     // Setup method 1 search
-    const search_box = search_method_div.querySelector(
+    const search_box: HTMLElement = search_method_div.querySelector(
       "#new-instance-search-box",
-    ) as HTMLElement;
-    const results_box = search_method_div.querySelector(
+    )!;
+    const results_box: HTMLElement = search_method_div.querySelector(
       "#new-instance-results-box",
-    ) as HTMLElement;
-    const results_header = search_method_div.querySelector(
+    )!;
+    const results_header: HTMLElement = search_method_div.querySelector(
       ".gisst-New-instance-search-header",
-    ) as HTMLElement;
+    )!;
     const results_header_display = results_header.style.display;
 
     const search = search_instances(search_url, search_key, {});
@@ -619,7 +614,7 @@ export class GISSTNewInstance extends HTMLElement {
 
     const contents = document.createElement("div");
     contents.className = "gisst-New-instance-container";
-    contents.appendChild(elementFromTemplates("new-instance-header"));
+    contents.appendChild(elementFromTemplate("new-instance-header"));
     contents.appendChild(search_method_div);
     contents.appendChild(this.content_matcher);
     contents.appendChild(metadata_form);
@@ -719,11 +714,9 @@ export class GISSTNewInstance extends HTMLElement {
       "#work-info input[name=work_version]",
     )!;
     // TODO: fetch other bibliographic info fields...
-    if (core_chooser.selectedOptions.length == 0) {
-      core_chooser.selectedIndex = Array.from(core_chooser.options).findIndex(
-        (o) => o.dataset["platform"] == work.work_platform,
-      );
-    }
+    core_chooser.selectedIndex = Array.from(core_chooser.options).findIndex(
+      (o) => o.dataset["corePlatform"] == work.work_platform,
+    );
     work_name.value = work.work_name;
     work_version.value = work.work_version;
     this.work.work_platform = work.work_platform;
