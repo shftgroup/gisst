@@ -39,7 +39,8 @@ if [ "$OLD_VSN" != "$NEW_VSN" ]; then
   else
     ASSETS=1
   fi
-  docker run --rm -v $(pwd)/build:/out:Z -v $(pwd)/manifest.json:/manifest.json:Z -v $(pwd)/v86bios:/files/v86bios:Z -v $(pwd)/psxbios:/files/psxbios:Z -v gisst-build:/gisst-build:Z -e GET_ASSETS=$ASSETS cafe.cs.pomona.edu/shftgroup/gisst-dist:latest
+  docker run --rm -v $(pwd)/build:/out:Z -v $(pwd)/manifest.json:/manifest.json:Z -v $(pwd)/v86bios:/files/v86bios:Z -v $(pwd)/psxbios:/files/psxbios:Z -v gisst-build:/gisst-build:Z -e GET_ASSETS=$ASSETS -e BUILD_NATIVE_CORES=1 --platform linux/amd64 cafe.cs.pomona.edu/shftgroup/gisst-dist:latest
+  docker run --rm -v $(pwd)/build:/out:Z -v $(pwd)/manifest.json:/manifest.json:Z -v $(pwd)/v86bios:/files/v86bios:Z -v $(pwd)/psxbios:/files/psxbios:Z -v gisst-build:/gisst-build:Z --platform linux/arm64 -e GET_ASSETS=0 -e BUILD_CORES=0 -e BUILD_NATIVE_CORES=1 cafe.cs.pomona.edu/shftgroup/gisst-dist:latest
   tar czvf cores.tgz build
   curl -u "jcoa2018:$(cat $JOB_TOKEN)" --anyauth --request DELETE "https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz" || echo "no existing package to delete"
   curl -u "jcoa2018:$(cat $JOB_TOKEN)" --anyauth --upload-file cores.tgz "https://cafe.cs.pomona.edu/api/packages/shftgroup/generic/cores/latest/cores.tgz"
