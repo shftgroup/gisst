@@ -11,16 +11,17 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
+const ci = !!(process.env.CI || process.env.PRE_COMMIT);
 export default defineConfig({
   testDir: "./src/test",
   /* Run tests in files in parallel; must be false for firefox/webkit on devcontainer in linux (at least) */
   fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: !!process.env.CI,
+  forbidOnly: ci,
   /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
+  retries: ci ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: ci ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ["html", { outputFolder: "../playwright-report/gisst-player-ui" }],
@@ -48,7 +49,6 @@ export default defineConfig({
       name: "webkit",
       use: { ...devices["Desktop Safari"] },
     },
-
     /* Test against mobile viewports. */
     // {
     //   name: 'Mobile Chrome',
