@@ -1,0 +1,66 @@
+services:
+  gisst:
+    image: gisst-eph:$BRANCH
+    env_file:
+      - ./.env
+    userns_mode: keep-id
+    volumes:
+      - ./:/workspace:cached,z
+      - source: ../eph/eph-start.sh
+        target: /usr/bin/eph-start.sh
+        type: bind
+      - source: ./eph.nginx.conf
+        target: /etc/nginx/sites-enabled/default
+        type: bind
+    command: /usr/bin/eph-start.sh
+    ports:
+      - "$PORT:80"
+      # TODO: consider opening ssl? postgres?
+    depends_on:
+      - db
+      - meili
+      - meilitest
+    networks:
+      - internal
+      - eph
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: gisstdb
+    expose:
+      - "5432"
+    networks:
+      - internal
+  meili:
+    image: getmeili/meilisearch:latest
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: devcontainer_testkey
+    volumes:
+      - meili-data:/meili_data
+    expose:
+      - "7700"
+    networks:
+      - internal
+  meilitest:
+    image: getmeili/meilisearch:latest
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: test-api-key
+      MEILI_HTTP_ADDR: "0.0.0.0:7701"
+    expose:
+      - "7701"
+    networks:
+      - internal
+volumes:
+  postgres-data:
+  meili-data:
+networks:
+  eph:
+  internal:
+    internal: true

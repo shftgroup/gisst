@@ -87,7 +87,7 @@ for ncore in ../build/native_cores/*_libretro.*; do
   FNAME=$(basename "$ncore")
   COREMETA="${FNAME%%.*}.json"
   echo "add native core $FNAME for $COREMETA"
-  ./target/debug/gisst-cli add-native-core "../build/cores/${COREMETA}" "${ncore}"
+  ./target/debug/gisst-cli add-native-core "../build/cores/${COREMETA}" "${ncore}" || echo "failed to load native core"
 done
 
 if ! $GISST_CI; then
