@@ -1,21 +1,22 @@
 services:
   gisst:
     image: gisst-eph:$BRANCH
+    restart: unless-stopped
     env_file:
       - ./.env
     userns_mode: keep-id
     volumes:
       - ./:/workspace:cached,z
-      - source: ../eph/eph-start.sh
-        target: /usr/bin/eph-start.sh
-        type: bind
       - source: ./eph.nginx.conf
         target: /etc/nginx/sites-enabled/default
         type: bind
-    command: /usr/bin/eph-start.sh
+      - source: ../eph/nightly-cores
+        target: /workspace/build
+        type: bind
+    command: sleep infinity
     ports:
       - "$PORT:80"
-      # TODO: consider opening ssl? postgres?
+      # TODO: consider opening vite-dev ports
     depends_on:
       - db
       - meili

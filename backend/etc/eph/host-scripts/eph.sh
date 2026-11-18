@@ -38,15 +38,15 @@ docker build -f Dockerfile.ci -t "gisst-eph:${BRANCH}" .
 echo $PORT > port
 echo $WORKER_KEY > worker
 . ../secrets
-envsubst '$PORT $BRANCH $ROOT' < ../eph/eph.nginx.t.frag > "../eph/nginx/${BRANCH}.nginx.frag"
+envsubst '$PORT $BRANCH $ROOT' < ../eph/eph.nginx.t.frag > "/etc/nginx/eph/${BRANCH}.nginx.frag"
+
+# passwordless sudo is required for this
+sudo /usr/bin/nginx -s reload
+
 cp ../eph/eph.nginx.t.conf "eph.nginx.conf"
 envsubst < ../eph/eph.local.t.toml > "backend/config/local.toml"
 envsubst < ../eph/eph.t.env > ".env"
 cp .env backend/.env
 envsubst '$PORT $BRANCH' < ../eph/eph.compose.t.yml > docker-compose.yml
-docker compose up
 
-# TODO: use a read loop with docker compose logs -f gisst. wait for error or success
-
-docker compose attach gisst
-#COMPOSE_MENU=false docker compose up --wait
+COMPOSE_MENU=false docker compose up --wait

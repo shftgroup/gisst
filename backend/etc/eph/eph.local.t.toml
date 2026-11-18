@@ -13,7 +13,7 @@ prometheus_endpoint = "http://prometheus:9090/"
 
 [search]
 meili_url = "http://meili:7700"
-meili_external_url = "https://ultra64.cs.pomona.edu/$ROOT/$BRANCH/"
+meili_external_url = "https://ultra64.cs.pomona.edu/$ROOT/$BRANCH/search"
 meili_api_key = "devcontainer_testkey"
 meili_search_key = "devcontainer_testkey"
 

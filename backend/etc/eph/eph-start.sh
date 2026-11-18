@@ -2,7 +2,7 @@
 
 set -e
 set -v
-sudo nginx -t 
+sudo nginx -t
 sudo service nginx start
 cd /workspace/
 

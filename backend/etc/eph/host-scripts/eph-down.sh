@@ -6,7 +6,9 @@ if [ "$BRANCH" = "" ] || [ "$BRANCH" = "eph" ]; then
     exit 1
 fi
 PORT=$(cat "${BRANCH}/port")
-docker compose down --rmi local -f "${BRANCH}/docker-compose.yml" -p "$BRANCH" -t 5
-rm "eph/nginx/${BRANCH}.nginx.frag"
+cd "${BRANCH}"
+docker compose down --rmi local -t 5
+cd ..
+rm "/etc/nginx/eph/${BRANCH}.nginx.frag"
 rm -rf "./${BRANCH}"
 
