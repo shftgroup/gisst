@@ -199,7 +199,7 @@ fi
 
 if [ ${BUILD_NATIVE_CORES:-0} -eq 1 ]; then
 
-mkdir "${OUT_DIR}/native_cores"
+mkdir -p "${OUT_DIR}/native_cores"
 
 pushd ra-build
 RETROARCH_VERSION=$(jq -r '.retroarch.version' "$MANIFEST_FILE")
@@ -214,7 +214,8 @@ for f in $CORENAMES; do
     then
         rgbds_repo=$(jq -r '.retroarch.cores.sameboy.rgbds_repo' "$MANIFEST_FILE")
         rgbds_version=$(jq -r '.retroarch.cores.sameboy.rgbds_version' "$MANIFEST_FILE")
-        git clone $rgbds_repo rgbds && pushd rgbds && git checkout $rgbds_version && popd
+        (git clone $rgbds_repo rgbds && pushd rgbds && git checkout $rgbds_version && popd) || echo "rgbds checkout failed, already exists?"
+        make -C rgbds clean
         make -C rgbds -j || die "Could not build rgbds"
         PATH="./rgbds:${PATH}" make clean
         PATH="./rgbds:${PATH}" make -j CONF=release bootroms || die "could not build sameboy bootroms"
