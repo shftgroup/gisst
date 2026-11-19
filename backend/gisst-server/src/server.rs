@@ -28,8 +28,8 @@ use sqlx::PgPool;
 use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
-use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
+use tower_http::{cors::CorsLayer, services::ServeFile};
 use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
 use tracing::info;
 use uuid::Uuid;
@@ -210,6 +210,11 @@ pub async fn launch(config: &Config) -> Result<()> {
             "/embed",
             builder.clone()
                 .service(selective_serve_dir::SelectiveServeDir::new("embed-dist")),
+        )
+        .nest_service(
+            "/favicon.ico",
+            builder.clone()
+                .service(ServeFile::new("web-dist/favicon.ico")),
         )
         .route("/", get(get_login_page))
         .layer(Extension(app_state))
