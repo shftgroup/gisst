@@ -55,7 +55,7 @@ jobs:
       run: |
         mv /tmp/frontend/node_modules frontend/
         cd frontend
-        npm ci
+        npm i
     - name: Frontend safety checks
       run: bash hooks/frontend-check.sh
     - name: Backend safety checks

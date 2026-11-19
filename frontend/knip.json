@@ -1,4 +1,5 @@
 {
+  "ignoreBinaries": ["tsc"],
   "workspaces": {
     "embedv86": {
       "entry": ["src/replay_worker.ts"]

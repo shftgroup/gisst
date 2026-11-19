@@ -1,0 +1,4 @@
+
+# Put this in your nginx site config for the host.
+# change the path to match your eph host config folder.
+include /home/jcoa2018/eph/eph/nginx/*.frag;
