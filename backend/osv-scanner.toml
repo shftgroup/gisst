@@ -1,3 +1,9 @@
 [[IgnoredVulns]]
 id = "RUSTSEC-2025-0141"
 reason = "We use a vendored copy we commit to maintaining"
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0459"
+reason = "We don't use libsqlite in our project, but it shows up in Cargo.lock"
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0543"
+reason = "We can't avoid chrono given the sqlx dependency"

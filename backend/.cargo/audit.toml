@@ -7,5 +7,9 @@ ignore = [
   # - https://github.com/rust-lang/cargo/issues/10801
   "RUSTSEC-2023-0071",
   # bincode is not maintained, it's a dependency of mbrman -- worth investigating in the future
-  "RUSTSEC-2025-0141"
+  "RUSTSEC-2025-0141",
+  # sqlite but we don't use sqlite
+  "RUSTSEC-2026-0459",
+  # can't avoid unmaintained chrono for now due to sqlx
+  "RUSTSEC-2026-0543"
 ]
