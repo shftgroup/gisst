@@ -1,5 +1,7 @@
-import { instantMeiliSearch } from "@meilisearch/instant-meilisearch";
-import { InstantMeiliSearchOptions } from "@meilisearch/instant-meilisearch";
+import {
+  instantMeiliSearch,
+  InstantMeiliSearchOptions,
+} from "@gisst/instant-meilisearch";
 import { default as instantsearch, InstantSearch } from "instantsearch.js";
 export type SearchObject = InstantSearch;
 export type SearchOptions = InstantMeiliSearchOptions;

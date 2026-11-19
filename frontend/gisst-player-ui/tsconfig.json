@@ -4,6 +4,7 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "lib": ["ESNext", "DOM"],
+    "types": ["node"],
     "moduleResolution": "bundler",
     "strict": true,
     "resolveJsonModule": true,
@@ -11,11 +12,11 @@
     "esModuleInterop": true,
     "declaration": true,
     "noEmit": false,
+    "rootDir": "./src",
     "outDir": "dist",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noImplicitReturns": true,
-    "skipLibCheck": true
+    "noImplicitReturns": true
   },
   "include": ["src"]
 }

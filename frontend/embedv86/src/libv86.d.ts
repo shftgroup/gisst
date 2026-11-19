@@ -1,28 +1,34 @@
-declare class V86 {
-  constructor(config: object);
-  is_running(): bool;
+export interface V86Constructor {
+  new (config: object): V86;
+}
+export interface V86 {
+  is_running(): boolean;
   destroy(): void;
-  async run(): Promise<void>;
-  async stop(): Promise<void>;
-  mouse_set_status(bool): void;
-  keyboard_set_status(bool): void;
+  run(): Promise<void>;
+  stop(): Promise<void>;
+  mouse_set_status(on: boolean): void;
+  keyboard_set_status(on: boolean): void;
   lock_mouse(): void;
   screen_adapter: ScreenAdapter;
   speaker_adapter: SpeakerAdapter;
   screen_make_screenshot(): HTMLImageElement;
   screen_set_scale(x: number, y: number): void;
-  async save_state(): Promise<ArrayBuffer>;
-  async restore_state(sbuf: ArrayBuffer): Promise<void>;
-  add_listener(evt: string, listener: (any) => void);
-  remove_listener(evt: string, listener: (any) => void);
+  save_state(): Promise<ArrayBuffer>;
+  restore_state(sbuf: ArrayBuffer): Promise<void>;
+  // eslint-disable-next-line
+  add_listener(evt: string, listener: (msg: any) => void): void;
+  // eslint-disable-next-line
+  remove_listener(evt: string, listener: (msg: any) => void): void;
   get_instruction_counter(): number;
   v86: V86v86;
   bus: Bus;
   emulator_bus: Bus;
 }
 interface Bus {
-  send(evt: string, val: unknown);
-  register(evt: string, handler: (any) => void);
+  // eslint-disable-next-line
+  send(evt: string, val: any): void;
+  // eslint-disable-next-line
+  register(evt: string, handler: (msg: any) => void): void;
 }
 interface V86v86 {
   cpu: Cpu;
@@ -47,15 +53,15 @@ interface SpeakerAdapter {
 }
 interface Mixer {
   node_merger: AudioNode;
-  set_volume(number);
+  set_volume(vol: number): void;
 }
 interface V86Config {
   wasm_path: string;
   disable_jit?: boolean;
   bios?: V86Image;
   vga_bios?: V86Image;
-  memory_size?: int;
-  vga_memory_size?: int;
+  memory_size?: number;
+  vga_memory_size?: number;
   screen: ScreenConfig;
   initial_state?: V86Image;
   autostart: boolean;

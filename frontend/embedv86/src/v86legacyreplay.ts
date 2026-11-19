@@ -7,6 +7,7 @@ import {
   Checkpoint,
   ReplayEvent,
 } from "./v86replay";
+import { type V86 } from "./libv86";
 
 //const REPLAY_CHECKPOINT_INTERVAL:number = 100003*1000*4;
 /* Cycles per millisecond (appx) * milliseconds per second * number of seconds */
