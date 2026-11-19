@@ -56,10 +56,28 @@ repos:
         files: ^backend/
         types_or: [rust,toml]
         stages: [pre-commit, pre-push]
+      - id: backend-unsafe-check
+        name: backend unsafe checks
+        description: Run backend unsafe checks in container if possible
+        entry: hooks/backend-unsafe-check.sh
+        language: unsupported_script
+        pass_filenames: false
+        files: ^backend/
+        types_or: [rust,toml]
+        stages: [pre-commit, pre-push]
       - id: frontend-check
         name: frontend check
         description: Run frontend checks
         language: unsupported_script
+        pass_filenames: false
         entry: hooks/frontend-check.sh
+        files: ^frontend/
+        stages: [pre-commit, pre-push]
+      - id: frontend-unsafe-check
+        name: frontend unsafe check
+        description: Run frontend unsafe checks
+        language: unsupported_script
+        pass_filenames: false
+        entry: hooks/frontend-unsafe-check.sh
         files: ^frontend/
         stages: [pre-commit, pre-push]
