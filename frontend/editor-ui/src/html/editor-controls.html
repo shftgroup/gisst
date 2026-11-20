@@ -1,7 +1,59 @@
 <div class="editor-controls-row">
-  <button type="button" data-action="mute">Mute</button>
-  <button type="button" data-action="zoom">1x</button>
-  <button type="button" data-action="save">Save</button>
-  <button type="button" data-action="record">Record</button>
-  <button type="button" data-action="stop">Stop</button>
+  <div class="editor-controls-group">
+    <button
+      type="button"
+      class="editor-controls-square"
+      id="editor-controls-mute"
+      aria-label="Mute"
+    >
+      <img class="editor-controls-icon" alt="" />
+    </button>
+    <div class="editor-controls-size">
+      <button
+        type="button"
+        class="editor-controls-square"
+        id="editor-controls-zoom"
+        aria-haspopup="menu"
+        aria-expanded="false"
+        aria-label="Size"
+      >
+        1x
+      </button>
+      <div class="editor-controls-menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-zoom="0.5">0.5x</button>
+        <button type="button" role="menuitem" data-zoom="1">1x</button>
+        <button type="button" role="menuitem" data-zoom="2">2x</button>
+        <button type="button" role="menuitem" data-zoom="Fit">Fit</button>
+        <button type="button" role="menuitem" id="editor-controls-fullscreen">
+          Full
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="editor-controls-group">
+    <button
+      type="button"
+      class="editor-controls-square editor-controls-primary"
+      id="editor-controls-save"
+      aria-label="Save"
+    >
+      <img class="editor-controls-icon" alt="" />
+    </button>
+    <button
+      type="button"
+      class="editor-controls-square editor-controls-primary"
+      id="editor-controls-record"
+      aria-label="Record"
+    >
+      <img class="editor-controls-icon" alt="" />
+    </button>
+    <button
+      type="button"
+      class="editor-controls-square editor-controls-primary"
+      id="editor-controls-stop"
+      aria-label="Stop"
+    >
+      <img class="editor-controls-icon" alt="" />
+    </button>
+  </div>
 </div>

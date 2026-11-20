@@ -4,6 +4,7 @@ declare global {
     "gisst-add-work": CustomEvent;
     "gisst-mute": CustomEvent;
     "gisst-zoom": CustomEvent<string>;
+    "gisst-fullscreen": CustomEvent;
     "gisst-save-state": CustomEvent;
     "gisst-start-performance": CustomEvent;
     "gisst-finish-performance": CustomEvent;

@@ -134,9 +134,94 @@ editor-stage {
   margin: 0;
 }
 
+editor-controls {
+  position: relative;
+  z-index: 1;
+}
+
 .editor-controls-row {
+  gap: 24px;
   padding: 8px;
-  overflow-x: auto;
+  overflow: visible;
+}
+
+.editor-controls-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.editor-controls-square {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--gisst-light-theme-light);
+  background: var(--gisst-light-theme-text-light);
+  border-color: var(--gisst-light-theme-text-light);
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.editor-controls-primary {
+  background: var(--gisst-light-theme-primary);
+  border-color: var(--gisst-light-theme-primary);
+}
+
+.editor-controls-square:active {
+  background: var(--gisst-light-theme-text-main);
+  border-color: var(--gisst-light-theme-text-main);
+  transform: translateY(1px);
+}
+
+.editor-controls-primary:active {
+  background: var(--gisst-light-theme-primary-dark);
+  border-color: var(--gisst-light-theme-primary-dark);
+}
+
+.editor-controls-square.is-active {
+  outline: 2px solid var(--gisst-light-theme-dark);
+  outline-offset: 1px;
+}
+
+.editor-controls-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.editor-controls-size {
+  position: relative;
+}
+
+.editor-controls-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  background: var(--gisst-light-theme-card-bg);
+  border: 1px solid rgb(var(--gisst-light-theme-border));
+}
+
+.editor-controls-menu[hidden] {
+  display: none;
+}
+
+.editor-controls-menu button.is-current {
+  color: var(--gisst-light-theme-light);
+  background: var(--gisst-light-theme-primary);
+  border-color: var(--gisst-light-theme-primary);
 }
 
 .editor-lower {
