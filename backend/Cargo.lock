@@ -2880,10 +2880,12 @@ name = "ra-video-worker"
 version = "0.2.4"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
  "clap-verbosity-flag",
  "env_logger",
  "ffmpeg-next",
+ "futures",
  "gisst",
  "log",
  "reqwest",
@@ -2891,9 +2893,11 @@ dependencies = [
  "ringbuf",
  "rply-codec",
  "rust-libretro-sys",
+ "serde",
  "serde_json",
  "server-types",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
