@@ -7,11 +7,6 @@ license.workspace = true
 [dependencies]
 gisst.workspace = true
 server-types.workspace = true
-rply-codec = { git = "https://github.com/JoeOsborn/rply-codec", rev = "8b1c6b561d0f453698456e8b439b16e47377c6bc"}
-retro-rs = { workspace = true, default-features=false }
-rust-libretro-sys.workspace = true
-ffmpeg-next = "9.0.0"
-ringbuf = "0.5.2"
 reqwest.workspace = true
 tokio.workspace = true
 clap = { workspace = true, features = ["derive", "cargo", "env"]}
@@ -24,3 +19,4 @@ futures.workspace = true
 uuid = { workspace = true, features = ["serde", "v4"] }
 chrono = { workspace = true, features = ["clock"] }
 serde = { workspace = true, features = ["derive"] }
+tokio-stream = "0.1"

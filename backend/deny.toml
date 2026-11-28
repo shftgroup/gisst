@@ -195,25 +195,19 @@ deny = [
     "jni-sys-macros@*",
     "combine@*",
     "simd_cesu8@*"
-    #"ansi_term@0.11.0",
-    #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is banned" },
-    # Wrapper crates can optionally be specified to allow the crate when it
-    # is a direct dependency of the otherwise banned crate
-    #{ crate = "ansi_term@0.11.0", wrappers = ["this-crate-directly-depends-on-ansi_term"] },
 ]
 
 # Certain crates/versions that will be skipped when doing duplicate detection.
 skip-tree = [
     { crate = "base64@0.22.1", reason="jsonwebtoken/meilisearch-sdk, oauth2, sqlx, tonic, tower-sessions"},
     { crate = "reqwest@0.13.5", reason = "pending updates to tower-http dep" },
-    { crate = "untrusted@0.7.1", reason = "aws-lc-rs@1.18.0" },
     { crate = "thiserror@1.0.69", reason = "oauth2@5.0.0, yaup@0.3.1 (via meilisearch)" },
     { crate = "syn@2.0.119", reason = "axum-macros@0.5.1, serde_with@3.22, reqwest@0.13.4, meilisearch-sdk, chd, opentelemetry, sqlx, oauth2@5.0.0, tracing@0.1.44" },
     { crate = "rand@0.9.5", reason = "opentelemetry" },
     { crate = "hashbrown@0.15.5", reason = "petgraph via tree-magic-mini" },
     { crate = "hashbrown@0.16.1", reason = "sqlx" },
     { crate = "core-foundation@0.9.4", reason = "hyper-util via axum" },
-    { crate = "bindgen@0.73.2", reason = "nom, libloading"},
+    { crate = "cexpr@0.6", reason = "bindgen" }
 ]
 skip = [
     #"ansi_term@0.11.0", # will be skipped along with _all_ of its direct and transitive dependencies
@@ -250,8 +244,9 @@ allow-build-scripts = [
   "aws-lc-sys@0.47.0",
   "bindgen@0.73.2",
   "clang-sys@1.9.1",
+  "constant_time_eq@0.6.1",
   "cookie@0.18.2",
-  "crc32fast@1.5.3",
+  "crc32fast@1.5.4",
   "crossbeam-queue@0.3.13",
   "crossbeam-utils@0.8.23",
   "encoding_rs@0.8.44",
@@ -261,34 +256,44 @@ allow-build-scripts = [
   "generic-array@0.14.9",
   "getrandom@0.3.4",
   "getrandom@0.4.3",
+  "gl@0.14.0",
   "httparse@1.10.1",
-  "icu_normalizer_data@2.4.0",
-  "icu_properties_data@2.4.0",
+  "icu_normalizer_data@2.4",
+  "icu_properties_data@2.4",
+  "khronos_api@3.1.0",
   "libc@0.2.191",
   "mime_guess@2.0.5",
   "multer@3.1.0",
   "nix@0.31.3",
   "num-traits@0.2.19",
+  "objc2@0.6.5",
   "parking_lot_core@0.9.12",
   "portable-atomic@1.15.0",
   "portable-atomic-util@0.2.7",
   "prettyplease@0.2.37",
+  "prettyplease@0.3.0",
   "proc-macro2@1.0.107",
   "quote@1.0.47",
   "radium@0.7.0",
-  "rust-libretro-sys@0.3.2",
+  "retro-rs@0.6.3",
+  "gisst-rust-libretro-sys@0.4.2",
   "rustix@0.38.44",
   "rustls@0.23.46",
   "rustversion@1.0.23",
   "serde@1.0.229",
   "serde_core@1.0.229",
   "serde_json@1.0.154",
+  "surfman@0.14.0",
   "syn@1.0.109",
   "system-configuration-sys@0.6.0",
   "thiserror@1.0.69",
   "thiserror@2.0.21",
+  "wayland-sys@0.31.11",
+  "winapi@0.3.9",
+  "winapi-x86_64-pc-windows-gnu@0.4.0",
   "windows_x86_64_gnu@0.52.6",
   "windows_x86_64_msvc@0.52.6",
+  "x11-dl@2.21.0",
   "zerocopy@0.8.63",
   "zmij@1.0.23",
   "zstd-safe@8.2.0",
@@ -316,6 +321,9 @@ allow-globs = []
 crate = "zerocopy"
 allow-globs = ["cargo.sh", "ci/*.sh"]
 
+[[bans.build.bypass]]
+crate = "surfman"
+allow-globs = ["android-example/gradlew"]
 
 # This section is considered when running `cargo deny check sources`.
 # More documentation about the 'sources' section can be found here:
@@ -331,7 +339,7 @@ unknown-git = "deny"
 # if not specified. If it is specified but empty, no registries are allowed.
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # List of URLs for allowed Git repositories
-allow-git = ["git+https://github.com/rafalh/rust-fatfs/", "git+https://github.com/JoeOsborn/axum-login/", "git+https://github.com/JoeOsborn/oauth2-rs", "git+https://github.com/transact-rs/sqlx/", "https://github.com/JoeOsborn/rply-codec/"]
+allow-git = ["git+https://github.com/rafalh/rust-fatfs/", "git+https://github.com/JoeOsborn/axum-login/", "git+https://github.com/JoeOsborn/oauth2-rs", "git+https://github.com/transact-rs/sqlx/"]
 required-git-spec="rev"
 
 [sources.allow-org]
