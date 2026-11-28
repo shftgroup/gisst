@@ -1,12 +1,11 @@
 
 # cargo-vet audits file
 
-[[audits.axum-login]]
+[[audits.axum-server]]
 who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
 criteria = "safe-to-deploy"
-delta = "0.18.0 -> 0.18.0@git:151c72d7a1b4646830f86b4332e6bd6e34d719a7"
-importable = false
-notes = "Not malware."
+delta = "0.9.1 -> 0.9.2"
+notes = "Acme removed, this is not a change that impacts us since we disable ssl features in axum-server anyhow"
 
 [[audits.bincode]]
 who = "Joseph C. Osborn <joseph.osborn@pomona.edu>"
@@ -213,6 +212,12 @@ user-id = 6741 # Alice Ryhl (Darksonn)
 start = "2026-04-14"
 end = "2027-08-24"
 
+[[trusted.axum-login]]
+criteria = "safe-to-deploy"
+user-id = 5112
+start = "2022-08-27"
+end = "2027-11-10"
+
 [[trusted.axum-macros]]
 criteria = "safe-to-deploy"
 user-id = 6741 # Alice Ryhl (Darksonn)
@@ -221,7 +226,7 @@ end = "2027-08-24"
 
 [[trusted.bitvec]]
 criteria = "safe-to-deploy"
-user-id = 2945 # Alexander Payne (myrrlyn)
+user-id = 2945
 start = "2019-03-07"
 end = "2027-08-24"
 
@@ -539,7 +544,7 @@ end = "2027-08-24"
 
 [[trusted.funty]]
 criteria = "safe-to-deploy"
-user-id = 2945 # Alexander Payne (myrrlyn)
+user-id = 2945
 start = "2020-02-24"
 end = "2027-08-24"
 
@@ -1199,7 +1204,7 @@ end = "2027-08-24"
 
 [[trusted.radium]]
 criteria = "safe-to-deploy"
-user-id = 2945 # Alexander Payne (myrrlyn)
+user-id = 2945
 start = "2020-09-18"
 end = "2027-08-24"
 
@@ -1889,7 +1894,7 @@ end = "2027-08-24"
 
 [[trusted.wyz]]
 criteria = "safe-to-deploy"
-user-id = 2945 # Alexander Payne (myrrlyn)
+user-id = 2945
 start = "2019-09-22"
 end = "2027-08-24"
 

@@ -246,7 +246,7 @@ allow-build-scripts = [
   "clang-sys@1.9.1",
   "constant_time_eq@0.6.1",
   "cookie@0.18.2",
-  "crc32fast@1.5.4",
+  "crc32fast@1.5.5",
   "crossbeam-queue@0.3.13",
   "crossbeam-utils@0.8.23",
   "encoding_rs@0.8.44",

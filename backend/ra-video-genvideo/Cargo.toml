@@ -11,3 +11,4 @@ ffmpeg-next = "9.0.0"
 ringbuf = "0.6"
 anyhow.workspace = true
 serde_json.workspace = true
+surfman.workspace = true
